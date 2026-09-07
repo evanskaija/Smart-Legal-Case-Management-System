@@ -31,6 +31,19 @@ public class AIResearchService {
         String query = request.getQuery() != null ? request.getQuery().trim() : "";
         String qLower = query.toLowerCase();
 
+        // 0. Enforce Authentication Requirement
+        if (request.getUserName() == null || request.getUserName().trim().isEmpty() || "Guest".equalsIgnoreCase(request.getUserName().trim())) {
+            return AIQueryResponse.builder()
+                    .directAnswer("🔒 <strong>Authentication Required</strong>: You must register or sign in to your authorized SLCMS account before accessing the Tanzania Legal Research Assistant and case records.")
+                    .legalExplanation("Please sign in with your authorized credentials or register using your firm-issued invitation code to continue.")
+                    .retrievedPassages(Collections.emptyList())
+                    .citedSources(Collections.emptyList())
+                    .limitations(List.of("Authentication required for legal research query execution."))
+                    .requiresProfessionalReview(false)
+                    .queryIntent("AUTHENTICATION_REQUIRED")
+                    .build();
+        }
+
         // 1. Retrieve candidate passages from all READY_FOR_AI documents
         List<LegalSourceDocument> readyDocs = indexingService.getAllDocuments().stream()
                 .filter(d -> d.getStatus() == LegalSourceDocument.DocumentStatus.READY_FOR_AI)

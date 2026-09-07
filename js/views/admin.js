@@ -4,14 +4,15 @@
    ========================================================================== */
 
 const AdminView = {
-  activeSubtab: 'users', // 'users' | 'activity'
+  activeSubtab: 'users', // 'users' | 'invitations' | 'pending' | 'activity'
   searchQuery: '',
   roleFilter: 'all',
   moduleFilter: 'all',
 
   render() {
     // Check RBAC permission on server/client level
-    if (SLCMS_STATE.currentUser.role !== 'Administrator') {
+    const userRole = SLCMS_STATE.currentUser.role;
+    if (userRole !== 'Administrator' && userRole !== 'Managing Partner' && userRole !== 'System Administrator') {
       return `
         <div class="card empty-state animate-fade" style="padding: 3.5rem 2rem; text-align: center;">
           <div class="empty-icon" style="border-color: var(--color-danger); color: var(--color-danger); width: 64px; height: 64px; margin: 0 auto 1.5rem auto; border-radius: 50%; background: #FEE2E2; display: flex; align-items: center; justify-content: center;">
@@ -22,15 +23,16 @@ const AdminView = {
           </div>
           <h2 style="color: var(--color-danger); margin-bottom: 0.5rem; font-size: 1.5rem;">Access Denied (403 Restricted)</h2>
           <p style="color: var(--color-text-secondary); max-width: 480px; margin: 0 auto 1.5rem auto; line-height: 1.6;">
-            User Management, Account Provisioning, and Security Audit Logs are strictly restricted to Managing Partners and System Administrators. Your active session role is: <strong>${SLCMS_STATE.currentUser.role}</strong>.
+            User Management, Account Provisioning, and Security Audit Logs are strictly restricted to Managing Partners and System Administrators. Your active session role is: <strong>${userRole}</strong>.
           </p>
           <button class="btn btn-primary" onclick="App.navigate('dashboard')">Return to Dashboard</button>
         </div>
       `;
     }
 
-    const activeUsers = SLCMS_STATE.users.filter(u => u.status === 'Active').length;
-    const lockedUsers = SLCMS_STATE.users.filter(u => u.status === 'Locked').length;
+    const lockedUsers = SLCMS_STATE.users.filter(u => u.status === 'LOCKED' || u.status === 'Locked').length;
+    const pendingApprovals = SLCMS_STATE.users.filter(u => (u.accountStatus || u.status) === 'PENDING_APPROVAL').length;
+    const activeInvitations = (SLCMS_STATE.invitations || []).filter(i => (i.status || '').toUpperCase() === 'PENDING').length;
 
     return `
       <div class="animate-fade">
@@ -44,18 +46,16 @@ const AdminView = {
               </span>
             </div>
             <p style="color: var(--color-text-secondary); font-size: 0.88rem;">
-              Firm staff provisioning, role-based permissions, account unlocking, and immutable audit trails
+              Firm invitation provisioning, professional identity verification, account unlocking, and immutable audit trails
             </p>
           </div>
           <div class="flex items-center gap-3">
-            <button class="btn btn-gold" onclick="AdminView.openAddUserModal()">
+            <button class="btn btn-gold" onclick="AdminView.openIssueInvitationModal()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <line x1="19" y1="8" x2="19" y2="14"/>
-                <line x1="22" y1="11" x2="16" y2="11"/>
+                <path d="M22 2L11 13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
               </svg>
-              <span>+ Provision New User Account</span>
+              <span>+ Issue Firm Invitation</span>
             </button>
           </div>
         </div>
@@ -63,16 +63,27 @@ const AdminView = {
         <!-- 2. SUBTABS NAVIGATION -->
         <div class="tabs-nav">
           <button class="tab-btn ${this.activeSubtab === 'users' ? 'active' : ''}" onclick="AdminView.switchSubtab('users')">
-            <span>👥 Law-Firm Staff Accounts (${SLCMS_STATE.users.length})</span>
+            <span>👥 Staff Accounts (${SLCMS_STATE.users.length})</span>
             ${lockedUsers > 0 ? `<span class="badge badge-lost" style="font-size: 0.65rem; padding: 0.1rem 0.4rem; margin-left: 0.35rem;">${lockedUsers} Locked</span>` : ''}
           </button>
+          <button class="tab-btn ${this.activeSubtab === 'invitations' ? 'active' : ''}" onclick="AdminView.switchSubtab('invitations')">
+            <span>✉️ Firm Invitations (${SLCMS_STATE.invitations ? SLCMS_STATE.invitations.length : 0})</span>
+            ${activeInvitations > 0 ? `<span class="badge badge-active" style="font-size: 0.65rem; padding: 0.1rem 0.4rem; margin-left: 0.35rem;">${activeInvitations} Active</span>` : ''}
+          </button>
+          <button class="tab-btn ${this.activeSubtab === 'pending' ? 'active' : ''}" onclick="AdminView.switchSubtab('pending')">
+            <span>⏳ Pending Approvals</span>
+            ${pendingApprovals > 0 ? `<span class="badge badge-pending" style="font-size: 0.65rem; padding: 0.1rem 0.4rem; margin-left: 0.35rem;">${pendingApprovals} Pending</span>` : ''}
+          </button>
           <button class="tab-btn ${this.activeSubtab === 'activity' ? 'active' : ''}" onclick="AdminView.switchSubtab('activity')">
-            <span>📜 Immutable Activity & Security Log (${SLCMS_STATE.activityLogs.length})</span>
+            <span>📜 Immutable Activity Log (${SLCMS_STATE.activityLogs.length})</span>
           </button>
         </div>
 
         <!-- 3. TAB CONTENT -->
-        ${this.activeSubtab === 'users' ? this.renderUsersTab() : this.renderActivityTab()}
+        ${this.activeSubtab === 'users' ? this.renderUsersTab() :
+          this.activeSubtab === 'invitations' ? this.renderInvitationsTab() :
+          this.activeSubtab === 'pending' ? this.renderPendingApprovalsTab() :
+          this.renderActivityTab()}
       </div>
     `;
   },
@@ -81,6 +92,375 @@ const AdminView = {
     this.activeSubtab = tab;
     this.searchQuery = '';
     App.refreshCurrentView();
+  },
+
+  renderInvitationsTab() {
+    const invitations = SLCMS_STATE.invitations || [];
+    const filteredInv = invitations.filter(i => {
+      if (!this.searchQuery) return true;
+      const q = this.searchQuery.toLowerCase();
+      return i.invitationCode.toLowerCase().includes(q) ||
+             i.approvedFullName.toLowerCase().includes(q) ||
+             i.approvedRole.toLowerCase().includes(q) ||
+             i.approvedEmail.toLowerCase().includes(q) ||
+             (i.staffId && i.staffId.toLowerCase().includes(q));
+    });
+
+    return `
+      <div>
+        <div class="flex items-center justify-between gap-4 flex-wrap" style="margin-bottom: 1.25rem;">
+          <div class="input-with-icon" style="max-width: 380px; width: 100%;">
+            <span class="input-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </span>
+            <input type="text" class="form-control" placeholder="Search invitation codes, practitioner names, emails..." value="${this.searchQuery}" oninput="AdminView.handleSearch(this.value)">
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button class="btn btn-gold btn-sm" onclick="AdminView.openIssueInvitationModal()">
+              + Issue New Invitation
+            </button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Invitation Code & Status</th>
+                <th>Approved Legal Practitioner</th>
+                <th>Pre-Approved Role</th>
+                <th>Professional Identifiers</th>
+                <th>Expiration Date</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredInv.map(inv => {
+                const isPending = (inv.status || '').toUpperCase() === 'PENDING';
+                const isExpired = inv.expirationDate && new Date(inv.expirationDate) < new Date();
+                const displayStatus = (!isPending) ? inv.status : (isExpired ? 'EXPIRED' : 'PENDING');
+
+                return `
+                  <tr>
+                    <td>
+                      <div>
+                        <div style="font-family: var(--font-mono); font-weight: 700; color: var(--color-primary); font-size: 0.92rem; display: flex; align-items: center; gap: 0.35rem;">
+                          <span>🎫</span>
+                          <span>${inv.invitationCode}</span>
+                        </div>
+                        <div style="margin-top: 0.25rem;">
+                          <span class="badge ${displayStatus === 'PENDING' ? 'badge-active' : displayStatus === 'USED' ? 'badge-confidential' : 'badge-lost'}" style="font-size: 0.68rem;">
+                            ${displayStatus}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div style="font-weight: 700; color: var(--color-primary);">${inv.approvedFullName}</div>
+                      <div style="font-size: 0.75rem; color: var(--color-text-secondary);">${inv.approvedEmail} • ${inv.approvedPhone}</div>
+                      <div style="font-size: 0.72rem; color: #64748B;">Dept: ${inv.department}</div>
+                    </td>
+                    <td>
+                      <span class="badge ${inv.approvedRole === 'Managing Partner' ? 'badge-confidential' : inv.approvedRole === 'Senior Counsel' ? 'badge-new' : inv.approvedRole === 'Legal Clerk' ? 'badge-onhold' : 'badge-active'}">
+                        ${inv.approvedRole}
+                      </span>
+                    </td>
+                    <td>
+                      <div style="font-size: 0.78rem;">
+                        <div>Staff ID: <code style="font-weight: 600;">${inv.staffId}</code></div>
+                        ${inv.advocateNumber ? `<div>Roll No: <code>${inv.advocateNumber}</code></div>` : ''}
+                        ${inv.nationalIdRef ? `<div>NIDA Ref: <code>${inv.nationalIdRef}</code></div>` : ''}
+                      </div>
+                    </td>
+                    <td>
+                      <span style="font-size: 0.8rem; color: ${isExpired ? '#DC2626' : 'var(--color-text-secondary)'};">
+                        ${inv.expirationDate ? new Date(inv.expirationDate).toLocaleDateString() : 'Never'}
+                        ${isExpired ? '<br><span style="color: #DC2626; font-size: 0.7rem; font-weight: 700;">(EXPIRED)</span>' : ''}
+                      </span>
+                    </td>
+                    <td style="text-align: right;">
+                      <div class="flex items-center justify-end gap-1.5">
+                        <button class="btn btn-secondary btn-sm" onclick="AdminView.copyInvitationCode('${inv.invitationCode}')" title="Copy invitation code to clipboard">
+                          📋 Copy
+                        </button>
+                        ${isPending && !isExpired ? `
+                          <button class="btn btn-ghost btn-sm text-danger" onclick="AdminView.revokeInvitation('${inv.id}')" title="Revoke this invitation">
+                            Revoke
+                          </button>
+                        ` : ''}
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  },
+
+  renderPendingApprovalsTab() {
+    const pendingUsers = SLCMS_STATE.users.filter(u => (u.accountStatus || u.status) === 'PENDING_APPROVAL');
+
+    return `
+      <div>
+        <div class="alert alert-warning" style="margin-bottom: 1.25rem; display: flex; align-items: flex-start; gap: 0.85rem; padding: 1rem 1.25rem;">
+          <div style="font-size: 1.3rem;">⏳</div>
+          <div style="font-size: 0.85rem; line-height: 1.5;">
+            <strong>Pending Partner / Administrator Approvals:</strong> Newly registered practitioners whose identities have been verified but require leadership sign-off before entering the law firm workspace.
+          </div>
+        </div>
+
+        ${pendingUsers.length === 0 ? `
+          <div class="card empty-state" style="padding: 3rem 2rem; text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">✅</div>
+            <h3 style="color: var(--color-primary); margin-bottom: 0.35rem;">All Registrations Approved</h3>
+            <p style="color: var(--color-text-secondary); font-size: 0.88rem;">There are no practitioner registrations currently awaiting leadership authorization.</p>
+          </div>
+        ` : `
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Practitioner Candidate</th>
+                  <th>Assigned Role</th>
+                  <th>Department & Identification</th>
+                  <th>Verification Status</th>
+                  <th style="text-align: right;">Approval Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${pendingUsers.map(u => `
+                  <tr>
+                    <td>
+                      <div class="flex items-center gap-3">
+                        <div class="avatar avatar-sm avatar-purple">
+                          ${u.name.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div style="font-weight: 700; color: var(--color-primary);">${u.name}</div>
+                          <div style="font-size: 0.75rem; color: var(--color-text-secondary);">${u.email} • ${u.phone}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="badge badge-confidential">${u.role}</span>
+                    </td>
+                    <td>
+                      <div style="font-size: 0.8rem;">
+                        <div>Dept: <strong>${u.department}</strong></div>
+                        <div>Staff ID: <code>${u.staffId || u.employeeId}</code> ${u.advocateNumber ? `• Roll: <code>${u.advocateNumber}</code>` : ''}</div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="badge badge-pending">
+                        <span class="badge-dot"></span> PENDING_APPROVAL
+                      </span>
+                    </td>
+                    <td style="text-align: right;">
+                      <button class="btn btn-gold btn-sm" onclick="AdminView.approveUser('${u.id}')">
+                        ✓ Approve & Activate Access
+                      </button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `}
+      </div>
+    `;
+  },
+
+  copyInvitationCode(code) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code);
+      App.showToast(`Invitation code ${code} copied to clipboard!`, 'success');
+    } else {
+      App.showToast(`Invitation Code: ${code}`, 'info');
+    }
+  },
+
+  revokeInvitation(invId) {
+    const success = SLCMS_STATE.revokeInvitation(invId);
+    if (success) {
+      App.showToast('Invitation successfully revoked.', 'info');
+      App.refreshCurrentView();
+    }
+  },
+
+  approveUser(userId) {
+    const success = SLCMS_STATE.approveUserAccount(userId);
+    if (success) {
+      App.showToast('User account successfully approved and activated!', 'success');
+      App.refreshCurrentView();
+    }
+  },
+
+  openIssueInvitationModal() {
+    const autoStaffId = 'EMP-10' + (SLCMS_STATE.users.length + (SLCMS_STATE.invitations ? SLCMS_STATE.invitations.length : 0) + 1);
+
+    App.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+        <div>
+          <h3 class="modal-title" style="color: #FFFFFF; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>✉️</span> Issue Firm Invitation Code
+          </h3>
+          <p style="font-size: 0.78rem; color: #CBD5E1; margin-top: 0.2rem;">
+            Generate an expirable, one-time invitation code with immutable role and clearance parameters.
+          </p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem;">
+        <form id="issue-invitation-form" onsubmit="AdminView.handleIssueInvitationSubmit(event)">
+          <div class="grid grid-cols-2 gap-3" style="margin-bottom: 1rem;">
+            <div class="form-group">
+              <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Approved Practitioner Full Name *</label>
+              <input type="text" id="inv-full-name" class="form-control" placeholder="e.g. Adv. Zainab Salim" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Assigned Staff ID *</label>
+              <input type="text" id="inv-staff-id" class="form-control" value="${autoStaffId}" required>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3" style="margin-bottom: 1rem;">
+            <div class="form-group">
+              <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Pre-Approved System Role *</label>
+              <select id="inv-role" class="form-control" required onchange="AdminView.toggleRoleIdentifierFields(this.value)">
+                <option value="Senior Counsel">⚖️ Senior Counsel (Lead cases, pleadings)</option>
+                <option value="Associate Lawyer" selected>📜 Associate Lawyer (Assigned drafting)</option>
+                <option value="Junior Lawyer">🎓 Junior Lawyer (Research & citations)</option>
+                <option value="Legal Clerk">📁 Legal Clerk (Registry & filings)</option>
+                <option value="Managing Partner">👑 Managing Partner (Leadership oversight)</option>
+                <option value="System Administrator">🛡️ System Administrator (Security)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Department / Practice Group</label>
+              <select id="inv-dept" class="form-control">
+                <option value="Commercial Litigation">Commercial Litigation</option>
+                <option value="Intellectual Property & Patents">Intellectual Property & Patents</option>
+                <option value="Corporate & Tax Advisory">Corporate & Tax Advisory</option>
+                <option value="Appellate & Constitutional Law">Appellate & Constitutional Law</option>
+                <option value="Court Filings & Registry">Court Filings & Registry</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3" style="margin-bottom: 1rem;">
+            <div class="form-group">
+              <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Approved Email Address *</label>
+              <input type="email" id="inv-email" class="form-control" placeholder="z.salim@slcms-law.com" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Approved Phone Number *</label>
+              <input type="text" id="inv-phone" class="form-control" placeholder="+255 754 889 900" required>
+            </div>
+          </div>
+
+          <div id="inv-dynamic-identifiers-row" class="grid grid-cols-2 gap-3" style="margin-bottom: 1rem;">
+            <div class="form-group">
+              <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Advocate Roll / Bar No. *</label>
+              <input type="text" id="inv-advocate-no" class="form-control" placeholder="ADV/2026/0512" value="ADV/2026/0512">
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Practising Certificate No.</label>
+              <input type="text" id="inv-pc-no" class="form-control" placeholder="PC-TZ-2026-9041" value="PC-TZ-2026-9041">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Invitation Validity Period</label>
+            <select id="inv-expiration-days" class="form-control">
+              <option value="7">7 Days Validity</option>
+              <option value="14" selected>14 Days Validity (Standard)</option>
+              <option value="30">30 Days Validity</option>
+            </select>
+          </div>
+
+          <div class="flex items-center justify-end gap-2">
+            <button type="button" class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+            <button type="submit" class="btn btn-gold">
+              Issue Invitation Code
+            </button>
+          </div>
+        </form>
+      </div>
+    `, 'modal-lg');
+  },
+
+  toggleRoleIdentifierFields(role) {
+    const row = document.getElementById('inv-dynamic-identifiers-row');
+    if (!row) return;
+
+    if (role === 'Legal Clerk') {
+      row.innerHTML = `
+        <div class="form-group" style="grid-column: span 2;">
+          <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">National ID Reference (NIDA/NID) *</label>
+          <input type="text" id="inv-nid-ref" class="form-control" placeholder="NIDA-19950512-1002-33" value="NIDA-19950512-1002-33" required>
+        </div>
+      `;
+    } else {
+      row.innerHTML = `
+        <div class="form-group">
+          <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Advocate Roll / Bar No. *</label>
+          <input type="text" id="inv-advocate-no" class="form-control" placeholder="ADV/2026/0512" value="ADV/2026/0512" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Practising Certificate No.</label>
+          <input type="text" id="inv-pc-no" class="form-control" placeholder="PC-TZ-2026-9041" value="PC-TZ-2026-9041">
+        </div>
+      `;
+    }
+  },
+
+  handleIssueInvitationSubmit(e) {
+    e.preventDefault();
+    const approvedFullName = document.getElementById('inv-full-name')?.value.trim();
+    const staffId = document.getElementById('inv-staff-id')?.value.trim();
+    const role = document.getElementById('inv-role')?.value;
+    const department = document.getElementById('inv-dept')?.value;
+    const email = document.getElementById('inv-email')?.value.trim();
+    const phone = document.getElementById('inv-phone')?.value.trim();
+    const advocateNumber = document.getElementById('inv-advocate-no')?.value?.trim();
+    const practisingCertNo = document.getElementById('inv-pc-no')?.value?.trim();
+    const nationalIdRef = document.getElementById('inv-nid-ref')?.value?.trim();
+    const expirationDays = document.getElementById('inv-expiration-days')?.value;
+
+    if (!approvedFullName || !email || !staffId) {
+      App.showToast('Please complete all required fields.', 'error');
+      return;
+    }
+
+    const res = SLCMS_STATE.createInvitation({
+      approvedFullName,
+      staffId,
+      role,
+      department,
+      email,
+      phone,
+      advocateNumber,
+      practisingCertNo,
+      nationalIdRef,
+      expirationDays
+    });
+
+    if (res.success) {
+      App.closeModal();
+      App.showToast(res.message, 'success');
+      this.activeSubtab = 'invitations';
+      App.refreshCurrentView();
+    } else {
+      App.showToast(res.message, 'error');
+    }
   },
 
   renderUsersTab() {
@@ -147,8 +527,8 @@ const AdminView = {
                     </div>
                   </td>
                   <td>
-                    <span class="badge ${u.role === 'Administrator' ? 'badge-confidential' : u.role === 'Lawyer' ? 'badge-new' : 'badge-onhold'}">
-                      ${u.role === 'Administrator' ? '👑 ' : u.role === 'Lawyer' ? '⚖️ ' : '📋 '}${u.role}
+                    <span class="badge ${u.role === 'Managing Partner' || u.role === 'Administrator' ? 'badge-confidential' : u.role === 'Senior Counsel' ? 'badge-new' : u.role === 'Associate Lawyer' ? 'badge-active' : u.role === 'Junior Lawyer' ? 'badge-purple' : u.role === 'Legal Clerk' ? 'badge-onhold' : 'badge-neutral'}">
+                      ${u.role === 'Managing Partner' || u.role === 'Administrator' ? '👑 ' : u.role === 'Senior Counsel' ? '⚖️ ' : u.role === 'Associate Lawyer' ? '📜 ' : u.role === 'Junior Lawyer' ? '🎓 ' : u.role === 'Legal Clerk' ? '📁 ' : '🛡️ '}${u.role}
                     </span>
                   </td>
                   <td>

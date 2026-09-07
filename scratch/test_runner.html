@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Tanzania Intent Router Test Runner</title>
+</head>
+<body>
+  <h1>Tanzania Intent Router Test Results</h1>
+  <div id="results"></div>
+
+  <script src="../js/state.js"></script>
+  <script src="../js/services/tanzania-intent-router.js"></script>
+  <script>
+    const resultsDiv = document.getElementById('results');
+    const logs = [];
+
+    function assert(name, condition, details = '') {
+      if (condition) {
+        logs.push(`✅ PASS: ${name}`);
+      } else {
+        logs.push(`❌ FAIL: ${name} — ${details}`);
+      }
+    }
+
+    try {
+      // -------------------------------------------------------------
+      // PART A: UNAUTHENTICATED GUEST TESTS (Must force sign-in/register)
+      // -------------------------------------------------------------
+      SLCMS_STATE.currentUser = null;
+      if (typeof App !== 'undefined') App.isLoggedIn = false;
+
+      const unauthRes1 = TanzaniaIntentRouter.routeMessage("Find Abdallah Salum Muwinge");
+      assert("Unauthenticated 'Find Abdallah Salum Muwinge' requires auth", unauthRes1.requiresAuth === true && unauthRes1.intent === 'AUTHENTICATION_REQUIRED');
+      assert("Unauthenticated query response mentions Authentication Required", unauthRes1.response.includes('Authentication Required'));
+      assert("Unauthenticated query provides Sign In and Register options", unauthRes1.guidedOptions.some(o => o.label.includes('Sign In')) && unauthRes1.guidedOptions.some(o => o.label.includes('Register')));
+
+      const unauthRes2 = TanzaniaIntentRouter.routeMessage("Summarize Abdallah Salum Muwinge v Halima Ismail");
+      assert("Unauthenticated 'Summarize' requires auth and provides NO case answer", unauthRes2.requiresAuth === true && !unauthRes2.response.includes('Case Summary:'));
+
+      const unauthRes3 = TanzaniaIntentRouter.routeMessage("How do I register?");
+      assert("Unauthenticated registration inquiry provides registration assistance", unauthRes3.categoryCode === 'AUTHENTICATION_ACCOUNTS' && unauthRes3.response.includes('Registration'));
+
+      // -------------------------------------------------------------
+      // PART B: AUTHENTICATED USER TESTS (Full legal research active)
+      // -------------------------------------------------------------
+      SLCMS_STATE.currentUser = {
+        id: 'usr-1',
+        name: 'John Vance',
+        email: 'j.vance@slcms-law.com',
+        role: 'Senior Counsel',
+        status: 'Active'
+      };
+      if (typeof App !== 'undefined') App.isLoggedIn = true;
+
+      // Test 1: "Find Abdallah Salum Muwinge"
+      const res1 = TanzaniaIntentRouter.routeMessage("Find Abdallah Salum Muwinge");
+      assert("Find Abdallah Salum Muwinge is FIND_JUDGMENT", res1.categoryCode === 'FIND_JUDGMENT');
+      assert("Find Abdallah Salum Muwinge matches Muwinge case", res1.matchedCase && res1.matchedCase.id === 'tz-j-009');
+      assert("Find Abdallah Salum Muwinge has isSingleMatchPrompt", res1.isSingleMatchPrompt === true);
+      assert("Response contains 'Matching Judgments Found'", res1.response.includes('Matching Judgments Found'));
+      assert("Response contains Citation", res1.response.includes('[2020] TZHC 10045'));
+      assert("Response contains Proceeding", res1.response.includes('PC Civil Appeal No. 69 of 2018'));
+      assert("Response contains Judge", res1.response.includes('S. M. Kulita, J.'));
+      assert("Response contains Outcome", res1.response.includes('Lower-court proceedings nullified and a trial de novo ordered.'));
+      assert("Response contains Is this the case you need?", res1.response.includes('Is this the case you need?'));
+      assert("Response contains Search Another Case", res1.response.includes('Search Another Case'));
+      assert("Active Case ID is set in context", TanzaniaIntentRouter.context.activeCaseId === 'tz-j-009');
+
+      // Test 2: "Abdallah Salum Muwinge"
+      const res2 = TanzaniaIntentRouter.routeMessage("Abdallah Salum Muwinge");
+      assert("Abdallah Salum Muwinge is FIND_JUDGMENT", res2.categoryCode === 'FIND_JUDGMENT');
+      assert("Abdallah Salum Muwinge has isSingleMatchPrompt", res2.isSingleMatchPrompt === true);
+
+      // Test 3: "Do you have Muwinge?"
+      const res3 = TanzaniaIntentRouter.routeMessage("Do you have Muwinge?");
+      assert("Do you have Muwinge? is FIND_JUDGMENT", res3.categoryCode === 'FIND_JUDGMENT');
+      assert("Do you have Muwinge? matches Muwinge", res3.matchedCase && res3.matchedCase.id === 'tz-j-009');
+
+      // Test 4: "Show Muwinge cases"
+      const res4 = TanzaniaIntentRouter.routeMessage("Show Muwinge cases");
+      assert("Show Muwinge cases is FIND_JUDGMENT", res4.categoryCode === 'FIND_JUDGMENT');
+
+      // Test 5: "Muwinge case of 2020"
+      const res5 = TanzaniaIntentRouter.routeMessage("Muwinge case of 2020");
+      assert("Muwinge case of 2020 matches with 2020 filter", res5.matchedCase && res5.matchedCase.id === 'tz-j-009');
+
+      // Test 6: "Summarize Abdallah Salum Muwinge v Halima Ismail"
+      const res6 = TanzaniaIntentRouter.routeMessage("Summarize Abdallah Salum Muwinge v Halima Ismail");
+      assert("Explicit summarize is CASE_SUMMARY", res6.categoryCode === 'CASE_SUMMARY');
+      assert("Explicit summarize generates summary directly", res6.response.includes('Case Summary: Abdallah Salum Muwinge v Halima Ismail'));
+
+      // Test 7: "Show facts of Muwinge"
+      const res7 = TanzaniaIntentRouter.routeMessage("Show facts of Muwinge");
+      assert("Show facts of Muwinge is CASE_FACTS", res7.categoryCode === 'CASE_FACTS');
+      assert("Facts response includes Parties", res7.response.includes('Parties:'));
+
+      // Test 8: "Open Muwinge PDF"
+      const res8 = TanzaniaIntentRouter.routeMessage("Open Muwinge PDF");
+      assert("Open Muwinge PDF is OPEN_SOURCE", res8.categoryCode === 'OPEN_SOURCE');
+      assert("Open Muwinge PDF has isOpenSource", res8.isOpenSource === true);
+
+      // Test 9: Contextual follow-up memory ("Summarize it.")
+      // First ensure active case is tz-j-009
+      TanzaniaIntentRouter.routeMessage("Find Abdallah Salum Muwinge");
+      const resFollowUpSumm = TanzaniaIntentRouter.routeMessage("Summarize it.");
+      assert("Follow-up 'Summarize it.' is CASE_SUMMARY", resFollowUpSumm.categoryCode === 'CASE_SUMMARY');
+      assert("Follow-up 'Summarize it.' refers to Muwinge", resFollowUpSumm.matchedCase && resFollowUpSumm.matchedCase.id === 'tz-j-009');
+
+      // Test 10: Contextual follow-up "Show its facts."
+      const resFollowUpFacts = TanzaniaIntentRouter.routeMessage("Show its facts.");
+      assert("Follow-up 'Show its facts.' is CASE_FACTS", resFollowUpFacts.categoryCode === 'CASE_FACTS');
+      assert("Follow-up 'Show its facts.' refers to Muwinge", resFollowUpFacts.matchedCase && resFollowUpFacts.matchedCase.id === 'tz-j-009');
+
+      // Test 11: Contextual follow-up "What were the issues?"
+      const resFollowUpIssues = TanzaniaIntentRouter.routeMessage("What were the issues?");
+      assert("Follow-up 'What were the issues?' is LEGAL_ISSUES", resFollowUpIssues.categoryCode === 'LEGAL_ISSUES');
+      assert("Follow-up 'What were the issues?' refers to Muwinge", resFollowUpIssues.matchedCase && resFollowUpIssues.matchedCase.id === 'tz-j-009');
+
+      // Test 12: Contextual follow-up "Why did the judge decide that?"
+      const resFollowUpReason = TanzaniaIntentRouter.routeMessage("Why did the judge decide that?");
+      assert("Follow-up 'Why did the judge decide that?' is COURT_REASONING", resFollowUpReason.categoryCode === 'COURT_REASONING');
+      assert("Follow-up 'Why did the judge decide that?' refers to Muwinge", resFollowUpReason.matchedCase && resFollowUpReason.matchedCase.id === 'tz-j-009');
+
+      // Test 13: Contextual follow-up "Show the final order."
+      const resFollowUpDec = TanzaniaIntentRouter.routeMessage("Show the final order.");
+      assert("Follow-up 'Show the final order.' is FINAL_DECISION", resFollowUpDec.categoryCode === 'FINAL_DECISION');
+      assert("Follow-up 'Show the final order.' refers to Muwinge", resFollowUpDec.matchedCase && resFollowUpDec.matchedCase.id === 'tz-j-009');
+
+      // Test 14: Contextual follow-up "Open the PDF."
+      const resFollowUpPdf = TanzaniaIntentRouter.routeMessage("Open the PDF.");
+      assert("Follow-up 'Open the PDF.' is OPEN_SOURCE", resFollowUpPdf.categoryCode === 'OPEN_SOURCE');
+      assert("Follow-up 'Open the PDF.' refers to Muwinge", resFollowUpPdf.matchedCase && resFollowUpPdf.matchedCase.id === 'tz-j-009');
+
+      // Test 15: Contextual follow-up "Generate its report."
+      const resFollowUpRep = TanzaniaIntentRouter.routeMessage("Generate its report.");
+      assert("Follow-up 'Generate its report.' is LEGAL_REPORT", resFollowUpRep.categoryCode === 'LEGAL_REPORT');
+      assert("Follow-up 'Generate its report.' refers to Muwinge", resFollowUpRep.matchedCase && resFollowUpRep.matchedCase.id === 'tz-j-009');
+
+      // Test 16: Suggested buttons all refer to active case (no mixing)
+      const buttons = resFollowUpSumm.guidedOptions;
+      assert("Guided options exist for active case", Array.isArray(buttons) && buttons.length > 0);
+      const allReferToMuwinge = buttons.every(b => b.prompt.includes('Abdallah Salum Muwinge') || b.prompt.includes('another judgment'));
+      assert("All suggested buttons refer only to active case (Muwinge)", allReferToMuwinge);
+
+      // Test 17: Out of scope request
+      const resOos = TanzaniaIntentRouter.routeMessage("Who scored in the premier league match?");
+      assert("Premier league query is OUT_OF_SCOPE", resOos.categoryCode === 'OUT_OF_SCOPE');
+
+    } catch (e) {
+      logs.push(`❌ EXCEPTION: ${e.message}\n${e.stack}`);
+    }
+
+    resultsDiv.innerHTML = logs.map(l => `<div style="font-family: monospace; padding: 4px 0; color: ${l.startsWith('✅') ? 'green' : 'red'}">${l}</div>`).join('');
+    console.log(logs.join('\n'));
+  </script>
+</body>
+</html>

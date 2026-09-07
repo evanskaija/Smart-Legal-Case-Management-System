@@ -1,0 +1,1431 @@
+/* ==========================================================================
+   SLCMS - Complete Mobile, Tablet, Laptop & Desktop Responsive System
+   Mobile-First Architecture adhering to all 22 Responsive Guidelines
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. BASE TOUCH & TYPOGRAPHY STANDARDS (MOBILE DEFAULT < 640px)
+   -------------------------------------------------------------------------- */
+:root {
+  --page-padding: 16px;
+  --touch-target-min: 44px;
+}
+
+/* Touch targets: interactive buttons, links, inputs */
+button:not(.topbar-icon-btn):not(.topbar-add-new-btn), 
+.btn:not(.topbar-icon-btn):not(.topbar-add-new-btn), 
+.nav-item, 
+.tz-year-pill, 
+.form-control,
+.select-control,
+.badge-interactive {
+  min-height: var(--touch-target-min);
+  touch-action: manipulation;
+}
+
+/* Base typography responsive clamps */
+.page-title {
+  font-size: clamp(1.25rem, 4vw, 1.75rem) !important;
+}
+
+.auth-main-headline {
+  font-size: clamp(1.6rem, 5vw, 2.5rem) !important;
+}
+
+/* Page container fluid layout */
+.content-area,
+.page-container {
+  padding: var(--page-padding) !important;
+  width: 100% !important;
+  max-width: 1600px !important;
+  margin-inline: auto !important;
+  box-sizing: border-box;
+}
+
+/* Universal table responsive scroll wrapper */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+}
+
+/* Prevent background scrolling when mobile drawer is open */
+body.mobile-nav-open {
+  overflow: hidden !important;
+  height: 100vh !important;
+  touch-action: none;
+}
+
+/* --------------------------------------------------------------------------
+   2. MOBILE BOTTOM NAVIGATION BAR (< 768px)
+   -------------------------------------------------------------------------- */
+.mobile-bottom-nav {
+  display: flex;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: #0B1F33;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35);
+  z-index: 150;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0 0.5rem;
+  user-select: none;
+}
+
+.mobile-bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: #94A3B8;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  flex: 1;
+  min-height: 48px;
+}
+
+.mobile-bottom-nav-item.active {
+  color: var(--color-gold, #C89B3C);
+}
+
+.mobile-bottom-nav-item:hover,
+.mobile-bottom-nav-item:active {
+  color: #FFFFFF;
+}
+
+.mobile-bottom-nav-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+/* Ensure content on mobile does not get covered by bottom nav */
+@media (max-width: 767px) {
+  .main-wrapper {
+    margin-left: 0 !important;
+    padding-bottom: 74px !important;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 285px !important;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 300 !important;
+    box-shadow: 4px 0 25px rgba(0, 0, 0, 0.5);
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0) !important;
+  }
+
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(11, 31, 51, 0.65);
+    backdrop-filter: blur(4px);
+    z-index: 290;
+  }
+
+  .sidebar-backdrop.active {
+    display: block !important;
+  }
+
+  /* Drawer Mobile Header with User info & Close */
+  .sidebar-mobile-user-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.15rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  /* Fixed Radius Header on Mobile (< 768px) - Stays anchored when scrolling */
+  .topbar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 58px !important;
+    padding: 0 0.85rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    background-color: var(--color-surface, #FFFFFF) !important;
+    border-radius: 0 0 20px 20px !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+    border-bottom: 1px solid var(--color-border) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    z-index: 100 !important;
+  }
+
+  .topbar-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .sidebar-toggle-btn {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    flex-shrink: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .breadcrumb-area {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+  }
+
+  .topbar #topbar-page-title,
+  .topbar .page-title {
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    color: var(--color-primary) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.2 !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+
+  .breadcrumb-area .breadcrumb-trail {
+    display: none !important;
+  }
+
+  .global-search-container {
+    display: none !important;
+  }
+
+  .topbar-right {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Hide crowded desktop actions on mobile topbar */
+  .topbar-right .role-switcher,
+  .topbar-right .topbar-test-expiry-btn,
+  .topbar-right .topbar-calendar-btn {
+    display: none !important;
+  }
+
+  /* Perfect Circular Header Icon Buttons on Mobile (zero oval distortion) */
+  .topbar .topbar-icon-btn,
+  .topbar-right .topbar-icon-btn,
+  .topbar-left .topbar-icon-btn,
+  .topbar-right .topbar-mobile-search-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    max-width: 36px !important;
+    max-height: 36px !important;
+    aspect-ratio: 1 / 1 !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Quick Add button: Perfect Gold Circle on Mobile */
+  .topbar-right .topbar-add-new-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    max-width: 36px !important;
+    max-height: 36px !important;
+    aspect-ratio: 1 / 1 !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .topbar-right .topbar-add-new-btn span {
+    display: none !important;
+  }
+
+  .topbar-right .topbar-add-new-btn svg {
+    margin: 0 !important;
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  /* User Profile Avatar: Perfect Circle with Gold Ring */
+  .topbar-profile-pill,
+  .topbar-profile-pill .avatar {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    max-width: 36px !important;
+    max-height: 36px !important;
+    aspect-ratio: 1 / 1 !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  .topbar-profile-pill .avatar img {
+    width: 100% !important;
+    height: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    border-radius: 50% !important;
+    object-fit: cover !important;
+  }
+}
+
+/* On very compact phone viewports (< 480px) */
+@media (max-width: 480px) {
+  .topbar #topbar-page-title,
+  .topbar .page-title {
+    font-size: 0.88rem !important;
+    max-width: 150px !important;
+  }
+}
+
+/* Hide mobile bottom nav & mobile elements on tablets & desktops */
+@media (min-width: 768px) {
+  .mobile-bottom-nav {
+    display: none !important;
+  }
+
+  .sidebar-mobile-user-header {
+    display: none !important;
+  }
+
+  .topbar-mobile-search-btn {
+    display: none !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   3. TABLET SIDEBAR OVERLAY & ADAPTATIONS (768px – 1023px)
+   -------------------------------------------------------------------------- */
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    --page-padding: 24px;
+  }
+
+  /* Tablet starts with compact icon sidebar */
+  .sidebar {
+    width: var(--sidebar-collapsed-width, 76px);
+  }
+
+  .sidebar .sidebar-brand-text,
+  .sidebar .nav-section-title,
+  .sidebar .nav-item span,
+  .sidebar .nav-badge,
+  .sidebar .user-details {
+    display: none;
+  }
+
+  .sidebar .nav-item {
+    justify-content: center;
+    padding: 0.75rem 0;
+  }
+
+  .sidebar .sidebar-header,
+  .sidebar .sidebar-footer {
+    justify-content: center;
+    padding: 0.75rem 0;
+  }
+
+  /* Tablet Fixed Radius Header (768px – 1023px) - Stays anchored when scrolling */
+  .topbar {
+    position: fixed !important;
+    top: 0 !important;
+    left: var(--sidebar-collapsed-width, 76px) !important;
+    right: 0 !important;
+    width: calc(100% - var(--sidebar-collapsed-width, 76px)) !important;
+    height: 64px !important;
+    padding: 0 1.5rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    background-color: var(--color-surface, #FFFFFF) !important;
+    border-radius: 0 0 20px 20px !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+    border-bottom: 1px solid var(--color-border) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    z-index: 100 !important;
+  }
+
+  .content-area {
+    padding-top: calc(64px + 1.25rem) !important;
+  }
+
+  /* When expanded by menu toggle on tablet, overlay page with backdrop */
+  .sidebar.expanded-tablet {
+    width: 264px !important;
+    z-index: 250 !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .sidebar.expanded-tablet .sidebar-brand-text,
+  .sidebar.expanded-tablet .nav-section-title,
+  .sidebar.expanded-tablet .nav-item span,
+  .sidebar.expanded-tablet .user-details {
+    display: block !important;
+  }
+
+  .sidebar.expanded-tablet .nav-item {
+    justify-content: flex-start !important;
+    padding: 0.65rem 0.85rem !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   4. DESKTOP SYSTEM (min-width: 1024px & min-width: 1280px)
+   -------------------------------------------------------------------------- */
+@media (min-width: 1024px) {
+  .sidebar {
+    width: var(--sidebar-width, 264px);
+  }
+
+  .main-wrapper {
+    margin-left: var(--sidebar-width, 264px);
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --page-padding: 32px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   5. RESPONSIVE FORMS & FORM GRIDS
+   -------------------------------------------------------------------------- */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .form-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.form-control,
+.form-select,
+textarea.form-control {
+  font-size: 1rem; /* >= 16px prevents iOS automatic zoom on focus */
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* --------------------------------------------------------------------------
+   6. RESPONSIVE MODALS & BOTTOM SHEETS
+   -------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  .modal-backdrop {
+    padding: 0 !important;
+    align-items: flex-end !important; /* Bottom sheet or full-screen */
+  }
+
+  .modal-dialog,
+  .modal-content,
+  .modal-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: 92vh !important;
+    margin: 0 !important;
+    border-radius: 16px 16px 0 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    animation: slideUpMobile 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  .modal-header {
+    padding: 1rem 1.25rem !important;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .modal-body {
+    flex: 1;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 1.15rem !important;
+    max-height: calc(92vh - 130px) !important;
+  }
+
+  .modal-footer {
+    padding: 0.85rem 1.15rem !important;
+    position: sticky;
+    bottom: 0;
+    background: var(--color-surface, #FFFFFF);
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column-reverse; /* Primary action button on top */
+    gap: 8px;
+    z-index: 10;
+  }
+
+  .modal-footer .btn {
+    width: 100% !important;
+  }
+}
+
+@keyframes slideUpMobile {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* --------------------------------------------------------------------------
+   7. DASHBOARD RESPONSIVENESS
+   -------------------------------------------------------------------------- */
+.dashboard-stats,
+.stat-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (min-width: 640px) {
+  .dashboard-stats,
+  .stat-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .dashboard-stats,
+  .stat-cards-grid {
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 1.25rem;
+  }
+  .stat-cards-grid .stat-card:nth-child(5) {
+    grid-column: auto !important;
+  }
+}
+
+/* Reorder urgent court deadlines before analytics charts on mobile */
+@media (max-width: 767px) {
+  .dashboard-main-grid {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .dashboard-deadlines-panel {
+    order: 1 !important;
+  }
+
+  .dashboard-analytics-panel {
+    order: 2 !important;
+  }
+}
+
+/* Responsive charts wrapper */
+.chart-container-responsive {
+  width: 100% !important;
+  height: auto !important;
+  min-height: 260px;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   8. DATA TABLES & MOBILE CARD TRANSFORMATION
+   -------------------------------------------------------------------------- */
+/* Hide desktop table on phone, show mobile card list */
+@media (max-width: 767px) {
+  .desktop-table-view {
+    display: none !important;
+  }
+
+  .mobile-cards-view {
+    display: flex !important;
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+@media (min-width: 768px) {
+  .desktop-table-view {
+    display: block !important;
+  }
+
+  .mobile-cards-view {
+    display: none !important;
+  }
+}
+
+/* Mobile Case Card Styling */
+.case-card-mobile {
+  background: var(--color-surface, #FFFFFF);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-primary);
+  border-radius: 10px;
+  padding: 1rem 1.15rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.case-card-mobile.active-case {
+  border-left-color: var(--color-gold);
+}
+
+.case-card-mobile-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 0.45rem;
+}
+
+.case-card-mobile-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  line-height: 1.35;
+}
+
+.case-card-mobile-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.case-card-mobile-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 0.65rem;
+  border-top: 1px dashed var(--color-border);
+}
+
+.case-card-mobile-actions .btn {
+  flex: 1;
+}
+
+/* Mobile Document Card Styling */
+.doc-card-mobile {
+  background: var(--color-card-bg, #FFFFFF);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  transition: all var(--transition-fast);
+}
+
+.doc-card-mobile:active {
+  transform: scale(0.99);
+}
+
+/* --------------------------------------------------------------------------
+   9. CLIENTS DIRECTORY GRID
+   -------------------------------------------------------------------------- */
+.clients-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+@media (min-width: 640px) {
+  .clients-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .clients-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   10. DOCUMENT VAULT & PDF VIEWER
+   -------------------------------------------------------------------------- */
+.pdf-viewer-container {
+  width: 100% !important;
+  height: 80vh !important;
+  max-height: 800px;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 767px) {
+  .pdf-viewer-container {
+    height: calc(100vh - 120px) !important;
+  }
+
+  .pdf-toolbar {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    padding: 0.5rem !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   11. TASKS KANBAN & LIST ADAPTATION
+   -------------------------------------------------------------------------- */
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  align-items: flex-start;
+}
+
+.kanban-mobile-tabs {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .kanban-board {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 1rem !important;
+  }
+}
+
+@media (max-width: 767px) {
+  /* Mobile Tab navigation for Kanban columns */
+  .kanban-mobile-tabs {
+    display: flex !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    padding: 0.2rem 0 0.85rem 0 !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+  }
+
+  .kanban-mobile-tabs::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .kanban-mobile-tab-btn {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 0.4rem 0.8rem !important;
+    border-radius: 20px !important;
+    font-size: 0.76rem !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+    background: var(--color-surface-subtle, #102A43) !important;
+    color: var(--color-text-main, #FFFFFF) !important;
+    border: 1px solid var(--color-border) !important;
+    cursor: pointer !important;
+    transition: all var(--transition-fast) !important;
+    flex-shrink: 0 !important;
+  }
+
+  .kanban-mobile-tab-btn:active {
+    background: var(--color-gold) !important;
+    color: #000000 !important;
+  }
+
+  /* Horizontal swipeable snap board on mobile */
+  .kanban-board {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 12px !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 1rem !important;
+    margin-inline: -0.85rem !important;
+    padding-inline: 0.85rem !important;
+  }
+
+  .kanban-col {
+    flex: 0 0 85vw !important;
+    max-width: 320px !important;
+    min-width: 270px !important;
+    scroll-snap-align: center !important;
+    min-height: auto !important;
+    padding: 0.85rem !important;
+    border-radius: 12px !important;
+  }
+
+  .kanban-col-header {
+    margin-bottom: 0.75rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   12. COMMUNICATIONS / MESSAGING (CHAT VIEW)
+   -------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  .communications-layout {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 145px) !important;
+  }
+
+  /* When viewing conversation thread on phone, hide thread list */
+  .communications-layout.thread-active .conversations-list-pane {
+    display: none !important;
+  }
+
+  .communications-layout:not(.thread-active) .active-thread-pane {
+    display: none !important;
+  }
+
+  .chat-composer-box {
+    position: sticky;
+    bottom: 0;
+    background: var(--color-surface, #FFFFFF);
+    padding: 0.75rem !important;
+    border-top: 1px solid var(--color-border);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   13. TANZANIA LEGAL AI & CASE LIBRARY
+   -------------------------------------------------------------------------- */
+/* Swiping horizontal chip lists */
+.prompt-list,
+.tz-quick-prompt-pills,
+.tz-category-chips-bar,
+.tz-year-pills-row {
+  display: flex !important;
+  gap: 8px !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: none !important;
+  white-space: nowrap !important;
+  padding-bottom: 4px !important;
+}
+
+.prompt-list::-webkit-scrollbar,
+.tz-quick-prompt-pills::-webkit-scrollbar,
+.tz-category-chips-bar::-webkit-scrollbar,
+.tz-year-pills-row::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* Mobile AI Question Field: min-height 120px and full width */
+@media (max-width: 767px) {
+  .tz-question-textarea {
+    min-height: 120px !important;
+    width: 100% !important;
+    font-size: 1rem !important;
+  }
+
+  .tz-send-btn-container .btn {
+    width: 100% !important;
+  }
+
+  /* 2-column legal AI stacks into single vertical column on mobile/tablet */
+  .tz-workspace-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .tz-sidebar-sources-panel {
+    width: 100% !important;
+  }
+
+  /* Compact progress indicator without horizontal overflow */
+  .tz-ai-stages-indicator {
+    font-size: 0.72rem;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .tz-caselaw-card {
+    padding: 0 !important;
+    height: auto;
+    min-height: 0;
+  }
+  .tz-caselaw-info-block {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   14. GENERAL GRID AND LAYOUT COLLAPSE UTILITIES
+   -------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  .grid-cols-2,
+  .grid-cols-3,
+  .grid-cols-4 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .view-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    margin-bottom: 1.25rem !important;
+  }
+
+  .view-header > div:first-child {
+    width: 100% !important;
+  }
+
+  .view-header h1,
+  .view-header .page-title {
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    line-height: 1.25 !important;
+    margin: 0 0 4px 0 !important;
+    color: var(--color-primary) !important;
+  }
+
+  .view-header p {
+    font-size: 0.82rem !important;
+    line-height: 1.4 !important;
+    margin: 0 !important;
+  }
+
+  .view-header > div:last-child,
+  .view-header-actions {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .view-header > div:last-child .btn,
+  .view-header-actions .btn {
+    flex: 1 1 calc(50% - 8px) !important;
+    min-width: 130px !important;
+    justify-content: center !important;
+    font-size: 0.82rem !important;
+    padding: 0.55rem 0.75rem !important;
+  }
+
+  .filter-bar,
+  .filter-controls {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    padding: 0.85rem !important;
+  }
+
+  .filter-group {
+    width: 100% !important;
+  }
+
+  .filter-group select,
+  .filter-group input {
+    width: 100% !important;
+  }
+
+  .content-area {
+    padding: 1rem 0.85rem !important;
+    padding-top: calc(58px + 1rem) !important;
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 16px)) !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+
+  .main-wrapper {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Round AI Floating Action Button on Mobile */
+  .ai-copilot-fab {
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    min-height: 52px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 1px !important;
+    bottom: calc(64px + 14px) !important; /* Floats safely 14px above the mobile bottom nav */
+    right: 16px !important;
+    border: 2px solid var(--color-gold) !important;
+    background: linear-gradient(135deg, #102A43 0%, #0B1F33 100%) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 16px rgba(200, 155, 60, 0.35) !important;
+    z-index: 1010 !important;
+    cursor: pointer !important;
+  }
+
+  .ai-copilot-fab:active {
+    transform: scale(0.94) !important;
+  }
+
+  .ai-copilot-fab-desktop-text,
+  .ai-copilot-fab-badge {
+    display: none !important;
+  }
+
+  .ai-copilot-fab-mobile-text {
+    display: block !important;
+    font-size: 0.68rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.5px !important;
+    color: var(--color-gold) !important;
+    line-height: 1 !important;
+  }
+
+  .ai-copilot-fab-sparkle {
+    font-size: 1.05rem !important;
+    line-height: 1 !important;
+    display: block !important;
+  }
+
+  /* Full-width slide-out drawer on mobile phones */
+  .ai-copilot-drawer {
+    width: 100% !important;
+    max-width: 100vw !important;
+  }
+
+  /* 2-in-a-row KPI Stat Cards on Mobile Phones */
+  .stat-cards-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .stat-card {
+    padding: 0.7rem 0.75rem !important;
+    min-height: 0 !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+  }
+
+  .stat-card-top {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    margin-bottom: 0.4rem !important;
+    gap: 0.35rem !important;
+  }
+
+  .stat-value {
+    font-size: 1.35rem !important;
+    line-height: 1.1 !important;
+    margin-bottom: 0.15rem !important;
+    font-weight: 700 !important;
+  }
+
+  .stat-label {
+    font-size: 0.72rem !important;
+    line-height: 1.25 !important;
+    color: var(--color-text-secondary) !important;
+    font-weight: 600 !important;
+  }
+
+  .stat-icon-wrapper {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    border-radius: 8px !important;
+    font-size: 0.95rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  .stat-icon-wrapper svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .stat-footer {
+    margin-top: 0.45rem !important;
+    padding-top: 0.4rem !important;
+    font-size: 0.68rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: wrap !important;
+    gap: 2px 4px !important;
+  }
+
+  .stat-footer span {
+    font-size: 0.67rem !important;
+  }
+
+  /* 5th Card spans both columns on mobile for a balanced 2x2 + 1 featured layout */
+  .stat-cards-grid .stat-card:nth-child(5) {
+    grid-column: 1 / -1 !important;
+  }
+
+  .stat-cards-grid .stat-card:nth-child(5) .stat-card-top {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  /* Tanzanian Case Law Card on Mobile Phones */
+  .tz-caselaw-card {
+    padding: 0 !important;
+    margin-bottom: 1rem !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+
+  .tz-caselaw-card-header {
+    padding: 0.75rem 0.85rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 0.5rem !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  .tz-caselaw-info-block {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  .tz-caselaw-title-row {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.4rem !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+  }
+
+  .tz-caselaw-title-wrap {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+    flex: 1 1 auto !important;
+  }
+
+  .tz-caselaw-scale-icon {
+    font-size: 1.15rem !important;
+    margin-top: 0 !important;
+    line-height: 1 !important;
+  }
+
+  .tz-caselaw-title {
+    font-size: 0.88rem !important;
+    line-height: 1.25 !important;
+    font-weight: 700 !important;
+    margin: 0 !important;
+  }
+
+  .tz-caselaw-count-badge {
+    align-self: center !important;
+    margin-left: 0 !important;
+    font-size: 0.65rem !important;
+    padding: 0.15rem 0.45rem !important;
+    white-space: nowrap !important;
+  }
+
+  .tz-caselaw-subtitle {
+    font-size: 0.72rem !important;
+    line-height: 1.35 !important;
+    margin-top: 0.2rem !important;
+    color: #94A3B8 !important;
+  }
+
+  .tz-caselaw-action-wrap {
+    width: 100% !important;
+    margin: 0 !important;
+    flex: 0 0 auto !important;
+  }
+
+  .tz-caselaw-open-btn {
+    width: 100% !important;
+    justify-content: center !important;
+    height: 35px !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    padding: 0.35rem 0.75rem !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.4rem !important;
+    box-shadow: 0 2px 8px rgba(200, 155, 60, 0.25) !important;
+  }
+
+  .tz-caselaw-pills-container {
+    padding: 0.5rem 0.75rem !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  /* Year pills wrapped into a balanced, compact 3-column grid layout on mobile */
+  .tz-caselaw-pills-container .tz-year-pills-row {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 5px !important;
+    overflow-x: visible !important;
+    padding: 0 !important;
+  }
+
+  .tz-caselaw-pills-container .tz-year-pill {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 0.35rem 0.4rem !important;
+    font-size: 0.72rem !important;
+    border-radius: 7px !important;
+    min-height: 30px !important;
+    gap: 4px !important;
+  }
+
+  .tz-caselaw-pills-container .tz-year-pill.tz-year-pill-latest {
+    grid-column: 1 / -1 !important; /* Latest year highlighted across the top */
+    justify-content: center !important;
+    padding: 0.4rem 0.75rem !important;
+    font-size: 0.78rem !important;
+    min-height: 32px !important;
+  }
+
+  .tz-caselaw-pills-container .tz-year-pill.tz-year-pill-all {
+    grid-column: 1 / -1 !important; /* All years highlighted across the bottom */
+    justify-content: center !important;
+    padding: 0.4rem 0.75rem !important;
+    font-size: 0.78rem !important;
+    min-height: 32px !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   15. FLUID SPACING & CONTAINER SYSTEM (No Rigid Widths)
+   -------------------------------------------------------------------------- */
+.container,
+.main-wrapper,
+.content-area {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+@media (min-width: 1536px) {
+  .content-area {
+    max-width: 1600px;
+    margin-inline: auto;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   16. COMPREHENSIVE RESPONSIVE AUTH & ONBOARDING SYSTEM (< 768px & < 480px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  /* Prevent horizontal overflow on auth screens */
+  .auth-page-container {
+    min-height: 100vh !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+  }
+
+  .auth-split-layout {
+    flex: 1 0 auto !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    display: flex !important;
+  }
+
+  .auth-hero-panel {
+    display: none !important;
+  }
+
+  .auth-form-panel {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: calc(100vh - 48px) !important;
+    padding: 2.25rem 1.25rem 1.75rem 1.25rem !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .auth-mobile-brand-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.75rem !important;
+    margin-bottom: 1.25rem !important;
+  }
+
+  .auth-white-card {
+    width: 100% !important;
+    max-width: 440px !important;
+    padding: 1.75rem 1.25rem !important;
+    border-radius: 18px !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+  }
+
+  .auth-theme-toggle-btn {
+    position: absolute !important;
+    top: 0.85rem !important;
+    right: 0.85rem !important;
+    z-index: 20 !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+  }
+
+  /* Hide AI copilot fab from obscuring auth/login screen on mobile */
+  .auth-page-container ~ #ai-copilot-drawer-container #ai-copilot-fab,
+  body:has(.auth-page-container) #ai-copilot-fab,
+  body.auth-view-active #ai-copilot-fab,
+  .auth-view-active #ai-copilot-drawer-container {
+    display: none !important;
+  }
+
+  .auth-global-footer {
+    height: auto !important;
+    min-height: 44px !important;
+    padding: 0.75rem 1rem !important;
+    flex-wrap: wrap !important;
+    gap: 0.4rem 0.85rem !important;
+    font-size: 0.75rem !important;
+    text-align: center !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Registration Form Grids inside Auth Card collapse to single column */
+  .auth-white-card .grid.grid-cols-2 {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  .auth-white-card .reg-quick-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-tab-desktop-text {
+    display: none !important;
+  }
+  .auth-tab-mobile-text {
+    display: inline !important;
+  }
+
+  .auth-form-panel {
+    padding: 2rem 0.75rem 1.25rem 0.75rem !important;
+  }
+
+  .auth-white-card {
+    padding: 1.35rem 0.85rem !important;
+    border-radius: 16px !important;
+  }
+
+  .auth-card-title {
+    font-size: 1.35rem !important;
+  }
+
+  .auth-card-subtitle {
+    font-size: 0.78rem !important;
+    margin-bottom: 1.1rem !important;
+  }
+
+  .auth-toggle-tabs {
+    margin-bottom: 1.1rem !important;
+    padding: 3px !important;
+  }
+
+  .auth-toggle-tab {
+    padding: 0.45rem 0.35rem !important;
+    font-size: 0.75rem !important;
+    gap: 0.25rem !important;
+  }
+
+  .auth-btn-signin {
+    height: 44px !important;
+    font-size: 0.92rem !important;
+  }
+
+  .auth-demo-drawer .grid.grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+

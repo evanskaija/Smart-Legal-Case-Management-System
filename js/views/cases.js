@@ -113,7 +113,13 @@ const CasesView = {
   },
 
   getFilteredCases() {
+    const user = SLCMS_STATE.currentUser;
     return SLCMS_STATE.cases.filter(c => {
+      // Role & Assignment Access Control
+      if (!SLCMS_STATE.canAccessCase(user, c.id)) {
+        return false;
+      }
+
       const matchSearch = !this.searchQuery || 
         c.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
         c.caseNumber.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
@@ -146,80 +152,119 @@ const CasesView = {
     }
 
     return `
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Case Number</th>
-              <th>Case Title & Matter</th>
-              <th>Client</th>
-              <th>Practice Area</th>
-              <th>Assigned Counsel</th>
-              <th>Next Hearing</th>
-              <th>Priority</th>
-              <th>Status</th>
-              <th style="text-align: right;">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${casesList.map(c => `
+      <!-- Desktop & Tablet Table View -->
+      <div class="desktop-table-view">
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
               <tr>
-                <td>
-                  <span style="font-family: var(--font-mono); font-weight: 700; font-size: 0.82rem; color: var(--color-primary);">
-                    ${c.caseNumber}
-                  </span>
-                </td>
-                <td>
-                  <div style="font-weight: 600; color: var(--color-primary); cursor: pointer;" onclick="CasesView.openCaseDetails('${c.id}')">
-                    ${c.title}
-                  </div>
-                  <div style="font-size: 0.75rem; color: var(--color-text-secondary);">${c.court}</div>
-                </td>
-                <td>
-                  <div style="font-weight: 500;">${c.client}</div>
-                  <span style="font-size: 0.72rem; color: var(--color-text-muted);">${c.clientType}</span>
-                </td>
-                <td>
-                  <span class="badge" style="background: var(--color-surface-subtle); color: var(--color-primary); border: 1px solid var(--color-border);">
-                    ${c.caseType}
-                  </span>
-                </td>
-                <td>
-                  <div class="flex items-center gap-2">
-                    <div class="avatar avatar-sm avatar-navy">${c.lawyerAvatar}</div>
-                    <span style="font-size: 0.82rem; font-weight: 500;">${c.lawyer.split(',')[0]}</span>
-                  </div>
-                </td>
-                <td>
-                  <div style="font-weight: 600; font-size: 0.82rem; color: ${c.nextHearingDate === 'Completed' ? 'var(--color-text-muted)' : 'var(--color-danger)'};">
-                    ${c.nextHearingDate}
-                  </div>
-                </td>
-                <td>
-                  <span class="badge badge-priority-${c.priority.toLowerCase()}">${c.priority}</span>
-                </td>
-                <td>
-                  <span class="badge badge-${c.status.toLowerCase().replace(' ', '')}">
-                    <span class="badge-dot"></span>
-                    ${c.status}
-                  </span>
-                </td>
-                <td style="text-align: right;">
-                  <div class="flex items-center justify-end gap-1">
-                    <button class="btn btn-secondary btn-sm" onclick="CasesView.openCaseDetails('${c.id}')" title="View Deep Case Dossier">
-                      View
-                    </button>
-                    <button class="btn btn-ghost btn-sm" onclick="CasesView.quickAddTask('${c.id}')" title="Add Task to Case">
-                      +Task
-                    </button>
-                  </div>
-                </td>
+                <th>Case Number</th>
+                <th>Case Title & Matter</th>
+                <th>Client</th>
+                <th>Practice Area</th>
+                <th>Assigned Counsel</th>
+                <th>Next Hearing</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th style="text-align: right;">Actions</th>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              ${casesList.map(c => `
+                <tr>
+                  <td>
+                    <span style="font-family: var(--font-mono); font-weight: 700; font-size: 0.82rem; color: var(--color-primary);">
+                      ${c.caseNumber}
+                    </span>
+                  </td>
+                  <td>
+                    <div style="font-weight: 600; color: var(--color-primary); cursor: pointer;" onclick="CasesView.openCaseDetails('${c.id}')">
+                      ${c.title}
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--color-text-secondary);">${c.court}</div>
+                  </td>
+                  <td>
+                    <div style="font-weight: 500;">${c.client}</div>
+                    <span style="font-size: 0.72rem; color: var(--color-text-muted);">${c.clientType}</span>
+                  </td>
+                  <td>
+                    <span class="badge" style="background: var(--color-surface-subtle); color: var(--color-primary); border: 1px solid var(--color-border);">
+                      ${c.caseType}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <div class="avatar avatar-sm avatar-navy">${c.lawyerAvatar}</div>
+                      <span style="font-size: 0.82rem; font-weight: 500;">${c.lawyer.split(',')[0]}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div style="font-weight: 600; font-size: 0.82rem; color: ${c.nextHearingDate === 'Completed' ? 'var(--color-text-muted)' : 'var(--color-danger)'};">
+                      ${c.nextHearingDate}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge badge-priority-${c.priority.toLowerCase()}">${c.priority}</span>
+                  </td>
+                  <td>
+                    <span class="badge badge-${c.status.toLowerCase().replace(' ', '')}">
+                      <span class="badge-dot"></span>
+                      ${c.status}
+                    </span>
+                  </td>
+                  <td style="text-align: right;">
+                    <div class="flex items-center justify-end gap-1">
+                      <button class="btn btn-secondary btn-sm" onclick="CasesView.openCaseDetails('${c.id}')" title="View Deep Case Dossier">
+                        View
+                      </button>
+                      <button class="btn btn-ghost btn-sm" onclick="CasesView.quickAddTask('${c.id}')" title="Add Task to Case">
+                        +Task
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div class="flex items-center justify-between" style="margin-top: 1rem; font-size: 0.8rem; color: var(--color-text-secondary);">
+
+      <!-- Mobile Phone Cards View (Optimized for Touch & Readability) -->
+      <div class="mobile-cards-view">
+        ${casesList.map(c => `
+          <div class="case-card-mobile" onclick="CasesView.openCaseDetails('${c.id}')">
+            <div class="case-card-mobile-header">
+              <div class="case-card-mobile-title">${c.title}</div>
+              <span class="badge badge-${c.status.toLowerCase().replace(' ', '')}" style="font-size: 0.72rem; flex-shrink: 0;">
+                <span class="badge-dot"></span>
+                ${c.status}
+              </span>
+            </div>
+            <div class="case-card-mobile-meta">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-family: var(--font-mono); font-weight: 700; color: var(--color-gold);">${c.caseNumber}</span>
+                <span>🏛️ ${c.court}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                <span>Client: <strong>${c.client}</strong></span>
+                <span style="font-weight: 600; color: ${c.nextHearingDate === 'Completed' ? 'var(--color-text-muted)' : 'var(--color-danger)'};">
+                  📅 ${c.nextHearingDate}
+                </span>
+              </div>
+            </div>
+            <div class="case-card-mobile-actions" onclick="event.stopPropagation()">
+              <button class="btn btn-secondary btn-sm" onclick="CasesView.openCaseDetails('${c.id}')">
+                Open Matter
+              </button>
+              <button class="btn btn-ghost btn-sm" onclick="CasesView.quickAddTask('${c.id}')">
+                +Task
+              </button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="flex items-center justify-between" style="margin-top: 1rem; font-size: 0.8rem; color: var(--color-text-secondary); flex-wrap: wrap; gap: 8px;">
         <div>Showing <strong>${casesList.length}</strong> of <strong>${SLCMS_STATE.cases.length}</strong> legal matters</div>
         <div class="flex items-center gap-1">
           <button class="btn btn-secondary btn-sm" disabled>Previous</button>
@@ -855,6 +900,11 @@ const CasesView = {
   activeCaseId: null,
 
   openCaseDetails(caseId) {
+    if (!SLCMS_STATE.canAccessCase(SLCMS_STATE.currentUser, caseId)) {
+      App.showAccessRestrictedModal('Matter Dossier Restricted', 'You are not assigned to this case. Access restricted under firm ethical wall protocol.');
+      return;
+    }
+
     this.activeCaseId = caseId;
     this.activeCaseTab = 'overview';
     const c = SLCMS_STATE.cases.find(item => item.id === caseId) || SLCMS_STATE.cases[0];
@@ -899,7 +949,7 @@ const CasesView = {
         <button class="btn btn-secondary" onclick="App.closeModal()">Close Dossier</button>
         <button class="btn btn-gold" onclick="CasesView.quickAddDocument('${c.id}')">+ Upload Document</button>
       </div>
-    `, 'modal-xl');
+    `, 'modal-xl modal-fixed-dossier');
   },
 
   switchCaseDetailTab(tabName) {

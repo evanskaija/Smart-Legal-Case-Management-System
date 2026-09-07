@@ -50,8 +50,71 @@ const DashboardView = {
           </div>
         </div>
 
+        <!-- 1.5 TANZANIAN CASE LAW BY YEAR (2020–2026) QUICK EXPLORER -->
+        <div class="card tz-caselaw-card">
+          <div class="tz-caselaw-card-header">
+            <div class="tz-caselaw-info-block">
+              <div class="tz-caselaw-title-row">
+                <div class="tz-caselaw-title-wrap">
+                  <span class="tz-caselaw-scale-icon">⚖️</span>
+                  <h3 class="tz-caselaw-title">Tanzanian Case Law Repository (2020 – 2026)</h3>
+                </div>
+                <span class="badge badge-gold tz-caselaw-count-badge">${SLCMS_STATE.tanzaniaJudgments.length} Indexed Cases</span>
+              </div>
+              <p class="tz-caselaw-subtitle">
+                Select a year below to explore judgments, full dossiers, and direct TanzLII links
+              </p>
+            </div>
+            <div class="tz-caselaw-action-wrap">
+              <button class="btn btn-gold btn-sm tz-caselaw-open-btn" onclick="AIAssistantView.openYearBrowserModal('ALL')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+                <span>Open Full Case Library</span>
+              </button>
+            </div>
+          </div>
+          <div class="tz-caselaw-pills-container">
+            <div class="tz-year-pills-row">
+              <button class="tz-year-pill tz-year-pill-latest active" onclick="AIAssistantView.openYearBrowserModal('2026')">
+                <span class="pill-year">✨ 2026</span>
+                <span class="tz-year-pill-count">${SLCMS_STATE.tanzaniaJudgments.filter(j => j.year == 2026).length} Latest</span>
+              </button>
+              <button class="tz-year-pill" onclick="AIAssistantView.openYearBrowserModal('2025')">
+                <span class="pill-year">2025</span>
+                <span class="tz-year-pill-count">${SLCMS_STATE.tanzaniaJudgments.filter(j => j.year == 2025).length}</span>
+              </button>
+              <button class="tz-year-pill" onclick="AIAssistantView.openYearBrowserModal('2024')">
+                <span class="pill-year">2024</span>
+                <span class="tz-year-pill-count">${SLCMS_STATE.tanzaniaJudgments.filter(j => j.year == 2024).length}</span>
+              </button>
+              <button class="tz-year-pill" onclick="AIAssistantView.openYearBrowserModal('2023')">
+                <span class="pill-year">2023</span>
+                <span class="tz-year-pill-count">${SLCMS_STATE.tanzaniaJudgments.filter(j => j.year == 2023).length}</span>
+              </button>
+              <button class="tz-year-pill" onclick="AIAssistantView.openYearBrowserModal('2022')">
+                <span class="pill-year">2022</span>
+                <span class="tz-year-pill-count">${SLCMS_STATE.tanzaniaJudgments.filter(j => j.year == 2022).length}</span>
+              </button>
+              <button class="tz-year-pill" onclick="AIAssistantView.openYearBrowserModal('2021')">
+                <span class="pill-year">2021</span>
+                <span class="tz-year-pill-count">${SLCMS_STATE.tanzaniaJudgments.filter(j => j.year == 2021).length}</span>
+              </button>
+              <button class="tz-year-pill" onclick="AIAssistantView.openYearBrowserModal('2020')">
+                <span class="pill-year">2020</span>
+                <span class="tz-year-pill-count">${SLCMS_STATE.tanzaniaJudgments.filter(j => j.year == 2020).length}</span>
+              </button>
+              <button class="tz-year-pill tz-year-pill-all" onclick="AIAssistantView.openYearBrowserModal('ALL')">
+                <span class="pill-year">🔍 All Years</span>
+                <span class="tz-year-pill-count">${SLCMS_STATE.tanzaniaJudgments.length}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- 2. FIVE PRIMARY METRIC KPI CARDS -->
-        <div class="stat-cards-grid" style="display: grid; grid-template-columns: repeat(5, minmax(170px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div class="stat-cards-grid" style="margin-bottom: 1.5rem;">
           <div class="stat-card" onclick="App.navigate('cases')" style="cursor: pointer;">
             <div class="stat-card-top">
               <div>

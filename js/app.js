@@ -4,7 +4,7 @@
 
 const App = {
   currentRoute: 'dashboard',
-  isLoggedIn: sessionStorage.getItem('slcms_auth') === 'true',
+  isLoggedIn: sessionStorage.getItem('slcms_auth') === 'true' && (!!sessionStorage.getItem('slcms_current_user') || !!sessionStorage.getItem('slcms_current_user_id')),
   isSidebarCollapsed: false,
   theme: localStorage.getItem('slcms_theme') || 'light',
   inactivityTimer: null,
@@ -12,6 +12,10 @@ const App = {
   pendingRedirectRoute: null,
 
   init() {
+    if (typeof SLCMS_STATE !== 'undefined' && typeof SLCMS_STATE.restoreSessionUser === 'function') {
+      SLCMS_STATE.restoreSessionUser();
+    }
+    this.isLoggedIn = sessionStorage.getItem('slcms_auth') === 'true' && (!!sessionStorage.getItem('slcms_current_user') || !!sessionStorage.getItem('slcms_current_user_id'));
     this.initTheme();
     this.bindGlobalEvents();
     this.bindInactivityTracker();
@@ -82,6 +86,23 @@ const App = {
 
       <!-- 1. FIXED LEFT SIDEBAR -->
       <aside id="app-sidebar" class="sidebar">
+        <!-- Mobile Drawer Header with User Profile and Close Button -->
+        <div class="sidebar-mobile-user-header">
+          <div class="user-display-avatar avatar avatar-sm avatar-ring-gold">
+            <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=256&q=80" alt="Avatar">
+          </div>
+          <div class="mobile-user-meta">
+            <div class="user-display-name mobile-user-name">Eleanor Vance, Esq.</div>
+            <div class="user-display-role mobile-user-role">Managing Partner · Active</div>
+          </div>
+          <button class="mobile-drawer-close-btn" onclick="App.closeMobileSidebar()" aria-label="Close navigation drawer" title="Close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
         <!-- Sidebar Header & Logo -->
         <div class="sidebar-header">
           <div class="sidebar-logo" style="padding: 0; background: transparent; border: none;">
@@ -154,6 +175,14 @@ const App = {
 
           <!-- Topbar Right Actions -->
           <div class="topbar-right">
+            <!-- Mobile Global Search Icon Button (visible on mobile phones) -->
+            <button class="topbar-icon-btn topbar-mobile-search-btn" onclick="App.openGlobalSearch()" title="Search cases & documents">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </button>
+
             <!-- Role Switcher Sandbox Pill -->
             <div class="role-switcher" title="Switch User Role to preview permission differences">
               <span style="font-size: 0.7rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700;">Role:</span>
@@ -165,12 +194,12 @@ const App = {
             </div>
 
             <!-- Quick Inactivity Expiry Test Button (Requirement 14 & 18) -->
-            <button class="btn btn-ghost btn-sm" onclick="App.triggerInactivityWarning()" title="Simulate 2-minute session inactivity warning" style="color: #64748B; font-size: 0.75rem;">
+            <button class="btn btn-ghost btn-sm topbar-test-expiry-btn" onclick="App.triggerInactivityWarning()" title="Simulate 2-minute session inactivity warning" style="color: #64748B; font-size: 0.75rem;">
               ⏳ Test Expiry
             </button>
 
             <!-- Quick "Add New" Button -->
-            <button class="btn btn-gold btn-sm" onclick="CasesView.openNewCaseModal()" title="New Legal Case">
+            <button class="btn btn-gold btn-sm topbar-add-new-btn" onclick="CasesView.openNewCaseModal()" title="New Legal Case">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
@@ -178,7 +207,7 @@ const App = {
             </button>
 
             <!-- Calendar Icon -->
-            <button class="topbar-icon-btn" onclick="App.navigate('tasks')" title="Statutory Calendar">
+            <button class="topbar-icon-btn topbar-calendar-btn" onclick="App.navigate('tasks')" title="Statutory Calendar">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
                 <line x1="16" y1="2" x2="16" y2="6"/>
@@ -188,14 +217,14 @@ const App = {
             </button>
 
             <!-- Dark / Light Theme Toggle Button -->
-            <button id="theme-toggle-btn" class="topbar-icon-btn" onclick="App.toggleTheme()" title="Toggle Dark / Light Mode (Ctrl+Shift+D)">
+            <button id="theme-toggle-btn" class="topbar-icon-btn topbar-theme-btn" onclick="App.toggleTheme()" title="Toggle Dark / Light Mode (Ctrl+Shift+D)">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
               </svg>
             </button>
 
             <!-- Notification Bell -->
-            <button class="topbar-icon-btn" onclick="App.openNotifications()" title="Alerts & Deadlines">
+            <button class="topbar-icon-btn topbar-notifications-btn" onclick="App.openNotifications()" title="Alerts & Deadlines">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
                 <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
@@ -204,7 +233,7 @@ const App = {
             </button>
 
             <!-- User Profile Dropdown Pill -->
-            <div class="flex items-center gap-2" style="cursor: pointer;" onclick="App.openUserProfileModal()" title="View & Edit Attorney Profile">
+            <div class="flex items-center gap-2 topbar-profile-pill" style="cursor: pointer;" onclick="App.openUserProfileModal()" title="View & Edit Attorney Profile">
               <div class="user-display-avatar avatar avatar-sm avatar-ring-gold">
                 <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=256&q=80" alt="Eleanor Vance, Esq.">
               </div>
@@ -215,8 +244,64 @@ const App = {
         <!-- 3. CENTRAL DYNAMIC CONTENT CONTAINER -->
         <main id="main-content-container" class="content-area"></main>
       </div>
+
+      <!-- 4. MOBILE BOTTOM NAVIGATION (5 Primary Tabs) -->
+      <nav id="mobile-bottom-nav" class="mobile-bottom-nav" aria-label="Mobile Navigation Bar">
+        <a class="mobile-bottom-nav-item" data-route="dashboard" onclick="App.navigate('dashboard')">
+          <span class="mobile-bottom-nav-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="7" height="9" x="3" y="3" rx="1"/>
+              <rect width="7" height="5" x="14" y="3" rx="1"/>
+              <rect width="7" height="9" x="14" y="12" rx="1"/>
+              <rect width="7" height="5" x="3" y="16" rx="1"/>
+            </svg>
+          </span>
+          <span>Dashboard</span>
+        </a>
+        <a class="mobile-bottom-nav-item" data-route="cases" onclick="App.navigate('cases')">
+          <span class="mobile-bottom-nav-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+          </span>
+          <span>Cases</span>
+        </a>
+        <a class="mobile-bottom-nav-item" data-route="tasks" onclick="App.navigate('tasks')">
+          <span class="mobile-bottom-nav-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </span>
+          <span>Tasks</span>
+        </a>
+        <a class="mobile-bottom-nav-item" id="mobile-nav-ai-tab" data-route="ai-assistant" onclick="App.navigate('ai-assistant')">
+          <span class="mobile-bottom-nav-icon" style="color: var(--color-gold);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          </span>
+          <span>Legal AI</span>
+        </a>
+        <a class="mobile-bottom-nav-item" id="mobile-nav-more-tab" onclick="App.toggleSidebar()">
+          <span class="mobile-bottom-nav-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="1.5"/>
+              <circle cx="19" cy="12" r="1.5"/>
+              <circle cx="5" cy="12" r="1.5"/>
+            </svg>
+          </span>
+          <span>More</span>
+        </a>
+      </nav>
     `;
 
+    document.body.classList.remove('auth-view-active');
     this.updateUserUI();
     this.renderSidebarNav();
     this.updateThemeButton();
@@ -310,7 +395,11 @@ const App = {
 
   forceInactivityLogout() {
     this.closeModal();
-    sessionStorage.removeItem('slcms_auth');
+    if (typeof SLCMS_STATE !== 'undefined' && typeof SLCMS_STATE.clearSessionUser === 'function') {
+      SLCMS_STATE.clearSessionUser();
+    } else {
+      sessionStorage.removeItem('slcms_auth');
+    }
     this.isLoggedIn = false;
     document.getElementById('app-root').innerHTML = AuthView.render();
     SLCMS_STATE.addAuditLog('Session Expired (Inactivity)', 'Authentication', 'Auto-terminated');
@@ -376,6 +465,8 @@ const App = {
   },
 
   navigate(route) {
+    this.closeMobileSidebar();
+
     // 1. Strict Protected Pages Check (Requirement 12)
     if (!this.isLoggedIn) {
       this.pendingRedirectRoute = route;
@@ -384,20 +475,49 @@ const App = {
       return;
     }
 
-    this.currentRoute = route;
-    window.location.hash = route;
-
     // Check Role Restrictions
     const role = SLCMS_STATE.currentUser.role;
-    if (route === 'user-management' || route === 'activity-logs') {
-      if (role !== 'Administrator') {
-        this.showToast('Restricted: Administrator access required.', 'error');
+    
+    // 1. Admin modules
+    if (route === 'user-management' || route === 'activity-logs' || route === 'settings') {
+      if (role !== 'Managing Partner' && role !== 'System Administrator' && role !== 'Administrator') {
+        this.showAccessRestrictedModal('Administration Module Restricted');
+        return;
       }
     }
+
+    // 2. Billing & Reports modules
+    if (route === 'billing' || route === 'reports') {
+      if (role !== 'Managing Partner' && role !== 'Senior Counsel' && role !== 'Administrator') {
+        this.showAccessRestrictedModal('Financial & Analytical Records Restricted');
+        return;
+      }
+    }
+
+    // 3. AI Assistant module (Clerks & Admins without legal clearance restricted)
+    if (route === 'ai-assistant') {
+      if (role === 'Legal Clerk') {
+        this.showAccessRestrictedModal('AI Jurisprudence Assistant Restricted', 'Legal clerks are restricted from AI legal research and brief generation.');
+        return;
+      }
+    }
+
+    this.currentRoute = route;
+    window.location.hash = route;
 
     // Update active state in sidebar
     const navLinks = document.querySelectorAll('.sidebar-nav .nav-item');
     navLinks.forEach(link => {
+      if (link.dataset.route === route) {
+        link.classList.add('active');
+      } else {
+        link.classList.remove('active');
+      }
+    });
+
+    // Update active state in mobile bottom nav
+    const bottomNavLinks = document.querySelectorAll('.mobile-bottom-nav .mobile-bottom-nav-item');
+    bottomNavLinks.forEach(link => {
       if (link.dataset.route === route) {
         link.classList.add('active');
       } else {
@@ -780,29 +900,67 @@ const App = {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      this.showToast('Image file size must be less than 10MB.', 'error');
+    if (file.size > 15 * 1024 * 1024) {
+      this.showToast('Image file size must be less than 15MB.', 'error');
       return;
     }
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      const dataUrl = e.target.result;
-      const previewImg = document.getElementById('profile-modal-preview-img');
-      const initialsSpan = document.getElementById('profile-modal-preview-initials');
-      const urlInput = document.getElementById('edit-user-avatar-url');
+      const rawDataUrl = e.target.result;
+      const img = new Image();
+      img.onload = () => {
+        // High-DPI canvas downscaling (max 512x512) for fast persistence & retina crispness
+        const maxDim = 512;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.90);
 
-      if (previewImg) {
-        previewImg.src = dataUrl;
-        previewImg.style.display = 'block';
-      }
-      if (initialsSpan) initialsSpan.style.display = 'none';
-      if (urlInput) urlInput.value = dataUrl;
+        const previewImg = document.getElementById('profile-modal-preview-img');
+        const initialsSpan = document.getElementById('profile-modal-preview-initials');
+        const urlInput = document.getElementById('edit-user-avatar-url');
 
-      // Clear active states on presets
-      document.querySelectorAll('.avatar-preset-btn').forEach(b => b.classList.remove('active'));
+        if (previewImg) {
+          previewImg.src = dataUrl;
+          previewImg.style.display = 'block';
+        }
+        if (initialsSpan) initialsSpan.style.display = 'none';
+        if (urlInput) urlInput.value = dataUrl;
 
-      this.showToast('Photo loaded successfully! Click "Save Profile Changes" to apply.', 'success');
+        // Clear active states on presets
+        document.querySelectorAll('.avatar-preset-btn').forEach(b => b.classList.remove('active'));
+
+        this.showToast('Photo loaded and optimized! Click "Save Profile Changes" to save permanently.', 'success');
+      };
+      img.onerror = () => {
+        const previewImg = document.getElementById('profile-modal-preview-img');
+        const initialsSpan = document.getElementById('profile-modal-preview-initials');
+        const urlInput = document.getElementById('edit-user-avatar-url');
+
+        if (previewImg) {
+          previewImg.src = rawDataUrl;
+          previewImg.style.display = 'block';
+        }
+        if (initialsSpan) initialsSpan.style.display = 'none';
+        if (urlInput) urlInput.value = rawDataUrl;
+
+        this.showToast('Photo loaded! Click "Save Profile Changes" to apply.', 'success');
+      };
+      img.src = rawDataUrl;
     };
     reader.onerror = () => {
       this.showToast('Failed to read image file.', 'error');
@@ -863,7 +1021,7 @@ const App = {
       }
     });
 
-    this.showToast('Selected preset portrait.', 'info');
+    this.showToast('Selected preset portrait. Click "Save Profile Changes" to apply.', 'info');
   },
 
   previewAvatarUrl(url) {
@@ -896,7 +1054,7 @@ const App = {
     if (fileInput) fileInput.value = '';
 
     document.querySelectorAll('.avatar-preset-btn').forEach(b => b.classList.remove('active'));
-    this.showToast('Photo removed. Initials badge will be used.', 'info');
+    this.showToast('Photo removed. Initials badge will be used after saving.', 'info');
   },
 
   saveUserProfile() {
@@ -951,22 +1109,80 @@ const App = {
     }
 
     // Update corresponding user in users directory
-    const foundUser = SLCMS_STATE.users.find(item => item.id === u.id || item.email === u.email);
+    const foundUser = SLCMS_STATE.users.find(item => item.id === u.id || (item.email && u.email && item.email.toLowerCase() === u.email.toLowerCase()));
     if (foundUser) {
       foundUser.name = u.name;
       foundUser.email = u.email;
       foundUser.phone = u.phone;
       foundUser.department = u.department;
       foundUser.jobTitle = u.roleLabel;
+      foundUser.roleTitle = u.roleLabel;
       foundUser.avatarImg = u.avatarImg;
       foundUser.avatar = u.avatar;
+    }
+
+    // Permanently persist to localStorage and sessionStorage
+    if (typeof SLCMS_STATE.persistCurrentUser === 'function') {
+      SLCMS_STATE.persistCurrentUser();
+    }
+    if (typeof SLCMS_STATE.persistUsers === 'function') {
+      SLCMS_STATE.persistUsers();
     }
 
     SLCMS_STATE.addAuditLog('Attorney Profile Updated', 'Security & Personnel', `${u.name} (${u.roleLabel}) - Dossier & Licensure updated`);
     this.updateUserUI();
     this.closeModal();
-    this.showToast('Attorney profile, headshot, and licensure details updated successfully!', 'success');
+    this.showToast('Attorney profile, photo, and licensure details saved permanently!', 'success');
     this.refreshCurrentView();
+  },
+
+  showAccessRestrictedModal(actionName = 'Access Denied', details = '') {
+    const msg = SLCMS_STATE.getStandardDenialMessage();
+    this.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #7F1D1D, #450A0A); color: #FFFFFF;">
+        <div>
+          <h3 class="modal-title" style="color: #FFFFFF; display: flex; align-items: center; gap: 0.5rem; font-size: 1.15rem;">
+            <span>🛡️</span> Security Authorization Policy
+          </h3>
+          <p style="font-size: 0.78rem; color: #FECACA; margin-top: 0.2rem;">
+            Strict Role-Based Access Control (RBAC) & Ethical Wall Enforcement
+          </p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem; text-align: center;">
+        <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); color: var(--color-danger); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+
+        <h4 style="font-size: 1.1rem; font-weight: 700; color: var(--color-danger); margin-bottom: 0.5rem;">
+          ${actionName}
+        </h4>
+
+        <div class="alert alert-danger" style="text-align: left; font-size: 0.85rem; line-height: 1.5; margin-bottom: 1.25rem;">
+          ${msg}
+        </div>
+
+        <div style="background: var(--color-surface-subtle); border: 1px solid var(--color-border); border-radius: 8px; padding: 0.85rem; font-size: 0.8rem; text-align: left;">
+          <div style="color: #64748B; margin-bottom: 0.25rem;"><strong>Active Session User:</strong> ${SLCMS_STATE.currentUser.name}</div>
+          <div style="color: #64748B; margin-bottom: 0.25rem;"><strong>Assigned Role:</strong> <span class="badge badge-neutral" style="font-size: 0.72rem;">${SLCMS_STATE.currentUser.roleLabel || SLCMS_STATE.currentUser.role}</span></div>
+          ${details ? `<div style="color: #64748B; margin-top: 0.35rem; font-style: italic;">Note: ${details}</div>` : ''}
+          <div style="color: #94A3B8; font-size: 0.72rem; margin-top: 0.5rem;">
+            🔒 <em>This unauthorized attempt has been recorded in the firm's immutable security audit log.</em>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="justify-content: center;">
+        <button class="btn btn-secondary" onclick="App.closeModal()">Acknowledge & Return</button>
+      </div>
+    `, 'modal-md');
+
+    SLCMS_STATE.addAuditLog('Access Restricted (Unauthorized Action Blocked)', 'Security', `${actionName} attempted by ${SLCMS_STATE.currentUser.email} (${SLCMS_STATE.currentUser.role})`, 'Blocked');
   },
 
   renderSidebarNav() {
@@ -1041,9 +1257,10 @@ const App = {
       </a>
     `;
 
-    if (role === 'Administrator' || role === 'Lawyer') {
+    // Jurisprudence & Legal AI: Managing Partner, Senior Counsel, Associate Lawyer, Junior Lawyer
+    if (role === 'Managing Partner' || role === 'Senior Counsel' || role === 'Associate Lawyer' || role === 'Junior Lawyer' || role === 'Administrator' || role === 'Lawyer') {
       html += `
-        <div class="nav-section-title">Counsel & Finance</div>
+        <div class="nav-section-title">Counsel & Jurisprudence</div>
         <a class="nav-item ${this.currentRoute === 'ai-assistant' ? 'active' : ''}" data-route="ai-assistant" onclick="App.navigate('ai-assistant')">
           <span class="nav-icon" style="color: var(--color-gold);">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1053,6 +1270,23 @@ const App = {
           <span>Tanzania Legal AI</span>
         </a>
 
+        <a class="nav-item" onclick="AIAssistantView.openYearBrowserModal('ALL')" title="Browse Tanzanian Case Law by Year (2020–2026)" style="cursor: pointer; white-space: nowrap;">
+          <span class="nav-icon" style="color: #38BDF8;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              <path d="M8 7h8M8 11h6"/>
+            </svg>
+          </span>
+          <span style="font-weight: 600; white-space: nowrap;">Case Library (2020–2026)</span>
+          <span class="nav-badge" style="background: linear-gradient(135deg, rgba(200,155,60,0.3) 0%, rgba(200,155,60,0.15) 100%); color: var(--color-gold); border: 1px solid rgba(200,155,60,0.4); flex-shrink: 0; margin-left: auto;">${SLCMS_STATE.tanzaniaJudgments.length}</span>
+        </a>
+      `;
+    }
+
+    // Billing & Retainers: Managing Partner & Senior Counsel
+    if (role === 'Managing Partner' || role === 'Senior Counsel' || role === 'Administrator') {
+      html += `
         <a class="nav-item ${this.currentRoute === 'billing' ? 'active' : ''}" data-route="billing" onclick="App.navigate('billing')">
           <span class="nav-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1062,7 +1296,12 @@ const App = {
           </span>
           <span>Billing & Payments</span>
         </a>
+      `;
+    }
 
+    // Reports: Managing Partner only
+    if (role === 'Managing Partner' || role === 'Administrator') {
+      html += `
         <a class="nav-item ${this.currentRoute === 'reports' ? 'active' : ''}" data-route="reports" onclick="App.navigate('reports')">
           <span class="nav-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1076,7 +1315,8 @@ const App = {
       `;
     }
 
-    if (role === 'Administrator') {
+    // Administration: Managing Partner & System Administrator
+    if (role === 'Managing Partner' || role === 'System Administrator' || role === 'Administrator') {
       html += `
         <div class="nav-section-title">Administration</div>
         <a class="nav-item ${this.currentRoute === 'user-management' ? 'active' : ''}" data-route="user-management" onclick="App.navigate('user-management')">
@@ -1128,15 +1368,54 @@ const App = {
     `;
 
     navContainer.innerHTML = html;
+
+    // Synchronize Mobile Bottom Nav for RBAC
+    const aiTab = document.getElementById('mobile-nav-ai-tab');
+    if (aiTab) {
+      if (role === 'Legal Clerk') {
+        aiTab.setAttribute('data-route', 'documents');
+        aiTab.setAttribute('onclick', "App.navigate('documents')");
+        aiTab.innerHTML = `
+          <span class="mobile-bottom-nav-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+          </span>
+          <span>Vault</span>
+        `;
+      } else {
+        aiTab.setAttribute('data-route', 'ai-assistant');
+        aiTab.setAttribute('onclick', "App.navigate('ai-assistant')");
+        aiTab.innerHTML = `
+          <span class="mobile-bottom-nav-icon" style="color: var(--color-gold);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          </span>
+          <span>Legal AI</span>
+        `;
+      }
+    }
   },
 
   toggleSidebar() {
     const sidebar = document.getElementById('app-sidebar');
-    if (window.innerWidth <= 768) {
-      sidebar.classList.toggle('mobile-open');
-      const backdrop = document.getElementById('sidebar-backdrop');
-      if (backdrop) backdrop.classList.toggle('active');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    if (!sidebar) return;
+
+    const width = window.innerWidth;
+    if (width < 768) {
+      // Mobile drawer (<768px)
+      const isOpen = sidebar.classList.toggle('mobile-open');
+      if (backdrop) backdrop.classList.toggle('active', isOpen);
+      document.body.classList.toggle('mobile-nav-open', isOpen);
+    } else if (width >= 768 && width < 1024) {
+      // Tablet icon overlay (768px - 1023px)
+      const isExpanded = sidebar.classList.toggle('expanded-tablet');
+      if (backdrop) backdrop.classList.toggle('active', isExpanded);
     } else {
+      // Desktop collapse to icon bar (>=1024px)
       sidebar.classList.toggle('collapsed');
       this.isSidebarCollapsed = sidebar.classList.contains('collapsed');
     }
@@ -1144,9 +1423,13 @@ const App = {
 
   closeMobileSidebar() {
     const sidebar = document.getElementById('app-sidebar');
-    sidebar.classList.remove('mobile-open');
+    if (sidebar) {
+      sidebar.classList.remove('mobile-open');
+      sidebar.classList.remove('expanded-tablet');
+    }
     const backdrop = document.getElementById('sidebar-backdrop');
     if (backdrop) backdrop.classList.remove('active');
+    document.body.classList.remove('mobile-nav-open');
   },
 
   // --- AUTHENTICATION FLOWS ---
@@ -1157,7 +1440,11 @@ const App = {
       confirmText: 'Sign Out',
       confirmClass: 'btn-danger',
       onConfirm: () => {
-        sessionStorage.removeItem('slcms_auth');
+        if (typeof SLCMS_STATE !== 'undefined' && typeof SLCMS_STATE.clearSessionUser === 'function') {
+          SLCMS_STATE.clearSessionUser();
+        } else {
+          sessionStorage.removeItem('slcms_auth');
+        }
         this.isLoggedIn = false;
         document.getElementById('app-root').innerHTML = AuthView.render();
         this.showToast('You have securely signed out.', 'info');

@@ -339,6 +339,34 @@
   color: #F8FAFC !important;
 }
 
+[data-theme="dark"] .auth-role-card {
+  background: #0B192A !important;
+  border-color: #1B3550 !important;
+}
+
+[data-theme="dark"] .auth-role-card.active-selected {
+  background: #142B44 !important;
+  border-color: var(--color-gold) !important;
+}
+
+[data-theme="dark"] .auth-role-name {
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .auth-role-desc {
+  color: #94A3B8 !important;
+}
+
+[data-theme="dark"] .auth-sec-state-chip {
+  background: #0B192A !important;
+  border-color: #1B3550 !important;
+  color: #E2E8F0 !important;
+}
+
+[data-theme="dark"] .auth-rbac-title {
+  color: #F1F5F9 !important;
+}
+
 [data-theme="dark"] .password-req-box {
   background-color: #0B192A !important;
   border-color: #1B3550 !important;
@@ -510,4 +538,29 @@ button, input, select, textarea {
 
 .animate-fade {
   animation: fadeIn var(--transition-normal) ease-out forwards;
+}
+
+/* RBAC & Security Matrix Enhancements */
+.badge-purple {
+  background: rgba(124, 58, 237, 0.12);
+  color: #7C3AED;
+  border: 1px solid rgba(124, 58, 237, 0.25);
+}
+
+.badge-confidential {
+  background: rgba(200, 155, 60, 0.15);
+  color: #9A721C;
+  border: 1px solid rgba(200, 155, 60, 0.35);
+  font-weight: 700;
+}
+
+.auth-input-highlight {
+  animation: pulseGold 0.8s ease-in-out;
+  border-color: var(--color-gold) !important;
+  background-color: #FFFDF5 !important;
+}
+
+.btn-secondary:hover {
+  background: var(--color-surface-hover, #F1F5F9);
+  border-color: var(--color-primary-light, #CBD5E1);
 }

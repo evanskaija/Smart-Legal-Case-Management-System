@@ -26,14 +26,19 @@ const DocumentsView = {
               Encrypted legal document archive with chain-of-custody tracking and privilege tags
             </p>
           </div>
-          <button class="btn btn-gold" onclick="DocumentsView.openUploadModal()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
-            <span>Upload Document</span>
-          </button>
+          <div class="flex items-center gap-2">
+            <button class="btn btn-secondary" onclick="DocumentsView.openCaseRegistrationModal()" title="Complete 6-Step Case Registration Record for Scanned Tanzanian Judgments">
+              <span>⚖️ Register Scanned Judgment</span>
+            </button>
+            <button class="btn btn-gold" onclick="DocumentsView.openUploadModal()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              <span>Upload Document</span>
+            </button>
+          </div>
         </div>
 
         <!-- Drag & Drop Zone -->
@@ -43,8 +48,8 @@ const DocumentsView = {
             <polyline points="17 8 12 3 7 8"/>
             <line x1="12" y1="3" x2="12" y2="15"/>
           </svg>
-          <div style="font-weight: 600; color: var(--color-primary); font-size: 0.95rem;">Drag & drop case files, pleadings, or trial exhibits to upload</div>
-          <div style="font-size: 0.78rem; color: var(--color-text-secondary); margin-top: 0.25rem;">Supported formats: PDF, DOCX, XLSX, TIFF, MSG up to 100MB • AES-256 Encrypted</div>
+          <div style="font-weight: 600; color: var(--color-primary); font-size: 0.95rem;">Drag & drop case files, scanned judgments, pleadings, or trial exhibits</div>
+          <div style="font-size: 0.78rem; color: var(--color-text-secondary); margin-top: 0.25rem;">Supported formats: PDF, DOCX, XLSX, TIFF, MSG up to 100MB • AES-256 Encrypted • Scanned OCR Ready</div>
         </div>
 
         <!-- Filter Bar -->
@@ -71,76 +76,134 @@ const DocumentsView = {
           </div>
         </div>
 
-        <!-- Documents Table -->
-        <div class="table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Document Details</th>
-                <th>Related Matter</th>
-                <th>Category</th>
-                <th>Access Level</th>
-                <th>Version</th>
-                <th>Uploaded By</th>
-                <th>Size</th>
-                <th style="text-align: right;">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filteredDocs.map(d => `
+        <!-- Desktop & Tablet Documents Table -->
+        <div class="desktop-table-view">
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
                 <tr>
-                  <td>
-                    <div class="flex items-center gap-3">
-                      <div style="width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--color-surface-subtle); display: flex; align-items: center; justify-content: center; color: var(--color-primary); font-weight: 700; font-size: 0.72rem;">
-                        ${d.fileType}
-                      </div>
-                      <div>
-                        <div style="font-weight: 600; color: var(--color-primary); cursor: pointer;" onclick="DocumentsView.previewDocument('${d.id}')">
-                          ${d.title}
-                        </div>
-                        <div style="font-size: 0.72rem; color: var(--color-text-muted); font-family: var(--font-mono);">${d.fileName}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div style="font-size: 0.82rem; font-weight: 500;">${d.caseTitle}</div>
-                    <span style="font-size: 0.72rem; color: var(--color-gold); font-family: var(--font-mono);">${d.caseNumber}</span>
-                  </td>
-                  <td>
-                    <span class="badge" style="background: var(--color-surface-subtle);">${d.category}</span>
-                  </td>
-                  <td>
-                    <span class="badge ${d.accessLevel.includes('Privileged') || d.accessLevel.includes('Confidential') ? 'badge-confidential' : 'badge-onhold'}">
-                      ${d.accessLevel}
-                    </span>
-                  </td>
-                  <td>
-                    <span style="font-weight: 600; font-size: 0.8rem;">${d.version}</span>
-                  </td>
-                  <td>
-                    <div style="font-size: 0.8rem;">${d.uploadedBy}</div>
-                    <div style="font-size: 0.7rem; color: var(--color-text-muted);">${d.uploadDate}</div>
-                  </td>
-                  <td>
-                    <span style="font-size: 0.8rem; color: var(--color-text-secondary);">${d.size}</span>
-                  </td>
-                  <td style="text-align: right;">
-                    <div class="flex items-center justify-end gap-1">
-                      <button class="btn btn-secondary btn-sm" onclick="DocumentsView.previewDocument('${d.id}')" title="Preview Document">
-                        Preview
-                      </button>
-                      <button class="btn btn-ghost btn-sm" onclick="DocumentsView.downloadDocument('${d.id}')" title="Download Encrypted File">
-                        ⬇
-                      </button>
-                      <button class="btn btn-ghost btn-sm text-danger" onclick="DocumentsView.deleteDocument('${d.id}')" title="Delete Document">
-                        ✕
-                      </button>
-                    </div>
-                  </td>
+                  <th>Document Details</th>
+                  <th>Related Matter</th>
+                  <th>Category</th>
+                  <th>Access Level</th>
+                  <th>Version</th>
+                  <th>Uploaded By</th>
+                  <th>Size</th>
+                  <th style="text-align: right;">Actions</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${filteredDocs.map(d => `
+                  <tr>
+                    <td>
+                      <div class="flex items-center gap-3">
+                        <div style="width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--color-surface-subtle); display: flex; align-items: center; justify-content: center; color: var(--color-primary); font-weight: 700; font-size: 0.72rem;">
+                          ${d.fileType}
+                        </div>
+                        <div>
+                          <div style="font-weight: 600; color: var(--color-primary); cursor: pointer;" onclick="DocumentsView.previewDocument('${d.id}')">
+                            ${d.title}
+                          </div>
+                          <div style="font-size: 0.72rem; color: var(--color-text-muted); font-family: var(--font-mono);">${d.fileName}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div style="font-size: 0.82rem; font-weight: 500;">${d.caseTitle}</div>
+                      <span style="font-size: 0.72rem; color: var(--color-gold); font-family: var(--font-mono);">${d.caseNumber}</span>
+                    </td>
+                    <td>
+                      <span class="badge" style="background: var(--color-surface-subtle);">${d.category}</span>
+                    </td>
+                    <td>
+                      <span class="badge ${d.accessLevel.includes('Privileged') || d.accessLevel.includes('Confidential') ? 'badge-confidential' : 'badge-onhold'}">
+                        ${d.accessLevel}
+                      </span>
+                    </td>
+                    <td>
+                      <span style="font-weight: 600; font-size: 0.8rem;">${d.version}</span>
+                    </td>
+                    <td>
+                      <div style="font-size: 0.8rem;">${d.uploadedBy}</div>
+                      <div style="font-size: 0.7rem; color: var(--color-text-muted);">${d.uploadDate}</div>
+                    </td>
+                    <td>
+                      <span style="font-size: 0.8rem; color: var(--color-text-secondary);">${d.size}</span>
+                    </td>
+                    <td style="text-align: right;">
+                      <div class="flex items-center justify-end gap-1">
+                        <button class="btn btn-secondary btn-sm" onclick="DocumentsView.previewDocument('${d.id}')" title="Preview Document">
+                          Preview
+                        </button>
+                        <button class="btn btn-ghost btn-sm" onclick="DocumentsView.downloadDocument('${d.id}')" title="Download Encrypted File">
+                          ⬇
+                        </button>
+                        <button class="btn btn-ghost btn-sm text-danger" onclick="DocumentsView.deleteDocument('${d.id}')" title="Delete Document">
+                          ✕
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Mobile Document Cards View (< 768px) -->
+        <div class="mobile-cards-view">
+          ${filteredDocs.length === 0 ? `
+            <div class="card empty-state" style="padding: 2rem; text-align: center;">
+              <p style="color: var(--color-text-muted);">No matching documents found in repository.</p>
+            </div>
+          ` : filteredDocs.map(d => `
+            <div class="card doc-card-mobile">
+              <div style="display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.65rem;">
+                <div style="width: 38px; height: 38px; border-radius: 8px; background: rgba(200, 155, 60, 0.12); border: 1px solid rgba(200, 155, 60, 0.3); display: flex; align-items: center; justify-content: center; color: var(--color-gold); font-weight: 800; font-size: 0.75rem; flex-shrink: 0;">
+                  ${d.fileType}
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-weight: 700; color: var(--color-primary); font-size: 0.92rem; line-height: 1.3; cursor: pointer;" onclick="DocumentsView.previewDocument('${d.id}')">
+                    ${d.title}
+                  </div>
+                  <div style="font-size: 0.72rem; color: var(--color-text-muted); font-family: var(--font-mono); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    ${d.fileName}
+                  </div>
+                </div>
+              </div>
+
+              <div style="background: var(--color-surface-subtle); padding: 0.55rem 0.75rem; border-radius: 8px; margin-bottom: 0.65rem; font-size: 0.78rem;">
+                <div style="font-weight: 600; color: var(--color-text-main); line-height: 1.3;">${d.caseTitle}</div>
+                <span style="font-size: 0.72rem; color: var(--color-gold); font-family: var(--font-mono); font-weight: 600;">${d.caseNumber}</span>
+              </div>
+
+              <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 0.75rem;">
+                <span class="badge" style="background: var(--color-surface-subtle); font-size: 0.7rem;">${d.category}</span>
+                <span class="badge ${d.accessLevel.includes('Privileged') || d.accessLevel.includes('Confidential') ? 'badge-confidential' : 'badge-onhold'}" style="font-size: 0.7rem;">
+                  ${d.accessLevel}
+                </span>
+                <span class="badge" style="background: rgba(255,255,255,0.06); font-size: 0.7rem; font-weight: 600;">${d.version}</span>
+                <span style="font-size: 0.72rem; color: var(--color-text-secondary); margin-left: auto;">${d.size}</span>
+              </div>
+
+              <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--color-border-subtle); padding-top: 0.65rem; font-size: 0.72rem; color: var(--color-text-muted);">
+                <div>
+                  <span>${d.uploadedBy} • ${d.uploadDate}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <button class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 0.75rem;" onclick="DocumentsView.previewDocument('${d.id}')" title="Preview Document">
+                    Preview
+                  </button>
+                  <button class="btn btn-ghost btn-sm" style="padding: 4px 8px;" onclick="DocumentsView.downloadDocument('${d.id}')" title="Download Encrypted File">
+                    ⬇
+                  </button>
+                  <button class="btn btn-ghost btn-sm text-danger" style="padding: 4px 8px;" onclick="DocumentsView.deleteDocument('${d.id}')" title="Delete Document">
+                    ✕
+                  </button>
+                </div>
+              </div>
+            </div>
+          `).join('')}
         </div>
       </div>
     `;
@@ -335,5 +398,13 @@ const DocumentsView = {
     App.closeModal();
     App.showToast(`Document "${newDoc.title}" securely uploaded!`, 'success');
     App.refreshCurrentView();
+  },
+
+  openCaseRegistrationModal(prefill = {}) {
+    if (typeof CaseRegistrationModal !== 'undefined') {
+      CaseRegistrationModal.open(prefill);
+    } else {
+      App.showToast('Case Registration Wizard is initializing...', 'info');
+    }
   }
 };
