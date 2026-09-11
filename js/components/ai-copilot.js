@@ -48,7 +48,7 @@ const AICopilot = {
             </h3>
           </div>
           <div class="flex items-center gap-2">
-            <button class="ai-copilot-close-btn" onclick="AICopilot.closeDrawer()" aria-label="Close Copilot" style="font-size: 1.35rem;">✕</button>
+            <button class="ai-copilot-close-btn" onclick="AICopilot.closeDrawer()" aria-label="Close Copilot">✕</button>
           </div>
         </div>
 
@@ -161,7 +161,13 @@ const AICopilot = {
 
     if (this.activeTab === 'chat') {
       const scrollContainer = document.getElementById('ai-copilot-body');
-      if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      if (scrollContainer) {
+        if (this.chatMessages.length > 0) {
+          scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        } else {
+          scrollContainer.scrollTop = 0;
+        }
+      }
     }
   },
 

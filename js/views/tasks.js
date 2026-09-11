@@ -644,7 +644,7 @@ const TasksView = {
             </div>
 
             <!-- Header Action Controls -->
-            <div class="flex items-center gap-2 flex-wrap">
+            <div class="court-cal-controls-wrapper flex items-center gap-2 flex-wrap">
               <div class="court-cal-nav-group">
                 <button class="court-cal-nav-btn" onclick="TasksView.changeCalendarMonth(-1)" title="Previous Month">
                   ‹ ${prevMonthLabel}
@@ -657,19 +657,21 @@ const TasksView = {
                 </button>
               </div>
 
-              <button class="btn btn-secondary btn-sm" onclick="TasksView.syncECourts()" title="Sync e-Courts & NYSCEF Docket">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-                </svg>
-                <span>e-Courts Sync</span>
-              </button>
+              <div class="court-cal-actions-row flex items-center gap-2">
+                <button class="btn btn-secondary btn-sm" onclick="TasksView.syncECourts()" title="Sync e-Courts & NYSCEF Docket">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                  </svg>
+                  <span>e-Courts Sync</span>
+                </button>
 
-              <button class="btn btn-gold btn-sm" onclick="TasksView.openScheduleAppearanceModal()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 5v14M5 12h14"/>
-                </svg>
-                <span>+ Schedule Appearance</span>
-              </button>
+                <button class="btn btn-gold btn-sm" onclick="TasksView.openScheduleAppearanceModal()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12h14"/>
+                  </svg>
+                  <span>Schedule Appearance</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -686,7 +688,7 @@ const TasksView = {
                   <line x1="3" y1="12" x2="3.01" y2="12"/>
                   <line x1="3" y1="18" x2="3.01" y2="18"/>
                 </svg>
-                <span>Docket Agenda Cards</span>
+                <span>Docket Agenda</span>
               </button>
 
               <button class="court-cal-view-tab ${this.calendarSubView === 'grid' ? 'active' : ''}" onclick="TasksView.switchCalendarSubView('grid')">
@@ -694,14 +696,14 @@ const TasksView = {
                   <rect width="18" height="18" x="3" y="3" rx="2"/>
                   <path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>
                 </svg>
-                <span>Month Matrix Grid</span>
+                <span>Month Grid</span>
               </button>
 
               <button class="court-cal-view-tab ${this.calendarSubView === 'matrix' ? 'active' : ''}" onclick="TasksView.switchCalendarSubView('matrix')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                 </svg>
-                <span>Statutory Cutoffs Matrix</span>
+                <span>Statutory Cutoffs</span>
               </button>
             </div>
 
@@ -804,11 +806,11 @@ const TasksView = {
 
               <!-- Right Area: Assigned Counsel & Action Buttons -->
               <div class="court-docket-action-area">
-                <div class="flex items-center gap-2">
+                <div class="court-counsel-info flex items-center gap-2">
                   <div class="avatar avatar-sm ${evt.assignedAvatar === 'EV' ? 'avatar-gold' : evt.assignedAvatar === 'JM' ? 'avatar-navy' : 'avatar-teal'}" style="font-size: 10px; font-weight: 700;">
                     ${evt.assignedAvatar}
                   </div>
-                  <div style="text-align: right;">
+                  <div class="court-counsel-meta" style="text-align: right;">
                     <div style="font-size: 0.78rem; font-weight: 700; color: var(--color-primary);">${evt.assignedTo}</div>
                     <div style="font-size: 0.68rem; color: var(--color-text-muted);">Lead Counsel</div>
                   </div>

@@ -3399,22 +3399,147 @@
 }
 
 @media (max-width: 860px) {
+  .court-cal-header {
+    padding: 1rem 1.15rem;
+    gap: 0.85rem;
+  }
+  .court-cal-title-block {
+    width: 100%;
+  }
+  .court-cal-controls-wrapper {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+  .court-cal-nav-group {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+  }
+  .court-cal-nav-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.78rem;
+  }
+  .court-cal-actions-row {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .court-cal-actions-row .btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 0.76rem;
+    padding: 0.45rem 0.5rem;
+    white-space: nowrap;
+  }
+  .court-cal-toolbar {
+    padding: 0.65rem 0.85rem;
+    gap: 0.65rem;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .court-cal-view-tabs {
+    width: 100%;
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .court-cal-view-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .court-cal-view-tab {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    justify-content: center;
+    font-size: 0.75rem;
+    padding: 0.4rem 0.5rem;
+    gap: 0.35rem;
+  }
+  .court-cal-filters {
+    width: 100%;
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .court-cal-filters::-webkit-scrollbar {
+    display: none;
+  }
+  .court-filter-pill {
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-size: 0.74rem;
+    padding: 0.3rem 0.65rem;
+  }
+  .court-agenda-container {
+    padding: 0.85rem;
+    gap: 0.85rem;
+  }
   .court-docket-card {
     grid-template-columns: 1fr;
-    gap: 1rem;
+    gap: 0.85rem;
+    padding: 1rem;
   }
   .court-date-badge {
     flex-direction: row;
+    align-items: center;
     justify-content: space-between;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.75rem;
+    gap: 0.5rem;
+  }
+  .court-date-month {
+    font-size: 0.7rem;
+  }
+  .court-date-day {
+    font-size: 1.4rem;
+    line-height: 1;
+  }
+  .court-date-weekday {
+    font-size: 0.7rem;
+    margin-top: 0;
+  }
+  .court-date-time {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    margin-top: 0 !important;
+    font-size: 0.7rem !important;
+    padding: 2px 6px !important;
   }
   .court-docket-action-area {
-    align-items: flex-start;
-    flex-direction: row;
-    justify-content: space-between;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.65rem;
     width: 100%;
     border-top: 1px solid var(--color-border-subtle);
     padding-top: 0.75rem;
+  }
+  .court-counsel-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .court-action-btns {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .court-action-btns .btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 0.75rem;
+    padding: 0.45rem 0.4rem;
+    white-space: nowrap;
   }
 }
 
@@ -3664,6 +3789,14 @@
   padding: 0.75rem 1.25rem;
   background: var(--color-surface-subtle);
   border-bottom: 1px solid var(--color-border-subtle);
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.notif-filter-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .notif-tab-btn {
@@ -3675,6 +3808,8 @@
   border: 1px solid transparent;
   border-radius: var(--radius-full);
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all var(--transition-fast);
 }
 
@@ -16671,13 +16806,21 @@
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.14);
   color: #CBD5E1;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.92rem;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  max-width: 32px !important;
+  max-height: 32px !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.95rem !important;
+  flex-shrink: 0 !important;
   cursor: pointer;
   transition: all 0.2s ease;
 }

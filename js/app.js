@@ -1663,28 +1663,30 @@ const App = {
     this.openModal(`
       <div class="notif-modal-wrapper">
         <!-- Modal Header -->
-        <div class="modal-header" style="padding: 1.15rem 1.35rem;">
-          <div class="flex items-center gap-2.5">
-            <div style="width: 34px; height: 34px; border-radius: 50%; background: var(--color-gold-light); display: flex; align-items: center; justify-content: center; color: var(--color-gold); box-shadow: 0 2px 6px rgba(200, 155, 60, 0.2);">
+        <div class="modal-header notif-modal-header" style="padding: 1rem 1.15rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0; flex: 1;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--color-gold-light); display: flex; align-items: center; justify-content: center; color: var(--color-gold); flex-shrink: 0; box-shadow: 0 2px 6px rgba(200, 155, 60, 0.2);">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
                 <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
               </svg>
             </div>
-            <div>
-              <h3 class="modal-title" style="font-size: 1.1rem; margin: 0; line-height: 1.2;">Notifications & Alerts</h3>
-              <span style="font-size: 0.74rem; color: var(--color-text-secondary);">Real-time firm docket, court hearings & billing</span>
+            <div style="min-width: 0; flex: 1;">
+              <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                <h3 class="modal-title" style="font-size: 1.05rem; margin: 0; line-height: 1.2;">Notifications</h3>
+                ${unreadCount > 0 ? `<span class="notif-header-badge" style="font-size: 0.65rem; padding: 0.12rem 0.45rem;">${unreadCount} Unread</span>` : `<span class="badge badge-active" style="font-size: 0.62rem; padding: 0.1rem 0.4rem;">All Caught Up</span>`}
+              </div>
+              <span style="font-size: 0.72rem; color: var(--color-text-secondary); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px;">Real-time firm docket &amp; hearings</span>
             </div>
-            ${unreadCount > 0 ? `<span class="notif-header-badge">${unreadCount} Unread</span>` : `<span class="badge badge-active" style="font-size: 0.68rem;">All Caught Up</span>`}
           </div>
 
-          <div class="flex items-center gap-2">
+          <div style="display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;">
             ${unreadCount > 0 ? `
-              <button class="btn btn-ghost btn-sm" style="font-size: 0.78rem; font-weight: 700; color: var(--color-gold);" onclick="App.markAllNotificationsRead()">
+              <button class="btn btn-ghost btn-sm" style="font-size: 0.74rem; font-weight: 700; color: var(--color-gold); padding: 0.25rem 0.5rem; white-space: nowrap;" onclick="App.markAllNotificationsRead()" title="Mark all notifications as read">
                 ✓ Mark all read
               </button>
             ` : ''}
-            <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" title="Close">✕</button>
+            <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" title="Close" style="width: 32px; height: 32px; min-width: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 1rem;">✕</button>
           </div>
         </div>
 

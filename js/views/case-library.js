@@ -14,7 +14,21 @@ const CaseLibraryView = {
     const judgments = SLCMS_STATE.tanzaniaJudgments || [];
     const distinctCount = (typeof SLCMS_STATE.getDistinctJudgmentsCount === 'function') ? SLCMS_STATE.getDistinctJudgmentsCount() : 77;
     const years = [...new Set(judgments.map(j => j.year))].sort((a, b) => b - a);
-    const categories = ['ALL', ...new Set(judgments.map(j => j.category).filter(Boolean))].sort();
+    // Deduplicate and normalize categories cleanly
+    const rawCategories = judgments.map(j => (j.category || '').trim()).filter(Boolean);
+    const catMap = new Map();
+    rawCategories.forEach(cat => {
+      const norm = cat.toLowerCase();
+      if (!catMap.has(norm)) {
+        catMap.set(norm, cat);
+      } else {
+        const existing = catMap.get(norm);
+        if (cat[0] === cat[0].toUpperCase() && existing[0] !== existing[0].toUpperCase()) {
+          catMap.set(norm, cat);
+        }
+      }
+    });
+    const categories = ['ALL', ...Array.from(catMap.values()).sort((a, b) => a.localeCompare(b))];
     const isAdmin = (SLCMS_STATE.currentUser?.role === 'Administrator');
 
     const categoryMap = {
@@ -242,14 +256,21 @@ const CaseLibraryView = {
           }
           .lib-subcat-row {
             width: 100% !important;
-            margin-top: 0.5rem !important;
+            margin-top: 0.45rem !important;
             display: flex !important;
             align-items: center !important;
             justify-content: space-between !important;
+            gap: 0.5rem !important;
           }
-          .lib-subcat-row select {
+          .lib-subcat-row select,
+          .lib-subcat-select {
             width: 100% !important;
             flex: 1 !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            height: 38px !important;
+            font-size: 0.82rem !important;
+            border-radius: 8px !important;
           }
           .lib-year-meta-row {
             width: 100% !important;
@@ -1512,12 +1533,12 @@ const CaseLibraryView = {
               <span style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; color: var(--color-text-muted); letter-spacing: 0.05em;">
                 Legal Discipline:
               </span>
-              <div class="lib-subcat-row" style="display: flex; align-items: center; gap: 0.5rem;">
+              <div class="lib-subcat-row">
                 <span style="font-size: 0.74rem; font-weight: 600; color: var(--color-text-muted); white-space: nowrap;">Sub-Category:</span>
-                <select class="form-control" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; width: 200px; cursor: pointer; border-radius: 6px;" onchange="CaseLibraryView.filterCategory(this.value)">
+                <select class="form-control lib-subcat-select" onchange="CaseLibraryView.filterCategory(this.value)">
                   <option value="ALL" ${this.activeCategory === 'ALL' ? 'selected' : ''}>-- All Categories (${categories.length - 1}) --</option>
                   ${categories.filter(c => c !== 'ALL').map(c => `
-                    <option value="${c}" ${this.activeCategory === c ? 'selected' : ''}>${c}</option>
+                    <option value="${c}" ${this.activeCategory === c || this.activeCategory.toLowerCase() === c.toLowerCase() ? 'selected' : ''}>${c}</option>
                   `).join('')}
                 </select>
               </div>
