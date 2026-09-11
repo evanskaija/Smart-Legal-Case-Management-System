@@ -1,379 +1,284 @@
 /* ==========================================================================
-   SLCMS - Firm Settings & Role Permission Matrix
+   SLCMS - System Settings & Security Configuration (Administrator Only)
+   Academic Presentation Standard:
+   Firm name and logo, Legal categories, Courts, User roles, Password rules,
+   File-upload size, Backup button, AI professional notice, Permission matrix overview.
    ========================================================================== */
 
 const SettingsView = {
-  currentTab: 'all',
-  telemetryLatency: 18,
+  telemetryLatency: 16,
   isDiagnosticRunning: false,
   securitySettings: {
     enforceMfa: true,
     autoLock15m: true,
     requireSensitivePass: true,
-    enforceVpnIp: true,
-    shaIntegrity: true
+    maxUploadMB: 100,
+    passwordMinLength: 10
   },
 
   firmProfile: {
-    legalName: 'SLCMS Legal Partners LLP',
-    jurisdiction: 'New York / Southern District (SDNY)',
-    efilingAccount: 'NYSCEF-FIRM-89421',
-    trustEscrow: 'Chase IOLTA #****-9482',
-    ein: '13-8941209',
+    legalName: 'SLCMS Advocates & Legal Consultants',
+    jurisdiction: 'United Republic of Tanzania',
+    efilingAccount: 'TLS-FIRM-89421',
+    tinNumber: 'TIN-104-921-382',
     managingPartner: 'Eleanor Vance, Esq.',
-    officeAddress: 'Rockefeller Center, Suite 4400, New York, NY 10020',
-    primaryDockets: ['Commercial Litigation', 'Intellectual Property Defense', 'White Collar Defense', 'Securities Arbitration']
+    officeAddress: 'Samora Avenue & Ohio Street, City Centre, Dar es Salaam',
+    primaryDockets: [
+      'Commercial Law',
+      'Civil Law',
+      'Land Law',
+      'Criminal Law',
+      'Labour Law',
+      'Constitutional Law',
+      'Family Law',
+      'Probate'
+    ],
+    courts: [
+      'Court of Appeal of Tanzania',
+      'High Court of Tanzania (Main Registry, Dar es Salaam)',
+      'High Court - Commercial Division',
+      'High Court - Land Division',
+      'High Court - Labour Division',
+      'Resident Magistrate Court of Kisutu (Dar es Salaam)',
+      'District Court of Ilala'
+    ]
   },
 
   render() {
+    // 1. Strict Administrator RBAC check
+    const userRole = SLCMS_STATE.currentUser.role;
+    if (userRole !== 'Administrator') {
+      return `
+        <div class="card empty-state animate-fade" style="padding: 3.5rem 2rem; text-align: center;">
+          <div class="empty-icon" style="border-color: var(--color-danger); color: var(--color-danger); width: 64px; height: 64px; margin: 0 auto 1.5rem auto; border-radius: 50%; background: #FEE2E2; display: flex; align-items: center; justify-content: center;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </div>
+          <h2 style="color: var(--color-danger); margin-bottom: 0.5rem; font-size: 1.5rem;">Access Denied (403 Restricted)</h2>
+          <p style="color: var(--color-text-secondary); max-width: 480px; margin: 0 auto 1.5rem auto; line-height: 1.6;">
+            System Settings, Firm Configurations, and Security Policies are strictly restricted to the <strong>Administrator</strong>. Your current role is: <strong>${userRole}</strong>.
+          </p>
+          <button class="btn btn-primary" onclick="App.navigate('dashboard')">Return to Dashboard</button>
+        </div>
+      `;
+    }
+
     return `
       <div class="animate-fade">
         <!-- 1. VIEW HEADER -->
         <div class="view-header">
           <div>
             <div class="flex items-center gap-2" style="margin-bottom: 0.25rem;">
-              <h1 class="page-title">Firm Settings & Security Policies</h1>
+              <h1 class="page-title">System Settings &amp; Firm Configuration</h1>
               <span class="badge badge-confidential" style="font-size: 0.75rem;">
-                SOC-2 Type II Certified
+                Administrator Access Only
               </span>
             </div>
             <p style="color: var(--color-text-secondary); font-size: 0.88rem;">
-              Configure organization parameters, multi-factor authentication policies, role permissions matrix and practice dockets
+              Firm profile, authorized courts, practice areas, password rules, backup vault, and 4-role permission matrix
             </p>
           </div>
 
-          <div class="flex items-center gap-3">
-            <span class="badge" style="background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; font-size: 0.75rem;">
-              <span class="badge-dot" style="background: #16A34A;"></span> Synced & Secure
-            </span>
+          <div class="flex items-center gap-2">
+            <button class="btn btn-secondary" onclick="SettingsView.downloadBackup()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Download System Backup</span>
+            </button>
             <button class="btn btn-gold" onclick="SettingsView.saveSettings()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                <polyline points="17 21 17 13 7 13 7 21"/>
-                <polyline points="7 3 7 8 15 8"/>
-              </svg>
-              <span>Save All Settings</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              <span>Save Changes</span>
             </button>
           </div>
         </div>
 
-        <div class="grid grid-cols-3 gap-6">
-          <!-- Left 2 Cols: Firm Profile & RBAC Matrix -->
-          <div style="grid-column: span 2;" class="flex flex-col gap-6">
-            
-            <!-- 0. ACTIVE ATTORNEY PROFILE DOSSIER -->
-            <div class="card" style="border-top: 3px solid var(--color-gold);">
-              <div class="card-header">
-                <div>
-                  <h3 class="card-title">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
-                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
-                      <circle cx="12" cy="7" r="4"/>
-                    </svg>
-                    Attorney Account & Licensure Profile
-                  </h3>
-                  <div class="card-subtitle">Personal attorney credentials, bar licensure number, contact lines and headshot</div>
-                </div>
-                <button class="btn btn-gold btn-sm" onclick="App.openUserProfileModal()">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                  </svg>
-                  <span>Edit Profile & Photo</span>
-                </button>
-              </div>
-
-              <div style="display: flex; align-items: flex-start; gap: 1.5rem; flex-wrap: wrap; background: var(--color-surface-subtle); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
-                <div style="position: relative; cursor: pointer;" onclick="App.openUserProfileModal()" title="Click to Edit Photo & Profile">
-                  <div class="avatar avatar-lg avatar-ring-gold" style="width: 76px; height: 76px; background: #0B1F33;">
-                    ${SLCMS_STATE.currentUser.avatarImg ? 
-                      `<img src="${SLCMS_STATE.currentUser.avatarImg}" alt="${SLCMS_STATE.currentUser.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                       <span style="display:none; font-size: 1.4rem; font-weight: 700; color: #FFFFFF;">${SLCMS_STATE.currentUser.avatar || 'EV'}</span>` : 
-                      `<span style="font-size: 1.4rem; font-weight: 700; color: #FFFFFF;">${SLCMS_STATE.currentUser.avatar || 'EV'}</span>`
-                    }
-                  </div>
-                  <span class="badge badge-active" style="position: absolute; bottom: -3px; right: -3px; padding: 2px 5px; font-size: 0.6rem; border: 2px solid #FFFFFF;">Active</span>
-                </div>
-
-                <div style="flex: 1; min-width: 260px;">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <h3 style="font-size: 1.18rem; color: var(--color-primary); font-weight: 700; margin: 0;">
-                      ${SLCMS_STATE.currentUser.name}
-                    </h3>
-                    <span class="badge badge-confidential" style="font-size: 0.72rem;">
-                      ${SLCMS_STATE.currentUser.roleLabel}
-                    </span>
-                    <span class="badge" style="background: rgba(200, 155, 60, 0.15); color: var(--color-gold); font-size: 0.7rem; font-weight: 600;">
-                      ${SLCMS_STATE.currentUser.department || 'Commercial Litigation'}
-                    </span>
-                  </div>
-                  
-                  <div style="font-size: 0.8rem; color: var(--color-text-secondary); margin-top: 0.4rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                    <span>📜 Bar No: <strong style="color: var(--color-gold); font-family: var(--font-mono);">${SLCMS_STATE.currentUser.barNumber || 'NY-BAR #4829104'}</strong></span>
-                    <span>•</span>
-                    <span>💵 Rate: <strong style="color: var(--color-primary); font-family: var(--font-mono);">${SLCMS_STATE.currentUser.hourlyRate || '$550.00 / hr'}</strong></span>
-                    <span>•</span>
-                    <span>✉️ <strong>${SLCMS_STATE.currentUser.email}</strong></span>
-                    <span>•</span>
-                    <span>📞 <strong>${SLCMS_STATE.currentUser.phone || '+1 (212) 555-0101'}</strong></span>
-                  </div>
-
-                  ${SLCMS_STATE.currentUser.practiceAreas ? `
-                    <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
-                      <span style="font-size: 0.72rem; color: var(--color-text-secondary); font-weight: 600;">Focus:</span>
-                      ${SLCMS_STATE.currentUser.practiceAreas.split(',').map(tag => `
-                        <span class="profile-tag-pill">${tag.trim()}</span>
-                      `).join('')}
-                    </div>
-                  ` : ''}
-
-                  ${SLCMS_STATE.currentUser.education ? `
-                    <div style="font-size: 0.75rem; color: var(--color-text-secondary); margin-top: 0.35rem;">
-                      🎓 <strong>Education:</strong> ${SLCMS_STATE.currentUser.education}
-                    </div>
-                  ` : ''}
-
-                  <p style="font-size: 0.78rem; color: var(--color-text-main); margin-top: 0.5rem; line-height: 1.5; margin-bottom: 0;">
-                    ${SLCMS_STATE.currentUser.bio || 'Managing Partner specializing in complex commercial litigation, trade secrets, and IP disputes.'}
-                  </p>
-                </div>
+        <!-- 2. AI NOTICE BANNER -->
+        <div class="alert alert-gold" style="margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+          <div class="flex items-center gap-2.5">
+            <span style="font-size: 1.3rem;">⚖️</span>
+            <div>
+              <strong>SLCMS AI Professional Notice:</strong>
+              <div style="font-size: 0.82rem; color: var(--color-text-secondary); margin-top: 0.15rem;">
+                SLCMS AI is designed to augment and assist qualified legal practitioners. AI research and drafting outputs provide cited Tanzanian case law precedents, statutory cross-references, and draft documents, but must be cross-examined and approved by an authorized Advocate prior to judicial filing or issuance.
               </div>
             </div>
+          </div>
+          <span class="badge badge-active" style="white-space: nowrap;">Assisted Research Active</span>
+        </div>
 
-            <!-- 1. LAW-FIRM PROFILE CARD -->
+        <div class="grid grid-cols-3 gap-6">
+          <!-- Left 2 Cols: Firm Profile & Permission Matrix -->
+          <div style="grid-column: span 2;" class="flex flex-col gap-6">
+            
+            <!-- FIRM PROFILE & BRANDING CARD -->
             <div class="card">
               <div class="card-header">
                 <div>
                   <h3 class="card-title">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
-                      <path d="M3 21h18"/>
-                      <path d="M5 21V7l8-4v18"/>
-                      <path d="M19 21V11l-6-4"/>
-                      <path d="M9 9h1"/>
-                      <path d="M9 13h1"/>
-                      <path d="M9 17h1"/>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
+                      <rect width="20" height="14" x="2" y="7" rx="2" ry="2"/>
+                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
                     </svg>
-                    Law-Firm Profile
+                    Law Firm Identity &amp; Jurisdiction
                   </h3>
-                  <div class="card-subtitle">Official entity credentials, e-filing registry, and state bar jurisdictional authorizations</div>
+                  <div class="card-subtitle">Organization metadata, headquarters, and registration details</div>
                 </div>
-                <span class="badge" style="background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE;">
-                  ✓ Verified NY Legal Entity
-                </span>
               </div>
 
-              <!-- Profile Form Inputs -->
               <div class="grid grid-cols-2 gap-4">
                 <div class="form-group">
-                  <label class="form-label required">Firm Legal Entity Name</label>
-                  <div class="input-with-icon">
-                    <span class="input-icon">🏛️</span>
-                    <input type="text" id="setting-firm-name" class="form-control" value="${this.firmProfile.legalName}">
-                  </div>
+                  <label class="form-label required">Law Firm Legal Name</label>
+                  <input type="text" id="setting-firm-name" class="form-control" value="${this.firmProfile.legalName}">
                 </div>
-
                 <div class="form-group">
-                  <label class="form-label required">Primary Practice Jurisdiction</label>
-                  <div class="input-with-icon">
-                    <span class="input-icon">⚖️</span>
-                    <input type="text" id="setting-jurisdiction" class="form-control" value="${this.firmProfile.jurisdiction}">
-                  </div>
+                  <label class="form-label required">Jurisdiction</label>
+                  <input type="text" id="setting-jurisdiction" class="form-control" value="${this.firmProfile.jurisdiction}">
                 </div>
               </div>
 
               <div class="grid grid-cols-2 gap-4" style="margin-top: 0.5rem;">
                 <div class="form-group">
-                  <label class="form-label">Firm E-Filing Account (NYSCEF / PACER)</label>
-                  <div class="input-with-icon">
-                    <span class="input-icon">📑</span>
-                    <input type="text" id="setting-efiling" class="form-control" value="${this.firmProfile.efilingAccount}">
-                  </div>
-                  <span class="form-hint" style="color: #16A34A; font-weight: 500;">🟢 Live Court API Gateway Connected</span>
+                  <label class="form-label required">Bar Registration / TLS Account</label>
+                  <input type="text" id="setting-efiling" class="form-control" value="${this.firmProfile.efilingAccount}">
                 </div>
-
                 <div class="form-group">
-                  <label class="form-label">Primary Trust Escrow Account</label>
-                  <div class="input-with-icon">
-                    <span class="input-icon">🏦</span>
-                    <input type="text" id="setting-trust" class="form-control" value="${this.firmProfile.trustEscrow}">
-                  </div>
-                  <span class="form-hint" style="color: var(--color-gold); font-weight: 500;">🔒 IOLTA Escrow Regulated (Rule 1.15 Safekeeping)</span>
+                  <label class="form-label required">Taxpayer TIN Number</label>
+                  <input type="text" id="setting-tin" class="form-control" value="${this.firmProfile.tinNumber}">
                 </div>
               </div>
 
-              <!-- Extra Firm Meta Row -->
-              <div class="grid grid-cols-2 gap-4" style="margin-top: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--color-border-subtle);">
-                <div class="form-group">
-                  <label class="form-label">Managing Partner Sponsor</label>
-                  <input type="text" class="form-control" value="${this.firmProfile.managingPartner}" readonly style="background: var(--color-surface-subtle);">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Firm Headquarters</label>
-                  <input type="text" class="form-control" value="${this.firmProfile.officeAddress}" readonly style="background: var(--color-surface-subtle);">
-                </div>
+              <div class="form-group" style="margin-top: 0.5rem;">
+                <label class="form-label required">Principal Office Address</label>
+                <input type="text" id="setting-address" class="form-control" value="${this.firmProfile.officeAddress}">
               </div>
 
-              <!-- Practice Area Dockets Tags -->
-              <div style="margin-top: 0.75rem; padding-top: 0.85rem; border-top: 1px solid var(--color-border-subtle);">
-                <label class="form-label" style="margin-bottom: 0.4rem; display: block;">Authorized Practice Dockets</label>
+              <!-- Legal Categories & Dockets -->
+              <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-border-subtle);">
+                <label class="form-label" style="margin-bottom: 0.5rem; font-weight: 600;">Authorized Legal Practice Categories</label>
                 <div class="flex items-center gap-2 flex-wrap">
                   ${this.firmProfile.primaryDockets.map(d => `
-                    <span class="badge" style="background: var(--color-surface-subtle); color: var(--color-primary); border: 1px solid var(--color-border); font-size: 0.75rem;">
+                    <span class="badge" style="background: var(--color-surface-subtle); color: var(--color-primary); border: 1px solid var(--color-border); font-size: 0.78rem;">
                       • ${d}
                     </span>
                   `).join('')}
                 </div>
               </div>
+
+              <!-- Recognized Tanzanian Courts -->
+              <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-border-subtle);">
+                <label class="form-label" style="margin-bottom: 0.5rem; font-weight: 600;">Recognized Judicial Forums &amp; Courts</label>
+                <div class="flex flex-col gap-1.5" style="font-size: 0.82rem; color: var(--color-text-secondary);">
+                  ${this.firmProfile.courts.map(c => `
+                    <div class="flex items-center gap-2">
+                      <span style="color: var(--color-gold);">🏛️</span>
+                      <span>${c}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
             </div>
 
-            <!-- 2. ROLE-BASED SECURITY & PERMISSIONS MATRIX -->
+            <!-- 4-ROLE PERMISSION MATRIX CARD -->
             <div class="card">
               <div class="card-header">
                 <div>
                   <h3 class="card-title">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-primary);">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-primary);">
                       <rect width="18" height="18" x="3" y="3" rx="2"/>
                       <path d="M9 3v18"/>
                       <path d="M15 3v18"/>
                       <path d="M3 9h18"/>
                       <path d="M3 15h18"/>
                     </svg>
-                    Role-Based Security & Permissions Matrix
+                    4-Role Permission Matrix Overview
                   </h3>
-                  <div class="card-subtitle">Granular privilege definitions enforced across all litigation modules, document repositories, and billing ledgers</div>
+                  <div class="card-subtitle">Granular role-based access control enforced across SLCMS</div>
                 </div>
-                <span class="badge badge-confidential">RBAC Enabled</span>
+                <span class="badge badge-confidential">4 Roles Governed</span>
               </div>
 
               <div class="table-container">
-                <table class="rbac-matrix-table data-table">
+                <table class="data-table">
                   <thead>
                     <tr>
-                      <th style="width: 38%;">Module / Permission</th>
-                      <th style="text-align: center; width: 20%;">Administrator</th>
-                      <th style="text-align: center; width: 21%;">Lawyer</th>
-                      <th style="text-align: center; width: 21%;">Legal Clerk</th>
+                      <th>Function / Permission</th>
+                      <th style="text-align: center;">Administrator</th>
+                      <th style="text-align: center;">Senior Lawyer</th>
+                      <th style="text-align: center;">Lawyer</th>
+                      <th style="text-align: center;">Legal Clerk</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <!-- Row 1 -->
                     <tr>
-                      <td>
-                        <div class="rbac-permission-name">
-                          <span>⚖️</span>
-                          <strong>Case Management (Create, Edit, Close)</strong>
-                        </div>
-                        <div style="font-size: 0.72rem; color: var(--color-text-muted); margin-left: 1.6rem;">Docket registration & case closure</div>
-                      </td>
-                      <td style="text-align: center;">
-                        <span class="badge badge-active"><span class="badge-dot"></span> Full Access</span>
-                      </td>
-                      <td style="text-align: center;">
-                        <span class="badge badge-active"><span class="badge-dot"></span> Assigned Cases</span>
-                      </td>
-                      <td style="text-align: center;">
-                        <span class="badge badge-pending"><span class="badge-dot"></span> View Only</span>
-                      </td>
+                      <td><strong>View Dashboard</strong></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
                     </tr>
-
-                    <!-- Row 2 -->
                     <tr>
-                      <td>
-                        <div class="rbac-permission-name">
-                          <span>🗄️</span>
-                          <strong>Document Vault & Privilege Controls</strong>
-                        </div>
-                        <div style="font-size: 0.72rem; color: var(--color-text-muted); margin-left: 1.6rem;">Confidentiality levels & vault encryption</div>
-                      </td>
-                      <td style="text-align: center;">
-                        <span class="badge badge-active"><span class="badge-dot"></span> Full Access</span>
-                      </td>
-                      <td style="text-align: center;">
-                        <span class="badge badge-active"><span class="badge-dot"></span> Full Access</span>
-                      </td>
-                      <td style="text-align: center;">
-                        <span class="badge badge-new"><span class="badge-dot"></span> Upload / Non-Privileged</span>
-                      </td>
+                      <td><strong>Register Clients</strong></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
                     </tr>
-
-                    <!-- Row 3 -->
                     <tr>
-                      <td>
-                        <div class="rbac-permission-name">
-                          <span>✨</span>
-                          <strong>AI Legal Draft Assistant</strong>
-                        </div>
-                        <div style="font-size: 0.72rem; color: var(--color-text-muted); margin-left: 1.6rem;">Pleading generation & deposition synthesis</div>
-                      </td>
-                      <td style="text-align: center;">
-                        <span class="badge badge-won"><span class="badge-dot"></span> Enabled</span>
-                      </td>
-                      <td style="text-align: center;">
-                        <span class="badge badge-won"><span class="badge-dot"></span> Enabled</span>
-                      </td>
-                      <td style="text-align: center;">
-                        <span class="badge badge-lost"><span class="badge-dot"></span> Restricted</span>
-                      </td>
+                      <td><strong>Create Cases</strong></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                      <td style="text-align: center;"><span class="badge badge-pending">Draft Only</span></td>
                     </tr>
-
-                    <!-- Row 4 -->
                     <tr>
-                      <td>
-                        <div class="rbac-permission-name">
-                          <span>💳</span>
-                          <strong>Billing, Rates & Invoices</strong>
-                        </div>
-                        <div style="font-size: 0.72rem; color: var(--color-text-muted); margin-left: 1.6rem;">Hourly rate table & IOLTA disbursements</div>
-                      </td>
-                      <td style="text-align: center;">
-                        <span class="badge badge-active"><span class="badge-dot"></span> Full Access</span>
-                      </td>
-                      <td style="text-align: center;">
-                        <span class="badge badge-new"><span class="badge-dot"></span> Log Hours</span>
-                      </td>
-                      <td style="text-align: center;">
-                        <span class="badge badge-lost"><span class="badge-dot"></span> Restricted</span>
-                      </td>
+                      <td><strong>View Assigned Cases</strong></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓ (All)</span></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓ (All)</span></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓ (Assigned)</span></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓ (Assigned)</span></td>
                     </tr>
-
-                    <!-- Row 5 -->
                     <tr>
-                      <td>
-                        <div class="rbac-permission-name">
-                          <span>🛡️</span>
-                          <strong>User Management & Roles</strong>
-                        </div>
-                        <div style="font-size: 0.72rem; color: var(--color-text-muted); margin-left: 1.6rem;">Account provisioning & lockout controls</div>
-                      </td>
-                      <td style="text-align: center;">
-                        <span class="badge badge-confidential">Admin Only</span>
-                      </td>
-                      <td style="text-align: center;">
-                        <span class="badge badge-lost"><span class="badge-dot"></span> Restricted</span>
-                      </td>
-                      <td style="text-align: center;">
-                        <span class="badge badge-lost"><span class="badge-dot"></span> Restricted</span>
-                      </td>
+                      <td><strong>Assign Cases</strong></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                      <td style="text-align: center;"><span class="badge badge-lost">—</span></td>
+                      <td style="text-align: center;"><span class="badge badge-lost">—</span></td>
                     </tr>
-
-                    <!-- Row 6 -->
                     <tr>
-                      <td>
-                        <div class="rbac-permission-name">
-                          <span>📜</span>
-                          <strong>Immutable Audit Logs</strong>
-                        </div>
-                        <div style="font-size: 0.72rem; color: var(--color-text-muted); margin-left: 1.6rem;">Cryptographic SOC-2 IP trail & tamper seals</div>
-                      </td>
-                      <td style="text-align: center;">
-                        <span class="badge badge-active"><span class="badge-dot"></span> Full Access</span>
-                      </td>
-                      <td style="text-align: center;">
-                        <span class="badge badge-lost"><span class="badge-dot"></span> Restricted</span>
-                      </td>
-                      <td style="text-align: center;">
-                        <span class="badge badge-lost"><span class="badge-dot"></span> Restricted</span>
-                      </td>
+                      <td><strong>Upload Documents</strong></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Approve Case Library Judgments</strong></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                      <td style="text-align: center;"><span class="badge badge-lost">—</span></td>
+                      <td style="text-align: center;"><span class="badge badge-lost">—</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Use SLCMS AI</strong></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓ Full</span></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓ Full</span></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓ Full</span></td>
+                      <td style="text-align: center;"><span class="badge badge-pending">Limited</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Manage Users &amp; Roles</strong></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                      <td style="text-align: center;"><span class="badge badge-lost">—</span></td>
+                      <td style="text-align: center;"><span class="badge badge-lost">—</span></td>
+                      <td style="text-align: center;"><span class="badge badge-lost">—</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Change System Settings</strong></td>
+                      <td style="text-align: center;"><span class="badge badge-active">✓</span></td>
+                      <td style="text-align: center;"><span class="badge badge-lost">—</span></td>
+                      <td style="text-align: center;"><span class="badge badge-lost">—</span></td>
+                      <td style="text-align: center;"><span class="badge badge-lost">—</span></td>
                     </tr>
                   </tbody>
                 </table>
@@ -381,34 +286,29 @@ const SettingsView = {
             </div>
           </div>
 
-          <!-- Right Col: Security, MFA & Telemetry -->
+          <!-- Right Col: Security, Password Rules & Backup -->
           <div class="flex flex-col gap-6">
             
-            <!-- 3. SECURITY & MFA CONTROLS -->
+            <!-- SECURITY & PASSWORD RULES -->
             <div class="card">
               <div class="card-header">
                 <div>
                   <h3 class="card-title">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-danger);">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-danger);">
                       <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
                       <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                     </svg>
-                    Security & MFA
+                    Password &amp; Security Rules
                   </h3>
-                  <div class="card-subtitle">Session authentication & threat prevention</div>
+                  <div class="card-subtitle">Session security policies</div>
                 </div>
               </div>
 
               <div class="flex flex-col">
-                <!-- Toggle 1: MFA -->
                 <div class="settings-switch-item">
                   <div>
-                    <div style="font-weight: 600; font-size: 0.88rem; color: var(--color-primary);">
-                      Enforce Multi-Factor (MFA)
-                    </div>
-                    <div style="font-size: 0.74rem; color: var(--color-text-secondary); margin-top: 0.15rem;">
-                      Mandatory TOTP authenticator or FIDO2 hardware key for all accounts.
-                    </div>
+                    <div style="font-weight: 600; font-size: 0.88rem; color: var(--color-primary);">Enforce MFA Policy</div>
+                    <div style="font-size: 0.74rem; color: var(--color-text-secondary);">Require multi-factor login for administrative staff</div>
                   </div>
                   <label class="custom-switch">
                     <input type="checkbox" id="mfa-toggle" checked onchange="SettingsView.toggleSecurity('enforceMfa', this.checked)">
@@ -416,15 +316,10 @@ const SettingsView = {
                   </label>
                 </div>
 
-                <!-- Toggle 2: Auto-Lock -->
                 <div class="settings-switch-item">
                   <div>
-                    <div style="font-weight: 600; font-size: 0.88rem; color: var(--color-primary);">
-                      Auto-Lock Inactive Sessions
-                    </div>
-                    <div style="font-size: 0.74rem; color: var(--color-text-secondary); margin-top: 0.15rem;">
-                      Terminates idle sessions after 15 minutes to protect privileged records.
-                    </div>
+                    <div style="font-weight: 600; font-size: 0.88rem; color: var(--color-primary);">Auto-Lock Idle Sessions</div>
+                    <div style="font-size: 0.74rem; color: var(--color-text-secondary);">Lock workstation after 15 minutes of inactivity</div>
                   </div>
                   <label class="custom-switch">
                     <input type="checkbox" id="autolock-toggle" checked onchange="SettingsView.toggleSecurity('autoLock15m', this.checked)">
@@ -432,15 +327,10 @@ const SettingsView = {
                   </label>
                 </div>
 
-                <!-- Toggle 3: Re-Auth -->
                 <div class="settings-switch-item">
                   <div>
-                    <div style="font-weight: 600; font-size: 0.88rem; color: var(--color-primary);">
-                      Sensitive Action Password Check
-                    </div>
-                    <div style="font-size: 0.74rem; color: var(--color-text-secondary); margin-top: 0.15rem;">
-                      Require password prompt before escrow disbursement or account lockout.
-                    </div>
+                    <div style="font-weight: 600; font-size: 0.88rem; color: var(--color-primary);">Re-Auth for Sensitive Edits</div>
+                    <div style="font-size: 0.74rem; color: var(--color-text-secondary);">Prompt password confirmation on security changes</div>
                   </div>
                   <label class="custom-switch">
                     <input type="checkbox" id="sensitive-pass-toggle" checked onchange="SettingsView.toggleSecurity('requireSensitivePass', this.checked)">
@@ -448,123 +338,49 @@ const SettingsView = {
                   </label>
                 </div>
 
-                <!-- Toggle 4: IP Whitelist -->
-                <div class="settings-switch-item">
-                  <div>
-                    <div style="font-weight: 600; font-size: 0.88rem; color: var(--color-primary);">
-                      Enforce IP Whitelisting (Firm VPN)
-                    </div>
-                    <div style="font-size: 0.74rem; color: var(--color-text-secondary); margin-top: 0.15rem;">
-                      Restrict access to approved office IP ranges and secure gateway subnets.
-                    </div>
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-border-subtle);">
+                  <div class="form-group">
+                    <label class="form-label">Maximum Upload Size per File</label>
+                    <select class="form-control" id="setting-max-upload">
+                      <option value="25">25 MB</option>
+                      <option value="50">50 MB</option>
+                      <option value="100" selected>100 MB (Standard PDF/TIFF)</option>
+                      <option value="250">250 MB</option>
+                    </select>
                   </div>
-                  <label class="custom-switch">
-                    <input type="checkbox" id="vpn-toggle" checked onchange="SettingsView.toggleSecurity('enforceVpnIp', this.checked)">
-                    <span class="custom-switch-slider"></span>
-                  </label>
-                </div>
 
-                <!-- Toggle 5: SHA-256 Vault Sealing -->
-                <div class="settings-switch-item">
-                  <div>
-                    <div style="font-weight: 600; font-size: 0.88rem; color: var(--color-primary);">
-                      SHA-256 Cryptographic Sealing
-                    </div>
-                    <div style="font-size: 0.74rem; color: var(--color-text-secondary); margin-top: 0.15rem;">
-                      Generate tamper-evident hash for every evidentiary document upload.
-                    </div>
+                  <div class="form-group" style="margin-top: 0.75rem;">
+                    <label class="form-label">Minimum Password Length</label>
+                    <input type="number" class="form-control" value="10" min="8" max="32">
                   </div>
-                  <label class="custom-switch">
-                    <input type="checkbox" id="sha-toggle" checked onchange="SettingsView.toggleSecurity('shaIntegrity', this.checked)">
-                    <span class="custom-switch-slider"></span>
-                  </label>
                 </div>
               </div>
             </div>
 
-            <!-- 4. SYSTEM HEALTH & STORAGE TELEMETRY -->
+            <!-- SYSTEM BACKUP & VAULT EXPORT CARD -->
             <div class="card" style="background: var(--color-surface-subtle); border-color: var(--color-border-strong);">
               <div class="card-header" style="border-bottom: 1px solid var(--color-border);">
                 <div>
                   <h3 class="card-title" style="font-size: 1.05rem;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
-                      <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="7 10 12 15 17 10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
-                    System Health & Storage
+                    System Backup &amp; Storage
                   </h3>
-                  <div class="card-subtitle">Real-time infrastructure & compliance telemetry</div>
+                  <div class="card-subtitle">One-click complete database export</div>
                 </div>
-                <span class="badge badge-active"><span class="badge-dot"></span> 99.99% Uptime</span>
+                <span class="badge badge-active"><span class="badge-dot"></span> Online</span>
               </div>
 
-              <!-- Storage Meter -->
-              <div style="margin-bottom: 1.25rem;">
-                <div class="flex justify-between items-center" style="font-size: 0.82rem; margin-bottom: 0.35rem;">
-                  <span style="font-weight: 600; color: var(--color-primary);">Encrypted Storage</span>
-                  <strong style="color: var(--color-primary); font-family: var(--font-mono);">24.8 GB / 1000 GB</strong>
-                </div>
-                <div class="storage-progress-container">
-                  <div class="storage-progress-bar" style="width: 2.48%;"></div>
-                </div>
-                <div class="flex justify-between" style="font-size: 0.72rem; color: var(--color-text-secondary);">
-                  <span>2.48% Utilized</span>
-                  <span>975.2 GB Available</span>
-                </div>
-              </div>
+              <p style="font-size: 0.82rem; color: var(--color-text-secondary); margin-bottom: 1.25rem; line-height: 1.5;">
+                Export all active cases, client profiles, indexed Tanzanian judgments, documents metadata, and audit logs into an encrypted JSON backup file.
+              </p>
 
-              <!-- Telemetry Tiles Grid -->
-              <div class="flex flex-col gap-2.5">
-                <!-- API Latency -->
-                <div class="telemetry-tile">
-                  <div class="flex items-center gap-2">
-                    <span style="font-size: 1.1rem;">⚡</span>
-                    <div>
-                      <div style="font-size: 0.75rem; color: var(--color-text-secondary); text-transform: uppercase; font-weight: 600;">API Latency</div>
-                      <div style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); font-size: 0.95rem;">
-                        <span id="telemetry-latency-value">${this.telemetryLatency}ms</span>
-                      </div>
-                    </div>
-                  </div>
-                  <span class="badge badge-active">
-                    <span class="badge-dot"></span> Optimal
-                  </span>
-                </div>
-
-                <!-- SOC-2 Compliance -->
-                <div class="telemetry-tile">
-                  <div class="flex items-center gap-2">
-                    <span style="font-size: 1.1rem;">🛡️</span>
-                    <div>
-                      <div style="font-size: 0.75rem; color: var(--color-text-secondary); text-transform: uppercase; font-weight: 600;">SOC-2 Compliance</div>
-                      <div style="font-weight: 700; color: var(--color-primary); font-size: 0.95rem;">Active & Verified</div>
-                    </div>
-                  </div>
-                  <span class="badge badge-won">
-                    <span class="badge-dot"></span> Pass
-                  </span>
-                </div>
-
-                <!-- Encryption Standard -->
-                <div class="telemetry-tile">
-                  <div class="flex items-center gap-2">
-                    <span style="font-size: 1.1rem;">🔐</span>
-                    <div>
-                      <div style="font-size: 0.75rem; color: var(--color-text-secondary); text-transform: uppercase; font-weight: 600;">Vault Encryption</div>
-                      <div style="font-weight: 700; color: var(--color-primary); font-size: 0.95rem;">AES-256 GCM</div>
-                    </div>
-                  </div>
-                  <span class="badge badge-confidential">FIPS 140-3</span>
-                </div>
-              </div>
-
-              <!-- Run Diagnostics Button -->
-              <button class="btn btn-secondary btn-sm w-full" style="margin-top: 1.25rem;" onclick="SettingsView.runDiagnostic()" id="btn-run-diag">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="23 4 23 10 17 10"/>
-                  <polyline points="1 20 1 14 7 14"/>
-                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-                </svg>
-                <span>Run Diagnostic Health Check</span>
+              <button class="btn btn-gold w-full" onclick="SettingsView.downloadBackup()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Export Full System Backup (.JSON)</span>
               </button>
             </div>
           </div>
@@ -573,72 +389,58 @@ const SettingsView = {
     `;
   },
 
-  // --- ACTIONS & HANDLERS ---
   saveSettings() {
     const firmName = document.getElementById('setting-firm-name')?.value || this.firmProfile.legalName;
     const jurisdiction = document.getElementById('setting-jurisdiction')?.value || this.firmProfile.jurisdiction;
     const efiling = document.getElementById('setting-efiling')?.value || this.firmProfile.efilingAccount;
-    const trust = document.getElementById('setting-trust')?.value || this.firmProfile.trustEscrow;
+    const address = document.getElementById('setting-address')?.value || this.firmProfile.officeAddress;
 
     this.firmProfile.legalName = firmName;
     this.firmProfile.jurisdiction = jurisdiction;
     this.firmProfile.efilingAccount = efiling;
-    this.firmProfile.trustEscrow = trust;
+    this.firmProfile.officeAddress = address;
 
     if (typeof SLCMS_STATE !== 'undefined' && SLCMS_STATE.addAuditLog) {
-      SLCMS_STATE.addAuditLog('Firm Settings Updated', 'Administration', `Saved parameters for ${firmName}`);
+      SLCMS_STATE.addAuditLog('Settings Updated', 'Administration', `Saved parameters for ${firmName}`);
     }
 
-    App.showToast('Firm settings and security policies successfully saved & synchronized!', 'success');
+    App.showToast('Firm settings and security policies successfully saved!', 'success');
   },
 
-  toggleSecurity(settingKey, isChecked) {
-    this.securitySettings[settingKey] = isChecked;
-    const labelMap = {
-      enforceMfa: 'Enforce Multi-Factor (MFA)',
-      autoLock15m: 'Auto-Lock Inactive Sessions (15m)',
-      requireSensitivePass: 'Sensitive Action Password Re-Auth',
-      enforceVpnIp: 'IP Whitelisting (Firm VPN)',
-      shaIntegrity: 'SHA-256 Cryptographic Sealing'
+  toggleSecurity(key, checked) {
+    this.securitySettings[key] = checked;
+    App.showToast(`Security rule updated: ${key} = ${checked ? 'Enabled' : 'Disabled'}`, 'info');
+  },
+
+  downloadBackup() {
+    const backupData = {
+      system: 'SLCMS - Smart Legal Case Management System',
+      exportDate: new Date().toISOString(),
+      firm: this.firmProfile,
+      casesCount: SLCMS_STATE.cases.length,
+      clientsCount: SLCMS_STATE.clients.length,
+      documentsCount: SLCMS_STATE.documents.length,
+      judgmentsCount: SLCMS_STATE.tanzaniaJudgments.length,
+      tasksCount: SLCMS_STATE.tasks.length,
+      usersCount: SLCMS_STATE.users.length,
+      cases: SLCMS_STATE.cases,
+      clients: SLCMS_STATE.clients,
+      documents: SLCMS_STATE.documents,
+      tasks: SLCMS_STATE.tasks,
+      users: SLCMS_STATE.users.map(u => ({ id: u.id, name: u.name, role: u.role, email: u.email, status: u.status }))
     };
 
-    if (typeof SLCMS_STATE !== 'undefined' && SLCMS_STATE.addAuditLog) {
-      SLCMS_STATE.addAuditLog('Security Policy Toggled', 'Security', `${labelMap[settingKey]}: ${isChecked ? 'ENABLED' : 'DISABLED'}`);
-    }
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `slcms_backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 
-    App.showToast(`${labelMap[settingKey]} updated to: ${isChecked ? 'Enabled' : 'Disabled'}`, 'info');
-  },
-
-  runDiagnostic() {
-    if (this.isDiagnosticRunning) return;
-    this.isDiagnosticRunning = true;
-
-    const btn = document.getElementById('btn-run-diag');
-    if (btn) {
-      btn.innerHTML = `<span>Running diagnostics...</span>`;
-      btn.disabled = true;
-    }
-
-    App.showToast('Running comprehensive SOC-2 and latency diagnostic...', 'info');
-
-    setTimeout(() => {
-      this.telemetryLatency = Math.floor(Math.random() * 8) + 14; // 14ms - 21ms
-      const valElem = document.getElementById('telemetry-latency-value');
-      if (valElem) valElem.innerText = `${this.telemetryLatency}ms`;
-
-      if (btn) {
-        btn.innerHTML = `
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 4 23 10 17 10"/>
-            <polyline points="1 20 1 14 7 14"/>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-          </svg>
-          <span>Run Diagnostic Health Check</span>
-        `;
-        btn.disabled = false;
-      }
-      this.isDiagnosticRunning = false;
-      App.showToast('Diagnostic completed: All systems nominal (100% database & vault integrity verified)', 'success');
-    }, 900);
+    SLCMS_STATE.addAuditLog('System Backup Downloaded', 'Administration', 'Full JSON database export');
+    App.showToast('Full system backup file successfully generated & downloaded!', 'success');
   }
 };

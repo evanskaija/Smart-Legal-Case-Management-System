@@ -280,7 +280,7 @@ const DesignSystemView = {
         'Dispatch research tasks to paralegal Kanban board'
       ],
       deliverables: ['Pleadings & Motions', 'Privilege Log', 'Interrogatory Requests', 'Deposition Outlines'],
-      primaryActionText: 'Open AI Draft Assistant',
+      primaryActionText: 'Open SLCMS AI Drafting Studio',
       primaryActionRoute: 'ai-assistant'
     },
     {

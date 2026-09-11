@@ -5,8 +5,27 @@
 
 const AuthView = {
   // Authentication View Sub-State
-  currentViewMode: 'login', // 'login' | 'first_login_password_change' | 'locked_notice'
+  currentTab: 'login', // 'login' | 'register'
+  currentViewMode: 'auth', // 'auth' | 'first_login_password_change'
   tempAuthUser: null, // Temporary session context for first-login reset
+  currentInvStep: 1, // 1 | 2 | 3
+  verifiedInvitationData: null,
+  verifiedFormData: null,
+
+  switchTab(tab) {
+    this.currentTab = tab;
+    this.hideServerAlert();
+    this.currentInvStep = 1;
+    this.verifiedInvitationData = null;
+    this.renderInPlace();
+  },
+
+  renderInPlace() {
+    const root = document.getElementById('app-root');
+    if (root) {
+      root.innerHTML = this.render();
+    }
+  },
 
   render() {
     if (this.currentViewMode === 'first_login_password_change' && this.tempAuthUser) {
@@ -41,54 +60,53 @@ const AuthView = {
               </h1>
               <div class="auth-headline-bar"></div>
               <p class="auth-lead-tagline">
-                Manage every legal matter securely and efficiently.
+                Enterprise law-firm management with strict administrator account governance and zero-trust identity control.
               </p>
 
               <!-- 3 Pill Badges -->
               <div class="auth-pill-badges-row">
                 <div class="auth-pill-badge">
                   <span class="badge-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
-                      <rect width="8" height="5" x="8" y="11" rx="1"/>
-                      <path d="M10 11V9a2 2 0 1 1 4 0v2"/>
+                      <path d="m9 12 2 2 4-4"/>
                     </svg>
                   </span>
-                  <span>Secure</span>
+                  <span>Administrator Managed</span>
                 </div>
 
                 <div class="auth-pill-badge">
                   <span class="badge-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                     </svg>
                   </span>
-                  <span>Organized</span>
+                  <span>Mandatory First-Login Reset</span>
                 </div>
 
                 <div class="auth-pill-badge">
                   <span class="badge-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="7" r="4"/>
-                      <path d="M5.5 21a8.38 8.38 0 0 1 13 0"/>
-                      <circle cx="12" cy="12" r="10" stroke-width="1.5"/>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <path d="m9 12 2 2 4-4"/>
                     </svg>
                   </span>
-                  <span>Accountable</span>
+                  <span>Strict RBAC</span>
                 </div>
               </div>
             </div>
 
             <!-- Left Bottom Spacer -->
-            <div style="font-size: 0.8rem; color: #94A3B8;">
-              Enterprise Law-Firm Portal • Authorized Personnel Only • Zero-Trust Enforced
+            <div class="auth-hero-bottom-legal" style="font-size: 0.8rem; color: #94A3B8;">
+              Enterprise Law-Firm Portal • Authorized Personnel Only • Self-Registration Prohibited
             </div>
           </div>
 
-          <!-- 2. Right Form Section -->
+          <!-- 2. Right Form Section - Unified Auth Card -->
           <div class="auth-form-panel">
             <div class="auth-white-card">
-              <!-- Circular Golden Lock Badge -->
+              <!-- Top Lock/Key Badge -->
               <div class="auth-card-lock-badge">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
@@ -98,9 +116,11 @@ const AuthView = {
               </div>
 
               <!-- Card Header -->
-              <h2 class="auth-card-title">Welcome Back</h2>
+              <h2 class="auth-card-title">
+                Welcome to SLCMS
+              </h2>
               <p class="auth-card-subtitle">
-                Sign in to continue to your workspace
+                Sign in with your Staff ID, email or username.
               </p>
 
               <!-- Server/Security Alert Banner -->
@@ -113,11 +133,11 @@ const AuthView = {
                 <div id="auth-server-alert-text"></div>
               </div>
 
-              <!-- Standard Login Form (No Public Registration) -->
+              <!-- SIGN IN FORM -->
               <form id="auth-main-login-form" onsubmit="AuthView.handleLoginSubmit(event)" novalidate>
-                <!-- Email or Username Field -->
+                <!-- Staff ID / Username / Email Field -->
                 <div class="auth-input-group">
-                  <label for="login-email-input">Email or Username</label>
+                  <label for="login-email-input">Staff ID, username or email</label>
                   <div style="position: relative;">
                     <span class="auth-input-icon">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -129,8 +149,8 @@ const AuthView = {
                       type="text" 
                       id="login-email-input" 
                       class="auth-input-field" 
-                      placeholder="name@slcms-law.com or EMP-1001" 
-                      value="e.vance@slcms-law.com" 
+                      placeholder="e.g. ADM-0001 or slcms.ad or admin@slcms.local" 
+                      value="" 
                       autocomplete="username"
                       oninput="AuthView.clearFieldError('login-email-input', 'login-email-error')"
                     >
@@ -152,8 +172,8 @@ const AuthView = {
                       type="password" 
                       id="login-password-input" 
                       class="auth-input-field" 
-                      placeholder="••••••••••••" 
-                      value="SecretLawFirm2026!" 
+                      placeholder="Enter your password" 
+                      value="" 
                       autocomplete="current-password"
                       style="padding-right: 2.75rem;"
                       oninput="AuthView.clearFieldError('login-password-input', 'login-password-error')"
@@ -161,6 +181,7 @@ const AuthView = {
                     <button 
                       type="button" 
                       onclick="AuthView.togglePasswordEye('login-password-input', 'auth-eye-svg')" 
+                      class="auth-password-eye-btn"
                       style="position: absolute; right: 0.85rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #94A3B8; display: flex; align-items: center;"
                       title="Show / Hide Password"
                     >
@@ -173,8 +194,8 @@ const AuthView = {
                   <div id="login-password-error" class="form-error-msg hidden"></div>
                 </div>
 
-                <!-- Remember Me & Forgot Password Row -->
-                <div class="flex items-center justify-between" style="margin-bottom: 1.25rem; font-size: 0.85rem;">
+                <!-- Remember Staff ID Checkbox -->
+                <div class="auth-remember-row flex items-center justify-between" style="margin-bottom: 1.25rem; font-size: 0.85rem;">
                   <label class="checkbox-label" style="font-size: 0.85rem; color: #475569;" title="Only use on trusted firm workstations">
                     <input type="checkbox" id="auth-remember-check" checked style="display: none;">
                     <span class="checkbox-custom">
@@ -182,77 +203,661 @@ const AuthView = {
                         <path d="M20 6 9 17l-5-5"/>
                       </svg>
                     </span>
-                    <span>Remember me</span>
+                    <span>Remember Staff ID</span>
                   </label>
-                  <a href="javascript:void(0)" onclick="AuthView.showForgotPasswordModal(document.getElementById('login-email-input')?.value)" style="color: var(--color-info); font-size: 0.82rem; font-weight: 500;">
-                    Forgot password?
-                  </a>
+                  <a href="javascript:void(0)" onclick="AuthView.showForgotPasswordModal()" class="auth-forgot-link" style="font-size: 0.82rem; color: var(--color-gold); font-weight: 600; text-decoration: none;">Forgot Password?</a>
                 </div>
 
-                <!-- Remember Me Security Advisory Warning -->
-                <div style="font-size: 0.72rem; color: #64748B; text-align: left; margin-bottom: 1.25rem; background: #F8FAFC; padding: 0.45rem 0.65rem; border-radius: 4px; border-left: 2.5px solid var(--color-gold);">
-                  🔒 <em>Do not use Remember me on a shared or public computer.</em>
-                </div>
-
-                <!-- Sign In Button -->
-                <button type="submit" id="auth-submit-btn" class="auth-btn-signin">
-                  Sign In
+                <!-- Login Button -->
+                <button type="submit" id="auth-submit-btn" class="auth-btn-signin" style="font-size: 1rem; padding: 0.85rem; font-weight: 700; letter-spacing: 0.02em;">
+                  Login
                 </button>
+
+                <div class="auth-card-need-access" style="margin-top: 1rem; font-size: 0.80rem; color: #64748B; line-height: 1.4; text-align: center;">
+                  Need access or new credentials?
+                  <a href="javascript:void(0)" onclick="AuthView.showContactAdminModal()" style="color: #0F172A; font-weight: 700; text-decoration: none;">Contact Administrator</a>
+                </div>
               </form>
 
               <!-- Bottom Security Protection Note -->
-              <div class="auth-security-footer-note">
+              <div class="auth-security-footer-note" style="margin-top: 1.5rem;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
                   <path d="m9 12 2 2 4-4"/>
                 </svg>
-                <span>Your session and information are protected.</span>
-              </div>
-
-              <!-- Interactive Security & Testing Matrix Sandbox -->
-              <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px dashed #E2E8F0; text-align: left;">
-                <div class="flex items-center justify-between" style="margin-bottom: 0.65rem;">
-                  <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; font-weight: 700;">
-                    🧪 Security States Showcase
-                  </span>
-                  <span class="badge badge-neutral" style="font-size: 0.65rem;">Requirement 18</span>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-2" style="font-size: 0.75rem;">
-                  <button type="button" class="btn btn-secondary btn-sm w-full" onclick="AuthView.fillCredentials('e.vance@slcms-law.com', 'SecretLawFirm2026!')" title="Active Admin Partner">
-                    👑 Admin Partner
-                  </button>
-                  <button type="button" class="btn btn-secondary btn-sm w-full" onclick="AuthView.fillCredentials('j.mercer@slcms-law.com', 'SecretLawFirm2026!')" title="Active Senior Counsel">
-                    ⚖️ Senior Counsel
-                  </button>
-                  <button type="button" class="btn btn-secondary btn-sm w-full" onclick="AuthView.fillCredentials('m.bell@slcms-law.com', 'SecretLawFirm2026!')" title="Active Legal Staff">
-                    📋 Legal Clerk
-                  </button>
-                  <button type="button" class="btn btn-secondary btn-sm w-full" onclick="AuthView.fillCredentials('temp.counsel@slcms-law.com', 'TempPass2026!')" title="First Login with Temporary Password">
-                    🔑 1st Login Reset
-                  </button>
-                  <button type="button" class="btn btn-secondary btn-sm w-full" onclick="AuthView.fillCredentials('disabled.user@slcms-law.com', 'SecretLawFirm2026!')" title="Deactivated Account Test">
-                    🚫 Deactivated User
-                  </button>
-                  <button type="button" class="btn btn-secondary btn-sm w-full" onclick="AuthView.fillCredentials('locked.user@slcms-law.com', 'SecretLawFirm2026!')" title="Locked Account (5 Failed Attempts)">
-                    🔒 Locked User
-                  </button>
-                </div>
+                <span>Privileged &amp; Confidential • Administrator-Managed Access • No Self-Registration</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 3. Bottom Dark Navy Footer -->
+        <!-- 3. Bottom Global Footer -->
         <footer class="auth-global-footer">
-          <span>© 2026 SLCMS Legal Technologies Inc.</span>
-          <span>•</span>
-          <a href="javascript:void(0)" onclick="App.showToast('Firm Security & Privacy Policies (SOC-2 Type II Certified)', 'info')">Privacy</a>
-          <span>•</span>
-          <a href="javascript:void(0)" onclick="AuthView.showHelpModal()">Help & Security Helpline</a>
+          <div class="auth-footer-line-1">
+            <span>© 2026 SLCMS Smart Legal Case Management System</span>
+            <span class="auth-footer-dot">•</span>
+          </div>
+          <div class="auth-footer-line-2">
+            <a href="javascript:void(0)" onclick="App.showToast('Firm Security & Privacy Policies (SOC-2 Type II Certified)', 'info')">Privacy &amp; Confidentiality</a>
+            <span class="auth-footer-dot">•</span>
+            <a href="javascript:void(0)" onclick="AuthView.showContactAdminModal()">Administrator Support</a>
+          </div>
         </footer>
       </div>
     `;
+  },
+
+  renderInCardRegistrationFlow() {
+    if (this.currentInvStep === 1) {
+      return this.renderInCardStep1();
+    } else if (this.currentInvStep === 2) {
+      return this.renderInCardStep2(this.verifiedInvitationData);
+    } else if (this.currentInvStep === 3) {
+      return this.renderInCardStep3(this.verifiedInvitationData);
+    }
+    return this.renderInCardStep1();
+  },
+
+  renderInCardStep1(presetCode = '') {
+    return `
+      <div id="in-card-step-1" class="reg-container">
+        <!-- 3-Step Connected Progress Stepper -->
+        <div class="reg-stepper">
+          <div class="reg-stepper-track">
+            <div class="reg-stepper-progress" style="width: 0%;"></div>
+          </div>
+          <div class="reg-step-node active">
+            <div class="reg-step-circle">1</div>
+            <span class="reg-step-label">Validate Token</span>
+          </div>
+          <div class="reg-step-node">
+            <div class="reg-step-circle">2</div>
+            <span class="reg-step-label">Dossier Clearance</span>
+          </div>
+          <div class="reg-step-node">
+            <div class="reg-step-circle">3</div>
+            <span class="reg-step-label">Passphrase</span>
+          </div>
+        </div>
+
+        <div id="in-card-inv-step-1-alert" class="alert alert-danger hidden" style="margin-bottom: 1rem; font-size: 0.82rem;"></div>
+
+        <form id="in-card-step-1-form" onsubmit="AuthView.handleInCardValidateInvitationSubmit(event)">
+          <!-- Luxury Voucher Pass Card -->
+          <div class="reg-ticket-card">
+            <div class="reg-ticket-header">
+              <div class="reg-ticket-title">
+                <span>🛡️</span>
+                <span>Firm Credential Voucher</span>
+              </div>
+              <span class="reg-ticket-badge">VIP Invitation</span>
+            </div>
+
+            <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #1E293B; margin-bottom: 0.45rem;">
+              Firm Invitation Code *
+            </label>
+
+            <div class="reg-code-input-wrapper">
+              <input 
+                type="text" 
+                id="in-card-inv-code" 
+                class="reg-code-input-field" 
+                placeholder="INV-TZ-2026-XXXX-XXXX" 
+                value="${presetCode || ''}"
+                autocomplete="off"
+                spellcheck="false"
+                required
+                oninput="AuthView.handleCodeInputChange(this.value)"
+              >
+              <span class="reg-code-input-icon">🎫</span>
+            </div>
+
+            <!-- Dynamic Real-time Token Match Preview -->
+            <div id="reg-code-live-preview" style="min-height: 22px; font-size: 0.74rem; margin-bottom: 0.45rem; transition: all 0.25s ease;">
+              <span style="color: #64748B;">Codes are issued exclusively by authorized administrators.</span>
+            </div>
+          </div>
+
+          <!-- Quick Interactive Test Cards -->
+          <div style="margin-bottom: 1.25rem;">
+            <div style="font-size: 0.74rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.55rem; display: flex; align-items: center; justify-content: space-between;">
+              <span style="display: flex; align-items: center; gap: 0.35rem;">
+                <span>⚡</span>
+                <span>Available Invitations (Click to auto-fill):</span>
+              </span>
+              <span style="font-size: 0.68rem; color: #C89B3C; font-weight: 600;">1-Click Fill</span>
+            </div>
+
+            <div class="reg-quick-grid">
+              <div class="reg-quick-card" onclick="AuthView.setInCardCode('INV-TZ-2026-ADMIN-4081')" title="Load Administrator invitation">
+                <div class="reg-quick-icon">🛡️</div>
+                <div class="reg-quick-info">
+                  <div class="reg-quick-role">System Admin</div>
+                  <div class="reg-quick-code">INV-TZ-2026-ADMIN-4081</div>
+                </div>
+              </div>
+
+              <div class="reg-quick-card" onclick="AuthView.setInCardCode('INV-TZ-2026-SR-COUNSEL')" title="Load Senior Counsel invitation">
+                <div class="reg-quick-icon">⚖️</div>
+                <div class="reg-quick-info">
+                  <div class="reg-quick-role">Senior Counsel</div>
+                  <div class="reg-quick-code">INV-TZ-2026-SR-COUNSEL</div>
+                </div>
+              </div>
+
+              <div class="reg-quick-card" onclick="AuthView.setInCardCode('INV-TZ-2026-ASSOC')" title="Load Associate Lawyer invitation">
+                <div class="reg-quick-icon">📜</div>
+                <div class="reg-quick-info">
+                  <div class="reg-quick-role">Associate Lawyer</div>
+                  <div class="reg-quick-code">INV-TZ-2026-ASSOC</div>
+                </div>
+              </div>
+
+              <div class="reg-quick-card" onclick="AuthView.setInCardCode('INV-TZ-2026-CLERK')" title="Load Legal Clerk invitation">
+                <div class="reg-quick-icon">📁</div>
+                <div class="reg-quick-info">
+                  <div class="reg-quick-role">Legal Clerk</div>
+                  <div class="reg-quick-code">INV-TZ-2026-CLERK</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="reg-btn-gold">
+            <span>Verify Invitation Code</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+              <polyline points="12 5 19 12 12 19"/>
+            </svg>
+          </button>
+        </form>
+      </div>
+    `;
+  },
+
+  handleCodeInputChange(rawVal) {
+    const val = rawVal.toUpperCase();
+    const input = document.getElementById('in-card-inv-code');
+    if (input && input.value !== val) input.value = val;
+    this.clearFieldError('in-card-inv-code', 'in-card-inv-step-1-alert');
+
+    const previewEl = document.getElementById('reg-code-live-preview');
+    if (!previewEl) return;
+
+    if (!val || val.length < 5) {
+      previewEl.innerHTML = `<span style="color: #64748B;">Codes are issued exclusively by authorized administrators.</span>`;
+      return;
+    }
+
+    const valResult = SLCMS_STATE.validateInvitationCode(val);
+    if (valResult.valid && valResult.invitation) {
+      const inv = valResult.invitation;
+      previewEl.innerHTML = `
+        <span style="color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <path d="M20 6 9 17l-5-5"/>
+          </svg>
+          Recognized: <strong>${inv.approvedFullName}</strong> (${inv.approvedRole})
+        </span>
+      `;
+    } else {
+      previewEl.innerHTML = `<span style="color: #94A3B8;">Entering token: <code style="color: #475569; font-family: monospace;">${val}</code></span>`;
+    }
+  },
+
+  setInCardCode(code) {
+    const input = document.getElementById('in-card-inv-code');
+    if (input) {
+      input.value = code;
+      input.classList.add('auth-input-highlight');
+      this.handleCodeInputChange(code);
+      setTimeout(() => input.classList.remove('auth-input-highlight'), 600);
+      App.showToast(`Selected invitation token: ${code}`, 'info', 1800);
+    }
+  },
+
+  fillRegisterCode(code) {
+    this.currentTab = 'register';
+    this.currentInvStep = 1;
+    this.renderInPlace();
+    setTimeout(() => {
+      this.setInCardCode(code);
+    }, 50);
+  },
+
+  handleInCardValidateInvitationSubmit(e) {
+    e.preventDefault();
+    const code = document.getElementById('in-card-inv-code')?.value.trim();
+    const alertEl = document.getElementById('in-card-inv-step-1-alert');
+
+    const valResult = SLCMS_STATE.validateInvitationCode(code);
+
+    if (!valResult.valid) {
+      if (alertEl) {
+        alertEl.innerText = valResult.message;
+        alertEl.classList.remove('hidden');
+      }
+      App.showToast(valResult.message, 'error');
+      return;
+    }
+
+    if (alertEl) alertEl.classList.add('hidden');
+    this.verifiedInvitationData = valResult.invitation;
+    this.currentInvStep = 2;
+    this.renderInPlace();
+    App.showToast(`Verified invitation for ${valResult.invitation.approvedFullName} (${valResult.invitation.approvedRole})`, 'success');
+  },
+
+  renderInCardStep2(inv) {
+    if (!inv) return this.renderInCardStep1();
+    const isLawyer = ['Managing Partner', 'Senior Counsel', 'Associate Lawyer', 'Junior Lawyer'].includes(inv.approvedRole);
+    const isClerk = (inv.approvedRole === 'Legal Clerk');
+
+    return `
+      <div id="in-card-step-2" class="reg-container">
+        <!-- 3-Step Connected Progress Stepper -->
+        <div class="reg-stepper">
+          <div class="reg-stepper-track">
+            <div class="reg-stepper-progress" style="width: 50%;"></div>
+          </div>
+          <div class="reg-step-node completed">
+            <div class="reg-step-circle">✓</div>
+            <span class="reg-step-label">Validated</span>
+          </div>
+          <div class="reg-step-node active">
+            <div class="reg-step-circle">2</div>
+            <span class="reg-step-label">Verify Identity</span>
+          </div>
+          <div class="reg-step-node">
+            <div class="reg-step-circle">3</div>
+            <span class="reg-step-label">Passphrase</span>
+          </div>
+        </div>
+
+        <!-- Luxury Practitioner Dossier Card -->
+        <div class="reg-dossier-card">
+          <div class="reg-dossier-top">
+            <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-gold); font-weight: 800;">
+              ⚖️ Official Firm Dossier
+            </div>
+            <span class="reg-dossier-role-pill">
+              🔒 ${inv.approvedRole}
+            </span>
+          </div>
+
+          <div class="reg-dossier-name">
+            ${inv.approvedFullName}
+          </div>
+
+          <div class="reg-dossier-meta">
+            <span>🏛️ <strong>${inv.department}</strong></span>
+            <span>•</span>
+            <span>🎫 Code: <code style="color: var(--color-gold); font-family: 'JetBrains Mono', monospace;">${inv.invitationCode}</code></span>
+          </div>
+        </div>
+
+        <div id="in-card-inv-step-2-alert" class="alert alert-danger hidden" style="margin-bottom: 1rem; font-size: 0.82rem;"></div>
+
+        <form id="in-card-step-2-form" onsubmit="AuthView.handleInCardIdentityVerificationSubmit(event)">
+          <div class="grid grid-cols-2 gap-3" style="margin-bottom: 0.85rem;">
+            <div class="auth-input-group" style="margin-bottom: 0.4rem;">
+              <label style="font-size: 0.8rem; font-weight: 700; color: #1E293B;">Staff / Employee ID *</label>
+              <div style="position: relative;">
+                <span class="auth-input-icon" style="left: 0.8rem; font-size: 0.9rem;">🆔</span>
+                <input type="text" id="inc-staff-id" class="auth-input-field" value="${inv.staffId}" required style="font-size: 0.88rem; padding: 0.65rem 0.75rem 0.65rem 2.4rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; background: #F8FAFC;">
+              </div>
+              <span class="reg-verified-field-indicator">✓ Registered Firm ID</span>
+            </div>
+            <div class="auth-input-group" style="margin-bottom: 0.4rem;">
+              <label style="font-size: 0.8rem; font-weight: 700; color: #1E293B;">Approved Firm Email *</label>
+              <div style="position: relative;">
+                <span class="auth-input-icon" style="left: 0.8rem; font-size: 0.9rem;">✉️</span>
+                <input type="email" id="inc-email" class="auth-input-field" value="${inv.approvedEmail}" required style="font-size: 0.88rem; padding: 0.65rem 0.75rem 0.65rem 2.4rem; font-weight: 600; background: #F8FAFC;">
+              </div>
+              <span class="reg-verified-field-indicator">✓ Pre-Approved Mailbox</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3" style="margin-bottom: 0.85rem;">
+            <div class="auth-input-group" style="margin-bottom: 0.4rem;">
+              <label style="font-size: 0.8rem; font-weight: 700; color: #1E293B;">Approved Phone Number *</label>
+              <div style="position: relative;">
+                <span class="auth-input-icon" style="left: 0.8rem; font-size: 0.9rem;">📞</span>
+                <input type="text" id="inc-phone" class="auth-input-field" value="${inv.approvedPhone}" required style="font-size: 0.88rem; padding: 0.65rem 0.75rem 0.65rem 2.4rem; font-weight: 600; background: #F8FAFC;">
+              </div>
+              <span class="reg-verified-field-indicator">✓ Verified Contact</span>
+            </div>
+            ${isLawyer ? `
+              <div class="auth-input-group" style="margin-bottom: 0.4rem;">
+                <label style="font-size: 0.8rem; font-weight: 700; color: #1E293B;">Advocate Roll No. *</label>
+                <div style="position: relative;">
+                  <span class="auth-input-icon" style="left: 0.8rem; font-size: 0.9rem;">⚖️</span>
+                  <input type="text" id="inc-advocate-no" class="auth-input-field" value="${inv.advocateNumber || ''}" placeholder="e.g. ADV/2026/0481" required style="font-size: 0.88rem; padding: 0.65rem 0.75rem 0.65rem 2.4rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; background: #F8FAFC;">
+                </div>
+                <span class="reg-verified-field-indicator">✓ Bar Licensure Match</span>
+              </div>
+            ` : `
+              <div class="auth-input-group" style="margin-bottom: 0.4rem;">
+                <label style="font-size: 0.8rem; font-weight: 700; color: #1E293B;">National ID Ref (NIDA) *</label>
+                <div style="position: relative;">
+                  <span class="auth-input-icon" style="left: 0.8rem; font-size: 0.9rem;">🛡️</span>
+                  <input type="text" id="inc-nid-ref" class="auth-input-field" value="${inv.nationalIdRefMasked || 'NIDA-19870512-1010-33'}" required style="font-size: 0.88rem; padding: 0.65rem 0.75rem 0.65rem 2.4rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; background: #F8FAFC;">
+                </div>
+                <span class="reg-verified-field-indicator">✓ National Identity Verified</span>
+              </div>
+            `}
+          </div>
+
+          <div class="flex gap-2" style="margin-top: 1.25rem;">
+            <button type="button" class="btn btn-secondary" onclick="AuthView.currentInvStep = 1; AuthView.renderInPlace();" style="flex: 0.35; padding: 0.8rem; font-weight: 600;">
+              ← Back
+            </button>
+            <button type="submit" class="reg-btn-gold" style="flex: 0.65;">
+              <span>Confirm & Setup Passphrase</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="5" y1="12" x2="19" y2="12"/>
+                <polyline points="12 5 19 12 12 19"/>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+  },
+
+  handleInCardIdentityVerificationSubmit(e) {
+    e.preventDefault();
+    const inv = this.verifiedInvitationData;
+    if (!inv) return;
+
+    const email = document.getElementById('inc-email')?.value.trim();
+    const phone = document.getElementById('inc-phone')?.value.trim();
+    const staffId = document.getElementById('inc-staff-id')?.value.trim();
+    const advocateNo = document.getElementById('inc-advocate-no')?.value.trim();
+    const nidRef = document.getElementById('inc-nid-ref')?.value.trim();
+    const alertEl = document.getElementById('in-card-inv-step-2-alert');
+
+    let hasMismatch = false;
+    if (email && email.toLowerCase() !== inv.approvedEmail.toLowerCase()) hasMismatch = true;
+    if (staffId && staffId.toLowerCase() !== inv.staffId.toLowerCase()) hasMismatch = true;
+    if (inv.advocateNumber && advocateNo && advocateNo.toLowerCase() !== inv.advocateNumber.toLowerCase()) hasMismatch = true;
+
+    if (hasMismatch) {
+      const msg = "Registration denied. The submitted professional information does not match the organization invitation record.";
+      if (alertEl) {
+        alertEl.innerText = msg;
+        alertEl.classList.remove('hidden');
+      }
+      App.showToast(msg, 'error');
+      return;
+    }
+
+    if (alertEl) alertEl.classList.add('hidden');
+    this.verifiedFormData = {
+      invitationCode: inv.invitationCode,
+      email,
+      phone,
+      staffId,
+      advocateNumber: advocateNo || inv.advocateNumber,
+      nationalIdRef: nidRef || inv.nationalIdRef,
+      practisingCertNo: inv.practisingCertNo
+    };
+
+    this.currentInvStep = 3;
+    this.renderInPlace();
+  },
+
+  renderInCardStep3(inv) {
+    if (!inv) return this.renderInCardStep1();
+
+    return `
+      <div id="in-card-step-3" class="reg-container">
+        <!-- 3-Step Connected Progress Stepper -->
+        <div class="reg-stepper">
+          <div class="reg-stepper-track">
+            <div class="reg-stepper-progress" style="width: 100%;"></div>
+          </div>
+          <div class="reg-step-node completed">
+            <div class="reg-step-circle">✓</div>
+            <span class="reg-step-label">Validated</span>
+          </div>
+          <div class="reg-step-node completed">
+            <div class="reg-step-circle">✓</div>
+            <span class="reg-step-label">Cleared</span>
+          </div>
+          <div class="reg-step-node active">
+            <div class="reg-step-circle">3</div>
+            <span class="reg-step-label">Passphrase</span>
+          </div>
+        </div>
+
+        <div id="in-card-inv-step-3-alert" class="alert alert-danger hidden" style="margin-bottom: 1rem; font-size: 0.82rem;"></div>
+
+        <form id="in-card-step-3-form" onsubmit="AuthView.handleInCardFinalRegistrationSubmit(event)">
+          <div class="auth-input-group" style="margin-bottom: 0.85rem;">
+            <label style="font-size: 0.82rem; font-weight: 700; color: #1E293B;">Create Master Password *</label>
+            <div style="position: relative;">
+              <span class="auth-input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              </span>
+              <input 
+                type="password" 
+                id="inc-new-pass" 
+                class="auth-input-field" 
+                placeholder="Create high-security passphrase" 
+                value="SecretLawFirm2026!"
+                required
+                style="padding: 0.75rem 2.75rem 0.75rem 2.65rem; font-size: 0.92rem;"
+                oninput="AuthView.checkRegistrationPasswordStrength(this.value)"
+              >
+              <button 
+                type="button" 
+                onclick="AuthView.togglePasswordEye('inc-new-pass', 'reg-pass-eye-1')" 
+                style="position: absolute; right: 0.85rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #94A3B8; display: flex; align-items: center;"
+                title="Show / Hide Password"
+              >
+                <svg id="reg-pass-eye-1" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+            
+            <!-- Real-time Password Strength Meter -->
+            <div style="margin-top: 0.5rem; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 0.6rem 0.75rem;">
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.72rem; margin-bottom: 0.35rem;">
+                <span style="color: #64748B; font-weight: 600;">Security Strength:</span>
+                <span id="reg-pass-strength-text" style="font-weight: 800; color: #10B981;">Enterprise-Grade (100%)</span>
+              </div>
+              <div style="height: 5px; background: #E2E8F0; border-radius: 3px; overflow: hidden; margin-bottom: 0.45rem;">
+                <div id="reg-pass-strength-fill" style="width: 100%; height: 100%; background: #10B981; transition: all 0.3s ease;"></div>
+              </div>
+              <div id="reg-pass-checklist" style="display: flex; flex-wrap: wrap; gap: 0.4rem; font-size: 0.68rem;">
+                <span id="chk-len" style="color: #059669; font-weight: 700;">✓ 8+ Characters</span>
+                <span id="chk-case" style="color: #059669; font-weight: 700;">✓ Upper & Lowercase</span>
+                <span id="chk-num" style="color: #059669; font-weight: 700;">✓ Number</span>
+                <span id="chk-sym" style="color: #059669; font-weight: 700;">✓ Symbol (!@#$)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="auth-input-group" style="margin-bottom: 0.85rem;">
+            <label style="font-size: 0.82rem; font-weight: 700; color: #1E293B;">Confirm Master Password *</label>
+            <div style="position: relative;">
+              <span class="auth-input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 6 9 17l-5-5"/>
+                </svg>
+              </span>
+              <input 
+                type="password" 
+                id="inc-confirm-pass" 
+                class="auth-input-field" 
+                placeholder="Re-enter your password to verify" 
+                value="SecretLawFirm2026!"
+                required
+                style="padding: 0.75rem 2.75rem 0.75rem 2.65rem; font-size: 0.92rem;"
+              >
+              <button 
+                type="button" 
+                onclick="AuthView.togglePasswordEye('inc-confirm-pass', 'reg-pass-eye-2')" 
+                style="position: absolute; right: 0.85rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #94A3B8; display: flex; align-items: center;"
+                title="Show / Hide Password"
+              >
+                <svg id="reg-pass-eye-2" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Activation Summary Dossier -->
+          <div style="background: linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%); border: 1px solid #CBD5E1; border-radius: 10px; padding: 0.75rem 0.95rem; font-size: 0.78rem; margin-bottom: 1.25rem;">
+            <div style="font-weight: 800; color: #1E293B; margin-bottom: 0.3rem; display: flex; align-items: center; justify-content: space-between;">
+              <span>📜 Activation Summary</span>
+              <span style="color: #059669; font-weight: 700; font-size: 0.7rem;">Ready to Authorize</span>
+            </div>
+            <div style="color: #475569; margin-bottom: 0.15rem;">• Practitioner: <strong>${inv.approvedFullName}</strong> (<span style="color: var(--color-gold); font-weight: 800;">${inv.approvedRole}</span>)</div>
+            <div style="color: #475569;">• Primary Sign-in: <code style="font-family: monospace; color: #1E293B;">${inv.approvedEmail}</code></div>
+          </div>
+
+          <div class="flex gap-2">
+            <button type="button" class="btn btn-secondary" onclick="AuthView.currentInvStep = 2; AuthView.renderInPlace();" style="flex: 0.35; padding: 0.8rem; font-weight: 600;">
+              ← Back
+            </button>
+            <button type="submit" class="reg-btn-gold" style="flex: 0.65;">
+              <span>Activate & Enter Workspace</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+  },
+
+  checkRegistrationPasswordStrength(pass) {
+    const textEl = document.getElementById('reg-pass-strength-text');
+    const fillEl = document.getElementById('reg-pass-strength-fill');
+    const chkLen = document.getElementById('chk-len');
+    const chkCase = document.getElementById('chk-case');
+    const chkNum = document.getElementById('chk-num');
+    const chkSym = document.getElementById('chk-sym');
+
+    let score = 0;
+    const hasLen = pass.length >= 8;
+    const hasCase = /[A-Z]/.test(pass) && /[a-z]/.test(pass);
+    const hasNum = /[0-9]/.test(pass);
+    const hasSym = /[^A-Za-z0-9]/.test(pass);
+
+    if (chkLen) {
+      chkLen.style.color = hasLen ? '#059669' : '#94A3B8';
+      chkLen.innerText = `${hasLen ? '✓' : '○'} 8+ Characters`;
+    }
+    if (chkCase) {
+      chkCase.style.color = hasCase ? '#059669' : '#94A3B8';
+      chkCase.innerText = `${hasCase ? '✓' : '○'} Upper & Lowercase`;
+    }
+    if (chkNum) {
+      chkNum.style.color = hasNum ? '#059669' : '#94A3B8';
+      chkNum.innerText = `${hasNum ? '✓' : '○'} Number`;
+    }
+    if (chkSym) {
+      chkSym.style.color = hasSym ? '#059669' : '#94A3B8';
+      chkSym.innerText = `${hasSym ? '✓' : '○'} Symbol (!@#$)`;
+    }
+
+    if (hasLen) score += 25;
+    if (hasCase) score += 25;
+    if (hasNum) score += 25;
+    if (hasSym) score += 25;
+
+    if (!fillEl || !textEl) return;
+
+    fillEl.style.width = `${score}%`;
+    if (score <= 25) {
+      fillEl.style.background = '#EF4444';
+      textEl.style.color = '#EF4444';
+      textEl.innerText = `Weak (${score}%)`;
+    } else if (score <= 50) {
+      fillEl.style.background = '#F59E0B';
+      textEl.style.color = '#D97706';
+      textEl.innerText = `Fair (${score}%)`;
+    } else if (score <= 75) {
+      fillEl.style.background = '#3B82F6';
+      textEl.style.color = '#2563EB';
+      textEl.innerText = `Strong (${score}%)`;
+    } else {
+      fillEl.style.background = '#10B981';
+      textEl.style.color = '#059669';
+      textEl.innerText = `Enterprise-Grade (100%)`;
+    }
+  },
+
+  handleInCardFinalRegistrationSubmit(e) {
+    e.preventDefault();
+    const pass = document.getElementById('inc-new-pass')?.value;
+    const confirm = document.getElementById('inc-confirm-pass')?.value;
+    const alertEl = document.getElementById('in-card-inv-step-3-alert');
+
+    if (pass !== confirm) {
+      if (alertEl) {
+        alertEl.innerText = 'Passwords do not match.';
+        alertEl.classList.remove('hidden');
+      }
+      return;
+    }
+
+    const payload = {
+      ...this.verifiedFormData,
+      password: pass
+    };
+
+    const regRes = SLCMS_STATE.registerWithInvitation(payload);
+
+    if (!regRes.success) {
+      if (alertEl) {
+        alertEl.innerText = regRes.message;
+        alertEl.classList.remove('hidden');
+      }
+      App.showToast(regRes.message, 'error');
+      return;
+    }
+
+    if (regRes.pendingApproval) {
+      App.openModal(`
+        <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+          <h3 class="modal-title" style="color: #FFFFFF;">⏳ Registration Received</h3>
+          <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 1.5rem; text-align: center;">
+          <div style="width: 56px; height: 56px; border-radius: 50%; background: #FEF3C7; color: #D97706; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <h4 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--color-text-main);">
+            Identity Received Successfully
+          </h4>
+          <p style="font-size: 0.88rem; color: #64748B; margin-bottom: 1.25rem; line-height: 1.5;">
+            Your identity was received successfully. Access will remain restricted until an authorized administrator approves your account.
+          </p>
+          <button class="btn btn-primary" onclick="App.closeModal(); AuthView.switchTab('login');">
+            Acknowledge & Return to Sign In
+          </button>
+        </div>
+      `, 'modal-md');
+    } else {
+      App.isLoggedIn = true;
+      App.renderAuthenticatedApp();
+      App.showToast(`Registration complete! Welcome, ${regRes.user.name} (${regRes.user.role}).`, 'success');
+    }
   },
 
   // ==========================================================================
@@ -332,7 +937,7 @@ const AuthView = {
               <form id="first-login-form" onsubmit="AuthView.handleFirstLoginSubmit(event)" novalidate>
                 <!-- Current Temporary Password -->
                 <div class="auth-input-group">
-                  <label for="temp-password-input">Current Temporary Password</label>
+                  <label for="temp-password-input">Temporary password</label>
                   <div style="position: relative;">
                     <span class="auth-input-icon">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -344,8 +949,8 @@ const AuthView = {
                       type="password" 
                       id="temp-password-input" 
                       class="auth-input-field" 
-                      placeholder="Enter the password received from Admin" 
-                      value="TempPass2026!"
+                      placeholder="Enter temporary password" 
+                      value=""
                       style="padding-right: 2.75rem;"
                     >
                     <button type="button" onclick="AuthView.togglePasswordEye('temp-password-input', 'temp-eye-svg')" style="position: absolute; right: 0.85rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #94A3B8;">
@@ -359,7 +964,7 @@ const AuthView = {
 
                 <!-- New Password Field -->
                 <div class="auth-input-group">
-                  <label for="new-password-input">New Private Password</label>
+                  <label for="new-password-input">New password</label>
                   <div style="position: relative;">
                     <span class="auth-input-icon">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -370,7 +975,7 @@ const AuthView = {
                       type="password" 
                       id="new-password-input" 
                       class="auth-input-field" 
-                      placeholder="Create a strong passphrase"
+                      placeholder="Enter new password"
                       style="padding-right: 2.75rem;"
                       oninput="AuthView.updatePasswordStrengthChecklist()"
                     >
@@ -396,7 +1001,7 @@ const AuthView = {
 
                 <!-- Confirm Password Field -->
                 <div class="auth-input-group">
-                  <label for="confirm-password-input">Confirm New Password</label>
+                  <label for="confirm-password-input">Confirm new password</label>
                   <div style="position: relative;">
                     <span class="auth-input-icon">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -408,44 +1013,44 @@ const AuthView = {
                       type="password" 
                       id="confirm-password-input" 
                       class="auth-input-field" 
-                      placeholder="Re-enter your new passphrase"
+                      placeholder="Confirm new password"
                       oninput="AuthView.clearFieldError('confirm-password-input', 'confirm-password-error')"
                     >
                   </div>
                   <div id="confirm-password-error" class="form-error-msg hidden"></div>
                 </div>
 
-                <!-- Requirement Checklist (Requirement 9) -->
+                <!-- Requirement Checklist (Section 5) -->
                 <div class="password-req-box" style="text-align: left; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.5rem; font-size: 0.78rem;">
-                  <div style="font-weight: 600; color: #334155; margin-bottom: 0.45rem;">Passphrase Requirements:</div>
+                  <div style="font-weight: 600; color: #334155; margin-bottom: 0.45rem;">New Password Requirements:</div>
                   <div class="grid grid-cols-2 gap-1" id="req-checklist">
                     <div id="req-len" class="flex items-center gap-1" style="color: #94A3B8;">
-                      <span>⚪</span> At least 8 characters
+                      <span>⚪</span> At least 10 characters
                     </div>
                     <div id="req-upper" class="flex items-center gap-1" style="color: #94A3B8;">
-                      <span>⚪</span> Uppercase letter (A-Z)
+                      <span>⚪</span> Uppercase &amp; lowercase
                     </div>
-                    <div id="req-lower" class="flex items-center gap-1" style="color: #94A3B8;">
-                      <span>⚪</span> Lowercase letter (a-z)
+                    <div id="req-lower" class="flex items-center gap-1" style="color: #94A3B8; display: none;">
+                      <span>⚪</span> Lowercase
                     </div>
                     <div id="req-num" class="flex items-center gap-1" style="color: #94A3B8;">
-                      <span>⚪</span> Number (0-9)
+                      <span>⚪</span> Contains a number
                     </div>
                     <div id="req-sym" class="flex items-center gap-1" style="color: #94A3B8;">
-                      <span>⚪</span> Special symbol (!@#$)
+                      <span>⚪</span> Special character
+                    </div>
+                    <div id="req-diff-temp" class="flex items-center gap-1" style="color: #94A3B8;">
+                      <span>⚪</span> Different from temp pass
                     </div>
                     <div id="req-not-name" class="flex items-center gap-1" style="color: #94A3B8;">
-                      <span>⚪</span> No name / email
+                      <span>⚪</span> No Staff ID or username
                     </div>
                   </div>
                 </div>
 
-                <div class="flex gap-2">
-                  <button type="button" class="btn btn-secondary" onclick="AuthView.cancelFirstLogin()" style="flex: 0.4;">
-                    Cancel
-                  </button>
-                  <button type="submit" id="btn-save-password" class="auth-btn-signin" style="flex: 0.6; margin-top: 0;">
-                    Save & Enter Workspace
+                <div>
+                  <button type="submit" id="btn-save-password" class="auth-btn-signin" style="width: 100%; margin-top: 0; font-size: 0.95rem; font-weight: 700; padding: 0.85rem;">
+                    Save New Password
                   </button>
                 </div>
               </form>
@@ -457,7 +1062,7 @@ const AuthView = {
   },
 
   // ==========================================================================
-  // FRONT-END VALIDATION & SUBMISSION HANDLING (Requirements 3 & 4)
+  // FRONT-END VALIDATION & SUBMISSION HANDLING
   // ==========================================================================
   handleLoginSubmit(e) {
     e.preventDefault();
@@ -468,79 +1073,76 @@ const AuthView = {
     const rememberMeCheck = document.getElementById('auth-remember-check');
 
     const emailVal = emailInput ? emailInput.value.trim() : '';
-    const passwordVal = passwordInput ? passwordInput.value : ''; // Do NOT trim internal spaces from password!
+    const passwordVal = passwordInput ? passwordInput.value : '';
 
-    let hasClientError = false;
-
-    // 1. Validate Email / Username
+    // Require both fields to be filled
+    let hasError = false;
     if (!emailVal) {
-      this.showFieldError('login-email-input', 'login-email-error', 'Enter your email address or username.');
-      hasClientError = true;
-    } else if (emailVal.includes('@')) {
-      // Basic RFC 5322 regex validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(emailVal)) {
-        this.showFieldError('login-email-input', 'login-email-error', 'Enter a valid email address.');
-        hasClientError = true;
-      }
+      this.showFieldError('login-email-input', 'login-email-error', 'Please enter your Staff ID, username or email.');
+      hasError = true;
     }
-
-    // 2. Validate Password
     if (!passwordVal) {
-      this.showFieldError('login-password-input', 'login-password-error', 'Enter your password.');
-      hasClientError = true;
-    } else if (passwordVal.length < 8) {
-      this.showFieldError('login-password-input', 'login-password-error', 'Password must be at least 8 characters.');
-      hasClientError = true;
+      this.showFieldError('login-password-input', 'login-password-error', 'Please enter your password.');
+      hasError = true;
+    }
+    if (hasError) return;
+
+    this.clearFieldError('login-email-input', 'login-email-error');
+    this.clearFieldError('login-password-input', 'login-password-error');
+
+    // Trigger Loading State
+    const btn = document.getElementById('auth-submit-btn');
+    if (btn) {
+      btn.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin" style="margin-right: 0.5rem; display: inline-block; vertical-align: middle;">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        <span>Signing in…</span>
+      `;
+      btn.disabled = true;
     }
 
-    if (hasClientError) return;
-
-    // 3. Trigger Loading State ("Signing in…", disable button to prevent double-submit)
-    const btn = document.getElementById('auth-submit-btn');
-    btn.innerHTML = `
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin" style="margin-right: 0.5rem; display: inline-block; vertical-align: middle;">
-        <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-      </svg>
-      <span>Signing in…</span>
-    `;
-    btn.disabled = true;
-
-    // 4. Server-Side Verification Execution (Simulated Secure Backend Engine)
+    // Server-Side Verification
     setTimeout(() => {
       const authResult = SLCMS_STATE.serverAuthenticate(emailVal, passwordVal, rememberMeCheck?.checked);
 
       if (!authResult.success) {
-        // Reset button
-        btn.innerHTML = 'Sign In';
-        btn.disabled = false;
-
-        // Display safe server-side controlled error message
+        if (btn) { btn.innerHTML = 'Login'; btn.disabled = false; }
         this.showServerAlert(authResult.message);
         return;
       }
 
-      // 5. Handle First-Login Password Change Intercept
+      // Handle First-Login Password Change Intercept (Section 5)
       if (authResult.requiresFirstLoginChange) {
         this.tempAuthUser = authResult.user;
         this.currentViewMode = 'first_login_password_change';
+        window.location.hash = '#/change-first-password';
+        if (btn) { btn.innerHTML = 'Login'; btn.disabled = false; }
         document.getElementById('app-root').innerHTML = this.render();
         return;
       }
 
-      // 6. Complete Login: Store session, log in, redirect to role dashboard
+      // Complete Login: Store session and redirect to role dashboard (Section 11)
       sessionStorage.setItem('slcms_auth', 'true');
       sessionStorage.setItem('slcms_token', authResult.token);
-      
+
       App.isLoggedIn = true;
       App.renderAuthenticatedApp();
-      
+
+      // Derive destination from role — never fall back blindly to admin dashboard
+      const rawDestination = authResult.destination ||
+        (typeof SLCMS_STATE !== 'undefined' && typeof SLCMS_STATE.getPermittedDestination === 'function'
+          ? SLCMS_STATE.getPermittedDestination(authResult.user?.role)
+          : '/dashboard');
+      const destination = rawDestination.replace(/^\/+/, '');
+      App.navigate(destination);
+
       const firstName = authResult.user.name.split(' ')[0] || 'Counsel';
       App.showToast(`Welcome back, ${firstName}.`, 'success');
     }, 450);
   },
 
-  // First Login Password Update Handler
+  // First Login Password Update Handler (Section 6)
   handleFirstLoginSubmit(e) {
     e.preventDefault();
     const tempPass = document.getElementById('temp-password-input')?.value;
@@ -554,8 +1156,8 @@ const AuthView = {
       hasError = true;
     }
 
-    if (!newPass || newPass.length < 8) {
-      this.showFieldError('new-password-input', 'new-password-error', 'New password must be at least 8 characters.');
+    if (!newPass || newPass.length < 10) {
+      this.showFieldError('new-password-input', 'new-password-error', 'New password must be at least 10 characters.');
       hasError = true;
     }
 
@@ -577,40 +1179,56 @@ const AuthView = {
       return;
     }
 
-    // Success: enter app
-    sessionStorage.setItem('slcms_auth', 'true');
+    // Invalidate temporary session and return to login page (Section 6)
     this.currentViewMode = 'login';
     this.tempAuthUser = null;
-
-    App.isLoggedIn = true;
-    App.renderAuthenticatedApp();
-    App.showToast(`Password successfully updated. Welcome to SLCMS, ${res.user.name}.`, 'success');
-  },
-
-  cancelFirstLogin() {
-    this.currentViewMode = 'login';
-    this.tempAuthUser = null;
+    sessionStorage.removeItem('slcms_auth');
+    sessionStorage.removeItem('slcms_token');
+    sessionStorage.removeItem('slcms_current_user');
+    window.location.hash = '#/login';
     document.getElementById('app-root').innerHTML = this.render();
+
+    // Show exact message on login page per Section 6
+    setTimeout(() => {
+      this.showServerAlert(
+        '<span style="color:#059669; font-weight:700;">✓</span> Password created successfully. Log in using your new private password.'
+      );
+      const alertEl = document.getElementById('auth-server-alert');
+      if (alertEl) {
+        alertEl.classList.remove('hidden');
+        alertEl.style.background = '#F0FDF4';
+        alertEl.style.borderColor = '#10B981';
+        alertEl.style.color = '#065F46';
+      }
+    }, 100);
   },
+
+  // No cancel allowed — user must complete the reset
+
 
   // Live Checklist & Strength Meter
   updatePasswordStrengthChecklist() {
     const val = document.getElementById('new-password-input')?.value || '';
     const user = this.tempAuthUser;
 
-    const hasLen = val.length >= 8;
+    const tempPass = document.getElementById('temp-password-input')?.value || '';
+    const hasLen = val.length >= 10;
     const hasUpper = /[A-Z]/.test(val);
     const hasLower = /[a-z]/.test(val);
+    const hasBothCases = hasUpper && hasLower;
     const hasNum = /[0-9]/.test(val);
     const hasSym = /[^A-Za-z0-9]/.test(val);
-    const notName = user ? (!val.toLowerCase().includes(user.name.toLowerCase().split(' ')[0]) && !val.toLowerCase().includes(user.email.split('@')[0])) : true;
+    const diffTemp = tempPass ? (val !== tempPass) : true;
+    const staffId = (user?.staffId || user?.employeeId || '').toLowerCase();
+    const username = (user?.username || '').toLowerCase();
+    const notStaffOrUsername = (!staffId || !val.toLowerCase().includes(staffId)) && (!username || !val.toLowerCase().includes(username));
 
     this.toggleChecklistBadge('req-len', hasLen);
-    this.toggleChecklistBadge('req-upper', hasUpper);
-    this.toggleChecklistBadge('req-lower', hasLower);
+    this.toggleChecklistBadge('req-upper', hasBothCases);
     this.toggleChecklistBadge('req-num', hasNum);
     this.toggleChecklistBadge('req-sym', hasSym);
-    this.toggleChecklistBadge('req-not-name', notName);
+    this.toggleChecklistBadge('req-diff-temp', diffTemp);
+    this.toggleChecklistBadge('req-not-name', notStaffOrUsername);
 
     // Calculate Strength (0-100)
     let score = 0;
@@ -677,7 +1295,7 @@ const AuthView = {
     const alertEl = document.getElementById('auth-server-alert');
     const textEl = document.getElementById('auth-server-alert-text');
     if (alertEl && textEl) {
-      textEl.innerText = msg;
+      textEl.innerHTML = `<div><strong>Authentication Notice:</strong> ${msg}</div>`;
       alertEl.classList.remove('hidden');
     }
   },
@@ -713,19 +1331,577 @@ const AuthView = {
     }
   },
 
-  // Fast Test Sandbox Filler
-  fillCredentials(email, password) {
-    this.hideServerAlert();
-    const emailInput = document.getElementById('login-email-input');
-    const passInput = document.getElementById('login-password-input');
-    if (emailInput) {
-      emailInput.value = email;
-      this.clearFieldError('login-email-input', 'login-email-error');
+  // Forgot Password Helper
+  showForgotPasswordModal() {
+    App.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+        <div>
+          <h3 class="modal-title" style="color: #FFFFFF; font-size: 1.05rem;">Forgot Your Password?</h3>
+          <p style="font-size: 0.78rem; color: #CBD5E1; margin-top: 0.2rem;">Password resets are handled by the System Administrator.</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem;">
+        <div class="alert alert-info" style="font-size: 0.88rem; line-height: 1.6;">
+          <strong>Password Reset Process:</strong><br>
+          1. Contact your System Administrator with your Staff ID.<br>
+          2. The Administrator will issue a new temporary password.<br>
+          3. Log in with the temporary password and create a new private password.
+        </div>
+        <div style="margin-top: 1rem; font-size: 0.85rem; color: var(--color-text-secondary);">
+          <strong>Contact Administrator:</strong> Contact the System Administrator through your organization's internal communication channels or in person.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-gold" onclick="App.closeModal()">Understood</button>
+      </div>
+    `);
+  },
+
+  // Contact Administrator Helper
+  showContactAdminModal() {
+    App.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+        <div>
+          <h3 class="modal-title" style="color: #FFFFFF; font-size: 1.05rem;">Contact System Administrator</h3>
+          <p style="font-size: 0.78rem; color: #CBD5E1; margin-top: 0.2rem;">For account access, credential issues or new account requests.</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem;">
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 1rem; font-size: 0.88rem; line-height: 1.7;">
+          <div style="font-weight: 700; color: var(--color-primary); margin-bottom: 0.5rem;">System Administrator</div>
+          <div>All user accounts are created and managed exclusively by the System Administrator.</div>
+          <div style="margin-top: 0.75rem;">Contact your Administrator to:</div>
+          <ul style="margin: 0.35rem 0 0 1rem; color: #475569;">
+            <li>Create a new account</li>
+            <li>Reset a forgotten password</li>
+            <li>Unlock a locked account</li>
+            <li>Update assigned permissions or cases</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-gold" onclick="App.closeModal()">Close</button>
+      </div>
+    `);
+  },
+
+  // ==========================================================================
+  // INVITATION-BASED REGISTRATION WIZARD (STRICT PROFESSIONAL VERIFICATION)
+  // Zero Public Role Selection • Immutable Role Assignment From Invitation
+  // ==========================================================================
+  currentInvStep: 1,
+  verifiedInvitationData: null,
+
+  showInvitationRegisterModal(presetCode = '') {
+    this.currentInvStep = 1;
+    this.verifiedInvitationData = null;
+
+    App.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+        <div>
+          <h3 class="modal-title" style="color: #FFFFFF; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>🛡️</span> Secure Staff Registration (Invitation-Only)
+          </h3>
+          <p style="font-size: 0.78rem; color: #CBD5E1; margin-top: 0.2rem;">
+            Registration requires a firm-issued invitation code. Role and clearance are locked and immutable.
+          </p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem;" id="invitation-modal-content">
+        ${this.renderInvitationStep1(presetCode)}
+      </div>
+    `, 'modal-lg');
+  },
+
+  renderInvitationStep1(presetCode = '') {
+    return `
+      <div id="inv-step-1-container">
+        <!-- Step Indicator -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid var(--color-border); padding-bottom: 0.75rem;">
+          <div style="font-size: 0.82rem; font-weight: 700; color: var(--color-primary); display: flex; align-items: center; gap: 0.4rem;">
+            <span style="width: 24px; height: 24px; border-radius: 50%; background: var(--color-gold); color: #000; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800;">1</span>
+            Step 1: Validate Invitation Code
+          </div>
+          <span style="font-size: 0.75rem; color: #64748B;">Step 1 of 3</span>
+        </div>
+
+        <!-- Alert Notification -->
+        <div id="inv-step-1-alert" class="alert alert-danger hidden" style="margin-bottom: 1rem; font-size: 0.85rem;"></div>
+
+        <!-- Form -->
+        <form id="inv-step-1-form" onsubmit="AuthView.handleValidateInvitationSubmit(event)">
+          <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label class="form-label" style="font-size: 0.85rem; font-weight: 600;">One-Time Firm Invitation Code *</label>
+            <div style="position: relative;">
+              <input 
+                type="text" 
+                id="reg-invitation-code" 
+                class="form-control" 
+                placeholder="e.g. INV-TZ-2026-SR-COUNSEL" 
+                value="${presetCode || 'INV-TZ-2026-SR-COUNSEL'}"
+                style="font-family: var(--font-mono); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding-left: 2.25rem;"
+                required
+              >
+              <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 1rem;">🎫</span>
+            </div>
+            <div style="font-size: 0.75rem; color: #64748B; margin-top: 0.35rem;">
+              Issued exclusively by the Managing Partner or authorized System Administrator.
+            </div>
+          </div>
+
+          <!-- Sandbox Quick-Test Invitation Buttons -->
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 0.85rem; margin-bottom: 1.25rem;">
+            <div style="font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.04em;">
+              🧪 Invitation Test Sandbox (Click to quick-fill code):
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="AuthView.fillInvitationCode('INV-TZ-2026-SR-COUNSEL')" style="font-size: 0.72rem; padding: 0.25rem 0.5rem;">
+                ⚖️ Senior Counsel (Valid)
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="AuthView.fillInvitationCode('INV-TZ-2026-ASSOC')" style="font-size: 0.72rem; padding: 0.25rem 0.5rem;">
+                📜 Associate Lawyer (Valid)
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="AuthView.fillInvitationCode('INV-TZ-2026-CLERK')" style="font-size: 0.72rem; padding: 0.25rem 0.5rem;">
+                📁 Legal Clerk / NIDA (Valid)
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="AuthView.fillInvitationCode('INV-EXPIRED-TEST')" style="font-size: 0.72rem; padding: 0.25rem 0.5rem; border-color: #FECACA; color: #DC2626;">
+                ❌ Expired Code (Test Rejection)
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="AuthView.fillInvitationCode('INV-USED-TEST')" style="font-size: 0.72rem; padding: 0.25rem 0.5rem; border-color: #FECACA; color: #DC2626;">
+                🚫 Used Code (Test Rejection)
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-2">
+            <button type="button" class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+            <button type="submit" class="btn btn-gold">
+              Verify Invitation Code →
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+  },
+
+  fillInvitationCode(code) {
+    const input = document.getElementById('reg-invitation-code');
+    if (input) {
+      input.value = code;
     }
-    if (passInput) {
-      passInput.value = password;
-      this.clearFieldError('login-password-input', 'login-password-error');
+  },
+
+  handleValidateInvitationSubmit(e) {
+    e.preventDefault();
+    const code = document.getElementById('reg-invitation-code')?.value.trim();
+    const alertEl = document.getElementById('inv-step-1-alert');
+
+    const valResult = SLCMS_STATE.validateInvitationCode(code);
+
+    if (!valResult.valid) {
+      if (alertEl) {
+        alertEl.innerText = valResult.message;
+        alertEl.classList.remove('hidden');
+      }
+      App.showToast(valResult.message, 'error');
+      return;
     }
+
+    if (alertEl) alertEl.classList.add('hidden');
+    this.verifiedInvitationData = valResult.invitation;
+    this.currentInvStep = 2;
+
+    const modalContent = document.getElementById('invitation-modal-content');
+    if (modalContent) {
+      modalContent.innerHTML = this.renderInvitationStep2(valResult.invitation);
+    }
+  },
+
+  renderInvitationStep2(inv) {
+    const isLawyer = ['Managing Partner', 'Senior Counsel', 'Associate Lawyer', 'Junior Lawyer'].includes(inv.approvedRole);
+    const isClerk = (inv.approvedRole === 'Legal Clerk');
+
+    return `
+      <div id="inv-step-2-container" class="animate-fade">
+        <!-- Step Indicator -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid var(--color-border); padding-bottom: 0.75rem;">
+          <div style="font-size: 0.82rem; font-weight: 700; color: var(--color-primary); display: flex; align-items: center; gap: 0.4rem;">
+            <span style="width: 24px; height: 24px; border-radius: 50%; background: var(--color-gold); color: #000; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800;">2</span>
+            Step 2: Professional Identity Verification
+          </div>
+          <span style="font-size: 0.75rem; color: #64748B;">Step 2 of 3</span>
+        </div>
+
+        <!-- Pre-Approved Immutable Role Card (No public role selection) -->
+        <div style="background: linear-gradient(135deg, #102A43, #1E3A5F); color: #FFFFFF; border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem; box-shadow: 0 4px 12px rgba(16,42,67,0.15);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-gold); font-weight: 700;">
+              🔒 Pre-Approved Role & Clearance (Immutable)
+            </div>
+            <span class="badge" style="background: rgba(200,155,60,0.25); color: #FCD34D; border: 1px solid rgba(200,155,60,0.4); font-size: 0.75rem; font-weight: 700;">
+              ${inv.approvedRole}
+            </span>
+          </div>
+          <div style="font-size: 1.1rem; font-weight: 700; color: #FFFFFF; margin-bottom: 0.2rem;">
+            ${inv.approvedFullName}
+          </div>
+          <div style="font-size: 0.8rem; color: #CBD5E1;">
+            Department: <strong>${inv.department}</strong> • Invitation Code: <code>${inv.invitationCode}</code>
+          </div>
+        </div>
+
+        <!-- Alert Notification -->
+        <div id="inv-step-2-alert" class="alert alert-danger hidden" style="margin-bottom: 1rem; font-size: 0.85rem;"></div>
+
+        <!-- Verification Form -->
+        <form id="inv-step-2-form" onsubmit="AuthView.handleIdentityVerificationSubmit(event)">
+          <div class="grid grid-cols-2 gap-3" style="margin-bottom: 1rem;">
+            <div class="form-group">
+              <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Staff / Employee ID *</label>
+              <input 
+                type="text" 
+                id="verif-staff-id" 
+                class="form-control" 
+                placeholder="e.g. ${inv.staffId}" 
+                value="${inv.staffId}" 
+                required
+              >
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Approved Email Address *</label>
+              <input 
+                type="email" 
+                id="verif-email" 
+                class="form-control" 
+                placeholder="${inv.approvedEmail}" 
+                value="${inv.approvedEmail}" 
+                required
+              >
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3" style="margin-bottom: 1rem;">
+            <div class="form-group">
+              <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Approved Phone Number *</label>
+              <input 
+                type="text" 
+                id="verif-phone" 
+                class="form-control" 
+                placeholder="${inv.approvedPhone}" 
+                value="${inv.approvedPhone}" 
+                required
+              >
+            </div>
+
+            ${isLawyer ? `
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Advocate Roll / Registration No. *</label>
+                <input 
+                  type="text" 
+                  id="verif-advocate-no" 
+                  class="form-control" 
+                  placeholder="e.g. ${inv.advocateNumber || 'ADV/2026/XXXX'}" 
+                  value="${inv.advocateNumber || ''}" 
+                  required
+                >
+              </div>
+            ` : isClerk ? `
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">National ID Reference (NIDA/NID) *</label>
+                <input 
+                  type="text" 
+                  id="verif-nid-ref" 
+                  class="form-control" 
+                  placeholder="NIDA-19940812-1002-88" 
+                  value="${inv.nationalIdRefMasked || 'NIDA-19940812-1002-88'}" 
+                  required
+                >
+              </div>
+            ` : `
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Administrative Security Clearance *</label>
+                <input 
+                  type="text" 
+                  id="verif-clearance-ref" 
+                  class="form-control" 
+                  placeholder="SEC-CLR-2026" 
+                  value="SEC-CLR-2026" 
+                  required
+                >
+              </div>
+            `}
+          </div>
+
+          ${isLawyer && inv.practisingCertNo ? `
+            <div class="form-group" style="margin-bottom: 1rem;">
+              <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Practising Certificate No.</label>
+              <input 
+                type="text" 
+                id="verif-pc-no" 
+                class="form-control" 
+                value="${inv.practisingCertNo}" 
+                readonly
+                style="background: #F1F5F9; font-family: var(--font-mono);"
+              >
+            </div>
+          ` : ''}
+
+          <div style="font-size: 0.72rem; color: #64748B; background: #F8FAFC; padding: 0.5rem 0.75rem; border-radius: 6px; margin-bottom: 1.25rem;">
+            🔒 <em>Server-Side Security Check: All credentials will be verified against the firm's invitation registry before account activation.</em>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <button type="button" class="btn btn-secondary" onclick="AuthView.showInvitationRegisterModal('${inv.invitationCode}')">
+              ← Back
+            </button>
+            <button type="submit" class="btn btn-gold">
+              Proceed to Password Setup →
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+  },
+
+  handleIdentityVerificationSubmit(e) {
+    e.preventDefault();
+    const inv = this.verifiedInvitationData;
+    if (!inv) return;
+
+    const email = document.getElementById('verif-email')?.value.trim();
+    const phone = document.getElementById('verif-phone')?.value.trim();
+    const staffId = document.getElementById('verif-staff-id')?.value.trim();
+    const advocateNo = document.getElementById('verif-advocate-no')?.value.trim();
+    const nidRef = document.getElementById('verif-nid-ref')?.value.trim();
+    const alertEl = document.getElementById('inv-step-2-alert');
+
+    // Mismatch verification
+    let hasMismatch = false;
+
+    if (email && email.toLowerCase() !== inv.approvedEmail.toLowerCase()) hasMismatch = true;
+    if (staffId && staffId.toLowerCase() !== inv.staffId.toLowerCase()) hasMismatch = true;
+    if (inv.advocateNumber && advocateNo && advocateNo.toLowerCase() !== inv.advocateNumber.toLowerCase()) hasMismatch = true;
+
+    if (hasMismatch) {
+      const denialMsg = "Registration denied. The submitted professional information does not match the role assigned by the organization.";
+      if (alertEl) {
+        alertEl.innerText = denialMsg;
+        alertEl.classList.remove('hidden');
+      }
+      App.showToast(denialMsg, 'error');
+      return;
+    }
+
+    if (alertEl) alertEl.classList.add('hidden');
+    this.currentInvStep = 3;
+
+    // Cache verified form inputs
+    this.verifiedFormData = {
+      invitationCode: inv.invitationCode,
+      email,
+      phone,
+      staffId,
+      advocateNumber: advocateNo || inv.advocateNumber,
+      nationalIdRef: nidRef || inv.nationalIdRef,
+      practisingCertNo: inv.practisingCertNo
+    };
+
+    const modalContent = document.getElementById('invitation-modal-content');
+    if (modalContent) {
+      modalContent.innerHTML = this.renderInvitationStep3(inv);
+    }
+  },
+
+  renderInvitationStep3(inv) {
+    return `
+      <div id="inv-step-3-container" class="animate-fade">
+        <!-- Step Indicator -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid var(--color-border); padding-bottom: 0.75rem;">
+          <div style="font-size: 0.82rem; font-weight: 700; color: var(--color-primary); display: flex; align-items: center; gap: 0.4rem;">
+            <span style="width: 24px; height: 24px; border-radius: 50%; background: var(--color-gold); color: #000; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800;">3</span>
+            Step 3: Secure Passphrase Setup
+          </div>
+          <span style="font-size: 0.75rem; color: #64748B;">Step 3 of 3</span>
+        </div>
+
+        <div id="inv-step-3-alert" class="alert alert-danger hidden" style="margin-bottom: 1rem; font-size: 0.85rem;"></div>
+
+        <form id="inv-step-3-form" onsubmit="AuthView.handleFinalRegistrationSubmit(event)">
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Create Strong Password *</label>
+            <input 
+              type="password" 
+              id="reg-new-pass" 
+              class="form-control" 
+              placeholder="Minimum 8 characters, uppercase, numbers, symbols" 
+              value="SecretLawFirm2026!"
+              required
+              oninput="AuthView.checkRegistrationPasswordStrength(this.value)"
+            >
+            <div id="reg-pass-strength-bar" style="height: 4px; background: #E2E8F0; border-radius: 2px; margin-top: 0.4rem; overflow: hidden;">
+              <div id="reg-pass-strength-fill" style="width: 100%; height: 100%; background: var(--color-success); transition: width 0.3s ease;"></div>
+            </div>
+            <div id="reg-pass-strength-text" style="font-size: 0.72rem; color: var(--color-success); margin-top: 0.25rem; font-weight: 600;">
+              Strong Password (Meets enterprise complexity criteria)
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Confirm Password *</label>
+            <input 
+              type="password" 
+              id="reg-confirm-pass" 
+              class="form-control" 
+              placeholder="Re-enter password" 
+              value="SecretLawFirm2026!"
+              required
+            >
+          </div>
+
+          <!-- Summary Box -->
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 0.85rem; font-size: 0.78rem; margin-bottom: 1.25rem;">
+            <div style="font-weight: 700; color: #1E293B; margin-bottom: 0.25rem;">
+              Account Verification Summary:
+            </div>
+            <div>• Practitioner: <strong>${inv.approvedFullName}</strong> (${inv.approvedRole})</div>
+            <div>• Registered Identifier: <code>${inv.approvedEmail}</code></div>
+            <div>• Firm ID: <code>${inv.staffId}</code> ${inv.advocateNumber ? `• Roll No: <code>${inv.advocateNumber}</code>` : ''}</div>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <button type="button" class="btn btn-secondary" onclick="AuthView.showInvitationRegisterModal('${inv.invitationCode}')">
+              ← Back
+            </button>
+            <button type="submit" class="btn btn-gold">
+              Complete Verified Registration ✓
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+  },
+
+  checkRegistrationPasswordStrength(pass) {
+    const fillEl = document.getElementById('reg-pass-strength-fill');
+    const textEl = document.getElementById('reg-pass-strength-text');
+    if (!fillEl || !textEl) return;
+
+    if (!pass || pass.length < 6) {
+      fillEl.style.width = '20%';
+      fillEl.style.background = 'var(--color-danger)';
+      textEl.innerText = 'Too short (Minimum 8 characters required)';
+      textEl.style.color = 'var(--color-danger)';
+    } else if (pass.length < 8 || !/[0-9]/.test(pass)) {
+      fillEl.style.width = '50%';
+      fillEl.style.background = 'var(--color-warning)';
+      textEl.innerText = 'Moderate (Include uppercase and numbers)';
+      textEl.style.color = 'var(--color-warning)';
+    } else {
+      fillEl.style.width = '100%';
+      fillEl.style.background = 'var(--color-success)';
+      textEl.innerText = 'Strong Password (Meets enterprise complexity criteria)';
+      textEl.style.color = 'var(--color-success)';
+    }
+  },
+
+  handleFinalRegistrationSubmit(e) {
+    e.preventDefault();
+    const pass = document.getElementById('reg-new-pass')?.value;
+    const confirm = document.getElementById('reg-confirm-pass')?.value;
+    const alertEl = document.getElementById('inv-step-3-alert');
+
+    if (pass !== confirm) {
+      if (alertEl) {
+        alertEl.innerText = 'Passwords do not match.';
+        alertEl.classList.remove('hidden');
+      }
+      return;
+    }
+
+    const payload = {
+      ...this.verifiedFormData,
+      password: pass
+    };
+
+    const regRes = SLCMS_STATE.registerWithInvitation(payload);
+
+    if (!regRes.success) {
+      if (alertEl) {
+        alertEl.innerText = regRes.message;
+        alertEl.classList.remove('hidden');
+      }
+      App.showToast(regRes.message, 'error');
+      return;
+    }
+
+    App.closeModal();
+
+    if (regRes.pendingApproval) {
+      // Pending Partner Approval State
+      App.openModal(`
+        <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+          <h3 class="modal-title" style="color: #FFFFFF;">⏳ Registration Received</h3>
+          <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 1.5rem; text-align: center;">
+          <div style="width: 56px; height: 56px; border-radius: 50%; background: #FEF3C7; color: #D97706; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <h4 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--color-text-main);">
+            Identity Received Successfully
+          </h4>
+          <p style="font-size: 0.88rem; color: #64748B; margin-bottom: 1.25rem; line-height: 1.5;">
+            Your identity was received successfully. Access will remain restricted until an authorized administrator approves your account.
+          </p>
+          <button class="btn btn-primary" onclick="App.closeModal()">
+            Acknowledge & Return to Sign In
+          </button>
+        </div>
+      `, 'modal-md');
+    } else {
+      // Active Account State
+      this.fillCredentials(regRes.user.email, pass, `${regRes.user.name} (${regRes.user.role})`);
+
+      App.openModal(`
+        <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+          <h3 class="modal-title" style="color: #FFFFFF;">✅ Registration Complete</h3>
+          <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 1.5rem; text-align: center;">
+          <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); color: var(--color-success); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+          <h4 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--color-text-main);">
+            ${regRes.user.name}
+          </h4>
+          <p style="font-size: 0.88rem; color: #64748B; margin-bottom: 1.25rem;">
+            Verified Role: <strong>${regRes.user.role}</strong> • Account Status: <span class="badge badge-won" style="font-size: 0.75rem;">ACTIVE</span>
+          </p>
+          <div style="background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 8px; padding: 1rem; text-align: left; font-size: 0.82rem; margin-bottom: 1.25rem;">
+            <div style="margin-bottom: 0.35rem;"><strong>Email / Phone:</strong> <code>${regRes.user.email}</code> / <code>${regRes.user.phone}</code></div>
+            <div style="margin-bottom: 0.35rem;"><strong>Staff ID:</strong> <code>${regRes.user.staffId}</code></div>
+            ${regRes.user.advocateNumber ? `<div><strong>Advocate Roll No:</strong> <code>${regRes.user.advocateNumber}</code></div>` : ''}
+            ${regRes.user.nationalIdRef ? `<div><strong>National ID Ref:</strong> <code>${regRes.user.nationalIdRef}</code></div>` : ''}
+          </div>
+          <button class="btn btn-gold" onclick="App.closeModal(); AuthView.handleLoginSubmit(new Event('submit'))">
+            Enter Assigned Workspace Now →
+          </button>
+        </div>
+      `, 'modal-md');
+    }
+  },
+
+  showStaffRegisterModal() {
+    this.showInvitationRegisterModal();
   },
 
   // ==========================================================================

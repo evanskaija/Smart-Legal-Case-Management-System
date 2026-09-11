@@ -5,9 +5,15 @@
 const TasksView = {
   activeView: 'kanban', // 'kanban' | 'list' | 'calendar'
   filterPriority: 'All', // 'All' | 'High' | 'Medium' | 'Low'
+  adminFilter: 'all', // 'all' | 'unassigned' | 'technical' | 'overdue'
   searchQuery: '',
 
   render() {
+    const isAdmin = (SLCMS_STATE.currentUser?.role === 'Administrator');
+    const unassignedCount = (SLCMS_STATE.tasks || []).filter(t => !t.assignedTo || t.assignedTo === 'Unassigned').length;
+    const techCount = (SLCMS_STATE.tasks || []).filter(t => t.isTechnical || t.category === 'technical').length;
+    const overdueCount = (SLCMS_STATE.tasks || []).filter(t => t.status !== 'completed' && new Date(t.dueDate) < new Date('2026-09-08')).length;
+
     return `
       <div class="animate-fade">
         <!-- 1. VIEW HEADER -->
@@ -65,6 +71,47 @@ const TasksView = {
           </div>
         </div>
 
+        ${isAdmin ? `
+          <!-- ADMINISTRATOR TASK OVERSIGHT & GOVERNANCE BAR -->
+          <div class="card animate-fade" style="margin-bottom: 1.25rem; padding: 1rem 1.25rem; border-left: 4px solid var(--color-gold); background: linear-gradient(135deg, rgba(16,42,67,0.03) 0%, rgba(200,155,60,0.08) 100%);">
+            <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+              <div class="flex items-center gap-2">
+                <span style="font-size: 1.15rem;">👑</span>
+                <div>
+                  <strong style="color: var(--color-primary); font-size: 0.92rem;">Administrator Task Oversight &amp; Staff Coordination</strong>
+                  <span class="badge badge-confidential" style="font-size: 0.68rem; margin-left: 0.35rem;">Technical Governance</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <button class="btn btn-gold btn-sm" style="font-size: 0.76rem;" onclick="TasksView.openCreateTechnicalTaskModal()">
+                  + Create Technical Task
+                </button>
+                <button class="btn btn-secondary btn-sm" style="font-size: 0.76rem;" onclick="TasksView.notifyResponsibleUsers()">
+                  🔔 Notify Responsible Users
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap" style="padding-top: 0.4rem; border-top: 1px solid rgba(0,0,0,0.06); font-size: 0.8rem;">
+              <span style="color: var(--color-text-secondary); font-weight: 600;">System Administrative Views:</span>
+              <button class="btn ${this.adminFilter === 'all' ? 'btn-primary' : 'btn-ghost'} btn-sm" style="font-size: 0.76rem;" onclick="TasksView.setAdminFilter('all')">
+                All Tasks (${SLCMS_STATE.tasks.length})
+              </button>
+              <button class="btn ${this.adminFilter === 'unassigned' ? 'btn-danger' : 'btn-ghost'} btn-sm" style="font-size: 0.76rem;" onclick="TasksView.setAdminFilter('unassigned')">
+                ⚠️ Unassigned Tasks (${unassignedCount})
+              </button>
+              <button class="btn ${this.adminFilter === 'technical' ? 'btn-gold' : 'btn-ghost'} btn-sm" style="font-size: 0.76rem;" onclick="TasksView.setAdminFilter('technical')">
+                ⚙️ Technical Tasks (${techCount})
+              </button>
+              <button class="btn ${this.adminFilter === 'overdue' ? 'btn-danger' : 'btn-ghost'} btn-sm" style="font-size: 0.76rem;" onclick="TasksView.setAdminFilter('overdue')">
+                ⏰ Overdue Admin Tasks (${overdueCount})
+              </button>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--color-text-secondary); line-height: 1.4; margin-top: 0.45rem;">
+              ⚖️ <strong>Legal Practice Restriction:</strong> Administrator cannot approve lawyer work, alter court statutory deadlines without authorization, or complete a legal filing on behalf of counsel.
+            </div>
+          </div>
+        ` : ''}
+
         <!-- 2. FILTER & SEARCH TOOLBAR -->
         <div class="filter-bar">
           <div class="input-with-icon" style="flex: 1; min-width: 260px;">
@@ -108,6 +155,11 @@ const TasksView = {
     App.refreshCurrentView();
   },
 
+  setAdminFilter(af) {
+    this.adminFilter = af;
+    App.refreshCurrentView();
+  },
+
   getFilteredTasks() {
     return SLCMS_STATE.tasks.filter(t => {
       const matchP = this.filterPriority === 'All' || t.priority === this.filterPriority;
@@ -115,8 +167,18 @@ const TasksView = {
         t.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
         t.caseNumber.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
         t.caseTitle.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        t.assignedTo.toLowerCase().includes(this.searchQuery.toLowerCase());
-      return matchP && matchQ;
+        (t.assignedTo && t.assignedTo.toLowerCase().includes(this.searchQuery.toLowerCase()));
+
+      let matchAdmin = true;
+      if (this.adminFilter === 'unassigned') {
+        matchAdmin = !t.assignedTo || t.assignedTo === 'Unassigned';
+      } else if (this.adminFilter === 'technical') {
+        matchAdmin = t.isTechnical || t.category === 'technical';
+      } else if (this.adminFilter === 'overdue') {
+        matchAdmin = t.status !== 'completed' && new Date(t.dueDate) < new Date('2026-09-08');
+      }
+
+      return matchP && matchQ && matchAdmin;
     });
   },
 
@@ -131,7 +193,7 @@ const TasksView = {
     const tasks = this.getFilteredTasks();
 
     return `
-      <div class="kanban-board" style="display: grid; grid-template-columns: repeat(4, minmax(280px, 1fr)); gap: 1.25rem; align-items: start;">
+      <div class="kanban-board" style="display: grid; gap: 1.25rem; align-items: start; grid-template-columns: repeat(4, minmax(280px, 1fr));">
         ${columns.map(col => {
           const colTasks = tasks.filter(t => t.status === col.id);
           return `
@@ -160,27 +222,29 @@ const TasksView = {
                   <div class="card card-hover kanban-card">
                     
                     <!-- Card Top: Priority & Due Date -->
-                    <div class="flex items-center justify-between" style="margin-bottom: 0.65rem;">
-                      <span class="badge badge-priority-${t.priority.toLowerCase()}">
-                        ${t.priority === 'High' ? '⚠️ ' : ''}${t.priority}
+                    <div class="flex items-center justify-between" style="margin-bottom: 0.55rem;">
+                      <span class="badge badge-priority-${t.priority.toLowerCase()}" style="font-size: 0.68rem; padding: 0.12rem 0.5rem;">
+                        ${t.priority === 'High' ? '🚨 ' : (t.priority === 'Medium' ? '⚡ ' : '🔹 ')}${t.priority}
                       </span>
-                      <span style="font-size: 0.75rem; font-weight: 600; color: ${t.priority === 'High' && col.id !== 'completed' ? 'var(--color-danger)' : 'var(--color-text-secondary)'}; font-family: var(--font-mono); display: flex; align-items: center; gap: 0.25rem;">
+                      <span style="font-size: 0.74rem; font-weight: 700; color: ${t.priority === 'High' && col.id !== 'completed' ? 'var(--color-danger)' : 'var(--color-text-secondary)'}; font-family: var(--font-mono); display: flex; align-items: center; gap: 0.25rem;">
                         📅 ${t.dueDate}
                       </span>
                     </div>
 
                     <!-- Task Title -->
-                    <h4 style="font-size: 0.95rem; color: var(--color-primary); margin-bottom: 0.45rem; line-height: 1.4; font-weight: 700;">
+                    <h4 style="font-size: 0.92rem; color: var(--color-primary); margin-bottom: 0.45rem; line-height: 1.4; font-weight: 700;">
                       ${t.title}
                     </h4>
 
                     <!-- Case Association Tag -->
-                    <div style="font-size: 0.76rem; color: var(--color-text-secondary); margin-bottom: 0.85rem; background: var(--color-surface-subtle); padding: 0.3rem 0.55rem; border-radius: 4px; border: 1px solid var(--color-border);">
-                      <strong style="color: var(--color-primary);">${t.caseNumber}:</strong> ${t.caseTitle}
+                    <div style="font-size: 0.74rem; margin-bottom: 0.75rem; background: rgba(200,155,60,0.08); padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); border: 1px solid rgba(200,155,60,0.25); display: flex; align-items: center; gap: 0.35rem; overflow: hidden;">
+                      <span style="font-family: var(--font-mono); font-weight: 800; color: var(--color-gold); font-size: 0.72rem; flex-shrink: 0;">${t.caseNumber}</span>
+                      <span style="color: var(--color-text-muted);">&bull;</span>
+                      <span style="color: var(--color-primary); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${t.caseTitle}">${t.caseTitle}</span>
                     </div>
 
                     <!-- Assignee & Move Action Buttons -->
-                    <div class="flex items-center justify-between pt-2.5" style="border-top: 1px solid var(--color-border-subtle);">
+                    <div class="flex items-center justify-between pt-2.5" style="border-top: 1px solid var(--color-border-subtle); margin-top: 0.35rem;">
                       <div class="flex items-center gap-2">
                         <div class="avatar avatar-sm ${t.assignedAvatar === 'EV' ? 'avatar-gold' : t.assignedAvatar === 'JM' ? 'avatar-navy' : t.assignedAvatar === 'MB' ? 'avatar-teal' : 'avatar-purple'}" style="font-size: 10px; font-weight: 700;">
                           ${t.assignedAvatar || 'US'}
@@ -190,19 +254,27 @@ const TasksView = {
                         </span>
                       </div>
                       
-                      <!-- Quick Move Actions -->
-                      <div class="flex items-center gap-1">
+                      <!-- Intuitive Workflow Advancement Buttons -->
+                      <div class="flex items-center gap-1.5">
                         ${col.id !== 'todo' ? `
-                          <button class="btn btn-secondary btn-sm" style="padding: 2px 7px; font-size: 0.72rem;" onclick="TasksView.moveTaskStatus('${t.id}', 'prev')" title="Move to previous stage">
+                          <button class="kanban-action-btn-prev" onclick="TasksView.moveTaskStatus('${t.id}', 'prev')" title="Move back to previous stage">
                             ←
                           </button>
                         ` : ''}
-                        ${col.id !== 'completed' ? `
-                          <button class="btn btn-gold btn-sm" style="padding: 2px 7px; font-size: 0.72rem;" onclick="TasksView.moveTaskStatus('${t.id}', 'next')" title="Advance task stage">
-                            →
+                        ${col.id === 'todo' ? `
+                          <button class="kanban-action-btn-next" onclick="TasksView.moveTaskStatus('${t.id}', 'next')" title="Start task">
+                            <span>Start</span> →
+                          </button>
+                        ` : col.id === 'in_progress' ? `
+                          <button class="kanban-action-btn-next" onclick="TasksView.moveTaskStatus('${t.id}', 'next')" title="Submit for partner review">
+                            <span>Review</span> →
+                          </button>
+                        ` : col.id === 'review' ? `
+                          <button class="kanban-action-btn-next" onclick="TasksView.moveTaskStatus('${t.id}', 'next')" title="Approve and record filing" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important; color: #FFFFFF !important;">
+                            <span>Approve</span> ✓
                           </button>
                         ` : `
-                          <span style="color: var(--color-success); font-weight: 700; font-size: 0.85rem;">✓ Filed</span>
+                          <span class="badge badge-active" style="font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.5rem;">✓ Filed</span>
                         `}
                       </div>
                     </div>
@@ -225,51 +297,61 @@ const TasksView = {
           <thead>
             <tr>
               <th style="width: 5%;">Done</th>
-              <th style="width: 35%;">Task Description & Milestones</th>
-              <th style="width: 20%;">Related Legal Matter</th>
-              <th style="width: 15%;">Assigned Counsel</th>
-              <th style="width: 12%;">Statutory Due</th>
+              <th style="width: 30%;">Task Description &amp; Milestones</th>
+              <th style="width: 18%;">Related Legal Matter</th>
+              <th style="width: 14%;">Assigned User</th>
+              <th style="width: 11%;">Statutory Due</th>
               <th style="width: 8%;">Priority</th>
-              <th style="width: 5%; text-align: right;">Action</th>
+              <th style="width: 10%;">Status</th>
+              <th style="width: 4%; text-align: right;">Action</th>
             </tr>
           </thead>
           <tbody>
-            ${tasks.map(t => `
-              <tr>
-                <td>
-                  <input type="checkbox" class="checkbox-custom" ${t.status === 'completed' ? 'checked' : ''} onchange="TasksView.toggleTaskStatus('${t.id}')">
-                </td>
-                <td>
-                  <div style="font-weight: 700; color: var(--color-primary); font-size: 0.92rem; ${t.status === 'completed' ? 'text-decoration: line-through; opacity: 0.6;' : ''}">
-                    ${t.title}
-                  </div>
-                  <div style="font-size: 0.75rem; color: var(--color-text-secondary); margin-top: 0.15rem;">${t.description}</div>
-                </td>
-                <td>
-                  <span class="badge" style="background: var(--color-surface-subtle); color: var(--color-primary); font-family: var(--font-mono); font-size: 0.75rem;">
-                    ${t.caseNumber}
-                  </span>
-                  <div style="font-size: 0.75rem; color: var(--color-text-secondary); margin-top: 0.15rem;">${t.caseTitle}</div>
-                </td>
-                <td>
-                  <div class="flex items-center gap-2">
-                    <div class="avatar avatar-sm ${t.assignedAvatar === 'EV' ? 'avatar-gold' : 'avatar-navy'}">${t.assignedAvatar || 'US'}</div>
-                    <span style="font-weight: 500; font-size: 0.82rem;">${t.assignedTo}</span>
-                  </div>
-                </td>
-                <td>
-                  <strong style="color: ${t.priority === 'High' && t.status !== 'completed' ? 'var(--color-danger)' : 'var(--color-text-main)'}; font-family: var(--font-mono); font-size: 0.85rem;">
-                    ${t.dueDate}
-                  </strong>
-                </td>
-                <td>
-                  <span class="badge badge-priority-${t.priority.toLowerCase()}">${t.priority}</span>
-                </td>
-                <td style="text-align: right;">
-                  <button class="btn btn-ghost btn-sm text-danger" onclick="TasksView.deleteTask('${t.id}')" title="Delete Task">✕</button>
-                </td>
-              </tr>
-            `).join('')}
+            ${tasks.map(t => {
+              const isOverdue = t.status !== 'completed' && new Date(t.dueDate) < new Date();
+              const displayStatus = isOverdue ? 'Overdue' : (t.status === 'in_progress' ? 'In Progress' : (t.status === 'completed' ? 'Completed' : 'Pending'));
+              const statusBadgeClass = isOverdue ? 'badge-lost' : (t.status === 'completed' ? 'badge-active' : (t.status === 'in_progress' ? 'badge-pending' : 'badge-onhold'));
+
+              return `
+                <tr>
+                  <td>
+                    <input type="checkbox" class="checkbox-custom" ${t.status === 'completed' ? 'checked' : ''} onchange="TasksView.toggleTaskStatus('${t.id}')">
+                  </td>
+                  <td>
+                    <div style="font-weight: 700; color: var(--color-primary); font-size: 0.92rem; ${t.status === 'completed' ? 'text-decoration: line-through; opacity: 0.6;' : ''}">
+                      ${t.title}
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--color-text-secondary); margin-top: 0.15rem;">${t.description}</div>
+                  </td>
+                  <td>
+                    <span class="badge" style="background: var(--color-surface-subtle); color: var(--color-primary); font-family: var(--font-mono); font-size: 0.75rem;">
+                      ${t.caseNumber}
+                    </span>
+                    <div style="font-size: 0.75rem; color: var(--color-text-secondary); margin-top: 0.15rem;">${t.caseTitle}</div>
+                  </td>
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <div class="avatar avatar-sm ${t.assignedAvatar === 'EV' ? 'avatar-gold' : 'avatar-navy'}">${t.assignedAvatar || 'US'}</div>
+                      <span style="font-weight: 500; font-size: 0.82rem;">${t.assignedTo}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <strong style="color: ${isOverdue ? 'var(--color-danger)' : 'var(--color-text-main)'}; font-family: var(--font-mono); font-size: 0.85rem;">
+                      ${t.dueDate}
+                    </strong>
+                  </td>
+                  <td>
+                    <span class="badge badge-priority-${t.priority.toLowerCase()}">${t.priority}</span>
+                  </td>
+                  <td>
+                    <span class="badge ${statusBadgeClass}">${displayStatus}</span>
+                  </td>
+                  <td style="text-align: right;">
+                    <button class="btn btn-ghost btn-sm text-danger" onclick="TasksView.deleteTask('${t.id}')" title="Delete Task">✕</button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
           </tbody>
         </table>
       </div>
@@ -1087,6 +1169,32 @@ const TasksView = {
     const t = SLCMS_STATE.tasks.find(item => item.id === taskId);
     if (!t) return;
 
+    const isAdmin = (SLCMS_STATE.currentUser?.role === 'Administrator');
+    // Administrator cannot approve lawyer's legal work or complete legal tasks
+    if (isAdmin && !t.isTechnical && t.category !== 'technical') {
+      if (dir === 'next' && (t.status === 'under_review' || t.status === 'in_progress')) {
+        App.openModal(`
+          <div class="modal-header" style="background: linear-gradient(135deg, #7F1D1D, #450A0A); color: #FFFFFF;">
+            <h3 class="modal-title" style="color: #FFFFFF; font-size: 1.1rem;">⚠️ Legal Counsel Authorization Required</h3>
+            <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+          </div>
+          <div class="modal-body" style="padding: 1.5rem;">
+            <div class="alert alert-danger" style="font-size: 0.86rem; line-height: 1.5; margin-bottom: 1rem;">
+              <strong>Administrator Restriction (Rule 5):</strong> System Administrators cannot mark counsel's substantive legal work as approved or complete legal filings on behalf of counsel.
+            </div>
+            <p style="font-size: 0.84rem; color: var(--color-text-secondary); line-height: 1.5;">
+              This task involves substantive legal filings for <strong>${t.caseNumber} - ${t.caseTitle}</strong>. Final approval and statutory lodging requires review and sign-off by a qualified Senior Lawyer or assigned Advocate.
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="App.closeModal()">Acknowledge Restriction</button>
+            <button class="btn btn-gold" onclick="App.closeModal(); TasksView.openReassignModal('${t.id}');">Reassign to Senior Lawyer</button>
+          </div>
+        `, 'modal-md');
+        return;
+      }
+    }
+
     let idx = sequence.indexOf(t.status);
     if (dir === 'next' && idx < sequence.length - 1) {
       t.status = sequence[idx + 1];
@@ -1101,11 +1209,36 @@ const TasksView = {
 
   toggleTaskStatus(taskId) {
     const t = SLCMS_STATE.tasks.find(item => item.id === taskId);
-    if (t) {
-      t.status = t.status === 'completed' ? 'todo' : 'completed';
-      SLCMS_STATE.addAuditLog('Task Completion Toggled', 'Tasks & Deadlines', `${t.title} (${t.status})`);
-      App.refreshCurrentView();
+    if (!t) return;
+
+    const isAdmin = (SLCMS_STATE.currentUser?.role === 'Administrator');
+    if (isAdmin && !t.isTechnical && t.category !== 'technical' && t.status !== 'completed') {
+      App.openModal(`
+        <div class="modal-header" style="background: linear-gradient(135deg, #7F1D1D, #450A0A); color: #FFFFFF;">
+          <h3 class="modal-title" style="color: #FFFFFF; font-size: 1.1rem;">⚠️ Cannot Complete Legal Task on Behalf of Counsel</h3>
+          <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 1.5rem;">
+          <div class="alert alert-danger" style="font-size: 0.86rem; line-height: 1.5; margin-bottom: 1rem;">
+            <strong>Administrator Restriction:</strong> Under Rule 5 of SLCMS Judicial Integrity, an Administrator cannot complete a legal task on behalf of counsel.
+          </div>
+          <p style="font-size: 0.84rem; color: var(--color-text-secondary); line-height: 1.5;">
+            Task: <strong>${t.title}</strong><br>
+            Matter: <strong>${t.caseNumber} - ${t.caseTitle}</strong><br>
+            Please reassign or notify the responsible advocate.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="App.closeModal()">Close</button>
+          <button class="btn btn-gold" onclick="App.closeModal(); TasksView.openReassignModal('${t.id}');">Reassign Staff</button>
+        </div>
+      `, 'modal-md');
+      return;
     }
+
+    t.status = t.status === 'completed' ? 'todo' : 'completed';
+    SLCMS_STATE.addAuditLog('Task Completion Toggled', 'Tasks & Deadlines', `${t.title} (${t.status})`);
+    App.refreshCurrentView();
   },
 
   deleteTask(taskId) {
@@ -1116,6 +1249,181 @@ const TasksView = {
       App.showToast('Task removed from docket.', 'info');
       App.refreshCurrentView();
     }
+  },
+
+  openReassignModal(taskId) {
+    const t = SLCMS_STATE.tasks.find(item => item.id === taskId);
+    if (!t) return;
+
+    App.openModal(`
+      <div class="modal-header">
+        <h3 class="modal-title">👤 Correct Task Assignment (Administrator)</h3>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info" style="font-size: 0.82rem; margin-bottom: 1rem;">
+          Reassign administrative or case tasks to rectify unassigned or misallocated workload across firm personnel.
+        </div>
+        <div style="background: var(--color-surface-subtle); padding: 0.75rem 1rem; border-radius: 6px; font-size: 0.84rem; margin-bottom: 1rem;">
+          <div><strong>Task:</strong> ${t.title}</div>
+          <div><strong>Current Assignee:</strong> ${t.assignedTo || 'Unassigned'}</div>
+          <div><strong>Associated Case:</strong> ${t.caseNumber} - ${t.caseTitle}</div>
+        </div>
+        <div class="form-group mb-3">
+          <label class="form-label required">Select Responsible Staff Member</label>
+          <select id="reassign-select" class="form-control">
+            <option value="Eleanor Vance, Esq.">Eleanor Vance, Esq. (Senior Partner / Senior Lawyer)</option>
+            <option value="Julian Mercer, Esq.">Julian Mercer, Esq. (Partner / Senior Lawyer)</option>
+            <option value="Sophia Chen">Sophia Chen (Associate Lawyer)</option>
+            <option value="Marcus Bell">Marcus Bell (Legal Clerk)</option>
+            <option value="Neema Joseph">Neema Joseph (System Administrator)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+        <button class="btn btn-gold" onclick="TasksView.saveTaskReassignment('${t.id}')">Save Assignment</button>
+      </div>
+    `, 'modal-md');
+  },
+
+  saveTaskReassignment(taskId) {
+    const t = SLCMS_STATE.tasks.find(item => item.id === taskId);
+    const newAssigned = document.getElementById('reassign-select')?.value;
+    if (!t || !newAssigned) return;
+
+    const oldAssigned = t.assignedTo;
+    t.assignedTo = newAssigned;
+    t.assignedAvatar = newAssigned.includes('Eleanor') ? 'EV' : newAssigned.includes('Julian') ? 'JM' : newAssigned.includes('Sophia') ? 'SC' : newAssigned.includes('Neema') ? 'NJ' : 'MB';
+
+    SLCMS_STATE.addAuditLog('Case Assignment Changed', 'Tasks & Deadlines', `Reassigned "${t.title}" from "${oldAssigned}" to "${newAssigned}"`, 'Success');
+    App.closeModal();
+    App.showToast(`Task successfully reassigned to ${newAssigned}.`, 'success');
+    App.refreshCurrentView();
+  },
+
+  openCreateTechnicalTaskModal() {
+    App.openModal(`
+      <div class="modal-header">
+        <h3 class="modal-title">⚙️ Create Technical / System Task (Administrator)</h3>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group mb-3">
+          <label class="form-label required">Technical Task Title</label>
+          <input type="text" id="tech-title" class="form-control" placeholder="e.g. Verify TanzLII Case Precedent Synchronization" required>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label required">Category</label>
+            <select id="tech-category" class="form-control">
+              <option value="technical">Technical Infrastructure</option>
+              <option value="ocr">OCR Processing Maintenance</option>
+              <option value="security">Security &amp; User Access Audit</option>
+              <option value="backup">Database Backup Verification</option>
+              <option value="tanzlii">TanzLII Repository Ingestion</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Priority</label>
+            <select id="tech-priority" class="form-control">
+              <option value="High">High (Immediate)</option>
+              <option value="Medium" selected>Medium (Standard)</option>
+              <option value="Low">Low (Maintenance)</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label required">Target Due Date</label>
+            <input type="date" id="tech-due" class="form-control" value="2026-09-12">
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Assigned Administrator / Engineer</label>
+            <select id="tech-assigned" class="form-control">
+              <option value="Neema Joseph">Neema Joseph (System Administrator)</option>
+              <option value="Marcus Bell">Marcus Bell (Legal Clerk)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Task Instructions</label>
+          <textarea id="tech-desc" class="form-control" rows="3" placeholder="Describe server endpoints, OCR check logs, or backup verification steps..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+        <button class="btn btn-gold" onclick="TasksView.saveTechnicalTask()">Create Technical Task</button>
+      </div>
+    `, 'modal-md');
+  },
+
+  saveTechnicalTask() {
+    const title = document.getElementById('tech-title')?.value;
+    if (!title) {
+      App.showToast('Please enter a task title.', 'error');
+      return;
+    }
+
+    const assigned = document.getElementById('tech-assigned')?.value || 'Neema Joseph';
+    const newTask = {
+      id: 'tech-' + Date.now(),
+      title: title,
+      caseId: 'case-101',
+      caseTitle: 'Firm Infrastructure & Technical Maintenance',
+      caseNumber: 'SYS-2026-TECH',
+      assignedTo: assigned,
+      assignedAvatar: assigned.includes('Neema') ? 'NJ' : 'MB',
+      priority: document.getElementById('tech-priority')?.value || 'Medium',
+      dueDate: document.getElementById('tech-due')?.value || '2026-09-12',
+      status: 'todo',
+      progressPct: 0,
+      category: 'technical',
+      isTechnical: true,
+      description: document.getElementById('tech-desc')?.value || 'System maintenance task created by Administrator.'
+    };
+
+    SLCMS_STATE.tasks.unshift(newTask);
+    SLCMS_STATE.addAuditLog('Technical Task Created', 'Tasks & Deadlines', newTask.title, 'Success');
+    App.closeModal();
+    App.showToast('Technical task registered successfully.', 'success');
+    App.refreshCurrentView();
+  },
+
+  notifyResponsibleUsers() {
+    const pendingTasks = (SLCMS_STATE.tasks || []).filter(t => t.status !== 'completed');
+    const unassigned = pendingTasks.filter(t => !t.assignedTo || t.assignedTo === 'Unassigned');
+
+    App.openModal(`
+      <div class="modal-header">
+        <h3 class="modal-title">🔔 Notify Responsible Users</h3>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.88rem; color: var(--color-text-secondary); margin-bottom: 1rem;">
+          Send automated docket reminder notices to all lawyers and staff regarding active tasks and upcoming court deadlines.
+        </p>
+        <div style="background: var(--color-surface-subtle); padding: 1rem; border-radius: 6px; font-size: 0.84rem; line-height: 1.6; margin-bottom: 1rem;">
+          <div>📋 <strong>Active Pending Tasks:</strong> ${pendingTasks.length}</div>
+          <div>⚠️ <strong>Unassigned Action Items:</strong> ${unassigned.length}</div>
+          <div>👥 <strong>Notified Recipients:</strong> Eleanor Vance, Julian Mercer, Sophia Chen, Marcus Bell</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notification Message</label>
+          <textarea id="notify-msg" class="form-control" rows="3">Reminder: Please review and fulfill your statutory docket obligations and unassigned matter items for the current session.</textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+        <button class="btn btn-gold" onclick="TasksView.sendNotifications()">Send Notifications</button>
+      </div>
+    `, 'modal-md');
+  },
+
+  sendNotifications() {
+    SLCMS_STATE.addAuditLog('User Notifications Dispatched', 'Tasks & Deadlines', 'System Administrator broadcasted statutory docket reminders to all staff.', 'Success');
+    App.closeModal();
+    App.showToast('Docket notifications broadcasted to 4 responsible staff members.', 'success');
   },
 
   openNewTaskModal(caseContext = null, defaultCol = 'todo') {
