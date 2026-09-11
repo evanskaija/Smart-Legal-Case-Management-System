@@ -49,7 +49,7 @@ const AdminView = {
               Accounts control, access governance, security policy enforcement, and technical case infrastructure.
             </p>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 adm-header-actions">
             <button class="btn btn-secondary btn-sm" onclick="AdminView.openSeparationOfDutiesModal()" title="View Law Firm Governance Matrix">
               Separation of Duties
             </button>

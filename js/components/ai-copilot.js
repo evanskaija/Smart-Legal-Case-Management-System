@@ -359,7 +359,35 @@ const AICopilot = {
   renderActiveTabFooter() {
     if (this.activeTab === 'chat') {
       return `
-        <div style="padding: 0.5rem 0.75rem 0.85rem 0.75rem;">
+        <div style="padding: 0.4rem 0.75rem 0.85rem 0.75rem;">
+          <!-- 8 Primary Category Action Buttons Bar (Sits Above Input Dock) -->
+          <div class="ai-copilot-cat-btn-bar">
+            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Find Abdallah Salum Muwinge')">
+              🔍 Find Judgment
+            </button>
+            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Summarize Abdallah Salum Muwinge v Halima Ismail')">
+              📄 Summarize Case
+            </button>
+            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show facts of Abdallah Salum Muwinge v Halima Ismail')">
+              ℹ️ Show Facts
+            </button>
+            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show legal issues in Abdallah Salum Muwinge v Halima Ismail')">
+              ❓ Show Legal Issues
+            </button>
+            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show court reasoning in Abdallah Salum Muwinge v Halima Ismail')">
+              🧠 Court Reasoning
+            </button>
+            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show final decision in Abdallah Salum Muwinge v Halima Ismail')">
+              ✅ Final Decision
+            </button>
+            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show laws and cases cited in Abdallah Salum Muwinge v Halima Ismail')">
+              📚 Laws Cited
+            </button>
+            <button type="button" class="ai-copilot-cat-btn" onclick="AIAssistantView.viewPdfModal('assets/cases/case1_scanned_judgment.pdf', 'Abdallah Salum Muwinge v Halima Ismail [2020] TZHC 10045')">
+              🌐 Open Original
+            </button>
+          </div>
+
           <div class="ai-chat-prompt-card">
             <textarea 
               id="ai-copilot-input" 
@@ -395,34 +423,6 @@ const AICopilot = {
                 </button>
               </div>
             </div>
-          </div>
-
-          <!-- 8 Primary Category Action Buttons Bar -->
-          <div class="ai-copilot-cat-btn-bar">
-            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Find Abdallah Salum Muwinge')">
-              🔍 Find Judgment
-            </button>
-            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Summarize Abdallah Salum Muwinge v Halima Ismail')">
-              📄 Summarize Case
-            </button>
-            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show facts of Abdallah Salum Muwinge v Halima Ismail')">
-              ℹ️ Show Facts
-            </button>
-            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show legal issues in Abdallah Salum Muwinge v Halima Ismail')">
-              ❓ Show Legal Issues
-            </button>
-            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show court reasoning in Abdallah Salum Muwinge v Halima Ismail')">
-              🧠 Court Reasoning
-            </button>
-            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show final decision in Abdallah Salum Muwinge v Halima Ismail')">
-              ✅ Final Decision
-            </button>
-            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show laws and cases cited in Abdallah Salum Muwinge v Halima Ismail')">
-              📚 Laws Cited
-            </button>
-            <button type="button" class="ai-copilot-cat-btn" onclick="AIAssistantView.viewPdfModal('assets/cases/case1_scanned_judgment.pdf', 'Abdallah Salum Muwinge v Halima Ismail [2020] TZHC 10045')">
-              🌐 Open Original
-            </button>
           </div>
         </div>
       `;

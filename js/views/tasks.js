@@ -19,9 +19,9 @@ const TasksView = {
         <!-- 1. VIEW HEADER -->
         <div class="view-header">
           <div>
-            <div class="flex items-center gap-2" style="margin-bottom: 0.25rem;">
-              <h1 class="page-title">Tasks & Statutory Deadlines</h1>
-              <span class="badge badge-confidential" style="font-size: 0.75rem;">
+            <div class="flex items-center gap-2" style="margin-bottom: 0.25rem; flex-wrap: wrap;">
+              <h1 class="page-title">Tasks &amp; Statutory Deadlines</h1>
+              <span class="badge badge-confidential" style="font-size: 0.72rem; white-space: nowrap;">
                 Statutory Docket Rules Active
               </span>
             </div>
@@ -66,7 +66,7 @@ const TasksView = {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
-              <span>+ Create Task</span>
+              <span>Create Task</span>
             </button>
           </div>
         </div>
@@ -75,24 +75,24 @@ const TasksView = {
           <!-- ADMINISTRATOR TASK OVERSIGHT & GOVERNANCE BAR -->
           <div class="card animate-fade" style="margin-bottom: 1.25rem; padding: 1rem 1.25rem; border-left: 4px solid var(--color-gold); background: linear-gradient(135deg, rgba(16,42,67,0.03) 0%, rgba(200,155,60,0.08) 100%);">
             <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
-              <div class="flex items-center gap-2">
-                <span style="font-size: 1.15rem;">👑</span>
-                <div>
+              <div class="flex items-center gap-2 flex-wrap" style="min-width: 0;">
+                <span style="font-size: 1.15rem; flex-shrink: 0;">👑</span>
+                <div class="flex items-center gap-2 flex-wrap" style="min-width: 0;">
                   <strong style="color: var(--color-primary); font-size: 0.92rem;">Administrator Task Oversight &amp; Staff Coordination</strong>
-                  <span class="badge badge-confidential" style="font-size: 0.68rem; margin-left: 0.35rem;">Technical Governance</span>
+                  <span class="badge badge-confidential" style="font-size: 0.68rem; white-space: nowrap;">Technical Governance</span>
                 </div>
               </div>
               <div class="flex items-center gap-1.5 flex-wrap">
                 <button class="btn btn-gold btn-sm" style="font-size: 0.76rem;" onclick="TasksView.openCreateTechnicalTaskModal()">
-                  + Create Technical Task
+                  Create Technical Task
                 </button>
                 <button class="btn btn-secondary btn-sm" style="font-size: 0.76rem;" onclick="TasksView.notifyResponsibleUsers()">
                   🔔 Notify Responsible Users
                 </button>
               </div>
             </div>
-            <div class="flex items-center gap-2 flex-wrap" style="padding-top: 0.4rem; border-top: 1px solid rgba(0,0,0,0.06); font-size: 0.8rem;">
-              <span style="color: var(--color-text-secondary); font-weight: 600;">System Administrative Views:</span>
+            <div class="flex items-center gap-1.5 flex-wrap" style="padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.06); font-size: 0.8rem;">
+              <span style="color: var(--color-text-secondary); font-weight: 600; width: 100%; margin-bottom: 2px;">System Administrative Views:</span>
               <button class="btn ${this.adminFilter === 'all' ? 'btn-primary' : 'btn-ghost'} btn-sm" style="font-size: 0.76rem;" onclick="TasksView.setAdminFilter('all')">
                 All Tasks (${SLCMS_STATE.tasks.length})
               </button>

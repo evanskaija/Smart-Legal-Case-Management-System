@@ -91,14 +91,16 @@ const App = {
 
       <!-- 1. FIXED LEFT SIDEBAR -->
       <aside id="app-sidebar" class="sidebar">
-        <!-- Mobile Drawer Header with User Profile and Close Button -->
-        <div class="sidebar-mobile-user-header">
-          <div class="user-display-avatar avatar avatar-sm avatar-ring-gold">
-            <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=256&q=80" alt="Avatar">
-          </div>
-          <div class="mobile-user-meta">
-            <div class="user-display-name mobile-user-name">Eleanor Vance, Esq.</div>
-            <div class="user-display-role mobile-user-role">Managing Partner · Active</div>
+        <!-- Sidebar Header & Logo with Clean Close Button on Mobile -->
+        <div class="sidebar-header" style="display: flex; align-items: center; justify-content: space-between;">
+          <div class="flex items-center gap-2.5" style="min-width: 0; flex: 1;">
+            <div class="sidebar-logo" style="padding: 0; background: transparent; border: none; flex-shrink: 0;">
+              <img src="assets/SLCMS.png" alt="SLCMS Emblem" style="width: 38px; height: 38px; border-radius: 50%; display: block; object-fit: contain; box-shadow: 0 0 10px rgba(200, 155, 60, 0.4);">
+            </div>
+            <div class="sidebar-brand-text">
+              <div class="brand-title">SLCMS</div>
+              <div class="brand-subtitle">Smart Legal Case Management</div>
+            </div>
           </div>
           <button class="mobile-drawer-close-btn" onclick="App.closeMobileSidebar()" aria-label="Close navigation drawer" title="Close">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -106,17 +108,6 @@ const App = {
               <line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
           </button>
-        </div>
-
-        <!-- Sidebar Header & Logo -->
-        <div class="sidebar-header">
-          <div class="sidebar-logo" style="padding: 0; background: transparent; border: none;">
-            <img src="assets/SLCMS.png" alt="SLCMS Emblem" style="width: 38px; height: 38px; border-radius: 50%; display: block; object-fit: contain; box-shadow: 0 0 10px rgba(200, 155, 60, 0.4);">
-          </div>
-          <div class="sidebar-brand-text">
-            <div class="brand-title">SLCMS</div>
-            <div class="brand-subtitle">Smart Legal Case Management</div>
-          </div>
         </div>
 
         <!-- Navigation Items List (Dynamic RBAC) -->
@@ -200,8 +191,8 @@ const App = {
 
           <!-- Topbar Right Actions -->
           <div class="topbar-right">
-            <!-- Quick "Add New" Button -->
-            <button class="btn btn-gold btn-sm topbar-add-new-btn" onclick="CasesView.openNewCaseModal()" title="New Legal Case">
+            <!-- Quick "Add New" Button (Desktop Only) -->
+            <button class="btn btn-gold btn-sm topbar-add-new-btn topbar-btn-hide-mobile" onclick="CasesView.openNewCaseModal()" title="New Legal Case">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
@@ -241,8 +232,8 @@ const App = {
               <span class="notification-dot"></span>
             </button>
 
-            <!-- User Profile Dropdown Pill / Avatar -->
-            <div class="topbar-avatar-pill flex items-center gap-2" style="cursor: pointer;" onclick="App.openUserProfileModal()" title="View Profile">
+            <!-- User Profile Dropdown Pill / Avatar (Desktop Only) -->
+            <div class="topbar-avatar-pill topbar-btn-hide-mobile flex items-center gap-2" style="cursor: pointer;" onclick="App.openUserProfileModal()" title="View Profile">
               <div class="user-display-avatar avatar avatar-sm avatar-ring-gold">
                 <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&q=80" alt="User Profile">
               </div>
