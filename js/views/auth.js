@@ -28,14 +28,17 @@ const AuthView = {
   },
 
   render() {
+    document.body.classList.add('auth-view-active');
     if (this.currentViewMode === 'first_login_password_change' && this.tempAuthUser) {
       return this.renderFirstLoginPasswordChangeView();
     }
 
+    const isLoginTab = (this.currentTab === 'login');
+
     return `
       <div class="auth-page-container animate-fade" style="position: relative;">
         <!-- Auth Screen Theme Toggle -->
-        <button class="topbar-icon-btn" onclick="App.toggleTheme()" title="Toggle Dark / Light Mode" style="position: absolute; top: 1.25rem; right: 1.5rem; z-index: 10; background: var(--color-surface); border: 1px solid var(--color-border); box-shadow: var(--shadow-sm);">
+        <button class="topbar-icon-btn auth-theme-toggle-btn" onclick="App.toggleTheme()" title="Toggle Dark / Light Mode" aria-label="Toggle Dark / Light Mode">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-primary);">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
           </svg>
@@ -105,14 +108,33 @@ const AuthView = {
 
           <!-- 2. Right Form Section - Unified Auth Card -->
           <div class="auth-form-panel">
+            <!-- Mobile Brand Header (Visible only on mobile/tablet <= 768px) -->
+            <div class="auth-mobile-brand-header">
+              <div class="auth-brand-logo-icon" style="padding: 0; background: transparent; border: none; width: 44px; height: 44px;">
+                <img src="assets/SLCMS.png" alt="SLCMS Emblem" style="width: 44px; height: 44px; border-radius: 50%; display: block; object-fit: contain; box-shadow: 0 0 12px rgba(200, 155, 60, 0.4);">
+              </div>
+              <div class="auth-mobile-brand-text">
+                <span class="auth-mobile-brand-title">SLCMS</span>
+                <span class="auth-mobile-brand-subtitle">Smart Legal Case Management</span>
+              </div>
+            </div>
+
             <div class="auth-white-card">
               <!-- Top Lock/Key Badge -->
               <div class="auth-card-lock-badge">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  <circle cx="12" cy="16" r="1.5"/>
-                </svg>
+                ${isLoginTab ? `
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    <circle cx="12" cy="16" r="1.5"/>
+                  </svg>
+                ` : `
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M19 8v6M22 11h-6"/>
+                  </svg>
+                `}
               </div>
 
               <!-- Card Header -->
@@ -122,6 +144,27 @@ const AuthView = {
               <p class="auth-card-subtitle">
                 Sign in with your Staff ID, email or username.
               </p>
+
+              <!-- UNIFIED TAB SWITCHER BAR (Login & Register in One Part) -->
+              <div class="auth-toggle-tabs" style="display: flex; background: #F1F5F9; border-radius: 10px; padding: 4px; margin-bottom: 1.5rem; border: 1px solid #E2E8F0;">
+                <button type="button" class="auth-toggle-tab ${isLoginTab ? 'active' : ''}" onclick="AuthView.switchTab('login')" style="flex: 1; padding: 0.55rem; font-size: 0.85rem; font-weight: 700; border-radius: 7px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                  <span>1. Sign In</span>
+                </button>
+                <button type="button" class="auth-toggle-tab ${!isLoginTab ? 'active' : ''}" onclick="AuthView.switchTab('register')" style="flex: 1; padding: 0.55rem; font-size: 0.85rem; font-weight: 700; border-radius: 7px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <line x1="19" y1="8" x2="19" y2="14"/>
+                    <line x1="22" y1="11" x2="16" y2="11"/>
+                  </svg>
+                  <span class="auth-tab-desktop-text">2. Register with Invitation</span>
+                  <span class="auth-tab-mobile-text">2. Register</span>
+                </button>
+              </div>
 
               <!-- Server/Security Alert Banner -->
               <div id="auth-server-alert" class="alert alert-danger hidden" style="margin-bottom: 1.25rem; font-size: 0.85rem; text-align: left;">
@@ -155,8 +198,6 @@ const AuthView = {
                       oninput="AuthView.clearFieldError('login-email-input', 'login-email-error')"
                     >
                   </div>
-                  <div id="login-email-error" class="form-error-msg hidden"></div>
-                </div>
 
                 <!-- Password Field -->
                 <div class="auth-input-group">
@@ -191,8 +232,6 @@ const AuthView = {
                       </svg>
                     </button>
                   </div>
-                  <div id="login-password-error" class="form-error-msg hidden"></div>
-                </div>
 
                 <!-- Remember Staff ID Checkbox -->
                 <div class="auth-remember-row flex items-center justify-between" style="margin-bottom: 1.25rem; font-size: 0.85rem;">

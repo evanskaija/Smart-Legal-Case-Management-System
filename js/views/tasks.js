@@ -182,6 +182,13 @@ const TasksView = {
     });
   },
 
+  scrollToColumn(colId) {
+    const el = document.getElementById(`kanban-col-${colId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  },
+
   renderKanban() {
     const columns = [
       { id: 'todo', title: 'To Do', border: 'var(--color-primary)', accent: '#102A43' },
@@ -197,7 +204,19 @@ const TasksView = {
         ${columns.map(col => {
           const colTasks = tasks.filter(t => t.status === col.id);
           return `
-            <div class="kanban-col">
+            <button class="kanban-mobile-tab-btn" onclick="TasksView.scrollToColumn('${col.id}')">
+              <span>${col.title}</span>
+              <span class="badge" style="font-size: 0.68rem; padding: 2px 6px;">${colTasks.length}</span>
+            </button>
+          `;
+        }).join('')}
+      </div>
+
+      <div class="kanban-board">
+        ${columns.map(col => {
+          const colTasks = tasks.filter(t => t.status === col.id);
+          return `
+            <div class="kanban-col" id="kanban-col-${col.id}">
               
               <!-- Column Header -->
               <div class="kanban-col-header" style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 0.85rem; margin-bottom: 1rem; border-bottom: 2.5px solid ${col.accent};">

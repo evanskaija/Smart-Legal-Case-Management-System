@@ -25,7 +25,7 @@ const AICopilot = {
     container.id = 'ai-copilot-drawer-container';
     container.innerHTML = `
       <!-- Floating Action Button -->
-      <div id="ai-copilot-fab" class="ai-copilot-fab" onclick="AICopilot.toggleDrawer()" title="Open AI Legal Copilot (Ctrl+J)">
+      <div id="ai-copilot-fab" class="ai-copilot-fab" onclick="AICopilot.toggleDrawer()" title="Open AI Legal Copilot (Ctrl+J)" aria-label="AI Copilot">
         <span class="ai-copilot-fab-sparkle">✨</span>
         <span class="ai-copilot-desktop-text">AI Copilot</span>
         <span class="ai-copilot-mobile-text">AI</span>
@@ -395,6 +395,34 @@ const AICopilot = {
                 </button>
               </div>
             </div>
+          </div>
+
+          <!-- 8 Primary Category Action Buttons Bar -->
+          <div class="ai-copilot-cat-btn-bar">
+            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Find Abdallah Salum Muwinge')">
+              🔍 Find Judgment
+            </button>
+            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Summarize Abdallah Salum Muwinge v Halima Ismail')">
+              📄 Summarize Case
+            </button>
+            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show facts of Abdallah Salum Muwinge v Halima Ismail')">
+              ℹ️ Show Facts
+            </button>
+            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show legal issues in Abdallah Salum Muwinge v Halima Ismail')">
+              ❓ Show Legal Issues
+            </button>
+            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show court reasoning in Abdallah Salum Muwinge v Halima Ismail')">
+              🧠 Court Reasoning
+            </button>
+            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show final decision in Abdallah Salum Muwinge v Halima Ismail')">
+              ✅ Final Decision
+            </button>
+            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show laws and cases cited in Abdallah Salum Muwinge v Halima Ismail')">
+              📚 Laws Cited
+            </button>
+            <button type="button" class="ai-copilot-cat-btn" onclick="AIAssistantView.viewPdfModal('assets/cases/case1_scanned_judgment.pdf', 'Abdallah Salum Muwinge v Halima Ismail [2020] TZHC 10045')">
+              🌐 Open Original
+            </button>
           </div>
         </div>
       `;

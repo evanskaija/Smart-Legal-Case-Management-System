@@ -112,42 +112,78 @@ const BillingView = {
               <button class="btn btn-secondary btn-sm" onclick="App.showToast('Exporting financial ledger to XLSX...', 'info')">Export Ledger</button>
             </div>
           </div>
-          <div class="table-container">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Invoice No</th>
-                  <th>Client Name</th>
-                  <th>Case Docket</th>
-                  <th>Issue Date</th>
-                  <th>Due Date</th>
-                  <th>Total Amount</th>
-                  <th>Status</th>
-                  <th style="text-align: right;">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${SLCMS_STATE.invoices.map(i => `
+          <!-- Desktop & Tablet Invoice Table -->
+          <div class="desktop-table-view">
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
                   <tr>
-                    <td><strong style="font-family: var(--font-mono); color: var(--color-primary);">${i.invoiceNo}</strong></td>
-                    <td><div style="font-weight: 600;">${i.clientName}</div></td>
-                    <td><span style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--color-gold);">${i.caseNumber}</span></td>
-                    <td>${i.date}</td>
-                    <td><span style="color: ${i.status === 'Overdue' ? 'var(--color-danger); font-weight: 700;' : 'inherit'}">${i.dueDate}</span></td>
-                    <td><strong style="font-size: 0.95rem;">$${i.total.toLocaleString()}</strong></td>
-                    <td>
-                      <span class="badge ${this.getStatusBadgeClass(i.status)}">${i.status}</span>
-                    </td>
-                    <td style="text-align: right;">
-                      <div class="flex items-center justify-end gap-1">
-                        <button class="btn btn-secondary btn-sm" onclick="BillingView.previewInvoice('${i.id}')">View / Print</button>
-                        ${i.status === 'Sent' ? `<button class="btn btn-gold btn-sm" onclick="BillingView.markPaid('${i.id}')">Mark Paid</button>` : ''}
-                      </div>
-                    </td>
+                    <th>Invoice No</th>
+                    <th>Client Name</th>
+                    <th>Case Docket</th>
+                    <th>Issue Date</th>
+                    <th>Due Date</th>
+                    <th>Total Amount</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Actions</th>
                   </tr>
-                `).join('')}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  ${SLCMS_STATE.invoices.map(i => `
+                    <tr>
+                      <td><strong style="font-family: var(--font-mono); color: var(--color-primary);">${i.invoiceNo}</strong></td>
+                      <td><div style="font-weight: 600;">${i.clientName}</div></td>
+                      <td><span style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--color-gold);">${i.caseNumber}</span></td>
+                      <td>${i.date}</td>
+                      <td><span style="color: ${i.status === 'Overdue' ? 'var(--color-danger); font-weight: 700;' : 'inherit'}">${i.dueDate}</span></td>
+                      <td><strong style="font-size: 0.95rem;">$${i.total.toLocaleString()}</strong></td>
+                      <td>
+                        <span class="badge ${this.getStatusBadgeClass(i.status)}">${i.status}</span>
+                      </td>
+                      <td style="text-align: right;">
+                        <div class="flex items-center justify-end gap-1">
+                          <button class="btn btn-secondary btn-sm" onclick="BillingView.previewInvoice('${i.id}')">View / Print</button>
+                          ${i.status === 'Sent' ? `<button class="btn btn-gold btn-sm" onclick="BillingView.markPaid('${i.id}')">Mark Paid</button>` : ''}
+                        </div>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Mobile Phone Invoice Cards List -->
+          <div class="mobile-cards-view" style="padding: 1rem;">
+            ${SLCMS_STATE.invoices.map(i => `
+              <div class="case-card-mobile" style="margin-bottom: 0.75rem;">
+                <div class="case-card-mobile-header">
+                  <div>
+                    <div style="font-family: var(--font-mono); font-weight: 700; color: var(--color-gold); font-size: 0.9rem;">${i.invoiceNo}</div>
+                    <div style="font-weight: 600; color: var(--color-primary); font-size: 0.95rem; margin-top: 2px;">${i.clientName}</div>
+                  </div>
+                  <span class="badge ${this.getStatusBadgeClass(i.status)}" style="font-size: 0.72rem; flex-shrink: 0;">
+                    ${i.status}
+                  </span>
+                </div>
+                <div class="case-card-mobile-meta">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.8rem; color: var(--color-text-secondary);">Matter: <strong>${i.caseNumber}</strong></span>
+                    <strong style="font-size: 1rem; color: var(--color-primary);">$${i.total.toLocaleString()}</strong>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                    <span style="font-size: 0.75rem; color: var(--color-text-muted);">Issued: ${i.date}</span>
+                    <span style="font-size: 0.75rem; font-weight: 600; color: ${i.status === 'Overdue' ? 'var(--color-danger)' : 'var(--color-text-secondary)'};">
+                      Due: ${i.dueDate}
+                    </span>
+                  </div>
+                </div>
+                <div class="case-card-mobile-actions">
+                  <button class="btn btn-secondary btn-sm" onclick="BillingView.previewInvoice('${i.id}')">View / Print</button>
+                  ${i.status === 'Sent' ? `<button class="btn btn-gold btn-sm" onclick="BillingView.markPaid('${i.id}')">Mark Paid</button>` : ''}
+                </div>
+              </div>
+            `).join('')}
           </div>
         </div>
       </div>

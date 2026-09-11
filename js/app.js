@@ -91,6 +91,23 @@ const App = {
 
       <!-- 1. FIXED LEFT SIDEBAR -->
       <aside id="app-sidebar" class="sidebar">
+        <!-- Mobile Drawer Header with User Profile and Close Button -->
+        <div class="sidebar-mobile-user-header">
+          <div class="user-display-avatar avatar avatar-sm avatar-ring-gold">
+            <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=256&q=80" alt="Avatar">
+          </div>
+          <div class="mobile-user-meta">
+            <div class="user-display-name mobile-user-name">Eleanor Vance, Esq.</div>
+            <div class="user-display-role mobile-user-role">Managing Partner · Active</div>
+          </div>
+          <button class="mobile-drawer-close-btn" onclick="App.closeMobileSidebar()" aria-label="Close navigation drawer" title="Close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
         <!-- Sidebar Header & Logo -->
         <div class="sidebar-header">
           <div class="sidebar-logo" style="padding: 0; background: transparent; border: none;">
@@ -184,7 +201,7 @@ const App = {
           <!-- Topbar Right Actions -->
           <div class="topbar-right">
             <!-- Quick "Add New" Button -->
-            <button class="btn btn-gold btn-sm" onclick="CasesView.openNewCaseModal()" title="New Legal Case">
+            <button class="btn btn-gold btn-sm topbar-add-new-btn" onclick="CasesView.openNewCaseModal()" title="New Legal Case">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
@@ -209,7 +226,7 @@ const App = {
             </button>
 
             <!-- Dark / Light Theme Toggle Button -->
-            <button id="theme-toggle-btn" class="topbar-icon-btn" onclick="App.toggleTheme()" title="Toggle Dark / Light Mode (Ctrl+Shift+D)">
+            <button id="theme-toggle-btn" class="topbar-icon-btn topbar-theme-btn" onclick="App.toggleTheme()" title="Toggle Dark / Light Mode (Ctrl+Shift+D)">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
               </svg>
@@ -558,6 +575,16 @@ const App = {
     const navLinks = document.querySelectorAll('.sidebar-nav .nav-item');
     navLinks.forEach(link => {
       if (link.dataset.route === effectiveRoute) {
+        link.classList.add('active');
+      } else {
+        link.classList.remove('active');
+      }
+    });
+
+    // Update active state in mobile bottom nav
+    const bottomNavLinks = document.querySelectorAll('.mobile-bottom-nav .mobile-bottom-nav-item');
+    bottomNavLinks.forEach(link => {
+      if (link.dataset.route === route) {
         link.classList.add('active');
       } else {
         link.classList.remove('active');
@@ -1247,6 +1274,14 @@ const App = {
       SLCMS_STATE.persistUsers();
     }
 
+    // Permanently persist to localStorage and sessionStorage
+    if (typeof SLCMS_STATE.persistCurrentUser === 'function') {
+      SLCMS_STATE.persistCurrentUser();
+    }
+    if (typeof SLCMS_STATE.persistUsers === 'function') {
+      SLCMS_STATE.persistUsers();
+    }
+
     SLCMS_STATE.addAuditLog('Attorney Profile Updated', 'Security & Personnel', `${u.name} (${u.roleLabel}) - Dossier & Licensure updated`);
     this.updateUserUI();
     this.closeModal();
@@ -1381,15 +1416,54 @@ const App = {
     }
 
     navContainer.innerHTML = html;
+
+    // Synchronize Mobile Bottom Nav for RBAC
+    const aiTab = document.getElementById('mobile-nav-ai-tab');
+    if (aiTab) {
+      if (role === 'Legal Clerk') {
+        aiTab.setAttribute('data-route', 'documents');
+        aiTab.setAttribute('onclick', "App.navigate('documents')");
+        aiTab.innerHTML = `
+          <span class="mobile-bottom-nav-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+          </span>
+          <span>Vault</span>
+        `;
+      } else {
+        aiTab.setAttribute('data-route', 'ai-assistant');
+        aiTab.setAttribute('onclick', "App.navigate('ai-assistant')");
+        aiTab.innerHTML = `
+          <span class="mobile-bottom-nav-icon" style="color: var(--color-gold);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          </span>
+          <span>Legal AI</span>
+        `;
+      }
+    }
   },
 
   toggleSidebar() {
     const sidebar = document.getElementById('app-sidebar');
-    if (window.innerWidth <= 768) {
-      sidebar.classList.toggle('mobile-open');
-      const backdrop = document.getElementById('sidebar-backdrop');
-      if (backdrop) backdrop.classList.toggle('active');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    if (!sidebar) return;
+
+    const width = window.innerWidth;
+    if (width < 768) {
+      // Mobile drawer (<768px)
+      const isOpen = sidebar.classList.toggle('mobile-open');
+      if (backdrop) backdrop.classList.toggle('active', isOpen);
+      document.body.classList.toggle('mobile-nav-open', isOpen);
+    } else if (width >= 768 && width < 1024) {
+      // Tablet icon overlay (768px - 1023px)
+      const isExpanded = sidebar.classList.toggle('expanded-tablet');
+      if (backdrop) backdrop.classList.toggle('active', isExpanded);
     } else {
+      // Desktop collapse to icon bar (>=1024px)
       sidebar.classList.toggle('collapsed');
       this.isSidebarCollapsed = sidebar.classList.contains('collapsed');
     }
@@ -1397,9 +1471,13 @@ const App = {
 
   closeMobileSidebar() {
     const sidebar = document.getElementById('app-sidebar');
-    sidebar.classList.remove('mobile-open');
+    if (sidebar) {
+      sidebar.classList.remove('mobile-open');
+      sidebar.classList.remove('expanded-tablet');
+    }
     const backdrop = document.getElementById('sidebar-backdrop');
     if (backdrop) backdrop.classList.remove('active');
+    document.body.classList.remove('mobile-nav-open');
   },
 
   // Sync mobile bottom nav active state with current route
