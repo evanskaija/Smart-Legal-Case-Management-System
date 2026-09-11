@@ -73,41 +73,46 @@ const TasksView = {
 
         ${isAdmin ? `
           <!-- ADMINISTRATOR TASK OVERSIGHT & GOVERNANCE BAR -->
-          <div class="card animate-fade" style="margin-bottom: 1.25rem; padding: 1rem 1.25rem; border-left: 4px solid var(--color-gold); background: linear-gradient(135deg, rgba(16,42,67,0.03) 0%, rgba(200,155,60,0.08) 100%);">
+          <div class="card animate-fade adm-oversight-card" style="margin-bottom: 0.85rem; padding: 0.85rem 1rem; border-left: 4px solid var(--color-gold); background: linear-gradient(135deg, rgba(16,42,67,0.03) 0%, rgba(200,155,60,0.08) 100%);">
             <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
               <div class="flex items-center gap-2 flex-wrap" style="min-width: 0;">
-                <span style="font-size: 1.15rem; flex-shrink: 0;">👑</span>
+                <span style="font-size: 1.1rem; flex-shrink: 0;">👑</span>
                 <div class="flex items-center gap-2 flex-wrap" style="min-width: 0;">
-                  <strong style="color: var(--color-primary); font-size: 0.92rem;">Administrator Task Oversight &amp; Staff Coordination</strong>
-                  <span class="badge badge-confidential" style="font-size: 0.68rem; white-space: nowrap;">Technical Governance</span>
+                  <strong style="color: var(--color-primary); font-size: 0.90rem;">Administrator Task Oversight</strong>
+                  <span class="badge badge-confidential" style="font-size: 0.65rem; white-space: nowrap;">Technical Governance</span>
                 </div>
               </div>
-              <div class="flex items-center gap-1.5 flex-wrap">
-                <button class="btn btn-gold btn-sm" style="font-size: 0.76rem;" onclick="TasksView.openCreateTechnicalTaskModal()">
+              <div class="flex items-center gap-1.5 flex-wrap adm-oversight-action-btns">
+                <button class="btn btn-gold btn-sm" style="font-size: 0.76rem; padding: 0.35rem 0.65rem;" onclick="TasksView.openCreateTechnicalTaskModal()">
                   Create Technical Task
                 </button>
-                <button class="btn btn-secondary btn-sm" style="font-size: 0.76rem;" onclick="TasksView.notifyResponsibleUsers()">
-                  🔔 Notify Responsible Users
+                <button class="btn btn-secondary btn-sm" style="font-size: 0.76rem; padding: 0.35rem 0.65rem;" onclick="TasksView.notifyResponsibleUsers()">
+                  🔔 Notify Users
                 </button>
               </div>
             </div>
-            <div class="flex items-center gap-1.5 flex-wrap" style="padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.06); font-size: 0.8rem;">
-              <span style="color: var(--color-text-secondary); font-weight: 600; width: 100%; margin-bottom: 2px;">System Administrative Views:</span>
-              <button class="btn ${this.adminFilter === 'all' ? 'btn-primary' : 'btn-ghost'} btn-sm" style="font-size: 0.76rem;" onclick="TasksView.setAdminFilter('all')">
-                All Tasks (${SLCMS_STATE.tasks.length})
-              </button>
-              <button class="btn ${this.adminFilter === 'unassigned' ? 'btn-danger' : 'btn-ghost'} btn-sm" style="font-size: 0.76rem;" onclick="TasksView.setAdminFilter('unassigned')">
-                ⚠️ Unassigned Tasks (${unassignedCount})
-              </button>
-              <button class="btn ${this.adminFilter === 'technical' ? 'btn-gold' : 'btn-ghost'} btn-sm" style="font-size: 0.76rem;" onclick="TasksView.setAdminFilter('technical')">
-                ⚙️ Technical Tasks (${techCount})
-              </button>
-              <button class="btn ${this.adminFilter === 'overdue' ? 'btn-danger' : 'btn-ghost'} btn-sm" style="font-size: 0.76rem;" onclick="TasksView.setAdminFilter('overdue')">
-                ⏰ Overdue Admin Tasks (${overdueCount})
-              </button>
+
+            <!-- Administrative Views Filters (Smooth Touch Strip on Mobile) -->
+            <div style="padding-top: 0.4rem; border-top: 1px solid rgba(0,0,0,0.06);">
+              <div class="flex items-center gap-1.5 flex-wrap adm-filter-pills-row" style="overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 2px;">
+                <span style="color: var(--color-text-secondary); font-weight: 700; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px; flex-shrink: 0;">Views:</span>
+                <button class="btn ${this.adminFilter === 'all' ? 'btn-primary' : 'btn-ghost'} btn-sm" style="font-size: 0.74rem; padding: 0.25rem 0.55rem; white-space: nowrap; flex-shrink: 0; border-radius: 16px;" onclick="TasksView.setAdminFilter('all')">
+                  All (${SLCMS_STATE.tasks.length})
+                </button>
+                <button class="btn ${this.adminFilter === 'unassigned' ? 'btn-danger' : 'btn-ghost'} btn-sm" style="font-size: 0.74rem; padding: 0.25rem 0.55rem; white-space: nowrap; flex-shrink: 0; border-radius: 16px;" onclick="TasksView.setAdminFilter('unassigned')">
+                  ⚠️ Unassigned (${unassignedCount})
+                </button>
+                <button class="btn ${this.adminFilter === 'technical' ? 'btn-gold' : 'btn-ghost'} btn-sm" style="font-size: 0.74rem; padding: 0.25rem 0.55rem; white-space: nowrap; flex-shrink: 0; border-radius: 16px;" onclick="TasksView.setAdminFilter('technical')">
+                  ⚙️ Tech (${techCount})
+                </button>
+                <button class="btn ${this.adminFilter === 'overdue' ? 'btn-danger' : 'btn-ghost'} btn-sm" style="font-size: 0.74rem; padding: 0.25rem 0.55rem; white-space: nowrap; flex-shrink: 0; border-radius: 16px;" onclick="TasksView.setAdminFilter('overdue')">
+                  ⏰ Overdue (${overdueCount})
+                </button>
+              </div>
             </div>
-            <div style="font-size: 0.75rem; color: var(--color-text-secondary); line-height: 1.4; margin-top: 0.45rem;">
-              ⚖️ <strong>Legal Practice Restriction:</strong> Administrator cannot approve lawyer work, alter court statutory deadlines without authorization, or complete a legal filing on behalf of counsel.
+
+            <div style="font-size: 0.70rem; color: var(--color-text-muted); line-height: 1.3; margin-top: 0.35rem;">
+              ⚖️ <strong>Legal Practice Restriction:</strong> Administrator cannot approve lawyer work, alter court statutory deadlines, or complete filings on behalf of counsel.
             </div>
           </div>
         ` : ''}
@@ -200,7 +205,7 @@ const TasksView = {
     const tasks = this.getFilteredTasks();
 
     return `
-      <div class="kanban-board" style="display: grid; gap: 1.25rem; align-items: start; grid-template-columns: repeat(4, minmax(280px, 1fr));">
+      <div class="kanban-mobile-tabs">
         ${columns.map(col => {
           const colTasks = tasks.filter(t => t.status === col.id);
           return `

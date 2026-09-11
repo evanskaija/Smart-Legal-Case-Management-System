@@ -10481,9 +10481,7 @@
   }
 
   .badge {
-    max-width: 96px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-width: none;
     white-space: nowrap;
   }
 
@@ -18205,64 +18203,84 @@
   gap: 0.45rem;
 }
 
-/* Circular Plus Button */
+/* Circular Plus Button (Strict Non-Distorted Circle) */
 .ai-prompt-circle-plus {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  max-width: 38px !important;
+  max-height: 38px !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+  line-height: 1 !important;
   transition: all 0.2s ease;
 }
 
 [data-theme="light"] .ai-prompt-circle-plus {
-  background: #E2E8F0;
-  color: #374151;
+  background: #E2E8F0 !important;
+  color: #374151 !important;
 }
 [data-theme="light"] .ai-prompt-circle-plus:hover {
-  background: #CBD5E1;
-  color: #111827;
+  background: #CBD5E1 !important;
+  color: #111827 !important;
 }
 
 [data-theme="dark"] .ai-prompt-circle-plus {
-  background: #3C4043;
-  color: #FFFFFF;
+  background: #334155 !important;
+  color: #F8FAFC !important;
 }
 [data-theme="dark"] .ai-prompt-circle-plus:hover {
-  background: #4E5256;
+  background: #475569 !important;
 }
 
-/* Mic Button */
+/* Mic Button (Strict Non-Distorted Circle) */
 .ai-prompt-mic-icon-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  max-width: 38px !important;
+  max-height: 38px !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+  line-height: 1 !important;
   transition: all 0.2s ease;
 }
 
 [data-theme="light"] .ai-prompt-mic-icon-btn {
-  color: #4B5563;
+  color: #4B5563 !important;
 }
 [data-theme="light"] .ai-prompt-mic-icon-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
-  color: #111827;
+  background: rgba(0, 0, 0, 0.06) !important;
+  color: #111827 !important;
 }
 
 [data-theme="dark"] .ai-prompt-mic-icon-btn {
-  color: #E5E7EB;
+  color: #E2E8F0 !important;
 }
 [data-theme="dark"] .ai-prompt-mic-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #FFFFFF !important;
 }
 
 .ai-prompt-mic-icon-btn.listening {
@@ -18275,18 +18293,28 @@
   50% { transform: scale(1.15); opacity: 0.75; }
 }
 
-/* Send Icon Button */
+/* Send Icon Button (Strict Non-Distorted Circle) */
 .ai-prompt-send-icon-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: var(--color-gold, #C89B3C);
-  color: #0B1F33;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  max-width: 38px !important;
+  max-height: 38px !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: var(--color-gold, #C89B3C) !important;
+  color: #0B1F33 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+  line-height: 1 !important;
   transition: all 0.2s ease;
 }
 
@@ -18296,9 +18324,9 @@
 }
 
 .ai-prompt-send-icon-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
 }
 
 /* Slide-Out Sources Drawer */

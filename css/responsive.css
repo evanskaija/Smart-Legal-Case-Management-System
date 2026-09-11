@@ -215,29 +215,8 @@ body.mobile-nav-open {
     justify-content: center !important;
   }
 
+  /* Hide breadcrumb area on mobile to avoid squashed duplicate titles (e.g. A...) */
   .breadcrumb-area {
-    min-width: 0 !important;
-    flex: 1 1 auto !important;
-    overflow: hidden !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-  }
-
-  .topbar #topbar-page-title,
-  .topbar .page-title {
-    font-size: 0.95rem !important;
-    font-weight: 700 !important;
-    color: var(--color-primary) !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    line-height: 1.2 !important;
-    margin: 0 !important;
-    display: block !important;
-  }
-
-  .breadcrumb-area .breadcrumb-trail {
     display: none !important;
   }
 
@@ -252,22 +231,11 @@ body.mobile-nav-open {
     flex-shrink: 0 !important;
   }
 
-  /* Hide crowded desktop actions on mobile topbar: keep exactly 3 clean circular buttons: Search, Theme, Bell */
-  .topbar-right .role-switcher,
-  .topbar-right .topbar-test-expiry-btn,
-  .topbar-right .topbar-calendar-btn,
-  .topbar-right .topbar-btn-hide-mobile,
-  .topbar-right .topbar-add-new-btn,
-  .topbar-right .topbar-avatar-pill,
-  .topbar-right .btn-gold {
-    display: none !important;
-  }
-
-  /* Perfect Circular Header Icon Buttons on Mobile (zero distortion) */
+  /* Perfect Circular Header Icon Buttons on Mobile (zero distortion, exactly 36px) */
   .topbar .topbar-icon-btn,
   .topbar-right .topbar-icon-btn,
   .topbar-left .topbar-icon-btn,
-  .topbar-right .topbar-mobile-search-btn,
+  .topbar-right .mobile-search-btn,
   .topbar-right .topbar-theme-btn,
   .topbar-right .topbar-notif-btn {
     width: 36px !important;
@@ -294,6 +262,20 @@ body.mobile-nav-open {
     background: #F1F5F9 !important;
     border-color: #E2E8F0 !important;
     color: #475569 !important;
+  }
+
+  /* Strictly Hide Desktop Buttons on Mobile (Must come after icon-btn declarations) */
+  .topbar-right .topbar-btn-hide-mobile,
+  .topbar-right button.topbar-btn-hide-mobile,
+  .topbar .topbar-btn-hide-mobile,
+  .topbar-right .topbar-calendar-btn,
+  .topbar button.topbar-calendar-btn,
+  .topbar-right .topbar-add-new-btn,
+  .topbar-right .topbar-avatar-pill,
+  .topbar-right .role-switcher,
+  .topbar-right .topbar-test-expiry-btn,
+  .topbar-right .btn-gold {
+    display: none !important;
   }
 
   /* Mobile Brand Label: Never truncate, clean gold accent */
@@ -346,7 +328,8 @@ body.mobile-nav-open {
   }
 
   .topbar-mobile-search-btn,
-  .mobile-drawer-close-btn {
+  .mobile-drawer-close-btn,
+  .kanban-mobile-tabs {
     display: none !important;
   }
 }
@@ -821,6 +804,30 @@ textarea.form-control {
   .kanban-col-header {
     margin-bottom: 0.75rem !important;
     padding-bottom: 0.5rem !important;
+  }
+
+  /* Compact Task Oversight Card on Mobile */
+  .adm-oversight-card {
+    padding: 0.75rem 0.85rem !important;
+    border-radius: 14px !important;
+    margin-bottom: 0.75rem !important;
+  }
+  .adm-oversight-action-btns {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.45rem !important;
+    margin-top: 0.35rem !important;
+  }
+  .adm-oversight-action-btns .btn {
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding: 0.42rem 0.5rem !important;
+    font-size: 0.75rem !important;
+  }
+  .adm-filter-pills-row {
+    flex-wrap: nowrap !important;
   }
 }
 
