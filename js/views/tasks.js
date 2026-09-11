@@ -9,6 +9,11 @@ const TasksView = {
   searchQuery: '',
 
   render() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestedView = urlParams.get('taskView');
+    if (requestedView && ['kanban', 'list', 'calendar'].includes(requestedView)) {
+      this.activeView = requestedView;
+    }
     const isAdmin = (SLCMS_STATE.currentUser?.role === 'Administrator');
     const unassignedCount = (SLCMS_STATE.tasks || []).filter(t => !t.assignedTo || t.assignedTo === 'Unassigned').length;
     const techCount = (SLCMS_STATE.tasks || []).filter(t => t.isTechnical || t.category === 'technical').length;
@@ -17,20 +22,20 @@ const TasksView = {
     return `
       <div class="animate-fade">
         <!-- 1. VIEW HEADER -->
-        <div class="view-header">
-          <div>
-            <div class="flex items-center gap-2" style="margin-bottom: 0.25rem; flex-wrap: wrap;">
-              <h1 class="page-title">Tasks &amp; Statutory Deadlines</h1>
-              <span class="badge badge-confidential" style="font-size: 0.72rem; white-space: nowrap;">
+        <div class="view-header" style="overflow: hidden;">
+          <div style="width: 100%; min-width: 0;">
+            <div class="flex items-center gap-2 flex-wrap" style="margin-bottom: 0.25rem;">
+              <h1 class="page-title" style="font-size: 1.15rem; margin-bottom: 0; line-height: 1.25;">Tasks &amp; Statutory Deadlines</h1>
+              <span class="badge badge-confidential" style="font-size: 0.65rem; white-space: nowrap;">
                 Statutory Docket Rules Active
               </span>
             </div>
-            <p style="color: var(--color-text-secondary); font-size: 0.88rem;">
+            <p style="color: var(--color-text-secondary); font-size: 0.82rem; line-height: 1.35; margin-top: 0.2rem;">
               Track litigation milestones, motion filing schedules, discovery depositions and reminders
             </p>
           </div>
 
-          <div class="flex items-center gap-3">
+          <div class="tasks-header-actions flex items-center gap-3">
             <div class="view-toggle">
               <button class="view-toggle-btn ${this.activeView === 'kanban' ? 'active' : ''}" onclick="TasksView.switchView('kanban')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -38,7 +43,7 @@ const TasksView = {
                   <path d="M9 3v18"/>
                   <path d="M15 3v18"/>
                 </svg>
-                <span>Kanban Board</span>
+                <span class="tasks-tab-full">Kanban Board</span><span class="tasks-tab-short">Kanban</span>
               </button>
               <button class="view-toggle-btn ${this.activeView === 'list' ? 'active' : ''}" onclick="TasksView.switchView('list')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -49,7 +54,7 @@ const TasksView = {
                   <line x1="3" y1="12" x2="3.01" y2="12"/>
                   <line x1="3" y1="18" x2="3.01" y2="18"/>
                 </svg>
-                <span>List View</span>
+                <span class="tasks-tab-full">List View</span><span class="tasks-tab-short">List</span>
               </button>
               <button class="view-toggle-btn ${this.activeView === 'calendar' ? 'active' : ''}" onclick="TasksView.switchView('calendar')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -58,11 +63,11 @@ const TasksView = {
                   <line x1="8" y1="2" x2="8" y2="6"/>
                   <line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
-                <span>Court Calendar</span>
+                <span class="tasks-tab-full">Court Calendar</span><span class="tasks-tab-short">Court</span>
               </button>
             </div>
 
-            <button class="btn btn-gold" onclick="TasksView.openNewTaskModal()">
+            <button class="btn btn-gold tasks-create-btn" onclick="TasksView.openNewTaskModal()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
@@ -785,15 +790,13 @@ const TasksView = {
 
                 <!-- Courtroom & Presiding Officer -->
                 <div class="court-room-detail">
-                  <span>
+                  <span class="court-detail-item">
                     🏛️ <strong>${evt.court}</strong>
                   </span>
-                  <span>•</span>
-                  <span>
+                  <span class="court-detail-item">
                     👤 Presiding: <strong>${evt.presiding}</strong>
                   </span>
-                  <span>•</span>
-                  <span>
+                  <span class="court-detail-item">
                     📜 Statute: <code style="font-family: var(--font-mono); font-size: 0.72rem; background: var(--color-surface-subtle); padding: 1px 4px; border-radius: 3px;">${evt.statute}</code>
                   </span>
                 </div>
@@ -807,10 +810,10 @@ const TasksView = {
               <!-- Right Area: Assigned Counsel & Action Buttons -->
               <div class="court-docket-action-area">
                 <div class="court-counsel-info flex items-center gap-2">
-                  <div class="avatar avatar-sm ${evt.assignedAvatar === 'EV' ? 'avatar-gold' : evt.assignedAvatar === 'JM' ? 'avatar-navy' : 'avatar-teal'}" style="font-size: 10px; font-weight: 700;">
+                  <div class="avatar avatar-sm ${evt.assignedAvatar === 'EV' ? 'avatar-gold' : evt.assignedAvatar === 'JM' ? 'avatar-navy' : 'avatar-teal'}" style="font-size: 10px; font-weight: 700; flex-shrink: 0;">
                     ${evt.assignedAvatar}
                   </div>
-                  <div class="court-counsel-meta" style="text-align: right;">
+                  <div class="court-counsel-meta">
                     <div style="font-size: 0.78rem; font-weight: 700; color: var(--color-primary);">${evt.assignedTo}</div>
                     <div style="font-size: 0.68rem; color: var(--color-text-muted);">Lead Counsel</div>
                   </div>

@@ -39,7 +39,9 @@ const App = {
   },
 
   initTheme() {
-    const savedTheme = localStorage.getItem('slcms_theme') || 'light';
+    const urlParams = new URLSearchParams(window.location.search);
+    const themeParam = urlParams.get('theme');
+    const savedTheme = (themeParam && (themeParam === 'dark' || themeParam === 'light')) ? themeParam : (localStorage.getItem('slcms_theme') || 'light');
     this.theme = savedTheme;
     document.documentElement.setAttribute('data-theme', savedTheme);
   },

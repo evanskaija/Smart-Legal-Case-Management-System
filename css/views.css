@@ -1322,6 +1322,13 @@
   font-weight: 600;
 }
 
+.tasks-tab-short {
+  display: none;
+}
+.tasks-tab-full {
+  display: inline;
+}
+
 /* --- CASES VIEW RESPONSIVE STYLES --- */
 .cases-view-container {
   display: flex;
@@ -3378,10 +3385,18 @@
   flex-wrap: wrap;
 }
 
+.court-room-detail .court-detail-item,
 .court-room-detail span {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+}
+
+.court-room-detail .court-detail-item:not(:last-child)::after {
+  content: "•";
+  margin-left: 0.75rem;
+  color: var(--color-text-muted);
+  opacity: 0.6;
 }
 
 /* Card Action Area */
@@ -3399,38 +3414,56 @@
 }
 
 @media (max-width: 860px) {
+  .court-cal-wrapper,
+  .court-cal-main-card {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+  .court-cal-stats-strip {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
   .court-cal-header {
     padding: 1rem 1.15rem;
     gap: 0.85rem;
+    min-width: 0 !important;
+    max-width: 100% !important;
   }
   .court-cal-title-block {
     width: 100%;
+    min-width: 0 !important;
   }
   .court-cal-controls-wrapper {
     width: 100%;
+    min-width: 0 !important;
     flex-direction: column;
     align-items: stretch;
     gap: 0.65rem;
   }
   .court-cal-nav-group {
     width: 100%;
+    min-width: 0 !important;
     display: flex;
     justify-content: space-between;
   }
   .court-cal-nav-btn {
     flex: 1;
+    min-width: 0 !important;
     justify-content: center;
     padding: 0.4rem 0.5rem;
     font-size: 0.78rem;
   }
   .court-cal-actions-row {
     width: 100%;
+    min-width: 0 !important;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
   }
   .court-cal-actions-row .btn {
     width: 100%;
+    min-width: 0 !important;
     justify-content: center;
     font-size: 0.76rem;
     padding: 0.45rem 0.5rem;
@@ -3441,44 +3474,49 @@
     gap: 0.65rem;
     flex-direction: column;
     align-items: stretch;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
   }
   .court-cal-view-tabs {
-    width: 100%;
-    display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    padding-bottom: 2px !important;
   }
   .court-cal-view-tabs::-webkit-scrollbar {
-    display: none;
+    display: none !important;
   }
   .court-cal-view-tab {
-    flex: 1;
-    min-width: 0;
-    white-space: nowrap;
-    justify-content: center;
-    font-size: 0.75rem;
-    padding: 0.4rem 0.5rem;
-    gap: 0.35rem;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+    justify-content: center !important;
+    font-size: 0.75rem !important;
+    padding: 0.4rem 0.65rem !important;
+    gap: 0.35rem !important;
   }
   .court-cal-filters {
-    width: 100%;
-    display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding-bottom: 2px;
+    width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    padding-bottom: 2px !important;
   }
   .court-cal-filters::-webkit-scrollbar {
-    display: none;
+    display: none !important;
   }
   .court-filter-pill {
-    flex-shrink: 0;
-    white-space: nowrap;
-    font-size: 0.74rem;
-    padding: 0.3rem 0.65rem;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+    font-size: 0.74rem !important;
+    padding: 0.3rem 0.65rem !important;
   }
   .court-agenda-container {
     padding: 0.85rem;
@@ -3522,11 +3560,23 @@
     border-top: 1px solid var(--color-border-subtle);
     padding-top: 0.75rem;
   }
+  .court-room-detail {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+  .court-room-detail .court-detail-item:not(:last-child)::after {
+    display: none;
+  }
   .court-counsel-info {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 0.65rem;
     width: 100%;
+  }
+  .court-counsel-meta {
+    text-align: left !important;
   }
   .court-action-btns {
     width: 100%;
@@ -4504,7 +4554,8 @@
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-primary);
-  margin-bottom: 1rem;
+  margin-bottom: 0;
+  white-space: nowrap;
 }
 
 /* Section Formatting */
@@ -4905,12 +4956,23 @@
 
 @media (max-width: 640px) {
   .tz-action-button-bar {
-    flex-direction: column;
-    align-items: stretch;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
   }
   .tz-action-button-bar .btn {
-    width: 100%;
-    justify-content: center;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.45rem !important;
+    padding: 0.55rem 0.85rem !important;
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+    border-radius: var(--radius-sm) !important;
   }
 }
 
@@ -11081,6 +11143,68 @@
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
+  }
+
+  /* Tasks & Header View Toggle Responsive Fit */
+  .view-header .view-toggle {
+    width: 100% !important;
+    display: flex !important;
+    background: rgba(16, 42, 67, 0.06) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--radius-sm) !important;
+    padding: 3px !important;
+    gap: 3px !important;
+  }
+  [data-theme="dark"] .view-header .view-toggle {
+    background: rgba(15, 23, 42, 0.7) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+  .view-header .view-toggle .view-toggle-btn {
+    flex: 1 !important;
+    min-width: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding: 0.42rem 0.25rem !important;
+    font-size: 0.76rem !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+    gap: 0.25rem !important;
+    border-radius: var(--radius-xs) !important;
+  }
+  .view-header .view-toggle .view-toggle-btn svg {
+    flex-shrink: 0 !important;
+    width: 13px !important;
+    height: 13px !important;
+  }
+  .view-header .view-toggle .view-toggle-btn span {
+    white-space: nowrap !important;
+  }
+  .tasks-tab-full {
+    display: none !important;
+  }
+  .tasks-tab-short {
+    display: inline !important;
+  }
+  .tasks-header-actions {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    gap: 0.5rem !important;
+  }
+  .tasks-create-btn,
+  .view-header .tasks-create-btn {
+    width: 100% !important;
+    height: 38px !important;
+    padding: 0.45rem 0.85rem !important;
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
+    border-radius: var(--radius-sm) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.4rem !important;
   }
 
   /* Tabs nav: clean horizontal scroll on all views */

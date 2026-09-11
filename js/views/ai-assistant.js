@@ -1997,6 +1997,11 @@ Lead Advocate for ${client}`;
 
   formatAnsweringMarkdown(text) {
     if (!text || typeof text !== 'string') return '';
+    const trimmed = text.trim();
+    // If text is already formatted HTML (e.g. prepared legal report or widget), return directly
+    if (trimmed.startsWith('<')) {
+      return text;
+    }
     const lines = text.split('\n');
     let html = '';
     let inList = false;
@@ -2010,6 +2015,16 @@ Lead Advocate for ${client}`;
           inList = false;
         }
         html += '<div class="ai-para-gap"></div>';
+        continue;
+      }
+
+      // If line is an HTML block or tag, preserve it directly without wrapping in para/bullet
+      if (line.startsWith('<') && line.endsWith('>')) {
+        if (inList) {
+          html += '</div>';
+          inList = false;
+        }
+        html += line;
         continue;
       }
 
@@ -2502,9 +2517,7 @@ Lead Advocate for ${client}`;
               I found ${list.length} judgments matching <strong>“${this.escapeHtml(cleanSearchPhrase)}.”</strong> Please select the intended case:
             </div>
           </div>
-          <span class="tz-status-pill" style="margin-bottom: 0;">
-            ✓ ${list.length} Matching Judgments
-          </span>
+          <span class="tz-status-pill" style="margin-bottom: 0;">✓ ${list.length} Matching Judgments</span>
         </div>
 
         <!-- Choices List -->
@@ -2990,9 +3003,7 @@ Lead Advocate for ${client}`;
               ${this.escapeHtml(c.citation || '')} · Exact Questions for Determination
             </div>
           </div>
-          <span class="tz-status-pill" style="margin-bottom: 0;">
-            ✓ ${issues.length} Questions Framed by Court
-          </span>
+          <span class="tz-status-pill" style="margin-bottom: 0;">✓ ${issues.length} Questions Framed by Court</span>
         </div>
 
         <div class="tz-report-section" style="margin-top: 1rem;">
@@ -3007,18 +3018,10 @@ Lead Advocate for ${client}`;
         </div>
 
         <div class="tz-action-button-bar">
-          <button type="button" class="btn btn-gold btn-sm" onclick="AIAssistantView.showReasoningForCaseRecord('${c.id}')">
-            🧠 Court Reasoning on Issues
-          </button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="AIAssistantView.showDecisionForCaseRecord('${c.id}')">
-            ✅ Final Decision & Orders
-          </button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="AIAssistantView.showPartiesArguments('${c.id}')">
-            👥 Parties' Arguments
-          </button>
-          <button type="button" class="btn btn-ghost btn-sm" style="color: var(--color-gold);" onclick="AIAssistantView.viewPdfModal('${c.id}')">
-            🌐 Open Original PDF
-          </button>
+          <button type="button" class="btn btn-gold btn-sm" onclick="AIAssistantView.showReasoningForCaseRecord('${c.id}')">🧠 Court Reasoning on Issues</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="AIAssistantView.showDecisionForCaseRecord('${c.id}')">✅ Final Decision & Orders</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="AIAssistantView.showPartiesArguments('${c.id}')">👥 Parties' Arguments</button>
+          <button type="button" class="btn btn-ghost btn-sm" style="color: var(--color-gold);" onclick="AIAssistantView.viewPdfModal('${c.id}')">🌐 Open Original PDF</button>
         </div>
       </div>
     `;

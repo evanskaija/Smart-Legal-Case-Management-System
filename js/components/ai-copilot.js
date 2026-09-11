@@ -214,7 +214,9 @@ const AICopilot = {
             <div class="ai-msg-assistant-row animate-fade">
               <div class="ai-assistant-answer-canvas">
                 <div class="ai-assistant-text-flow" style="font-size: 0.92rem;">
-                  ${typeof AIAssistantView !== 'undefined' && AIAssistantView.formatAnsweringMarkdown ? AIAssistantView.formatAnsweringMarkdown(m.text) : m.text}
+                  ${m.text && typeof m.text === 'string' && m.text.trim().startsWith('<')
+                    ? m.text
+                    : (typeof AIAssistantView !== 'undefined' && AIAssistantView.formatAnsweringMarkdown ? AIAssistantView.formatAnsweringMarkdown(m.text) : m.text)}
                 </div>
                 ${m.citation ? `<div style="font-size: 0.72rem; color: var(--color-gold); margin-top: 0.35rem;">📜 ${m.citation}</div>` : ''}
                 <div class="ai-disclaimer-text" style="margin-top: 0.75rem;">
