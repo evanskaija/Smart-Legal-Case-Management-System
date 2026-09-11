@@ -152,16 +152,24 @@ const ClientsView = {
                       View Cases →
                     </button>
                   </div>
-                  <div class="flex items-center gap-2">
-                    <button class="btn btn-secondary btn-sm" style="flex: 1;" onclick="ClientsView.openClientProfile('${c.id}')">View Profile</button>
+                  <div class="client-card-actions">
+                    <div class="client-card-main-btns">
+                      <button class="btn btn-secondary btn-sm client-card-btn-profile" onclick="ClientsView.openClientProfile('${c.id}')">View Profile</button>
+                      <button class="btn btn-gold btn-sm client-card-btn-addcase" onclick="ClientsView.createCaseForClient('${c.name}')" title="Create Case">+ Case</button>
+                    </div>
                     ${isAdmin ? `
-                      <button class="btn btn-ghost btn-sm" onclick="ClientsView.openWhoCanAccessClientModal('${c.id}')" title="Review Who Can Access Client">👥 Access</button>
-                      <button class="btn btn-ghost btn-sm ${c.status === 'Deactivated' ? 'text-success' : 'text-danger'}" onclick="ClientsView.toggleClientStatus('${c.id}')" title="${c.status === 'Deactivated' ? 'Activate Client' : 'Deactivate Client'}">
-                        ${c.status === 'Deactivated' ? '🟢 Activate' : '🚫 Deactivate'}
-                      </button>
-                    ` : ''}
-                    <button class="btn btn-ghost btn-sm" onclick="ClientsView.openEditClientModal('${c.id}')" title="Edit Client Information">✏️</button>
-                    <button class="btn btn-gold btn-sm" onclick="ClientsView.createCaseForClient('${c.name}')" title="Create Case">+ Case</button>
+                      <div class="client-card-sub-btns">
+                        <button class="btn btn-ghost btn-sm" onclick="ClientsView.openWhoCanAccessClientModal('${c.id}')" title="Review Who Can Access Client">👥 Access</button>
+                        <button class="btn btn-ghost btn-sm ${c.status === 'Deactivated' ? 'text-success' : 'text-danger'}" onclick="ClientsView.toggleClientStatus('${c.id}')" title="${c.status === 'Deactivated' ? 'Activate Client' : 'Deactivate Client'}">
+                          ${c.status === 'Deactivated' ? '🟢 Activate' : '🚫 Deactivate'}
+                        </button>
+                        <button class="btn btn-ghost btn-sm" onclick="ClientsView.openEditClientModal('${c.id}')" title="Edit Client Information">✏️</button>
+                      </div>
+                    ` : `
+                      <div class="client-card-sub-btns">
+                        <button class="btn btn-ghost btn-sm" onclick="ClientsView.openEditClientModal('${c.id}')" title="Edit Client Information">✏️ Edit</button>
+                      </div>
+                    `}
                   </div>
                 </div>
               </div>
@@ -579,12 +587,14 @@ const ClientsView = {
         <h3 class="modal-title" style="color: #FFFFFF; font-size: 1.15rem;">👥 Access Roster: ${c.name}</h3>
         <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
       </div>
-      <div class="modal-body" style="padding: 1.5rem;">
-        <p style="font-size: 0.85rem; color: #475569; margin-bottom: 1rem;">
+      <div class="modal-body" style="padding: 1.15rem 1rem;">
+        <p style="font-size: 0.84rem; color: var(--color-text-secondary, #475569); margin-bottom: 0.85rem; line-height: 1.45;">
           The following law firm personnel possess authorized access to matters and confidential files for <strong>${c.name}</strong>:
         </p>
-        <div class="table-container">
-          <table class="data-table">
+
+        <!-- Desktop / Tablet Table View -->
+        <div class="table-container roster-table-container">
+          <table class="data-table" style="min-width: 520px;">
             <thead>
               <tr><th>Authorized Staff</th><th>Role</th><th>Access Scope</th><th>Privilege Clearance</th></tr>
             </thead>
@@ -609,9 +619,46 @@ const ClientsView = {
             </tbody>
           </table>
         </div>
+
+        <!-- Mobile Optimized Roster Card List (Screens <= 640px) -->
+        <div class="roster-mobile-list">
+          ${lawyers.map(lName => {
+            const u = users.find(user => user.name === lName) || { role: 'Senior Lawyer', staffId: 'LAW-ADV' };
+            return `
+              <div class="roster-mobile-card">
+                <div class="roster-mobile-card-top">
+                  <span class="roster-staff-name">${lName}</span>
+                  <span class="badge badge-confidential" style="font-size: 0.68rem;">${u.role || 'Lawyer'}</span>
+                </div>
+                <div class="roster-mobile-detail">
+                  <span class="roster-detail-label">Access Scope:</span>
+                  <span class="roster-detail-val">Direct Client Matter Access (${clientCases.length} Matters)</span>
+                </div>
+                <div class="roster-mobile-detail">
+                  <span class="roster-detail-label">Privilege:</span>
+                  <span class="badge badge-active" style="font-size: 0.68rem;">Full Attorney Privilege</span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+          <div class="roster-mobile-card">
+            <div class="roster-mobile-card-top">
+              <span class="roster-staff-name">Neema Joseph</span>
+              <span class="badge badge-gold" style="font-size: 0.68rem;">System Administrator</span>
+            </div>
+            <div class="roster-mobile-detail">
+              <span class="roster-detail-label">Access Scope:</span>
+              <span class="roster-detail-val">Administrative Directory &amp; Billing Records Only</span>
+            </div>
+            <div class="roster-mobile-detail">
+              <span class="roster-detail-label">Privilege:</span>
+              <span class="badge badge-neutral" style="font-size: 0.68rem;">Technical Governance (Privileged Notes Shielded)</span>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="App.closeModal()">Close</button>
+        <button class="btn btn-secondary w-full" onclick="App.closeModal()">Close</button>
       </div>
     `, 'modal-md');
   }

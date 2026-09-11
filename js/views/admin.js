@@ -3047,8 +3047,8 @@ const AdminView = {
           </div>
 
           <!-- Display: 5 Core Information Items Shown -->
-          <div class="adm-settings-grid-3" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 14px; padding: 1.1rem 1.25rem; gap: 1rem; margin-bottom: 1.25rem;">
-            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+          <div class="adm-settings-backup-kpi-grid" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 14px; padding: 1.1rem 1.25rem; margin-bottom: 1.25rem;">
+            <div class="adm-settings-kpi-card" style="display: flex; flex-direction: column; gap: 0.25rem;">
               <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #64748B; letter-spacing: 0.04em;">Last Successful Backup</span>
               <span id="sys-backup-last-successful" style="font-size: 0.92rem; font-weight: 800; color: #059669; font-family: ui-monospace, monospace;">
                 ${s.lastSuccessfulBackup || s.lastBackupDate || '2026-09-08 07:30:00 UTC'}
@@ -3056,7 +3056,7 @@ const AdminView = {
               <span style="font-size: 0.72rem; color: #059669; font-weight: 600;">✓ Verified Healthy</span>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+            <div class="adm-settings-kpi-card" style="display: flex; flex-direction: column; gap: 0.25rem;">
               <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #64748B; letter-spacing: 0.04em;">Last Failed Backup</span>
               <span id="sys-backup-last-failed" style="font-size: 0.92rem; font-weight: 800; color: #0F172A; font-family: ui-monospace, monospace;">
                 ${s.lastFailedBackup || 'None'}
@@ -3064,7 +3064,7 @@ const AdminView = {
               <span style="font-size: 0.72rem; color: #059669;">0 Failed Attempts (100% Reliable)</span>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+            <div class="adm-settings-kpi-card" style="display: flex; flex-direction: column; gap: 0.25rem;">
               <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #64748B; letter-spacing: 0.04em;">Backup Size</span>
               <span id="sys-backup-size" style="font-size: 0.92rem; font-weight: 800; color: #0F172A; font-family: ui-monospace, monospace;">
                 ${s.backupSize || '14.8 MB'}
@@ -3072,7 +3072,7 @@ const AdminView = {
               <span style="font-size: 0.72rem; color: #64748B;">Encrypted Snapshot</span>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+            <div class="adm-settings-kpi-card" style="display: flex; flex-direction: column; gap: 0.25rem;">
               <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #64748B; letter-spacing: 0.04em;">Backup Date</span>
               <span id="sys-backup-date" style="font-size: 0.92rem; font-weight: 800; color: #0F172A; font-family: ui-monospace, monospace;">
                 ${s.lastBackupDate || '2026-09-08'}
@@ -3080,7 +3080,7 @@ const AdminView = {
               <span style="font-size: 0.72rem; color: #64748B;">Committed State</span>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+            <div class="adm-settings-kpi-card adm-settings-kpi-card-full" style="display: flex; flex-direction: column; gap: 0.25rem;">
               <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #64748B; letter-spacing: 0.04em;">Next Scheduled Backup</span>
               <span id="sys-backup-next" style="font-size: 0.92rem; font-weight: 800; color: #0F172A; font-family: ui-monospace, monospace;">
                 ${s.nextBackupDate || '2026-09-11 00:00:00 UTC'}
@@ -3090,7 +3090,7 @@ const AdminView = {
           </div>
 
           <!-- Buttons: Functions (Create, View History, Test, Restore) -->
-          <div class="adm-settings-card-footer" style="flex-wrap: wrap; gap: 0.65rem;">
+          <div class="adm-settings-card-footer adm-settings-backup-footer" style="flex-wrap: wrap; gap: 0.65rem;">
             <button type="button" class="btn btn-gold" onclick="AdminView.handleCreateBackupNow()">
               <span>💾 Create Backup Now</span>
             </button>

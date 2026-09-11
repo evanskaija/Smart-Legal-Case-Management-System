@@ -491,8 +491,8 @@ const AICopilot = {
       if (routeRes.isSmallTalk) {
         let guidedHtml = '';
         if (routeRes.guidedOptions) {
-          guidedHtml = `<div class="flex flex-wrap gap-1" style="margin-top: 0.5rem;">` + 
-            routeRes.guidedOptions.map(opt => `<button type="button" class="badge" style="cursor: pointer; background: var(--color-surface-subtle); color: var(--color-primary); border: 1px solid var(--color-border); font-size: 0.72rem;" onclick="${opt.action ? (opt.action.startsWith('AICopilot') ? opt.action : `AIAssistantView.${opt.action}()`) : `AICopilot.sendPresetPrompt('${opt.prompt}')`}">${opt.label}</button>`).join('') + 
+          guidedHtml = `<div class="ai-copilot-guided-chips" style="margin-top: 0.75rem;">` + 
+            routeRes.guidedOptions.map(opt => `<button type="button" class="ai-copilot-guided-chip" onclick="${opt.action ? (opt.action.startsWith('AICopilot') ? opt.action : `AIAssistantView.${opt.action}()`) : `AICopilot.sendPresetPrompt('${opt.prompt}')`}">${opt.label}</button>`).join('') + 
             `</div>`;
         }
         botResponse = routeRes.response + guidedHtml;
