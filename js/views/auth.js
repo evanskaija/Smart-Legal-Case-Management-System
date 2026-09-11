@@ -120,21 +120,13 @@ const AuthView = {
             </div>
 
             <div class="auth-white-card">
-              <!-- Top Lock/Key Badge -->
+              <!-- Top Lock Badge -->
               <div class="auth-card-lock-badge">
-                ${isLoginTab ? `
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                    <circle cx="12" cy="16" r="1.5"/>
-                  </svg>
-                ` : `
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M19 8v6M22 11h-6"/>
-                  </svg>
-                `}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  <circle cx="12" cy="16" r="1.5"/>
+                </svg>
               </div>
 
               <!-- Card Header -->
@@ -144,27 +136,6 @@ const AuthView = {
               <p class="auth-card-subtitle">
                 Sign in with your Staff ID, email or username.
               </p>
-
-              <!-- UNIFIED TAB SWITCHER BAR (Login & Register in One Part) -->
-              <div class="auth-toggle-tabs" style="display: flex; background: #F1F5F9; border-radius: 10px; padding: 4px; margin-bottom: 1.5rem; border: 1px solid #E2E8F0;">
-                <button type="button" class="auth-toggle-tab ${isLoginTab ? 'active' : ''}" onclick="AuthView.switchTab('login')" style="flex: 1; padding: 0.55rem; font-size: 0.85rem; font-weight: 700; border-radius: 7px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
-                  <span>1. Sign In</span>
-                </button>
-                <button type="button" class="auth-toggle-tab ${!isLoginTab ? 'active' : ''}" onclick="AuthView.switchTab('register')" style="flex: 1; padding: 0.55rem; font-size: 0.85rem; font-weight: 700; border-radius: 7px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <line x1="19" y1="8" x2="19" y2="14"/>
-                    <line x1="22" y1="11" x2="16" y2="11"/>
-                  </svg>
-                  <span class="auth-tab-desktop-text">2. Register with Invitation</span>
-                  <span class="auth-tab-mobile-text">2. Register</span>
-                </button>
-              </div>
 
               <!-- Server/Security Alert Banner -->
               <div id="auth-server-alert" class="alert alert-danger hidden" style="margin-bottom: 1.25rem; font-size: 0.85rem; text-align: left;">
@@ -193,7 +164,7 @@ const AuthView = {
                       id="login-email-input" 
                       class="auth-input-field" 
                       placeholder="e.g. ADM-0001 or slcms.ad or admin@slcms.local" 
-                      value="" 
+                      value="${localStorage.getItem('slcms_remembered_staff_id') || ''}" 
                       autocomplete="username"
                       oninput="AuthView.clearFieldError('login-email-input', 'login-email-error')"
                     >
@@ -1164,6 +1135,14 @@ const AuthView = {
       // Complete Login: Store session and redirect to role dashboard (Section 11)
       sessionStorage.setItem('slcms_auth', 'true');
       sessionStorage.setItem('slcms_token', authResult.token);
+      if (authResult.user) {
+        sessionStorage.setItem('slcms_current_user', JSON.stringify(authResult.user));
+        sessionStorage.setItem('slcms_current_user_id', authResult.user.id);
+        if (rememberMeCheck?.checked) {
+          localStorage.setItem('slcms_persisted_current_user', JSON.stringify(authResult.user));
+          localStorage.setItem('slcms_remembered_staff_id', emailVal);
+        }
+      }
 
       App.isLoggedIn = true;
       App.renderAuthenticatedApp();
