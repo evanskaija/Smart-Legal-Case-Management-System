@@ -37,12 +37,21 @@ const AuthView = {
 
     return `
       <div class="auth-page-container animate-fade" style="position: relative;">
-        <!-- Auth Screen Theme Toggle -->
-        <button class="topbar-icon-btn auth-theme-toggle-btn" onclick="App.toggleTheme()" title="Toggle Dark / Light Mode" aria-label="Toggle Dark / Light Mode">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-primary);">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-          </svg>
+        <!-- Floating Animated Background Orbs -->
+        <div class="auth-bg-orb auth-bg-orb-1"></div>
+        <div class="auth-bg-orb auth-bg-orb-2"></div>
+        <div class="auth-bg-orb auth-bg-orb-3"></div>
+
+        <!-- Theme Toggle: Bottom-Left Floating Pill (Best UX Position) -->
+        <button class="auth-theme-toggle-pill" id="auth-theme-toggle-btn" onclick="App.toggleTheme()" title="Toggle Dark / Light Mode (Ctrl+Shift+D)" aria-label="Toggle theme">
+          <span class="auth-theme-toggle-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </span>
+          <span class="auth-theme-toggle-label">Dark Mode</span>
         </button>
+
 
         <div class="auth-split-layout">
           <!-- 1. Left Legal Hero Branding Section -->
@@ -104,25 +113,24 @@ const AuthView = {
             <div class="auth-hero-bottom-legal" style="font-size: 0.8rem; color: #94A3B8;">
               Enterprise Law-Firm Portal • Authorized Personnel Only • Self-Registration Prohibited
             </div>
-          </div>
-
-          <!-- 2. Right Form Section - Unified Auth Card -->
+          </div>          <!-- 2. Right Form Section - Premium Redesigned Auth Card -->
           <div class="auth-form-panel">
-            <!-- Mobile Brand Header (Visible only on mobile/tablet <= 768px) -->
+
+            <!-- Mobile-Only Premium Header (hidden on desktop) -->
             <div class="auth-mobile-brand-header">
-              <div class="auth-brand-logo-icon" style="padding: 0; background: transparent; border: none; width: 44px; height: 44px;">
-                <img src="assets/SLCMS.png" alt="SLCMS Emblem" style="width: 44px; height: 44px; border-radius: 50%; display: block; object-fit: contain; box-shadow: 0 0 12px rgba(200, 155, 60, 0.4);">
+              <div class="auth-mobile-logo-ring">
+                <img src="assets/SLCMS.png" alt="SLCMS" style="width: 40px; height: 40px; border-radius: 50%; display: block; object-fit: contain;">
               </div>
               <div class="auth-mobile-brand-text">
                 <span class="auth-mobile-brand-title">SLCMS</span>
-                <span class="auth-mobile-brand-subtitle">Smart Legal Case Management</span>
+                <span class="auth-mobile-brand-subtitle">Enterprise Law Firm Portal</span>
               </div>
             </div>
 
             <div class="auth-white-card">
-              <!-- Top Lock Badge -->
+              <!-- Premium Lock Badge with Glow -->
               <div class="auth-card-lock-badge">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
                   <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                   <circle cx="12" cy="16" r="1.5"/>
@@ -130,12 +138,24 @@ const AuthView = {
               </div>
 
               <!-- Card Header -->
-              <h2 class="auth-card-title">
-                Welcome to SLCMS
-              </h2>
-              <p class="auth-card-subtitle">
-                Sign in with your Staff ID, email or username.
-              </p>
+              <h2 class="auth-card-title">Welcome Back</h2>
+              <p class="auth-card-subtitle">Sign in to your secure workspace</p>
+
+              <!-- Trust Badges Row -->
+              <div class="auth-trust-row">
+                <span class="auth-trust-badge">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+                  Zero-Trust
+                </span>
+                <span class="auth-trust-badge">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  Encrypted
+                </span>
+                <span class="auth-trust-badge">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                  RBAC
+                </span>
+              </div>
 
               <!-- Server/Security Alert Banner -->
               <div id="auth-server-alert" class="alert alert-danger hidden" style="margin-bottom: 1.25rem; font-size: 0.85rem; text-align: left;">
@@ -154,7 +174,7 @@ const AuthView = {
                   <label for="login-email-input">Staff ID, username or email</label>
                   <div style="position: relative;">
                     <span class="auth-input-icon">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="8" r="4"/>
                         <path d="M6 20v-2a6 6 0 0 1 12 0v2"/>
                       </svg>
@@ -162,8 +182,8 @@ const AuthView = {
                     <input 
                       type="text" 
                       id="login-email-input" 
-                      class="auth-input-field" 
-                      placeholder="e.g. ADM-0001 or slcms.ad or admin@slcms.local" 
+                      class="auth-input-field auth-input-premium" 
+                      placeholder="ADM-0001 · username · email" 
                       value="${localStorage.getItem('slcms_remembered_staff_id') || ''}" 
                       autocomplete="username"
                       oninput="AuthView.clearFieldError('login-email-input', 'login-email-error')"
@@ -175,7 +195,7 @@ const AuthView = {
                   <label for="login-password-input">Password</label>
                   <div style="position: relative;">
                     <span class="auth-input-icon">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
                         <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                       </svg>
@@ -183,7 +203,7 @@ const AuthView = {
                     <input 
                       type="password" 
                       id="login-password-input" 
-                      class="auth-input-field" 
+                      class="auth-input-field auth-input-premium" 
                       placeholder="Enter your password" 
                       value="" 
                       autocomplete="current-password"
@@ -204,9 +224,9 @@ const AuthView = {
                     </button>
                   </div>
 
-                <!-- Remember Staff ID Checkbox -->
+                <!-- Remember + Forgot Row -->
                 <div class="auth-remember-row flex items-center justify-between" style="margin-bottom: 1.25rem; font-size: 0.85rem;">
-                  <label class="checkbox-label" style="font-size: 0.85rem; color: #475569;" title="Only use on trusted firm workstations">
+                  <label class="checkbox-label" style="font-size: 0.82rem; color: #475569;" title="Only use on trusted firm workstations">
                     <input type="checkbox" id="auth-remember-check" checked style="display: none;">
                     <span class="checkbox-custom">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
@@ -218,24 +238,29 @@ const AuthView = {
                   <a href="javascript:void(0)" onclick="AuthView.showForgotPasswordModal()" class="auth-forgot-link" style="font-size: 0.82rem; color: var(--color-gold); font-weight: 600; text-decoration: none;">Forgot Password?</a>
                 </div>
 
-                <!-- Login Button -->
-                <button type="submit" id="auth-submit-btn" class="auth-btn-signin" style="font-size: 1rem; padding: 0.85rem; font-weight: 700; letter-spacing: 0.02em;">
-                  Login
+                <!-- Premium Login Button -->
+                <button type="submit" id="auth-submit-btn" class="auth-btn-signin auth-btn-premium">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                    <polyline points="10 17 15 12 10 7"/>
+                    <line x1="15" y1="12" x2="3" y2="12"/>
+                  </svg>
+                  Sign In to Workspace
                 </button>
 
-                <div class="auth-card-need-access" style="margin-top: 1rem; font-size: 0.80rem; color: #64748B; line-height: 1.4; text-align: center;">
-                  Need access or new credentials?
-                  <a href="javascript:void(0)" onclick="AuthView.showContactAdminModal()" style="color: #0F172A; font-weight: 700; text-decoration: none;">Contact Administrator</a>
+                <div class="auth-card-need-access" style="margin-top: 0.9rem; font-size: 0.79rem; color: #64748B; line-height: 1.4; text-align: center;">
+                  Need access?
+                  <a href="javascript:void(0)" onclick="AuthView.showContactAdminModal()" style="color: var(--color-gold); font-weight: 700; text-decoration: none;">Contact Administrator</a>
                 </div>
               </form>
 
-              <!-- Bottom Security Protection Note -->
-              <div class="auth-security-footer-note" style="margin-top: 1.5rem;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
+              <!-- Bottom Security Badge -->
+              <div class="auth-security-footer-note" style="margin-top: 1.25rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold); flex-shrink: 0;">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
                   <path d="m9 12 2 2 4-4"/>
                 </svg>
-                <span>Privileged &amp; Confidential • Administrator-Managed Access • No Self-Registration</span>
+                <span>Privileged &amp; Confidential • Admin-Managed • No Self-Registration</span>
               </div>
             </div>
           </div>
@@ -248,7 +273,7 @@ const AuthView = {
             <span class="auth-footer-dot">•</span>
           </div>
           <div class="auth-footer-line-2">
-            <a href="javascript:void(0)" onclick="App.showToast('Firm Security & Privacy Policies (SOC-2 Type II Certified)', 'info')">Privacy &amp; Confidentiality</a>
+            <a href="javascript:void(0)" onclick="App.showToast('Firm Security &amp; Privacy Policies (SOC-2 Type II Certified)', 'info')">Privacy &amp; Confidentiality</a>
             <span class="auth-footer-dot">•</span>
             <a href="javascript:void(0)" onclick="AuthView.showContactAdminModal()">Administrator Support</a>
           </div>
@@ -269,6 +294,7 @@ const AuthView = {
   },
 
   renderInCardStep1(presetCode = '') {
+
     return `
       <div id="in-card-step-1" class="reg-container">
         <!-- 3-Step Connected Progress Stepper -->

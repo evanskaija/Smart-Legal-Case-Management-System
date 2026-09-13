@@ -17,6 +17,217 @@
   overflow-x: hidden;
 }
 
+/* ── Animated Background Orbs (Auth Page) ─────────────────────────────── */
+.auth-bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(60px);
+  animation: authOrbFloat 8s ease-in-out infinite;
+}
+
+.auth-bg-orb-1 {
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle, rgba(200, 155, 60, 0.18) 0%, transparent 70%);
+  top: -80px;
+  right: -60px;
+  animation-delay: 0s;
+  animation-duration: 9s;
+}
+
+.auth-bg-orb-2 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.14) 0%, transparent 70%);
+  bottom: 60px;
+  left: 40px;
+  animation-delay: -4s;
+  animation-duration: 11s;
+}
+
+.auth-bg-orb-3 {
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(200, 155, 60, 0.10) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation-delay: -7s;
+  animation-duration: 13s;
+}
+
+@keyframes authOrbFloat {
+  0%, 100% { transform: translateY(0px) scale(1); opacity: 0.8; }
+  33%       { transform: translateY(-20px) scale(1.04); opacity: 1; }
+  66%       { transform: translateY(12px) scale(0.97); opacity: 0.65; }
+}
+
+/* ── Theme Toggle Pill — Bottom-Left Floating ─────────────────────────── */
+.auth-theme-toggle-pill {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 1.25rem;
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.85rem 0.5rem 0.65rem;
+  background: rgba(11, 31, 51, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(200, 155, 60, 0.4);
+  border-radius: 50px;
+  color: #E2E8F0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 0 0 rgba(200, 155, 60, 0);
+}
+
+.auth-theme-toggle-pill:hover {
+  background: rgba(200, 155, 60, 0.18);
+  border-color: var(--color-gold);
+  color: #FCD34D;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(200, 155, 60, 0.15);
+}
+
+.auth-theme-toggle-pill:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.auth-theme-toggle-icon {
+  display: flex;
+  align-items: center;
+  color: var(--color-gold);
+}
+
+.auth-theme-toggle-label {
+  line-height: 1;
+}
+
+[data-theme="light"] .auth-theme-toggle-pill {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(200, 155, 60, 0.5);
+  color: #102A43;
+  box-shadow: 0 4px 16px rgba(16, 42, 67, 0.15);
+}
+
+[data-theme="light"] .auth-theme-toggle-pill:hover {
+  background: rgba(200, 155, 60, 0.12);
+  border-color: #C89B3C;
+  color: #9A721C;
+}
+
+[data-theme="light"] .auth-theme-toggle-icon {
+  color: #C89B3C;
+}
+
+/* ── Trust Badge Row ───────────────────────────────────────────────────── */
+.auth-trust-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.1rem;
+}
+
+.auth-trust-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.28rem 0.6rem;
+  background: rgba(16, 42, 67, 0.06);
+  border: 1px solid rgba(200, 155, 60, 0.22);
+  border-radius: 50px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748B;
+  letter-spacing: 0.02em;
+}
+
+.auth-trust-badge svg {
+  color: var(--color-gold);
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .auth-trust-badge {
+  background: rgba(200, 155, 60, 0.08);
+  border-color: rgba(200, 155, 60, 0.25);
+  color: #94A3B8;
+}
+
+/* ── Premium Input Fields ─────────────────────────────────────────────── */
+.auth-input-premium {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease !important;
+}
+
+.auth-input-premium:focus {
+  border-color: var(--color-gold) !important;
+  box-shadow: 0 0 0 3px rgba(200, 155, 60, 0.12), 0 2px 8px rgba(200, 155, 60, 0.08) !important;
+  background: #FEFEF9 !important;
+}
+
+/* ── Premium Sign In Button ───────────────────────────────────────────── */
+.auth-btn-premium {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  font-size: 0.96rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.03em !important;
+  background: linear-gradient(135deg, #D4AF37 0%, #C89B3C 50%, #A47B25 100%) !important;
+  color: #071524 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 20px rgba(200, 155, 60, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.auth-btn-premium::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  transition: left 0.5s ease;
+}
+
+.auth-btn-premium:hover::before {
+  left: 100%;
+}
+
+.auth-btn-premium:hover {
+  background: linear-gradient(135deg, #DFB943 0%, #D4AF37 50%, #B78A2E 100%) !important;
+  box-shadow: 0 6px 28px rgba(200, 155, 60, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+  transform: translateY(-1.5px) !important;
+}
+
+.auth-btn-premium:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 12px rgba(200, 155, 60, 0.35) !important;
+}
+
+/* ── Mobile Logo Ring ─────────────────────────────────────────────────── */
+.auth-mobile-logo-ring {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid rgba(200, 155, 60, 0.5);
+  padding: 3px;
+  background: rgba(11, 31, 51, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 0 16px rgba(200, 155, 60, 0.3), 0 4px 12px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+}
+
 .auth-split-layout {
   flex: 1;
   display: flex;
@@ -10962,14 +11173,20 @@
   }
 
   .auth-input-icon {
-    display: none !important;
+    display: flex !important;
+    left: 0.75rem !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #94A3B8 !important;
+    pointer-events: none !important;
+    align-items: center !important;
   }
 
   .auth-input-field {
     width: 100% !important;
     min-width: 0 !important;
-    padding: 0.62rem 0.75rem !important;
-    font-size: 0.80rem !important;
+    padding: 0.62rem 0.75rem 0.62rem 2.45rem !important;
+    font-size: 0.82rem !important;
     color: #1E293B !important;
     background-color: #FFFFFF !important;
     border: 1px solid #E2E8F0 !important;
@@ -11059,18 +11276,23 @@
 
   .auth-btn-signin {
     width: 100% !important;
-    padding: 0.72rem !important;
+    padding: 0.72rem 1rem !important;
     font-size: 0.92rem !important;
-    font-weight: 600 !important;
-    color: #FFFFFF !important;
-    background-color: var(--color-gold) !important;
+    font-weight: 700 !important;
+    color: #071524 !important;
+    background: linear-gradient(135deg, #D4AF37 0%, #C89B3C 50%, #A47B25 100%) !important;
     border: none !important;
-    border-radius: 8px !important;
-    box-shadow: 0 4px 14px rgba(200, 155, 60, 0.28) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 18px rgba(200, 155, 60, 0.42), inset 0 1px 0 rgba(255,255,255,0.18) !important;
     cursor: pointer !important;
     margin-top: 0.15rem !important;
     transition: all var(--transition-fast) !important;
     box-sizing: border-box !important;
+    letter-spacing: 0.02em !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.45rem !important;
   }
 
   .auth-btn-signin:hover {
@@ -11087,7 +11309,7 @@
   }
 
   .auth-card-need-access a {
-    color: #0F172A !important;
+    color: var(--color-gold) !important;
     font-weight: 700 !important;
     text-decoration: none !important;
   }
@@ -11097,7 +11319,45 @@
   }
 
   .auth-security-footer-note {
-    display: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.4rem !important;
+    margin-top: 1rem !important;
+    font-size: 0.7rem !important;
+    color: #94A3B8 !important;
+    text-align: center !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Trust badges on mobile */
+  .auth-trust-row {
+    gap: 0.35rem !important;
+    margin-bottom: 0.85rem !important;
+    flex-wrap: wrap !important;
+  }
+
+  .auth-trust-badge {
+    font-size: 0.65rem !important;
+    padding: 0.22rem 0.5rem !important;
+    gap: 0.25rem !important;
+  }
+
+  .auth-trust-badge svg {
+    width: 10px !important;
+    height: 10px !important;
+  }
+
+  /* Mobile brand header */
+  .auth-mobile-logo-ring {
+    width: 42px !important;
+    height: 42px !important;
+    padding: 2px !important;
+  }
+
+  .auth-mobile-logo-ring img {
+    width: 34px !important;
+    height: 34px !important;
   }
 
   /* Global Footer on Mobile */
