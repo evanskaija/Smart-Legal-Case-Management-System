@@ -112,28 +112,90 @@ public class AuthController {
                             "message", "Your account is currently unavailable. Contact the system administrator."));
         }
 
+        // Check if temporary password is expired
+        if ((user.isMustChangePassword() || user.isFirstLoginRequired()) && user.getTemporaryPasswordExpiresAt() != null) {
+            if (java.time.LocalDateTime.now().isAfter(user.getTemporaryPasswordExpiresAt())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("success", false, "errorType", "TEMPORARY_PASSWORD_EXPIRED",
+                                "message", "The temporary password expired before first-login setup was completed. Please contact your Administrator."));
+            }
+        }
+
+        // Account Temporarily Locked - Reject login even if correct password is later entered during the lock period
         if (user.getStatus() == UserStatus.LOCKED || user.getAccountStatus() == AccountStatus.LOCKED) {
-            long remainingMinutes = user.getLockedUntil() != null ? 
-                    Math.max(1, (user.getLockedUntil() - System.currentTimeMillis()) / 60000) : 15;
-            return ResponseEntity.status(HttpStatus.LOCKED)
-                    .body(Map.of("success", false, "errorType", "ACCOUNT_LOCKED", 
-                            "message", "Too many unsuccessful attempts. Try again in " + remainingMinutes + " minute(s) or contact the administrator."));
+            if (user.getLockedUntil() != null && System.currentTimeMillis() >= user.getLockedUntil()) {
+                // Configured lock period elapsed -> auto unlock
+                user.setStatus(UserStatus.ACTIVE);
+                user.setAccountStatus(AccountStatus.ACTIVE);
+                user.setFailedAttempts(0);
+                user.setFailedLoginAttempts(0);
+                user.setLockedUntil(null);
+                user.setLockedAt(null);
+                user.setLockedReason(null);
+                rbacSecurityService.resolveAlertsForUser(user.getId(), com.slcms.model.AlertType.ACCOUNT_LOCKED, "SYSTEM");
+            } else {
+                return ResponseEntity.status(HttpStatus.LOCKED)
+                        .body(Map.of(
+                            "success", false, 
+                            "errorType", "ACCOUNT_TEMPORARILY_LOCKED", 
+                            "message", "Account Temporarily Locked\nYou cannot access SLCMS at this time. Try again after the lock period or contact the System Administrator."
+                        ));
+            }
         }
 
         if (!password.equals(user.getPasswordPlain())) {
-            user.setFailedAttempts(user.getFailedAttempts() + 1);
-            if (user.getFailedAttempts() >= 5) {
+            int attempts = user.getFailedAttempts() + 1;
+            user.setFailedAttempts(attempts);
+            user.setFailedLoginAttempts(attempts);
+
+            if (attempts >= 5) {
                 user.setStatus(UserStatus.LOCKED);
                 user.setAccountStatus(AccountStatus.LOCKED);
+                user.setLockedAt(java.time.LocalDateTime.now());
                 user.setLockedUntil(System.currentTimeMillis() + 15 * 60 * 1000);
+                user.setLockedReason("TOO_MANY_FAILED_LOGINS");
+
+                com.slcms.model.SecurityAlert alert = new com.slcms.model.SecurityAlert(
+                        "alt-" + System.currentTimeMillis(),
+                        user.getId(),
+                        user.getStaffId(),
+                        user.getName(),
+                        user.getRole().getDisplayName(),
+                        com.slcms.model.AlertType.ACCOUNT_LOCKED,
+                        "Account Locked Automatically",
+                        "The account was locked after five unsuccessful login attempts.",
+                        "HIGH"
+                );
+                alert.setLockedReason("TOO_MANY_FAILED_LOGINS");
+                rbacSecurityService.createSecurityAlert(alert);
+
+                rbacSecurityService.recordAudit(user.getEmail(), user.getRole().getDisplayName(), "Account Locked", "Security",
+                        "Automatic lockout following 5 consecutive failed login attempts.");
+
+                return ResponseEntity.status(HttpStatus.LOCKED)
+                        .body(Map.of(
+                            "success", false,
+                            "errorType", "ACCOUNT_TEMPORARILY_LOCKED",
+                            "message", "Account Temporarily Locked\nYou cannot access SLCMS at this time. Try again after the lock period or contact the System Administrator."
+                        ));
             }
+
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("success", false, "message", "Invalid email/username or password."));
         }
 
         // Reset failed counter on success
         user.setFailedAttempts(0);
+        user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
+        user.setLockedAt(null);
+        user.setLockedReason(null);
+        user.setLastLoginAt(java.time.LocalDateTime.now());
+        user.setLastLogin("Today, " + java.time.format.DateTimeFormatter.ofPattern("hh:mm a").format(java.time.LocalTime.now()));
+
+        // Ordinary successful login recorded only in Security Activity:
+        rbacSecurityService.recordAudit(user.getEmail(), user.getRole().getDisplayName(), "Login successful", "Security Activity",
+                "User: " + user.getStaffId() + ", Date and time: Automatically recorded");
 
         if (user.isMustChangePassword() || user.getStatus() == UserStatus.FIRST_LOGIN_PENDING || user.getAccountStatus() == AccountStatus.FIRST_LOGIN_RESET) {
             return ResponseEntity.ok(Map.of(

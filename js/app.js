@@ -95,7 +95,7 @@ const App = {
       <aside id="app-sidebar" class="sidebar">
         <!-- Sidebar Header & Logo with Clean Close Button on Mobile -->
         <div class="sidebar-header" style="display: flex; align-items: center; justify-content: space-between;">
-          <div class="flex items-center gap-2.5" style="min-width: 0; flex: 1;">
+          <div class="flex items-center gap-2.5" style="min-width: 0; flex: 1; cursor: pointer;" onclick="App.navigate('dashboard'); App.closeMobileSidebar();" title="SLCMS Dashboard">
             <div class="sidebar-logo" style="padding: 0; background: transparent; border: none; flex-shrink: 0;">
               <img src="assets/SLCMS.png" alt="SLCMS Emblem" style="width: 38px; height: 38px; border-radius: 50%; display: block; object-fit: contain; box-shadow: 0 0 10px rgba(200, 155, 60, 0.4);">
             </div>
@@ -330,6 +330,27 @@ const App = {
     this.pendingRedirectRoute = null;
     this.navigate(targetRoute);
     this.resetInactivityTimer();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('openSidebar') === 'true' || urlParams.get('openDrawer') === 'true') {
+      setTimeout(() => {
+        this.toggleSidebar();
+      }, 300);
+    }
+    const openModalParam = urlParams.get('openModal');
+    if (openModalParam === 'createUser') {
+      setTimeout(() => {
+        if (typeof AdminView !== 'undefined' && AdminView.openCreateUserModal) {
+          AdminView.openCreateUserModal();
+        }
+      }, 250);
+    } else if (openModalParam === 'newCase') {
+      setTimeout(() => {
+        if (typeof CasesView !== 'undefined' && CasesView.openNewCaseModal) {
+          CasesView.openNewCaseModal();
+        }
+      }, 250);
+    }
   },
 
   bindGlobalEvents() {
@@ -479,6 +500,11 @@ const App = {
   },
 
   navigate(route, params = null) {
+    // Automatically close mobile menu/drawer when any navigation occurs
+    if (typeof this.closeMobileSidebar === 'function') {
+      this.closeMobileSidebar();
+    }
+
     const rawRoute = (route || '').trim();
     const cleanRoute = rawRoute.replace(/^[\/#]+/, '');
 
@@ -723,7 +749,9 @@ const App = {
       `;
     }
 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (cleanRoute !== 'ai-assistant' || (typeof AIAssistantView !== 'undefined' && AIAssistantView.conversation && AIAssistantView.conversation.length === 0)) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
     // Support direct launch for automated test / verification
     try {
@@ -788,6 +816,9 @@ const App = {
   },
 
   openUserProfileModal() {
+    if (typeof this.closeMobileSidebar === 'function') {
+      this.closeMobileSidebar();
+    }
     const u = SLCMS_STATE.currentUser || {};
     const presets = [
       { name: 'Grace Mdee, Adv.', role: 'Senior Advocate', url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=256&q=80' },
@@ -1352,9 +1383,9 @@ const App = {
       let badgeHtml = '';
       if (badge !== null && badge !== undefined) {
         if (badgeAction || badgeType === 'danger') {
-          badgeHtml = `<span class="nav-badge nav-badge-danger" onclick="event.stopPropagation(); ${badgeAction || `App.navigate('${route}')`}" title="${badge} cases requiring attention" style="cursor: pointer;">${badge}</span>`;
+          badgeHtml = `<span class="nav-badge nav-badge-danger" onclick="event.stopPropagation(); ${badgeAction || `App.navigate('${route}')`}; App.closeMobileSidebar();" title="${badge} cases requiring attention" style="cursor: pointer;">${badge}</span>`;
         } else {
-          badgeHtml = `<span class="nav-badge nav-badge-info" title="${badge} judgments in library">${badge}</span>`;
+          badgeHtml = `<span class="nav-badge nav-badge-info" onclick="event.stopPropagation(); App.navigate('${route}'); App.closeMobileSidebar();" title="${badge} judgments in library" style="cursor: pointer;">${badge}</span>`;
         }
       }
       const isActive = this.currentRoute === route || 
@@ -1364,7 +1395,7 @@ const App = {
         (route === 'admin-security-activity' && (this.currentRoute === 'admin-security' || this.currentRoute === 'admin-logs'));
 
       return `
-        <a class="nav-item ${isActive ? 'active' : ''}" data-route="${route}" onclick="App.navigate('${route}')" title="${label}">
+        <a class="nav-item ${isActive ? 'active' : ''}" data-route="${route}" onclick="App.navigate('${route}'); App.closeMobileSidebar();" title="${label}">
           <span class="nav-icon">${icon}</span>
           <span>${label}</span>
           ${badgeHtml}
@@ -1392,8 +1423,7 @@ const App = {
       ${navItem('clients', icons.clients, 'Clients')}
       ${navItem('tasks', icons.tasks, 'Tasks & Deadlines')}
 
-      ${sectionLabel('LEGAL RESEARCH & DRAFTING')}
-      ${navItem('ai-assistant', `<span style="color: var(--color-gold); display: flex;">${icons.ai}</span>`, 'SLCMS AI')}
+      ${sectionLabel('LEGAL RESEARCH & PRECEDENTS')}
       ${navItem('case-library', icons.library, 'Case Library', judgmentsCount, null, 'info')}
     `;
 
@@ -1426,15 +1456,16 @@ const App = {
           <span>Vault</span>
         `;
       } else {
-        aiTab.setAttribute('data-route', 'ai-assistant');
-        aiTab.setAttribute('onclick', "App.navigate('ai-assistant')");
+        aiTab.setAttribute('data-route', 'case-library');
+        aiTab.setAttribute('onclick', "App.navigate('case-library')");
         aiTab.innerHTML = `
           <span class="mobile-bottom-nav-icon" style="color: var(--color-gold);">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
             </svg>
           </span>
-          <span>Legal AI</span>
+          <span>Library</span>
         `;
       }
     }
@@ -1509,6 +1540,9 @@ const App = {
 
 
   logout() {
+    if (typeof this.closeMobileSidebar === 'function') {
+      this.closeMobileSidebar();
+    }
     this.confirmAction({
       title: 'Confirm Secure Logout',
       message: 'You are about to terminate your encrypted law-firm session. Any unsaved edits will be discarded.',

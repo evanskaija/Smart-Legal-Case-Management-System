@@ -230,9 +230,9 @@ const BillingView = {
                 SLCMS LEGAL PARTNERS LLP
               </div>
               <div style="font-size: 0.8rem; color: var(--color-text-secondary); line-height: 1.4; margin-top: 0.25rem;">
-                Attorneys & Counselors at Law<br>
-                500 Madison Avenue, 24th Floor, New York, NY 10022<br>
-                Tel: +1 (212) 555-0100 • billing@slcms-law.com
+                Advocates & Legal Consultants<br>
+                Dar es Salaam HQ, Floor 7, Samora Avenue, Dar es Salaam<br>
+                Tel: +255 700 000 001 • billing@slcms-law.co.tz
               </div>
             </div>
             <div class="text-right">

@@ -209,6 +209,24 @@ const TasksView = {
 
     const tasks = this.getFilteredTasks();
 
+    if (tasks.length === 0) {
+      return `
+        <div class="card empty-state" style="padding: 3.5rem 1.5rem; text-align: center; margin-top: 1rem;">
+          <div class="empty-icon" style="font-size: 2.8rem; margin-bottom: 0.85rem;">📋</div>
+          <h3 class="empty-title" style="font-size: 1.25rem; color: var(--color-primary); font-weight: 700;">No tasks assigned</h3>
+          <p class="empty-desc" style="color: var(--color-text-secondary); max-width: 480px; margin: 0.5rem auto 1.5rem auto; line-height: 1.5;">
+            There are currently no tasks assigned to legal or administrative personnel. Create an actionable task linked to a legal matter.
+          </p>
+          <button class="btn btn-gold" onclick="TasksView.openNewTaskModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            <span>+ Create Task</span>
+          </button>
+        </div>
+      `;
+    }
+
     return `
       <div class="kanban-mobile-tabs">
         ${columns.map(col => {
@@ -298,9 +316,9 @@ const TasksView = {
                           <button class="kanban-action-btn-next" onclick="TasksView.moveTaskStatus('${t.id}', 'next')" title="Submit for partner review">
                             <span>Review</span> →
                           </button>
-                        ` : col.id === 'review' ? `
-                          <button class="kanban-action-btn-next" onclick="TasksView.moveTaskStatus('${t.id}', 'next')" title="Approve and record filing" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important; color: #FFFFFF !important;">
-                            <span>Approve</span> ✓
+                        ` : col.id === 'under_review' ? `
+                          <button class="kanban-action-btn-next" onclick="TasksView.moveTaskStatus('${t.id}', 'next')" title="Mark as filed / completed">
+                            <span>File</span> →
                           </button>
                         ` : `
                           <span class="badge badge-active" style="font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.5rem;">✓ Filed</span>
@@ -319,6 +337,24 @@ const TasksView = {
 
   renderList() {
     const tasks = this.getFilteredTasks();
+
+    if (tasks.length === 0) {
+      return `
+        <div class="card empty-state" style="padding: 3.5rem 1.5rem; text-align: center; margin-top: 1rem;">
+          <div class="empty-icon" style="font-size: 2.8rem; margin-bottom: 0.85rem;">📋</div>
+          <h3 class="empty-title" style="font-size: 1.25rem; color: var(--color-primary); font-weight: 700;">No tasks assigned</h3>
+          <p class="empty-desc" style="color: var(--color-text-secondary); max-width: 480px; margin: 0.5rem auto 1.5rem auto; line-height: 1.5;">
+            There are currently no tasks assigned to legal or administrative personnel. Create an actionable task linked to a legal matter.
+          </p>
+          <button class="btn btn-gold" onclick="TasksView.openNewTaskModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            <span>+ Create Task</span>
+          </button>
+        </div>
+      `;
+    }
 
     return `
       <div class="table-container">
@@ -392,153 +428,28 @@ const TasksView = {
   calendarMonth: 8, // September (0-indexed)
   calendarYear: 2026,
 
-  // Rich statutory docket events fixture
-  courtEvents: [
-    {
-      id: 'evt-01',
-      date: '2026-09-02',
-      time: '10:00 AM EST',
-      monthShort: 'SEP',
-      dayNum: '02',
-      weekday: 'Wednesday',
-      title: 'Mediation Terms Settlement & Pleading Review',
-      caseId: 'case-104',
-      caseNumber: 'EM-2026-0774',
-      caseTitle: 'Dr. Clara Thorne vs. St. Jude Hospital',
-      category: 'hearings',
-      type: 'Court Mediation Call',
-      court: 'JAMS ADR Hearing Center • Virtual Room 4',
-      presiding: 'Hon. Robert Vance (Ret.)',
-      assignedTo: 'Julian Mercer, Esq.',
-      assignedAvatar: 'JM',
-      priority: 'High',
-      status: 'Confirmed',
-      statute: 'CPLR § 3409 / ADR Rules',
-      location: 'Virtual Video Hearing',
-      description: 'Review final mutual non-disparagement covenants and severance escrow schedule with defense counsel.',
-      exhibits: 'Exhibit D-2 (Draft Covenant), Exhibit F (Damages Ledger)'
-    },
-    {
-      id: 'evt-02',
-      date: '2026-09-04',
-      time: '02:00 PM EST',
-      monthShort: 'SEP',
-      dayNum: '04',
-      weekday: 'Friday',
-      title: 'Pre-Deposition Expert Witness Briefing',
-      caseId: 'case-102',
-      caseNumber: 'IP-2026-0319',
-      caseTitle: 'AuraBio Pharmaceuticals Patent Infringement',
-      category: 'briefs',
-      type: 'Expert Witness Preparation',
-      court: 'Firm Boardroom 42A & Secure Remote Link',
-      presiding: 'Senior Patent Litigation Panel',
-      assignedTo: 'Julian Mercer, Esq.',
-      assignedAvatar: 'JM',
-      priority: 'High',
-      status: 'Mandatory',
-      statute: 'Fed. R. Civ. P. 26(b)(4)',
-      location: 'New York HQ, 42nd Floor',
-      description: 'Prepare chief biochemist Dr. K. Aris on mRNA sequence validity exhibits and prior art timeline analysis.',
-      exhibits: 'Claim Charts A through E, Laboratory Notebook Transcripts'
-    },
-    {
-      id: 'evt-03',
-      date: '2026-09-08',
-      time: '05:00 PM EST',
-      monthShort: 'SEP',
-      dayNum: '08',
-      weekday: 'Tuesday',
-      title: 'Filing: Motion for Summary Judgment & Rule 19-a Statement',
-      caseId: 'case-101',
-      caseNumber: 'CV-2026-0842',
-      caseTitle: 'Vanguard Capital vs. Apex Tech Holdings',
-      category: 'motions',
-      type: 'Summary Judgment Motion',
-      court: 'NYSCEF Electronic Court Filing Docket',
-      presiding: 'Hon. Justice Katherine Thorne',
-      assignedTo: 'Eleanor Vance, Esq.',
-      assignedAvatar: 'EV',
-      priority: 'High',
-      status: 'Critical Deadline',
-      statute: 'CPLR § 3212 / Uniform Rule 202.8-g',
-      location: 'Supreme Court - Commercial Division',
-      description: 'Submit 35-page Memorandum of Law, 18 evidentiary affidavits, and Rule 19-a Statement of Material Facts.',
-      exhibits: 'Pleading Affidavits 1-18, Trade Secret Licensing Contract'
-    },
-    {
-      id: 'evt-04',
-      date: '2026-09-14',
-      time: '09:30 AM EST',
-      monthShort: 'SEP',
-      dayNum: '14',
-      weekday: 'Monday',
-      title: 'Supreme Court Commercial Division Hearing Call',
-      caseId: 'case-101',
-      caseNumber: 'CV-2026-0842',
-      caseTitle: 'Vanguard Capital vs. Apex Tech Holdings',
-      category: 'hearings',
-      type: 'Oral Argument & Discovery Conference',
-      court: 'NY Supreme Court, 60 Centre Street, Room 232',
-      presiding: 'Hon. Justice Katherine Thorne',
-      assignedTo: 'Eleanor Vance, Esq.',
-      assignedAvatar: 'EV',
-      priority: 'High',
-      status: 'Confirmed Appearance',
-      statute: '22 NYCRR 202.70 (Rule 14)',
-      location: 'Supreme Court Commercial Division - Room 232',
-      description: 'Oral argument on the scope of confidential discovery disclosures and motion return docket call.',
-      exhibits: 'Protective Order Stipulation, Disputed Interrogatory Set'
-    },
-    {
-      id: 'evt-05',
-      date: '2026-09-18',
-      time: '04:00 PM EST',
-      monthShort: 'SEP',
-      dayNum: '18',
-      weekday: 'Friday',
-      title: 'Environmental Soil Survey Statutory Lodging',
-      caseId: 'case-103',
-      caseNumber: 'RE-2026-0155',
-      caseTitle: 'Greenfield Estate Zoning & Development',
-      category: 'briefs',
-      type: 'Regulatory Agency Filing',
-      court: 'Municipal Zoning & Planning Appeals Board',
-      presiding: 'Chief Zoning Administrator',
-      assignedTo: 'Marcus Bell',
-      assignedAvatar: 'MB',
-      priority: 'Medium',
-      status: 'In Progress',
-      statute: 'SEQRA 6 NYCRR Part 617',
-      location: 'Municipal Administration Building, Desk 4',
-      description: 'Obtain certified engineering surveyor stamps and lodge 4 physical evidentiary copies with the board clerk.',
-      exhibits: 'Certified Geotechnical Reports, Topographical Survey Maps'
-    },
-    {
-      id: 'evt-06',
-      date: '2026-09-25',
-      time: '11:00 AM EST',
-      monthShort: 'SEP',
-      dayNum: '25',
-      weekday: 'Friday',
-      title: 'Foreign Holding Disclosures & FINCEN Audit Lodging',
-      caseId: 'case-105',
-      caseNumber: 'CR-2026-0098',
-      caseTitle: 'State vs. Jonathan Vance Jr.',
-      category: 'briefs',
-      type: 'Compliance Audit Filing',
-      court: 'SDNY Magistrate Clerk Division • Room 501',
-      presiding: 'Magistrate Judge David Wu',
-      assignedTo: 'Sophia Chen',
-      assignedAvatar: 'SC',
-      priority: 'Medium',
-      status: 'Under Review',
-      statute: '31 U.S.C. § 5314 / FBAR',
-      location: 'Daniel Patrick Moynihan U.S. Courthouse',
-      description: 'Audit and reconcile 2021-2024 foreign banking declarations with FINCEN form 114 filings.',
-      exhibits: 'Foreign Bank Ledgers, Forensic Accountant Affidavit'
-    }
-  ],
+  // Statutory docket events (empty by default, loaded from database/persistence)
+  courtEvents: (() => {
+    try {
+      const saved = localStorage.getItem('slcms_persisted_court_events');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const DEMO_EVT_IDS = ['evt-01', 'evt-02', 'evt-03', 'evt-04', 'evt-05', 'evt-06'];
+        if (Array.isArray(parsed)) return parsed.filter(e => !DEMO_EVT_IDS.includes(e.id));
+      }
+    } catch(e){}
+    return [];
+  })(),
+
+  persistCourtEvents() {
+    try {
+      localStorage.setItem('slcms_persisted_court_events', JSON.stringify(this.courtEvents || []));
+    } catch(e){}
+  },
+
+  openScheduleDeadlineModal(caseContext = null) {
+    this.openScheduleAppearanceModal(caseContext);
+  },
 
   switchCalendarSubView(subView) {
     this.calendarSubView = subView;
@@ -588,6 +499,10 @@ const TasksView = {
     const nextMonthLabel = monthNames[(this.calendarMonth + 1) % 12];
     const filteredEvents = this.getFilteredEvents();
 
+    const courtCount = filteredEvents.filter(e => e.category === 'hearings').length;
+    const motionCount = filteredEvents.filter(e => e.category === 'motions').length;
+    const callCount = filteredEvents.filter(e => e.category === 'briefs').length;
+
     return `
       <div class="court-cal-wrapper">
         
@@ -596,28 +511,28 @@ const TasksView = {
           <div class="court-cal-stat-card">
             <div class="court-cal-stat-icon red">🏛️</div>
             <div>
-              <div class="court-cal-stat-val">3</div>
+              <div class="court-cal-stat-val">${courtCount}</div>
               <div class="court-cal-stat-label">Court Appearances</div>
             </div>
           </div>
           <div class="court-cal-stat-card">
             <div class="court-cal-stat-icon gold">⚠️</div>
             <div>
-              <div class="court-cal-stat-val">3</div>
+              <div class="court-cal-stat-val">${motionCount}</div>
               <div class="court-cal-stat-label">Critical Motions Due</div>
             </div>
           </div>
           <div class="court-cal-stat-card">
             <div class="court-cal-stat-icon navy">⚖️</div>
             <div>
-              <div class="court-cal-stat-val">2</div>
+              <div class="court-cal-stat-val">${callCount}</div>
               <div class="court-cal-stat-label">Commercial Div. Calls</div>
             </div>
           </div>
           <div class="court-cal-stat-card">
             <div class="court-cal-stat-icon green">✓</div>
             <div>
-              <div class="court-cal-stat-val">100%</div>
+              <div class="court-cal-stat-val">${filteredEvents.length === 0 ? 'N/A' : '100%'}</div>
               <div class="court-cal-stat-label">Statutory Compliance</div>
             </div>
           </div>
@@ -640,7 +555,7 @@ const TasksView = {
                   <span>${currentMonthLabel}</span>
                 </div>
                 <span class="court-cal-jurisdiction-tag">
-                  NY Supreme & SDNY Docket
+                  High Court &amp; Appellate Docket
                 </span>
               </div>
               <div class="court-cal-subtitle">
@@ -663,11 +578,11 @@ const TasksView = {
               </div>
 
               <div class="court-cal-actions-row flex items-center gap-2">
-                <button class="btn btn-secondary btn-sm" onclick="TasksView.syncECourts()" title="Sync e-Courts & NYSCEF Docket">
+                <button class="btn btn-secondary btn-sm" onclick="TasksView.syncECourts()" title="Sync e-Courts &amp; Judiciary Docket">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
                   </svg>
-                  <span>e-Courts Sync</span>
+                  <span>Judiciary Sync</span>
                 </button>
 
                 <button class="btn btn-gold btn-sm" onclick="TasksView.openScheduleAppearanceModal()">
@@ -718,13 +633,13 @@ const TasksView = {
                 All Scheduled (${this.courtEvents.length})
               </button>
               <button class="court-filter-pill ${this.calendarFilter === 'hearings' ? 'active' : ''}" onclick="TasksView.setCalendarFilter('hearings')">
-                🏛️ Court Hearings (2)
+                🏛️ Court Hearings (${this.courtEvents.filter(e => e.category === 'hearings').length})
               </button>
               <button class="court-filter-pill ${this.calendarFilter === 'motions' ? 'active' : ''}" onclick="TasksView.setCalendarFilter('motions')">
-                📑 Motions & Petitions (1)
+                📑 Motions &amp; Petitions (${this.courtEvents.filter(e => e.category === 'motions').length})
               </button>
               <button class="court-filter-pill ${this.calendarFilter === 'briefs' ? 'active' : ''}" onclick="TasksView.setCalendarFilter('briefs')">
-                📄 Briefs & Filings (3)
+                📄 Briefs &amp; Filings (${this.courtEvents.filter(e => e.category === 'briefs').length})
               </button>
             </div>
           </div>
@@ -743,9 +658,18 @@ const TasksView = {
   renderCalendarAgenda(events) {
     if (events.length === 0) {
       return `
-        <div style="padding: 3rem; text-align: center; color: var(--color-text-secondary);">
-          <p style="font-size: 1rem; font-weight: 600;">No scheduled court hearings or motions match the active filter.</p>
-          <button class="btn btn-secondary btn-sm mt-3" onclick="TasksView.setCalendarFilter('all')">Clear Filter</button>
+        <div class="card empty-state" style="padding: 3.5rem 1.5rem; text-align: center; margin: 1rem 0;">
+          <div class="empty-icon" style="font-size: 2.8rem; margin-bottom: 0.85rem;">📅</div>
+          <h3 class="empty-title" style="font-size: 1.25rem; color: var(--color-primary); font-weight: 700;">No deadlines scheduled</h3>
+          <p class="empty-desc" style="color: var(--color-text-secondary); max-width: 480px; margin: 0.5rem auto 1.5rem auto; line-height: 1.5;">
+            There are currently no court appearances, motion filings, or statutory cutoffs scheduled on the docket.
+          </p>
+          <button class="btn btn-gold" onclick="TasksView.openScheduleAppearanceModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            <span>+ Schedule Deadline</span>
+          </button>
         </div>
       `;
     }
@@ -1072,7 +996,13 @@ const TasksView = {
     `);
   },
 
-  openScheduleAppearanceModal() {
+  _deadlineCallback: null,
+
+  openScheduleAppearanceModal(caseContext = null, callback = null) {
+    this._deadlineCallback = callback;
+    const activeStaff = SLCMS_STATE.getActiveStaffUsers();
+    const cases = SLCMS_STATE.cases || [];
+
     App.openModal(`
       <div class="modal-header">
         <h3 class="modal-title">
@@ -1089,101 +1019,106 @@ const TasksView = {
       <div class="modal-body">
         <div class="form-group">
           <label class="form-label required">Appearance Title / Action Item</label>
-          <input type="text" id="sch-title" class="form-control" placeholder="e.g. Oral Argument on Motion for Protective Order" required>
+          <input type="text" id="sch-title" class="form-control" placeholder="e.g. Pre-Trial Hearing / Motion Filing Deadline" required>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div class="form-group">
             <label class="form-label required">Associated Legal Matter</label>
             <select id="sch-case" class="form-control">
-              ${SLCMS_STATE.cases.map(c => `<option value="${c.id}">${c.caseNumber} - ${c.title}</option>`).join('')}
+              ${cases.length === 0 ? `<option value="">General Matter / Firm Docket</option>` : cases.map(c => `<option value="${c.id}" ${(caseContext && (caseContext.id === c.id || caseContext === c.id)) ? 'selected' : ''}>${c.caseNumber} - ${c.title}</option>`).join('')}
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label required">Assigned Counsel</label>
+            <label class="form-label required">Assigned Staff</label>
             <select id="sch-assigned" class="form-control">
-              <option value="Eleanor Vance, Esq.">Eleanor Vance, Esq. (Partner)</option>
-              <option value="Julian Mercer, Esq.">Julian Mercer, Esq. (Partner)</option>
-              <option value="Marcus Bell">Marcus Bell (Senior Clerk)</option>
-              <option value="Sophia Chen">Sophia Chen (Paralegal)</option>
+              ${activeStaff.length === 0 ? `<option value="Unassigned">Unassigned</option>` : activeStaff.map(s => `<option value="${s.name}">${s.name} (${s.role})</option>`).join('')}
             </select>
           </div>
         </div>
         <div class="grid grid-cols-3 gap-4">
           <div class="form-group">
-            <label class="form-label required">Court Appearance Date</label>
+            <label class="form-label required">Appearance / Due Date</label>
             <input type="date" id="sch-date" class="form-control" value="2026-09-22" required>
           </div>
           <div class="form-group">
             <label class="form-label required">Call Time</label>
-            <input type="text" id="sch-time" class="form-control" value="09:30 AM EST">
+            <input type="text" id="sch-time" class="form-control" value="09:30 AM EAT">
           </div>
           <div class="form-group">
             <label class="form-label required">Event Type</label>
             <select id="sch-category" class="form-control">
               <option value="hearings">Court Hearing / Motion Call</option>
-              <option value="motions">Pleading & Brief Filing</option>
-              <option value="briefs">Discovery / Deposition</option>
+              <option value="motions">Pleading &amp; Brief Filing</option>
+              <option value="briefs">Discovery / Filing Due Date</option>
             </select>
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label required">Courtroom / Presiding Judge / Location</label>
-          <input type="text" id="sch-court" class="form-control" placeholder="e.g. NY Supreme Court - Commercial Division, Room 232 (Judge Thorne)">
+          <label class="form-label required">Courtroom / Location</label>
+          <input type="text" id="sch-court" class="form-control" placeholder="e.g. High Court of Tanzania, Commercial Division">
         </div>
         <div class="form-group">
-          <label class="form-label">Statutory Rule / Procedural Notes</label>
-          <textarea id="sch-desc" class="form-control" rows="2" placeholder="Specify applicable CPLR / FRCP statute and mandatory exhibits..."></textarea>
+          <label class="form-label">Procedural Notes / Instructions</label>
+          <textarea id="sch-desc" class="form-control" rows="2" placeholder="Specify statutory citations or instructions..."></textarea>
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
-        <button class="btn btn-gold" onclick="TasksView.saveNewAppearance()">Schedule on Statutory Docket</button>
+        <button class="btn btn-gold" onclick="TasksView.saveNewAppearance()">Schedule Deadline</button>
       </div>
     `);
   },
 
   saveNewAppearance() {
-    const title = document.getElementById('sch-title')?.value;
+    const title = document.getElementById('sch-title')?.value?.trim();
     if (!title) {
       App.showToast('Please enter an appearance title.', 'error');
       return;
     }
     const caseId = document.getElementById('sch-case')?.value;
-    const c = SLCMS_STATE.cases.find(item => item.id === caseId) || SLCMS_STATE.cases[0];
-    const dateVal = document.getElementById('sch-date')?.value || '2026-09-22';
-    const dayNum = dateVal.split('-')[2] || '22';
-    const assigned = document.getElementById('sch-assigned')?.value || 'Eleanor Vance, Esq.';
+    const c = (SLCMS_STATE.cases || []).find(item => item.id === caseId) || { id: 'case-gen', caseNumber: 'MATTER-GEN', title: 'General Practice Matter' };
+    const dateVal = document.getElementById('sch-date')?.value || new Date().toISOString().substring(0, 10);
+    const dayNum = dateVal.split('-')[2] || '15';
+    const assigned = document.getElementById('sch-assigned')?.value || 'Adv. Asha Mrema';
 
     const newEvt = {
       id: 'evt-' + Date.now(),
       date: dateVal,
-      time: document.getElementById('sch-time')?.value || '10:00 AM EST',
-      monthShort: 'SEP',
+      time: document.getElementById('sch-time')?.value || '09:30 AM EAT',
+      monthShort: new Date(dateVal).toLocaleString('en-US', { month: 'short' }).toUpperCase(),
       dayNum: dayNum,
-      weekday: 'Court Day',
+      weekday: new Date(dateVal).toLocaleString('en-US', { weekday: 'long' }),
       title: title,
       caseId: c.id,
       caseNumber: c.caseNumber,
       caseTitle: c.title,
       category: document.getElementById('sch-category')?.value || 'hearings',
-      type: 'Scheduled Court Appearance',
-      court: document.getElementById('sch-court')?.value || 'Supreme Court Commercial Division',
+      type: 'Scheduled Appearance',
+      court: document.getElementById('sch-court')?.value || 'High Court of Tanzania',
       presiding: 'Presiding Judge',
       assignedTo: assigned,
-      assignedAvatar: assigned.includes('Eleanor') ? 'EV' : assigned.includes('Julian') ? 'JM' : assigned.includes('Sophia') ? 'SC' : 'MB',
+      assignedAvatar: assigned.substring(0, 2).toUpperCase(),
       priority: 'High',
       status: 'Confirmed',
-      statute: 'CPLR / Uniform Rules',
-      location: 'Court Chambers',
-      description: document.getElementById('sch-desc')?.value || 'Mandatory court appearance.',
-      exhibits: 'Court Submissions & Appearance Notice'
+      statute: 'Judiciary Rules',
+      location: document.getElementById('sch-court')?.value || 'High Court of Tanzania',
+      description: document.getElementById('sch-desc')?.value || 'Mandatory appearance/deadline.',
+      exhibits: 'Pleadings & Affidavits'
     };
 
     this.courtEvents.unshift(newEvt);
+    this.persistCourtEvents();
     SLCMS_STATE.addAuditLog('Court Appearance Scheduled', 'Tasks & Deadlines', `${newEvt.title} (${newEvt.caseNumber})`);
     App.closeModal();
-    App.showToast('Appearance scheduled successfully on Statutory Docket.', 'success');
-    App.refreshCurrentView();
+    App.showToast('Deadline scheduled successfully on docket.', 'success');
+
+    if (typeof this._deadlineCallback === 'function') {
+      const cb = this._deadlineCallback;
+      this._deadlineCallback = null;
+      cb(newEvt);
+    } else {
+      App.refreshCurrentView();
+    }
   },
 
   syncECourts() {
@@ -1455,75 +1390,78 @@ const TasksView = {
     App.showToast('Docket notifications broadcasted to 4 responsible staff members.', 'success');
   },
 
-  openNewTaskModal(caseContext = null, defaultCol = 'todo') {
+  _taskCreationCallback: null,
+
+  openNewTaskModal(caseContext = null, defaultCol = 'todo', callback = null) {
+    this._taskCreationCallback = callback;
+    const activeStaff = SLCMS_STATE.getActiveStaffUsers();
+    const cases = SLCMS_STATE.cases || [];
+
     App.openModal(`
       <div class="modal-header">
         <h3 class="modal-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
             <path d="M12 5v14M5 12h14"/>
           </svg>
-          Create Legal Task & Statutory Deadline
+          Create Legal Task
         </h3>
         <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
           <label class="form-label required">Task Title / Action Item</label>
-          <input type="text" id="nt-title" class="form-control" placeholder="e.g. File Reply Brief with Commercial Division" required>
+          <input type="text" id="nt-title" class="form-control" placeholder="e.g. Request filing fees, Draft response, Interview client" required>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div class="form-group">
             <label class="form-label required">Associated Legal Matter</label>
             <select id="nt-case" class="form-control">
-              ${SLCMS_STATE.cases.map(c => `<option value="${c.id}" ${caseContext && caseContext.id === c.id ? 'selected' : ''}>${c.caseNumber} - ${c.title}</option>`).join('')}
+              ${cases.length === 0 ? `<option value="">General Matter / Administrative</option>` : cases.map(c => `<option value="${c.id}" ${(caseContext && (caseContext.id === c.id || caseContext === c.id)) ? 'selected' : ''}>${c.caseNumber} - ${c.title}</option>`).join('')}
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label required">Assigned Counsel / Staff</label>
+            <label class="form-label required">Assigned Staff</label>
             <select id="nt-assigned" class="form-control">
-              <option value="Eleanor Vance, Esq.">Eleanor Vance, Esq. (Partner)</option>
-              <option value="Julian Mercer, Esq.">Julian Mercer, Esq. (Partner)</option>
-              <option value="Marcus Bell">Marcus Bell (Senior Clerk)</option>
-              <option value="Sophia Chen">Sophia Chen (Paralegal)</option>
+              ${activeStaff.length === 0 ? `<option value="Unassigned">Unassigned</option>` : activeStaff.map(s => `<option value="${s.name}">${s.name} (${s.role})</option>`).join('')}
             </select>
           </div>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div class="form-group">
-            <label class="form-label required">Statutory Due Date</label>
-            <input type="date" id="nt-due" class="form-control" value="2026-09-15" required>
+            <label class="form-label required">Due Date</label>
+            <input type="date" id="nt-due" class="form-control" value="2026-09-20" required>
           </div>
           <div class="form-group">
             <label class="form-label required">Priority Level</label>
             <select id="nt-priority" class="form-control">
-              <option value="High">High Priority (Court Mandated)</option>
+              <option value="High">High Priority (Urgent Action)</option>
               <option value="Medium" selected>Medium (Standard Preparation)</option>
-              <option value="Low">Low (Internal Archival)</option>
+              <option value="Low">Low (Routine Follow-up)</option>
             </select>
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Detailed Instructions & Statutes</label>
-          <textarea id="nt-desc" class="form-control" rows="3" placeholder="Specify statutory citations, motion requirements, or filing instructions..."></textarea>
+          <label class="form-label">Detailed Instructions &amp; Action Notes</label>
+          <textarea id="nt-desc" class="form-control" rows="3" placeholder="Specify instructions, client deliverables, or court filing requirements..."></textarea>
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
-        <button class="btn btn-gold" onclick="TasksView.saveNewTask('${defaultCol}')">Save Task to Docket</button>
+        <button class="btn btn-gold" onclick="TasksView.saveNewTask('${defaultCol}')">Create Task</button>
       </div>
     `);
   },
 
   saveNewTask(col = 'todo') {
-    const title = document.getElementById('nt-title')?.value;
+    const title = document.getElementById('nt-title')?.value?.trim();
     if (!title) {
       App.showToast('Please enter a task title.', 'error');
       return;
     }
 
     const caseId = document.getElementById('nt-case')?.value;
-    const relatedCase = SLCMS_STATE.cases.find(c => c.id === caseId) || SLCMS_STATE.cases[0];
-    const assigned = document.getElementById('nt-assigned')?.value;
+    const relatedCase = (SLCMS_STATE.cases || []).find(c => c.id === caseId) || { id: 'case-gen', caseNumber: 'MATTER-GEN', title: 'General Practice' };
+    const assigned = document.getElementById('nt-assigned')?.value || 'Adv. Asha Mrema';
 
     const newTask = {
       id: 'tsk-' + Date.now(),
@@ -1532,9 +1470,9 @@ const TasksView = {
       caseTitle: relatedCase.title,
       caseNumber: relatedCase.caseNumber,
       assignedTo: assigned,
-      assignedAvatar: assigned.includes('Eleanor') ? 'EV' : assigned.includes('Julian') ? 'JM' : assigned.includes('Sophia') ? 'SC' : 'MB',
+      assignedAvatar: assigned.substring(0, 2).toUpperCase(),
       priority: document.getElementById('nt-priority')?.value || 'Medium',
-      dueDate: document.getElementById('nt-due')?.value || '2026-09-15',
+      dueDate: document.getElementById('nt-due')?.value || new Date().toISOString().substring(0, 10),
       status: col,
       progressPct: 0,
       description: document.getElementById('nt-desc')?.value || ''
@@ -1542,7 +1480,14 @@ const TasksView = {
 
     SLCMS_STATE.addTask(newTask);
     App.closeModal();
-    App.showToast('Task successfully scheduled on statutory docket.', 'success');
-    App.refreshCurrentView();
+    App.showToast('Task successfully added to docket.', 'success');
+
+    if (typeof this._taskCreationCallback === 'function') {
+      const cb = this._taskCreationCallback;
+      this._taskCreationCallback = null;
+      cb(newTask);
+    } else {
+      App.refreshCurrentView();
+    }
   }
 };

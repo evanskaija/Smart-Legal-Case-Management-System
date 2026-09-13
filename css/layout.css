@@ -652,21 +652,19 @@
     margin-left: 0 !important;
   }
 
-  /* --- Topbar: compact mobile header matching reference screenshot --- */
+  /* --- Topbar mobile base layout (theme-specific styles managed in responsive.css) --- */
   .topbar {
-    height: 62px !important;
-    padding: 0 1rem !important;
+    height: 60px !important;
+    padding: 0 0.85rem !important;
     gap: 0.5rem !important;
     align-items: center !important;
     justify-content: space-between !important;
-    background: #0B1F33 !important; /* Deep executive navy matching screenshot */
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-bottom-left-radius: 22px !important;
-    border-bottom-right-radius: 22px !important;
-    box-shadow: 0 8px 24px rgba(11, 31, 51, 0.45) !important;
-    position: sticky !important;
+    position: fixed !important;
     top: 0 !important;
-    z-index: 90 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    z-index: 100 !important;
   }
 
   /* Hide global search container on mobile (replaced by circular search button) */
@@ -674,160 +672,86 @@
     display: none !important;
   }
 
-  /* Topbar left: Hamburger button + Stacked SLCMS. / DASHBOARD */
+  /* Topbar left: Hamburger button + SLCMS. / DASHBOARD */
   .topbar-left {
     display: flex !important;
     align-items: center !important;
-    gap: 0.75rem !important;
+    gap: 0.65rem !important;
     min-width: 0 !important;
-    flex: initial !important;
+    flex: 1 1 auto !important;
   }
 
-  /* Hamburger Toggle Button visible on mobile */
+  /* Hamburger Toggle Button base on mobile */
   .topbar-left .sidebar-toggle-btn {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    background: transparent !important;
-    border: none !important;
-    color: #CBD5E1 !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
     padding: 0 !important;
-    width: 32px !important;
-    height: 32px !important;
+    border-radius: 50% !important;
     cursor: pointer !important;
-    transition: transform 0.15s ease, color 0.15s ease !important;
-  }
-
-  .topbar-left .sidebar-toggle-btn:hover,
-  .topbar-left .sidebar-toggle-btn:active {
-    color: #FFFFFF !important;
-    transform: scale(1.05);
+    flex-shrink: 0 !important;
   }
 
   .topbar-left .sidebar-toggle-btn svg {
-    width: 22px !important;
-    height: 22px !important;
+    width: 20px !important;
+    height: 20px !important;
   }
 
   /* Mobile SLCMS Brand Header on Left */
   .mobile-topbar-brand {
     display: flex !important;
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    justify-content: center !important;
-    gap: 1px !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 7px !important;
     cursor: pointer !important;
     text-decoration: none !important;
     user-select: none !important;
     flex-shrink: 0 !important;
-    line-height: 1.15 !important;
+    line-height: 1 !important;
   }
 
   .mobile-topbar-title {
-    font-size: 1.12rem !important;
+    font-size: 1.15rem !important;
     font-weight: 800 !important;
-    color: #FFFFFF !important;
     font-family: var(--font-heading, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif) !important;
-    letter-spacing: -0.2px !important;
+    letter-spacing: -0.3px !important;
     line-height: 1 !important;
+    white-space: nowrap !important;
   }
 
   .mobile-topbar-subtitle {
-    font-size: 0.68rem !important;
+    font-size: 0.65rem !important;
     font-weight: 800 !important;
-    color: #C89B3C !important;
-    letter-spacing: 0.9px !important;
+    letter-spacing: 0.6px !important;
     text-transform: uppercase !important;
     margin-left: 0 !important;
-    line-height: 1 !important;
+    line-height: 1.2 !important;
+    padding: 2.5px 7px !important;
+    border-radius: 6px !important;
+    white-space: nowrap !important;
   }
 
   .breadcrumb-area {
     display: none !important;
   }
 
-  /* Topbar right: exactly 3 icons: Circular Search, Circular Sun, Circular Avatar with Gold ring */
+  /* Topbar right: exactly 3 icons: Circular Search, Circular Sun/Moon, Circular Notification Bell */
   .topbar-right {
     display: flex !important;
-    gap: 0.55rem !important;
+    gap: 0.5rem !important;
     flex-shrink: 0 !important;
     align-items: center !important;
     margin-left: auto !important;
   }
 
-  /* Hide "Add New", desktop calendar, and notification bell on mobile */
+  /* Hide desktop-only controls on mobile */
   .topbar-right .btn-gold,
   .topbar-btn-hide-mobile,
-  .topbar-notif-btn {
-    display: none !important;
-  }
-
-  /* Circular Glassy Action Buttons (Search and Theme) */
-  .topbar-icon-btn.mobile-search-btn,
-  #theme-toggle-btn {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 36px !important;
-    height: 36px !important;
-    border-radius: 50% !important;
-    background: rgba(255, 255, 255, 0.07) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    color: #94A3B8 !important;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
-    transition: all 0.2s ease !important;
-    padding: 0 !important;
-    cursor: pointer !important;
-  }
-
-  .topbar-icon-btn.mobile-search-btn:hover,
-  .topbar-icon-btn.mobile-search-btn:active {
-    background: rgba(255, 255, 255, 0.15) !important;
-    color: #FFFFFF !important;
-    border-color: rgba(255, 255, 255, 0.3) !important;
-  }
-
-  #theme-toggle-btn {
-    color: #F59E0B !important;
-  }
-
-  #theme-toggle-btn svg {
-    stroke: #F59E0B !important;
-  }
-
-  #theme-toggle-btn:hover,
-  #theme-toggle-btn:active {
-    background: rgba(245, 158, 11, 0.15) !important;
-    border-color: rgba(245, 158, 11, 0.4) !important;
-    transform: scale(1.05);
-  }
-
-  /* User avatar pill on mobile: circular avatar with vibrant gold ring */
   .topbar-avatar-pill {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    cursor: pointer !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  .topbar-avatar-pill .avatar {
-    width: 36px !important;
-    height: 36px !important;
-    min-width: 36px !important;
-    min-height: 36px !important;
-    border-radius: 50% !important;
-    border: 2px solid #C89B3C !important;
-    box-shadow: 0 0 0 2px rgba(200, 155, 60, 0.25), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
-    overflow: hidden !important;
-  }
-
-  .topbar-avatar-pill .avatar img {
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover !important;
-    display: block !important;
+    display: none !important;
   }
 
   /* Content area: comfortable mobile padding with ample clearance for bottom nav & AI FAB */

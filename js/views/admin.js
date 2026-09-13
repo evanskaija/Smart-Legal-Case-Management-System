@@ -19,6 +19,7 @@ const AdminView = {
   searchQuery: '',
   roleFilter: 'all',
   statusFilter: 'all',
+  accessFilter: 'accessed', // Default: 'accessed' (only users who accessed system) | 'all' | 'never'
   selectedUserId: null,
   mobileUsersView: 'table', // 'table' (simple scrollable right & left) | 'cards' (compact scrollable chips)
   logSearchQuery: '',
@@ -170,20 +171,41 @@ const AdminView = {
   // MODULE 1: ADMIN DASHBOARD (12 Interactive Cards & Security Alerts)
   // ==========================================================================
   renderAdminDashboard() {
-    const userImg = 'assets/admin-avatar.jpg';
-    const dateStr = 'Thursday, September 10, 2026';
+    const dateStr = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const unresolvedAlertsCount = (typeof SLCMS_STATE !== 'undefined' && typeof SLCMS_STATE.getUnresolvedAlertsCount === 'function') 
+      ? SLCMS_STATE.getUnresolvedAlertsCount() 
+      : 0;
+
+    const metrics = (typeof SLCMS_STATE !== 'undefined' && typeof SLCMS_STATE.getDashboardMetrics === 'function')
+      ? SLCMS_STATE.getDashboardMetrics()
+      : {
+          totalStaff: (SLCMS_STATE.users || []).length,
+          activeStaff: (SLCMS_STATE.users || []).filter(u => (u.status || '').toUpperCase() === 'ACTIVE').length,
+          seniorLawyers: (SLCMS_STATE.users || []).filter(u => u.role === 'Senior Lawyer').length,
+          lawyers: (SLCMS_STATE.users || []).filter(u => u.role === 'Lawyer').length,
+          legalClerks: (SLCMS_STATE.users || []).filter(u => u.role === 'Legal Clerk').length,
+          firstLoginRequired: (SLCMS_STATE.users || []).filter(u => (u.status || '').toUpperCase() === 'FIRST_LOGIN_RESET' || u.first_login_required).length,
+          lockedAccounts: 0
+        };
+
+    // Schedule immediate asynchronous fetch and render of security alerts
+    setTimeout(() => {
+      if (typeof AdminView !== 'undefined' && typeof AdminView.loadSecurityAlerts === 'function') {
+        AdminView.loadSecurityAlerts();
+      }
+    }, 10);
 
     return `
       <div class="adm-dashboard-page">
-        <!-- 1. HERO BANNER (DESKTOP: IMAGE 1 | MOBILE: IMAGE 2) -->
+        <!-- 1. HERO BANNER -->
         <div class="adm-hero-banner">
           <!-- Left: Avatar + Title + Date -->
           <div class="adm-hero-left">
             <div class="adm-hero-avatar-wrap">
-              <img src="${userImg}" alt="System Administrator" class="adm-hero-avatar-img">
+              <div class="avatar avatar-md avatar-gold" style="width: 48px; height: 48px; font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #C89B3C; color: #FFFFFF;">SA</div>
             </div>
             <div class="adm-hero-greeting-box">
-              <h2 class="adm-hero-title">Good evening, SLCMS</h2>
+              <h2 class="adm-hero-title">Good day, System Administrator</h2>
               <div class="adm-hero-date">${dateStr}</div>
             </div>
           </div>
@@ -191,20 +213,20 @@ const AdminView = {
           <!-- Center: 4 Stat Cards in 1 row -->
           <div class="adm-hero-stats-pills">
             <div class="adm-hero-pill-item" onclick="AdminView.switchTab('users', { statusFilter: 'ACTIVE' })" title="Filter active staff">
-              <div class="adm-hero-pill-num text-teal">10</div>
+              <div class="adm-hero-pill-num text-teal">${metrics.activeStaff}</div>
               <div class="adm-hero-pill-label">Active Staff</div>
             </div>
             <div class="adm-hero-pill-item" onclick="App.navigate('cases')" title="View live cases">
-              <div class="adm-hero-pill-num text-blue">3</div>
+              <div class="adm-hero-pill-num text-blue">${(SLCMS_STATE.cases || []).length}</div>
               <div class="adm-hero-pill-label">Live Cases</div>
             </div>
             <div class="adm-hero-pill-item" onclick="App.navigate('caselibrary')" title="View judgments library">
-              <div class="adm-hero-pill-num text-gold">76</div>
+              <div class="adm-hero-pill-num text-gold">${(SLCMS_STATE.caseLibrary || []).length || 76}</div>
               <div class="adm-hero-pill-label">Judgments</div>
             </div>
-            <div class="adm-hero-pill-item adm-pill-danger-bg" onclick="AdminView.switchTab('users', { statusFilter: 'LOCKED' })" title="Needs attention accounts">
-              <div class="adm-hero-pill-num text-red">5</div>
-              <div class="adm-hero-pill-label text-red-label">Needs Attention</div>
+            <div class="adm-hero-pill-item ${unresolvedAlertsCount > 0 ? 'adm-pill-danger-bg' : ''}" onclick="AdminView.switchTab('users', { statusFilter: 'LOCKED' })" title="Needs attention accounts">
+              <div id="adm-hero-attention-count" class="adm-hero-pill-num ${unresolvedAlertsCount > 0 ? 'text-red' : 'text-teal'}">${unresolvedAlertsCount}</div>
+              <div class="adm-hero-pill-label ${unresolvedAlertsCount > 0 ? 'text-red-label' : ''}">Needs Attention</div>
             </div>
           </div>
 
@@ -239,20 +261,20 @@ const AdminView = {
               <span class="adm-core-card-title">Active Staff Accounts</span>
               <span class="adm-core-badge" style="background: #ECFDF5; color: #059669;">STAFF</span>
             </div>
-            <div class="adm-core-card-val">10</div>
-            <div class="adm-core-card-sub">15 total registered</div>
-            <div class="adm-core-tag" style="background: #ECFDF5; color: #059669;">100% verified</div>
+            <div class="adm-core-card-val">${metrics.activeStaff}</div>
+            <div class="adm-core-card-sub">${metrics.totalStaff} total registered</div>
+            <div class="adm-core-tag" style="background: #ECFDF5; color: #059669;">${metrics.firstLoginRequired > 0 ? `${metrics.firstLoginRequired} first-login pending` : 'All verified'}</div>
           </div>
 
-          <!-- Card 2: Needs Attention -->
-          <div class="adm-core-metric-card adm-border-danger" onclick="AdminView.switchTab('users', { statusFilter: 'LOCKED' })">
+          <!-- Card 2: Needs Attention (Dynamic Counter) -->
+          <div class="adm-core-metric-card ${unresolvedAlertsCount > 0 ? 'adm-border-danger' : ''}" onclick="AdminView.switchTab('users', { statusFilter: 'LOCKED' })">
             <div class="adm-core-card-top">
-              <span class="adm-core-card-title" style="color: #DC2626;">Needs Attention</span>
-              <span class="adm-core-badge" style="background: #FEE2E2; color: #DC2626;">LOCK</span>
+              <span class="adm-core-card-title" style="color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#1E293B'};">Needs Attention</span>
+              <span id="adm-core-attention-badge" class="adm-core-badge" style="background: ${unresolvedAlertsCount > 0 ? '#FEE2E2' : '#ECFDF5'}; color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#059669'};">${unresolvedAlertsCount > 0 ? 'LOCK' : 'OK'}</span>
             </div>
-            <div class="adm-core-card-val" style="color: #DC2626;">5</div>
-            <div class="adm-core-card-sub" style="color: #DC2626;">Locked / Pending / Prov...</div>
-            <div class="adm-core-tag" style="background: #FEE2E2; color: #DC2626;">Action Required</div>
+            <div id="adm-core-attention-val" class="adm-core-card-val" style="color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#059669'};">${unresolvedAlertsCount}</div>
+            <div id="adm-core-attention-sub" class="adm-core-card-sub" style="color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#64748B'};">${unresolvedAlertsCount > 0 ? 'Action Required' : 'All accounts normal'}</div>
+            <div id="adm-core-attention-tag" class="adm-core-tag" style="background: ${unresolvedAlertsCount > 0 ? '#FEE2E2' : '#ECFDF5'}; color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#059669'};">${unresolvedAlertsCount > 0 ? 'Action Required' : 'Healthy'}</div>
           </div>
 
           <!-- Card 3: System Health & Security -->
@@ -295,7 +317,7 @@ const AdminView = {
               <span class="adm-core-badge" style="background: #F3E8FF; color: #7E22CE;">SEC</span>
             </div>
             <div class="adm-core-card-val" style="color: #7E22CE;">1</div>
-            <div class="adm-core-card-sub">SOC-2 events logged</div>
+            <div class="adm-core-card-sub">Security events logged</div>
             <div class="adm-core-tag" style="background: #F3E8FF; color: #7E22CE;">Audit Trail Active</div>
           </div>
         </div>
@@ -306,71 +328,28 @@ const AdminView = {
           <div class="adm-column-card">
             <div class="adm-column-header">
               <div class="flex items-center gap-2">
-                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #EF4444;"></span>
+                <span id="adm-alerts-indicator-dot" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${unresolvedAlertsCount > 0 ? '#EF4444' : '#10B981'};"></span>
                 <h3 class="adm-column-title">Security &amp; Access Alerts</h3>
-                <span class="adm-tag-danger-outline">3 ATTENTION</span>
+                <span id="adm-alerts-count-badge" class="${unresolvedAlertsCount > 0 ? 'adm-tag-danger-outline' : 'adm-tag-green-pill'}">${unresolvedAlertsCount > 0 ? unresolvedAlertsCount + ' ATTENTION' : '0 requiring attention'}</span>
               </div>
               <a href="javascript:void(0)" onclick="AdminView.switchTab('users', { statusFilter: 'LOCKED' })" class="adm-link-gold">View Directory &rarr;</a>
             </div>
 
-            <div class="adm-alerts-stack">
-              <!-- Alert 1: Locked Faraji Kamau -->
-              <div class="adm-alert-box adm-alert-border-red">
-                <div class="adm-alert-icon-square" style="background: #FEE2E2; color: #DC2626;">🔒</div>
-                <div class="adm-alert-content">
-                  <div class="adm-alert-row">
-                    <span class="adm-alert-headline">Account Locked: Faraji Kamau</span>
-                    <span class="adm-pill-danger">LOCKED</span>
-                  </div>
-                  <div class="adm-alert-text">5 consecutive failed logins from IP 197.250.48.12 &bull; Law Partner (LAW-0052)</div>
-                  <div class="adm-alert-footer-text">12m ago &bull; Zero-Trust Gate Triggered</div>
-                </div>
-                <button class="btn btn-gold btn-sm adm-alert-action-btn" onclick="AdminView.unlockUser('usr-005')">
-                  Unlock Account
-                </button>
-              </div>
-
-              <!-- Alert 2: First-Login Daudi Mussa -->
-              <div class="adm-alert-box adm-alert-border-yellow">
-                <div class="adm-alert-icon-square" style="background: #FEF3C7; color: #D97706;">🔑</div>
-                <div class="adm-alert-content">
-                  <div class="adm-alert-row">
-                    <span class="adm-alert-headline">First-Login Setup: Daudi Mussa</span>
-                    <span class="adm-pill-warning">PENDING RESET</span>
-                  </div>
-                  <div class="adm-alert-text">Temporary security password active &bull; Associate Counsel (LAW-0053)</div>
-                  <div class="adm-alert-footer-text">Issued 2h ago &bull; Mandatory password change enforced</div>
-                </div>
-                <button class="btn btn-secondary btn-sm adm-alert-action-btn" onclick="AdminView.viewUserDetails('usr-007')">
-                  Review User
-                </button>
-              </div>
-
-              <!-- Alert 3: First-Login David Mushi -->
-              <div class="adm-alert-box adm-alert-border-yellow">
-                <div class="adm-alert-icon-square" style="background: #FEF3C7; color: #D97706;">🔑</div>
-                <div class="adm-alert-content">
-                  <div class="adm-alert-row">
-                    <span class="adm-alert-headline">First-Login Setup: David Mushi</span>
-                    <span class="adm-pill-warning">PENDING RESET</span>
-                  </div>
-                  <div class="adm-alert-text">Temporary security password active &bull; Legal Clerk (CLK-0044)</div>
-                  <div class="adm-alert-footer-text">Issued 4h ago &bull; Awaiting initial onboarding completion</div>
-                </div>
-                <button class="btn btn-secondary btn-sm adm-alert-action-btn" onclick="AdminView.viewUserDetails('usr-009')">
-                  Review User
-                </button>
+            <div id="adm-security-alerts-container" class="adm-alerts-stack">
+              <!-- Dynamically populated by AdminView.loadSecurityAlerts() -->
+              <div style="padding: 1.5rem; text-align: center; color: #64748B; font-size: 0.85rem;">
+                Loading security alerts...
               </div>
             </div>
           </div>
 
-          <!-- Right Column: Sentinel Security Watch -->
+          <!-- Right Column: Security Monitoring -->
           <div class="adm-column-card">
             <div class="adm-column-header">
               <div class="flex items-center gap-2">
                 <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10B981;"></span>
-                <h3 class="adm-column-title">Sentinel Security Watch</h3>
-                <span class="adm-tag-green-pill">SENTINEL ACTIVE</span>
+                <h3 class="adm-column-title">Security Monitoring</h3>
+                <span class="adm-tag-green-pill">MONITORING ACTIVE</span>
               </div>
               <a href="javascript:void(0)" onclick="AdminView.switchTab('security-activity')" class="adm-link-gold">Full Audit Trail &rarr;</a>
             </div>
@@ -378,7 +357,7 @@ const AdminView = {
             <!-- Top Summary Strip -->
             <div class="adm-sentinel-status-bar">
               <div class="adm-sentinel-col">
-                <div class="adm-sentinel-label">ZERO-TRUST FIREWALL</div>
+                <div class="adm-sentinel-label">SECURITY GATE</div>
                 <div class="adm-sentinel-val" style="color: #059669;">&check; 0 Breaches Detected</div>
               </div>
               <div class="adm-sentinel-divider"></div>
@@ -394,15 +373,15 @@ const AdminView = {
             </div>
 
             <div class="adm-alerts-stack">
-              <!-- Event 1: SOC-2 Hash -->
+              <!-- Event 1: Ledger Sealed -->
               <div class="adm-alert-box adm-alert-border-green">
                 <div class="adm-alert-icon-square" style="background: #ECFDF5; color: #059669;">🛡️</div>
                 <div class="adm-alert-content">
                   <div class="adm-alert-row">
-                    <span class="adm-alert-headline">SOC-2 Immutable Hash Sealed</span>
+                    <span class="adm-alert-headline">Audit Log Ledger Sealed</span>
                     <span class="adm-pill-green">COMMITTED</span>
                   </div>
-                  <div class="adm-alert-text">Tamper-evident ledger sealed for 24 litigation dockets &amp; audit records</div>
+                  <div class="adm-alert-text">Tamper-evident ledger sealed for litigation dockets &amp; audit records</div>
                   <div class="adm-alert-footer-text">3 mins ago &bull; System Automated Task</div>
                 </div>
                 <button class="btn btn-secondary btn-sm adm-alert-action-btn" onclick="AdminView.switchTab('security-activity')">
@@ -418,7 +397,7 @@ const AdminView = {
                     <span class="adm-alert-headline">Administrative Session Verified</span>
                     <span class="adm-pill-blue">VERIFIED</span>
                   </div>
-                  <div class="adm-alert-text">Zero-Trust privilege check passed for System Administrator (ADM-0001)</div>
+                  <div class="adm-alert-text">Privilege check passed for System Administrator (ADM-0001)</div>
                   <div class="adm-alert-footer-text">18 mins ago &bull; HQ Secure Gateway</div>
                 </div>
                 <button class="btn btn-secondary btn-sm adm-alert-action-btn" onclick="AdminView.switchTab('security-activity')">
@@ -431,11 +410,11 @@ const AdminView = {
                 <div class="adm-alert-icon-square" style="background: #FFFBEB; color: #D97706;">💾</div>
                 <div class="adm-alert-content">
                   <div class="adm-alert-row">
-                    <span class="adm-alert-headline">Automated Cryptographic Backup</span>
+                    <span class="adm-alert-headline">Automated System Backup</span>
                     <span class="adm-pill-warning">ENCRYPTED</span>
                   </div>
                   <div class="adm-alert-text">Snapshot #BKP-2026-09-09 healthy (2.4 GB encrypted database state)</div>
-                  <div class="adm-alert-footer-text">1 hour ago &bull; AWS Encrypted Vault</div>
+                  <div class="adm-alert-footer-text">1 hour ago &bull; Secure Storage Vault</div>
                 </div>
                 <button class="btn btn-secondary btn-sm adm-alert-action-btn" onclick="AdminView.switchTab('backup')">
                   Snapshot
@@ -591,6 +570,15 @@ const AdminView = {
     });
 
     const filteredUsers = sortedUsers.filter(u => {
+      // Access filter: only display users who accessed the system by default
+      const hasAccessed = Boolean(u.lastLogin && !u.lastLogin.toLowerCase().includes('never') && u.lastLogin.trim() !== '');
+      if (this.accessFilter === 'accessed' && !hasAccessed) {
+        return false;
+      }
+      if (this.accessFilter === 'never' && hasAccessed) {
+        return false;
+      }
+
       // Role filter
       if (this.roleFilter !== 'all') {
         const rf = this.roleFilter.toLowerCase();
@@ -671,22 +659,26 @@ const AdminView = {
               >
             </div>
 
-            <!-- Filter Dropdowns -->
+            <!-- Filter Dropdowns (Access, Role, Status) -->
             <div class="adm-filter-row-mobile" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <select class="adm-filter-select" onchange="AdminView.handleAccessFilter(this.value)" title="Filter by System Access">
+                <option value="accessed" ${this.accessFilter === 'accessed' ? 'selected' : ''}>Accessed System Only</option>
+                <option value="all" ${this.accessFilter === 'all' ? 'selected' : ''}>All Staff (Accessed &amp; Unaccessed)</option>
+                <option value="never" ${this.accessFilter === 'never' ? 'selected' : ''}>Never Accessed System</option>
+              </select>
+
               <select class="adm-filter-select" onchange="AdminView.handleRoleFilter(this.value)">
                 <option value="all" ${this.roleFilter === 'all' ? 'selected' : ''}>All Roles</option>
                 <option value="Administrator" ${this.roleFilter === 'Administrator' ? 'selected' : ''}>Administrator</option>
-                <option value="Senior Counsel" ${this.roleFilter === 'Senior Counsel' || this.roleFilter === 'Senior Lawyer' ? 'selected' : ''}>Senior Counsel</option>
-                <option value="Associate Lawyer" ${this.roleFilter === 'Associate Lawyer' || this.roleFilter === 'Lawyer' ? 'selected' : ''}>Associate Lawyer</option>
-                <option value="Junior Lawyer" ${this.roleFilter === 'Junior Lawyer' ? 'selected' : ''}>Junior Lawyer</option>
+                <option value="Senior Lawyer" ${this.roleFilter === 'Senior Lawyer' ? 'selected' : ''}>Senior Lawyer</option>
+                <option value="Lawyer" ${this.roleFilter === 'Lawyer' ? 'selected' : ''}>Lawyer</option>
                 <option value="Legal Clerk" ${this.roleFilter === 'Legal Clerk' ? 'selected' : ''}>Legal Clerk</option>
               </select>
 
               <select class="adm-filter-select" onchange="AdminView.handleStatusFilter(this.value)">
                 <option value="all" ${this.statusFilter === 'all' ? 'selected' : ''}>All Statuses</option>
                 <option value="ACTIVE" ${this.statusFilter === 'ACTIVE' ? 'selected' : ''}>Active</option>
-                <option value="PENDING_APPROVAL" ${this.statusFilter === 'PENDING_APPROVAL' ? 'selected' : ''}>Pending Approval</option>
-                <option value="FIRST_LOGIN_RESET" ${this.statusFilter === 'FIRST_LOGIN_RESET' ? 'selected' : ''}>First Login Required</option>
+                <option value="FIRST_LOGIN_RESET" ${this.statusFilter === 'FIRST_LOGIN_RESET' ? 'selected' : ''}>First Login Reset</option>
                 <option value="LOCKED" ${this.statusFilter === 'LOCKED' ? 'selected' : ''}>Locked</option>
                 <option value="SUSPENDED" ${this.statusFilter === 'SUSPENDED' ? 'selected' : ''}>Suspended</option>
                 <option value="DEACTIVATED" ${this.statusFilter === 'DEACTIVATED' ? 'selected' : ''}>Deactivated</option>
@@ -696,7 +688,7 @@ const AdminView = {
             <!-- Showing pill & Add Button -->
             <div class="adm-toolbar-right">
               <span class="adm-showing-pill">
-                SHOWING ${filteredUsers.length} OF ${SLCMS_STATE.users.length} ACCOUNTS
+                SHOWING ${filteredUsers.length} OF ${SLCMS_STATE.users.length} ACCOUNTS ${this.accessFilter === 'accessed' ? '(ACCESSED ONLY)' : ''}
               </span>
               <button class="adm-toolbar-btn-gold" onclick="AdminView.openCreateUserModal()">
                 Add Lawyer / User
@@ -715,31 +707,19 @@ const AdminView = {
           </button>
         </div>
 
-        <!-- HORIZONTAL SWIPE GUIDANCE INDICATOR (ON MOBILE) -->
-        <div class="adm-mobile-scroll-hint">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="15 18 9 12 15 6"></polyline>
-          </svg>
-          <span>${this.mobileUsersView === 'cards' ? 'Swipe chips ↔ to view all details' : 'Swipe left &amp; right ↔ to view all 9 columns'}</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="9 18 15 12 9 6"></polyline>
-          </svg>
-        </div>
-
-        <!-- 3. SIMPLE & HORIZONTALLY SCROLLABLE TABLE (SHOWN BY DEFAULT) -->
+        <!-- 3. SIMPLE 8-COLUMN USER TABLE (DATABASE GROUND TRUTH) -->
         <div class="adm-users-table-container ${this.mobileUsersView === 'cards' ? 'adm-hide-on-mobile' : ''}">
           <table class="adm-users-table">
             <thead>
               <tr>
                 <th style="width: 22%;">STAFF MEMBER</th>
-                <th style="width: 10%;">STAFF ID</th>
+                <th style="width: 12%;">STAFF ID</th>
                 <th style="width: 14%;">ROLE</th>
-                <th style="width: 17%;">OFFICIAL CONTACT</th>
-                <th style="width: 11%;">ACCOUNT STATUS</th>
-                <th style="width: 11%;">FIRST-LOGIN STATUS</th>
+                <th style="width: 18%;">CONTACT</th>
+                <th style="width: 12%;">STATUS</th>
                 <th style="width: 10%;">LAST LOGIN</th>
-                <th style="width: 8%; text-align: center;">ASSIGNED CASES</th>
-                <th style="width: 7%; text-align: right;">ACTIONS</th>
+                <th style="width: 6%; text-align: center;">ASSIGNED CASES</th>
+                <th style="width: 6%; text-align: right;">ACTIONS</th>
               </tr>
             </thead>
             <tbody>
@@ -747,11 +727,11 @@ const AdminView = {
                 const rollNo = this.getUserRollNumber(u);
                 const roleBadge = this.getUserRoleBadgeHtml(u);
                 const statusBadge = this.getUserStatusBadgeHtml(u);
-                const firstLoginBadge = this.getUserFirstLoginBadgeHtml(u);
                 const lastLoginText = this.getUserLastLoginText(u);
                 const avatarHtml = this.getUserAvatarHtml(u);
                 const staffId = u.staffId || u.employeeId || 'ADM-0001';
                 const casesCount = (u.assignedCaseIds && u.assignedCaseIds.length) ? u.assignedCaseIds.length : (u.activeCases || 0);
+                const curStatus = (u.accountStatus || u.status || 'ACTIVE').toUpperCase();
 
                 return `
                   <tr>
@@ -781,37 +761,51 @@ const AdminView = {
                       ${roleBadge}
                     </td>
 
-                    <!-- 4. OFFICIAL CONTACT -->
+                    <!-- 4. CONTACT -->
                     <td>
                       <div class="adm-contact-email">${u.email}</div>
                       <div class="adm-contact-phone">${u.phone || 'N/A'}</div>
                     </td>
 
-                    <!-- 5. ACCOUNT STATUS -->
+                    <!-- 5. STATUS -->
                     <td>
                       ${statusBadge}
                     </td>
 
-                    <!-- 6. FIRST-LOGIN STATUS -->
+                    <!-- 6. LAST LOGIN -->
                     <td>
-                      ${firstLoginBadge}
+                      <span style="font-size: 0.8rem; color: #475569;">${lastLoginText}</span>
                     </td>
 
-                    <!-- 7. LAST LOGIN -->
-                    <td>
-                      <span style="font-size: 0.78rem; color: #475569;">${lastLoginText}</span>
-                    </td>
-
-                    <!-- 8. ASSIGNED CASES -->
+                    <!-- 7. ASSIGNED CASES -->
                     <td style="text-align: center; font-weight: 700; color: #0F172A; font-size: 0.86rem;">
                       ${casesCount}
                     </td>
 
-                    <!-- 9. ACTIONS -->
-                    <td style="text-align: right;">
+                    <!-- 8. ACTIONS -->
+                    <td style="text-align: right; position: relative;">
                       <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.35rem;">
-                        <button class="adm-table-action-btn" onclick="AdminView.viewUserDetails('${u.id}')">View</button>
-                        <button class="adm-table-action-btn" onclick="AdminView.openRoleModal('${u.id}')">Role</button>
+                        <button class="adm-table-action-btn" onclick="AdminView.viewUserDetails('${u.id}')" title="View Full Details">View</button>
+                        <button class="adm-table-action-btn" onclick="AdminView.openEditUserModal('${u.id}')" title="Edit Profile & Details">Edit</button>
+                        <div class="adm-dropdown-container" style="position: relative; display: inline-block;">
+                          <button class="adm-table-action-btn" onclick="AdminView.toggleUserActionMenu(event, '${u.id}')" title="More Actions" style="padding: 0.2rem 0.5rem; font-weight: 800;">⋮</button>
+                          <div id="user-menu-${u.id}" class="adm-user-dropdown-menu" style="display: none; position: absolute; right: 0; top: 100%; z-index: 99; min-width: 210px; background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; box-shadow: 0 10px 25px rgba(15,23,42,0.15); padding: 0.35rem 0; text-align: left;">
+                            <a href="javascript:void(0)" onclick="AdminView.viewUserDetails('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #1E293B; text-decoration: none;">👤 View Dossier &amp; Access</a>
+                            <a href="javascript:void(0)" onclick="AdminView.openEditUserModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #1E293B; text-decoration: none;">✏️ Edit Details &amp; Role</a>
+                            <a href="javascript:void(0)" onclick="AdminView.openChangePasswordModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #1E293B; text-decoration: none;">🔑 Change / Reset Password</a>
+                            <a href="javascript:void(0)" onclick="AdminView.openAssignCaseModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #1E293B; text-decoration: none;">⚖️ Assign Case</a>
+                            <a href="javascript:void(0)" onclick="AdminView.openRoleModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #1E293B; text-decoration: none;">🛡️ Change Role</a>
+                            <a href="javascript:void(0)" onclick="AdminView.openIssueTempPasswordModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #1E293B; text-decoration: none;">🔑 Issue New Temp Password</a>
+                            <a href="javascript:void(0)" onclick="AdminView.openForcePasswordResetModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #1E293B; text-decoration: none;">🔄 Force Password Reset</a>
+                            ${(curStatus === 'ACTIVE') ? `<a href="javascript:void(0)" onclick="AdminView.openLockUserModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #DC2626; text-decoration: none;">🔒 Lock Account</a>` : ''}
+                            ${(curStatus === 'LOCKED') ? `<a href="javascript:void(0)" onclick="AdminView.openUnlockUserModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #059669; text-decoration: none;">🔓 Unlock Account</a>` : ''}
+                            ${(curStatus !== 'SUSPENDED' && curStatus !== 'DEACTIVATED') ? `<a href="javascript:void(0)" onclick="AdminView.openSuspendUserModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #D97706; text-decoration: none;">⏸️ Suspend</a>` : ''}
+                            ${(curStatus !== 'DEACTIVATED') ? `<a href="javascript:void(0)" onclick="AdminView.openDeactivateUserModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #DC2626; text-decoration: none;">⛔ Deactivate</a>` : ''}
+                            ${(curStatus === 'DEACTIVATED') ? `<a href="javascript:void(0)" onclick="AdminView.reactivateUser('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #059669; text-decoration: none;">✅ Reactivate</a>` : ''}
+                            <div style="border-top: 1px solid #E2E8F0; margin: 0.35rem 0;"></div>
+                            <a href="javascript:void(0)" onclick="AdminView.openRemoveUserModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #DC2626; font-weight: 700; text-decoration: none;">🗑️ Remove User</a>
+                          </div>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -820,6 +814,20 @@ const AdminView = {
             </tbody>
           </table>
         </div>
+
+        <!-- 3b. EMPTY STATE BOX BEFORE ADDING NON-ADMIN USERS -->
+        ${(!SLCMS_STATE.users.some(u => u.role !== 'Administrator')) ? `
+          <div class="adm-staff-empty-box" style="margin: 1.5rem 0; padding: 2.5rem 1.5rem; text-align: center; background: #F8FAFC; border: 2px dashed #CBD5E1; border-radius: 12px;">
+            <div style="font-size: 2.25rem; margin-bottom: 0.75rem;">👥</div>
+            <h4 style="font-size: 1.15rem; font-weight: 800; color: #0F172A; margin: 0 0 0.4rem 0;">No Staff Accounts Added</h4>
+            <p style="font-size: 0.9rem; color: #64748B; max-width: 460px; margin: 0 auto 1.25rem auto; line-height: 1.5;">
+              No Senior Lawyer, Lawyer or Legal Clerk has been registered yet. Use Add User to create the first staff account and assign the correct role.
+            </p>
+            <button class="btn btn-gold" onclick="AdminView.openCreateUserModal()" style="font-weight: 700; padding: 0.65rem 1.4rem; box-shadow: 0 4px 12px rgba(200, 155, 60, 0.3);">
+              + Add User
+            </button>
+          </div>
+        ` : ''}
 
         <!-- 4. SIMPLE COMPACT CARDS WITH HORIZONTAL SCROLL CHIPS (ONLY SHOWN WHEN SELECTED ON MOBILE) -->
         ${this.mobileUsersView === 'cards' ? `
@@ -847,7 +855,9 @@ const AdminView = {
                     </div>
                     <div class="adm-user-m-actions">
                       <button class="adm-table-action-btn" onclick="AdminView.viewUserDetails('${u.id}')" title="View Dossier">View</button>
-                      <button class="adm-table-action-btn" onclick="AdminView.openRoleModal('${u.id}')" title="Change Role">Role</button>
+                      <button class="adm-table-action-btn" onclick="AdminView.openEditUserModal('${u.id}')" title="Edit Details">Edit</button>
+                      <button class="adm-table-action-btn" onclick="AdminView.openChangePasswordModal('${u.id}')" title="Password">🔑</button>
+                      <button class="adm-table-action-btn" onclick="AdminView.openRemoveUserModal('${u.id}')" title="Remove" style="color: #DC2626;">🗑️</button>
                     </div>
                   </div>
 
@@ -882,43 +892,38 @@ const AdminView = {
   },
 
   getUserRoleBadgeHtml(u) {
-    if (u.name === 'Alan Sterling' || (u.jobTitle === 'System Administrator' && u.id !== 'usr-001')) {
-      return `<span class="adm-role-pill-senior">SYSTEM ADMINISTRATOR</span>`;
-    }
-    if (u.role === 'Administrator') {
+    const role = u.role || 'Staff';
+    if (role === 'Administrator') {
       return `<span class="adm-role-pill-admin">ADMINISTRATOR</span>`;
     }
-    if (u.role === 'Senior Counsel' || u.role === 'Senior Lawyer') {
-      return `<span class="adm-role-pill-senior">SENIOR COUNSEL</span>`;
+    if (role === 'Senior Lawyer' || role === 'Senior Counsel') {
+      return `<span class="adm-role-pill-senior">SENIOR LAWYER</span>`;
     }
-    if (u.role === 'Associate Lawyer') {
-      return `<span class="adm-role-pill-assoc">ASSOCIATE LAWYER</span>`;
+    if (role === 'Lawyer' || role === 'Associate Lawyer' || role === 'Junior Lawyer') {
+      return `<span class="adm-role-pill-assoc">LAWYER</span>`;
     }
-    if (u.role === 'Junior Lawyer') {
-      return `<span class="adm-role-pill-junior">JUNIOR LAWYER</span>`;
-    }
-    if (u.role === 'Legal Clerk') {
+    if (role === 'Legal Clerk') {
       return `<span class="adm-role-pill-clerk">LEGAL CLERK</span>`;
     }
-    return `<span class="adm-role-pill-assoc">${(u.role || 'STAFF').toUpperCase()}</span>`;
+    return `<span class="adm-role-pill-assoc">${role.toUpperCase()}</span>`;
   },
 
   getUserStatusBadgeHtml(u) {
     const status = (u.accountStatus || u.status || 'ACTIVE').toUpperCase();
-    if (status === 'ACTIVE') {
-      return `<span class="adm-status-pill-active"><span class="adm-dot-green"></span> ACTIVE</span>`;
+    if (status === 'FIRST_LOGIN_RESET' || (u.first_login_required && !u.firstLoginStatus?.includes('Completed'))) {
+      return `<span class="badge" style="background:#FEF3C7;color:#92400E;border:1px solid #F59E0B;font-weight:700;font-size:0.75rem;padding:0.2rem 0.55rem;border-radius:6px;">First Login Reset</span>`;
     }
-    if (status.includes('PENDING')) {
-      return `<span class="adm-status-pill-pending">PENDING_APPROVAL</span>`;
+    if (status === 'ACTIVE') {
+      return `<span class="adm-status-pill-active"><span class="adm-dot-green"></span> Active</span>`;
     }
     if (status === 'LOCKED') {
-      return `<span class="adm-status-pill-locked"><span class="adm-dot-red"></span> LOCKED</span>`;
+      return `<span class="adm-status-pill-locked"><span class="adm-dot-red"></span> Locked</span>`;
     }
     if (status === 'SUSPENDED') {
-      return `<span class="adm-status-pill-pending" style="background:#FFFBEB;color:#D97706;border-color:#FDE68A;">SUSPENDED</span>`;
+      return `<span class="adm-status-pill-pending" style="background:#FFFBEB;color:#D97706;border-color:#FDE68A;">Suspended</span>`;
     }
     if (status === 'DEACTIVATED') {
-      return `<span class="adm-status-pill-pending">DEACTIVATED</span>`;
+      return `<span class="adm-status-pill-pending" style="background:#F1F5F9;color:#64748B;border-color:#CBD5E1;">Deactivated</span>`;
     }
     return `<span class="adm-status-pill-active"><span class="adm-dot-green"></span> ${status}</span>`;
   },
@@ -1170,8 +1175,7 @@ const AdminView = {
   // MODULE 3: PROVISION LAW FIRM USER & ISSUE CREDENTIALS MODAL
   // ==========================================================================
   openCreateUserModal() {
-    const nextNum = (SLCMS_STATE.users?.length || 0) + 1;
-    const autoStaffId = 'EMP-10' + (nextNum < 10 ? '0' + nextNum : nextNum);
+    const autoStaffId = SLCMS_STATE.generateStaffId ? SLCMS_STATE.generateStaffId('Lawyer') : 'LAW-0001';
     const autoRoll = SLCMS_STATE.generateLawyerNumber ? SLCMS_STATE.generateLawyerNumber() : 'TLS/ADV/4877';
     const autoTempPass = SLCMS_STATE.generateTemporaryPassword ? SLCMS_STATE.generateTemporaryPassword() : 'SLCMS#Haf49&7';
     const defaultEmail = 'counsel@slcms-law.co.tz';
@@ -1180,10 +1184,10 @@ const AdminView = {
       <div class="adm-prov-header">
         <div class="adm-prov-header-left">
           <h3 class="adm-prov-title">
-            <span>🔐</span> Provision Law Firm User &amp; Issue Credentials
+            <span>👤</span> Add User Account
           </h3>
           <p class="adm-prov-subtitle">
-            Enter core profile details and role assignment. A secure temporary password is automatically generated.
+            Create a staff account and assign an approved role. A secure temporary password is automatically generated.
           </p>
         </div>
         <button type="button" class="adm-prov-close-btn" onclick="App.closeModal()" title="Close dialog">✕</button>
@@ -1193,36 +1197,36 @@ const AdminView = {
         <form id="create-user-form" onsubmit="AdminView.handleCreateUserSubmit(event)">
           
           <!-- ==================================================================
-               BOX 1: 1 ROLE & CORE IDENTITY
+               BOX 1: 1 ROLE & PERSONAL DETAILS
                ================================================================== -->
           <div class="adm-prov-card">
             <div class="adm-prov-card-header">
               <div class="adm-prov-header-tag">
                 <span class="adm-prov-num">1</span>
-                <span class="adm-prov-sec-title">Role &amp; Core Identity</span>
+                <span class="adm-prov-sec-title">Personal &amp; Contact Details</span>
               </div>
-              <span id="cu-role-badge" class="adm-prov-badge-role">LAWYER (ADVOCATE)</span>
+              <span id="cu-role-badge" class="adm-prov-badge-role">LAWYER</span>
             </div>
 
             <!-- Row 1: Role & Full Name -->
             <div class="adm-prov-grid-2" style="margin-bottom: 0.85rem;">
               <div class="adm-prov-group">
-                <label class="adm-prov-label required">Assigned System Role</label>
+                <label class="adm-prov-label required">Assigned Role</label>
                 <select id="cu-role" class="adm-prov-select" required onchange="AdminView.handleProvisionRoleChange(this.value)">
-                  <option value="Lawyer" selected>Lawyer (Litigation Associate)</option>
-                  <option value="Senior Lawyer">Senior Lawyer (Partner / Supervising Counsel)</option>
-                  <option value="Legal Clerk">Legal Clerk (Court Registry &amp; Docket)</option>
-                  <option value="Administrator">Administrator (System Governance)</option>
+                  <option value="Lawyer" selected>Lawyer</option>
+                  <option value="Senior Lawyer">Senior Lawyer</option>
+                  <option value="Legal Clerk">Legal Clerk</option>
+                  <option value="Administrator">Administrator</option>
                 </select>
               </div>
 
               <div class="adm-prov-group">
-                <label class="adm-prov-label required">Full Legal Name</label>
+                <label class="adm-prov-label required">Full Name</label>
                 <input type="text" id="cu-name" class="adm-prov-input" placeholder="e.g. Adv. Grace Mdee" required oninput="AdminView.handleProvisionNameInput(this.value)">
               </div>
             </div>
 
-            <!-- Row 2: Staff ID, Username, Official Email + Auto, Contact Phone -->
+            <!-- Row 2: Staff ID, Username, Official Email, Contact Phone -->
             <div class="adm-prov-grid-4">
               <div class="adm-prov-group">
                 <label class="adm-prov-label required">Staff ID</label>
@@ -1250,13 +1254,13 @@ const AdminView = {
           </div>
 
           <!-- ==================================================================
-               BOX 2: 2 ROLE-SPECIFIC DETAILS
+               BOX 2: WORK DETAILS
                ================================================================== -->
           <div class="adm-prov-card adm-prov-card-warm">
             <div class="adm-prov-card-header">
               <div class="adm-prov-header-tag">
                 <span class="adm-prov-num" style="background:#B45309;">2</span>
-                <span class="adm-prov-sec-title" style="color: #92400E;">Role-Specific Details</span>
+                <span class="adm-prov-sec-title" style="color: #92400E;">Work Details</span>
               </div>
               <span id="cu-role-spec-tag" class="adm-prov-mini-badge">TLS ACCREDITED</span>
             </div>
@@ -1267,13 +1271,13 @@ const AdminView = {
           </div>
 
           <!-- ==================================================================
-               BOX 3: 3 TEMPORARY PASSWORD & ACCESS STATUS
+               BOX 3: TEMPORARY PASSWORD & LOGIN REQUIREMENTS
                ================================================================== -->
           <div class="adm-prov-card adm-prov-card-green">
             <div class="adm-prov-card-header">
               <div class="adm-prov-header-tag">
                 <span class="adm-prov-num" style="background:#059669;">3</span>
-                <span class="adm-prov-sec-title" style="color: #166534;">Temporary Password &amp; Access Status</span>
+                <span class="adm-prov-sec-title" style="color: #166534;">Login Details &amp; Password</span>
               </div>
               <span class="adm-prov-badge-reset">FIRST_LOGIN_RESET</span>
             </div>
@@ -1291,41 +1295,57 @@ const AdminView = {
               </div>
             </div>
 
-            <div class="adm-prov-pwd-footer">
-              <span class="adm-pill-single-use">🔒 SINGLE-USE</span>
-              <span>User must change this password upon first login.</span>
+            <div class="adm-prov-pwd-footer" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+              <div>
+                <span class="adm-pill-single-use">🔒 EXPIRES IN 24 HOURS</span>
+                <span>Must change password on first login.</span>
+              </div>
+              <span style="font-size: 0.75rem; color: #059669; font-weight: 700;">✓ Force reset on first login enabled</span>
             </div>
           </div>
 
           <!-- ==================================================================
-               BOX 4: CREDENTIAL DELIVERY SUMMARY
+               BOX 4: INITIAL CASE ASSIGNMENT (OPTIONAL)
                ================================================================== -->
-          <div class="adm-prov-card adm-prov-card-summary">
+          <div class="adm-prov-card" style="border-left: 4px solid #3B82F6;">
             <div class="adm-prov-card-header">
               <div class="adm-prov-header-tag">
-                <span style="font-size: 1rem;">🔐</span>
-                <span class="adm-prov-sec-title" style="color: #78350F;">Credential Delivery Summary</span>
+                <span class="adm-prov-num" style="background:#2563EB;">4</span>
+                <span class="adm-prov-sec-title" style="color: #1E40AF;">Initial Case Assignment (Optional)</span>
               </div>
-              <span class="adm-prov-badge-slip">GENERATED ONE-TIME SLIP ON SUBMISSION</span>
+              <label style="font-size: 0.8rem; font-weight: 700; color: #1E40AF; display: flex; align-items: center; gap: 0.4rem; cursor: pointer; margin: 0;">
+                <input type="checkbox" id="cu-assign-case-toggle" onchange="AdminView.toggleProvisionCaseAssignment(this.checked)"> Assign case now
+              </label>
             </div>
 
-            <div class="adm-prov-summary-grid">
-              <!-- Summary Card 1: Lawyer No / Staff ID -->
-              <div class="adm-prov-sum-card accent-orange">
-                <div class="adm-prov-sum-label" id="sum-lbl-id">1. LAWYER NO / STAFF ID</div>
-                <div id="sum-col-id" class="adm-prov-sum-val" style="color: #0F172A;">${autoRoll}</div>
-              </div>
+            <div id="cu-assign-case-fields" style="display: none; padding-top: 0.75rem;">
+              <div class="adm-prov-grid-3">
+                <div class="adm-prov-group">
+                  <label class="adm-prov-label">Select Case</label>
+                  <select id="cu-case-id" class="adm-prov-select">
+                    ${(SLCMS_STATE.cases || []).map(c => `<option value="${c.id}">${c.caseNumber} - ${c.title}</option>`).join('')}
+                  </select>
+                </div>
 
-              <!-- Summary Card 2: Official Email -->
-              <div class="adm-prov-sum-card accent-blue">
-                <div class="adm-prov-sum-label">2. OFFICIAL EMAIL</div>
-                <div id="sum-col-email" class="adm-prov-sum-val" style="color: #1D4ED8;">${defaultEmail}</div>
-              </div>
+                <div class="adm-prov-group">
+                  <label class="adm-prov-label">Responsibility</label>
+                  <select id="cu-case-responsibility" class="adm-prov-select">
+                    <option value="Lead Lawyer">Lead Lawyer</option>
+                    <option value="Supporting Lawyer" selected>Supporting Lawyer</option>
+                    <option value="Legal Clerk">Legal Clerk</option>
+                    <option value="Supervisor">Supervisor</option>
+                  </select>
+                </div>
 
-              <!-- Summary Card 3: Temp Password -->
-              <div class="adm-prov-sum-card accent-green">
-                <div class="adm-prov-sum-label">3. TEMP PASSWORD</div>
-                <div id="sum-col-pass" class="adm-prov-sum-val" style="color: #059669;">${autoTempPass}</div>
+                <div class="adm-prov-group">
+                  <label class="adm-prov-label">Access Level</label>
+                  <select id="cu-case-access" class="adm-prov-select">
+                    <option value="View and Edit" selected>View and Edit</option>
+                    <option value="View Only">View Only</option>
+                    <option value="Upload Documents">Upload Documents</option>
+                    <option value="Administrative Entry">Administrative Entry</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -1338,7 +1358,7 @@ const AdminView = {
               Cancel
             </button>
             <button type="submit" class="btn btn-gold" style="font-weight: 800; font-size: 0.92rem; padding: 0.7rem 1.4rem; box-shadow: 0 4px 14px rgba(200, 155, 60, 0.35);">
-              🔐 Provision User &amp; Issue Credentials
+              Create User
             </button>
           </div>
         </form>
@@ -1402,9 +1422,9 @@ const AdminView = {
           <div class="adm-prov-group">
             <label class="adm-prov-label required">Supervising Counsel</label>
             <select id="cu-department" class="adm-prov-select">
-              <option value="Adv. Julian Mercer (Senior Lawyer)">Adv. Julian Mercer (Senior Lawyer)</option>
-              <option value="Adv. Eleanor Vance (Managing Partner)">Adv. Eleanor Vance (Managing Partner)</option>
-              <option value="General Litigation Pool">General Litigation Pool</option>
+              ${(SLCMS_STATE.users || []).filter(u => u.role === 'Senior Lawyer').map(u => `<option value="${u.name} (Senior Lawyer)">${u.name} (Senior Lawyer)</option>`).join('')}
+              <option value="Senior Lawyer Pool" selected>Senior Lawyer Pool</option>
+              <option value="General Litigation Registry">General Litigation Registry</option>
             </select>
           </div>
         </div>
@@ -1447,22 +1467,28 @@ const AdminView = {
     const specTag = document.getElementById('cu-role-spec-tag');
     const wrap = document.getElementById('cu-role-specific-details-wrap');
     const sumLblId = document.getElementById('sum-lbl-id');
+    const staffIdInput = document.getElementById('cu-staff-id');
+
+    // Auto-update Staff ID based on role
+    if (staffIdInput && SLCMS_STATE.generateStaffId) {
+      staffIdInput.value = SLCMS_STATE.generateStaffId(role);
+    }
 
     if (role === 'Senior Lawyer') {
-      if (badge) { badge.innerText = 'SENIOR LAWYER (SUPERVISION)'; badge.style.background = '#DBEAFE'; badge.style.color = '#1D4ED8'; }
+      if (badge) { badge.innerText = 'SENIOR LAWYER'; badge.style.background = '#DBEAFE'; badge.style.color = '#1D4ED8'; }
       if (specTag) specTag.innerText = 'TLS ACCREDITED';
       if (sumLblId) sumLblId.innerText = '1. LAWYER NO / STAFF ID';
     } else if (role === 'Lawyer') {
-      if (badge) { badge.innerText = 'LAWYER (ADVOCATE)'; badge.style.background = '#EFF6FF'; badge.style.color = '#1D4ED8'; }
+      if (badge) { badge.innerText = 'LAWYER'; badge.style.background = '#EFF6FF'; badge.style.color = '#1D4ED8'; }
       if (specTag) specTag.innerText = 'TLS ACCREDITED';
       if (sumLblId) sumLblId.innerText = '1. LAWYER NO / STAFF ID';
     } else if (role === 'Legal Clerk') {
-      if (badge) { badge.innerText = 'LEGAL CLERK (REGISTRY)'; badge.style.background = '#D1FAE5'; badge.style.color = '#065F46'; }
+      if (badge) { badge.innerText = 'LEGAL CLERK'; badge.style.background = '#D1FAE5'; badge.style.color = '#065F46'; }
       if (specTag) specTag.innerText = 'REGISTRY CLERK';
       if (sumLblId) sumLblId.innerText = '1. CLERK NO / STAFF ID';
     } else if (role === 'Administrator') {
-      if (badge) { badge.innerText = 'ADMINISTRATOR (GOVERNANCE)'; badge.style.background = '#FEF3C7'; badge.style.color = '#92400E'; }
-      if (specTag) specTag.innerText = 'SEC GOVERNANCE';
+      if (badge) { badge.innerText = 'ADMINISTRATOR'; badge.style.background = '#FEF3C7'; badge.style.color = '#92400E'; }
+      if (specTag) specTag.innerText = 'SYSTEM GOV';
       if (sumLblId) sumLblId.innerText = '1. ADMIN BADGE / STAFF ID';
     }
 
@@ -1471,6 +1497,11 @@ const AdminView = {
       wrap.innerHTML = this.renderProvisionRoleFields(role, autoRoll);
     }
     this.syncProvisionSummary();
+  },
+
+  toggleProvisionCaseAssignment(checked) {
+    const el = document.getElementById('cu-assign-case-fields');
+    if (el) el.style.display = checked ? 'block' : 'none';
   },
 
   handleProvisionNameInput(name) {
@@ -1618,6 +1649,13 @@ const AdminView = {
       supervisor: role === 'Legal Clerk' ? department : 'Managing Partner'
     };
 
+    const assignCaseNow = document.getElementById('cu-assign-case-toggle')?.checked;
+    if (assignCaseNow) {
+      payload.caseId = document.getElementById('cu-case-id')?.value;
+      payload.assignmentRole = document.getElementById('cu-case-responsibility')?.value || 'Supporting Lawyer';
+      payload.accessLevel = document.getElementById('cu-case-access')?.value || 'View and Edit';
+    }
+
     const res = SLCMS_STATE.createAdminUser(payload);
     if (!res.success) {
       App.showToast(res.message, 'error');
@@ -1625,8 +1663,229 @@ const AdminView = {
     }
 
     App.closeModal();
-    this.openTemporaryCredentialsModal(res.user, res.temporaryPassword);
-    this.switchTab('users');
+
+    if (!assignCaseNow) {
+      this.promptPostCreationCaseAssignment(res.user, res.temporaryPassword);
+    } else {
+      this.openTemporaryCredentialsModal(res.user, res.temporaryPassword);
+      this.switchTab('users');
+    }
+  },
+
+  promptPostCreationCaseAssignment(user, tempPassword) {
+    App.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+        <h3 class="modal-title" style="color: #FFFFFF; display: flex; align-items: center; gap: 0.5rem;">
+          <span>✅</span> User Created Successfully
+        </h3>
+        <button class="btn btn-ghost btn-sm" onclick="AdminView.finishUserCreation('${user.id}', '${tempPassword}')" style="color: #FFFFFF;">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem; text-align: left;">
+        <div style="font-size: 1rem; color: #0F172A; margin-bottom: 1rem;">
+          Account for <strong>${user.name}</strong> (<code style="color: #B45309; font-weight: 700;">${user.staffId}</code>) was provisioned successfully.
+        </div>
+        <div class="alert alert-gold" style="margin-bottom: 1.5rem;">
+          <strong>Case Assignment:</strong> Would you like to assign a case to this staff member now?
+        </div>
+        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;">
+          <button class="btn btn-secondary" onclick="AdminView.finishUserCreation('${user.id}', '${tempPassword}')" style="font-weight: 700; padding: 0.65rem 1.25rem;">
+            Finish
+          </button>
+          <button class="btn btn-gold" onclick="AdminView.openAssignCaseModal('${user.id}', '${tempPassword}')" style="font-weight: 800; padding: 0.65rem 1.4rem;">
+            Assign Case
+          </button>
+        </div>
+      </div>
+    `, 'modal-md');
+  },
+
+  finishUserCreation(userId, tempPassword) {
+    App.closeModal();
+    const user = SLCMS_STATE.users.find(u => u.id === userId);
+    if (user && tempPassword) {
+      this.openTemporaryCredentialsModal(user, tempPassword);
+    } else {
+      App.refreshCurrentView();
+    }
+  },
+
+  openAssignCaseModal(userId, tempPassword = null) {
+    const user = SLCMS_STATE.users.find(u => u.id === userId);
+    if (!user) return;
+    const cases = SLCMS_STATE.cases || [];
+
+    App.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+        <h3 class="modal-title" style="color: #FFFFFF; display: flex; align-items: center; gap: 0.5rem;">
+          <span>⚖️</span> Assign Case: ${user.name}
+        </h3>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem; text-align: left;">
+        <form onsubmit="AdminView.handleAssignCaseSubmit(event, '${user.id}', '${tempPassword || ''}')">
+          <div class="form-group mb-3">
+            <label class="form-label" style="font-weight: 700;">Select Case</label>
+            <select id="asgn-case-id" class="form-control form-select" required>
+              ${cases.map(c => `<option value="${c.id}">${c.caseNumber} - ${c.title}</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="form-group mb-3">
+            <label class="form-label" style="font-weight: 700;">Assignment Responsibility</label>
+            <select id="asgn-responsibility" class="form-control form-select" required>
+              <option value="Lead Lawyer">Lead Lawyer</option>
+              <option value="Supporting Lawyer" selected>Supporting Lawyer</option>
+              <option value="Legal Clerk">Legal Clerk</option>
+              <option value="Supervisor">Supervisor</option>
+            </select>
+          </div>
+
+          <div class="form-group mb-3">
+            <label class="form-label" style="font-weight: 700;">Access Level</label>
+            <select id="asgn-access-level" class="form-control form-select" required>
+              <option value="View and Edit" selected>View and Edit</option>
+              <option value="View Only">View Only</option>
+              <option value="Upload Documents">Upload Documents</option>
+              <option value="Administrative Entry">Administrative Entry</option>
+            </select>
+          </div>
+
+          <div class="form-group mb-4">
+            <label class="form-label" style="font-weight: 700;">Assignment Date</label>
+            <input type="date" id="asgn-date" class="form-control" value="${new Date().toISOString().substring(0, 10)}" required>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;">
+            <button type="button" class="btn btn-secondary" onclick="App.closeModal()" style="font-weight: 700;">Cancel</button>
+            <button type="submit" class="btn btn-gold" style="font-weight: 800;">Confirm Case Assignment</button>
+          </div>
+        </form>
+      </div>
+    `, 'modal-md');
+  },
+
+  handleAssignCaseSubmit(e, userId, tempPassword) {
+    e.preventDefault();
+    const caseId = document.getElementById('asgn-case-id')?.value;
+    const resp = document.getElementById('asgn-responsibility')?.value;
+    const access = document.getElementById('asgn-access-level')?.value;
+
+    const res = SLCMS_STATE.assignCaseToUser(userId, caseId, resp, access);
+    if (res.success) {
+      App.showToast('Case assigned successfully!', 'success');
+      App.closeModal();
+      if (tempPassword) {
+        const user = SLCMS_STATE.users.find(u => u.id === userId);
+        if (user) this.openTemporaryCredentialsModal(user, tempPassword);
+      } else {
+        App.refreshCurrentView();
+      }
+    } else {
+      App.showToast(res.message || 'Error assigning case', 'error');
+    }
+  },
+
+  toggleUserActionMenu(e, userId) {
+    if (e) e.stopPropagation();
+    const menu = document.getElementById(`user-menu-${userId}`);
+    if (!menu) return;
+    const isShowing = menu.style.display === 'block';
+    document.querySelectorAll('.adm-user-dropdown-menu').forEach(m => m.style.display = 'none');
+    if (!isShowing) {
+      menu.style.display = 'block';
+    }
+  },
+
+  openIssueTempPasswordModal(userId) {
+    const user = SLCMS_STATE.users.find(u => u.id === userId);
+    if (!user) return;
+    if (confirm(`Issue a new temporary password for ${user.name}? This will invalidate their previous password and require password reset upon next login.`)) {
+      const res = SLCMS_STATE.generateNewTemporaryPassword(user.id);
+      if (res.success) {
+        this.openTemporaryCredentialsModal(res.user, res.temporaryPassword);
+      } else {
+        App.showToast(res.message || 'Error issuing temporary password', 'error');
+      }
+    }
+  },
+
+  openForcePasswordResetModal(userId) {
+    const user = SLCMS_STATE.users.find(u => u.id === userId);
+    if (!user) return;
+    if (confirm(`Force password reset for ${user.name}? Their status will change to FIRST_LOGIN_RESET.`)) {
+      const res = SLCMS_STATE.unlockAndForcePasswordReset(user.id, 'Administrator forced password reset');
+      if (res.success) {
+        App.showToast(`Password reset forced for ${user.name}. Status is now First Login Reset.`, 'success');
+        App.refreshCurrentView();
+      } else {
+        App.showToast(res.message, 'error');
+      }
+    }
+  },
+
+  openSuspendUserModal(userId) {
+    const user = SLCMS_STATE.users.find(u => u.id === userId);
+    if (!user) return;
+    const reason = prompt(`Enter reason for suspending ${user.name}:`, 'Administrative review');
+    if (reason !== null && reason.trim()) {
+      user.status = 'SUSPENDED';
+      user.accountStatus = 'SUSPENDED';
+      user.account_status = 'SUSPENDED';
+      SLCMS_STATE.persistUsers();
+      SLCMS_STATE.addAuditLog('Account Suspended', 'User Accounts', `Account ${user.staffId} suspended. Reason: ${reason}`);
+      App.showToast(`Account for ${user.name} suspended.`, 'warning');
+      App.refreshCurrentView();
+    }
+  },
+
+  openDeactivateUserModal(userId) {
+    const user = SLCMS_STATE.users.find(u => u.id === userId);
+    if (!user) return;
+    const reason = prompt(`Are you sure you want to deactivate ${user.name}? They will no longer be permitted to log in.\nEnter reason:`, 'Departure from organization');
+    if (reason !== null && reason.trim()) {
+      user.status = 'DEACTIVATED';
+      user.accountStatus = 'DEACTIVATED';
+      user.account_status = 'DEACTIVATED';
+      SLCMS_STATE.persistUsers();
+      SLCMS_STATE.addAuditLog('Account Deactivated', 'User Accounts', `Account ${user.staffId} deactivated. Reason: ${reason}`);
+      App.showToast(`Account for ${user.name} deactivated.`, 'error');
+      App.refreshCurrentView();
+    }
+  },
+
+  reactivateUser(userId) {
+    const user = SLCMS_STATE.users.find(u => u.id === userId);
+    if (!user) return;
+    if (confirm(`Reactivate account for ${user.name}?`)) {
+      user.status = 'ACTIVE';
+      user.accountStatus = 'ACTIVE';
+      user.account_status = 'ACTIVE';
+      SLCMS_STATE.persistUsers();
+      SLCMS_STATE.addAuditLog('Account Reactivated', 'User Accounts', `Account ${user.staffId} reactivated.`);
+      App.showToast(`Account for ${user.name} reactivated.`, 'success');
+      App.refreshCurrentView();
+    }
+  },
+
+  async loadUsers() {
+    try {
+      const response = await fetch("/api/admin/users", { credentials: "include" });
+      if (response.ok) {
+        const users = await response.json();
+        if (Array.isArray(users) && users.length > 0) {
+          users.forEach(u => {
+            const idx = SLCMS_STATE.users.findIndex(su => su.id === u.id || (su.staffId && su.staffId === u.staffId));
+            if (idx >= 0) {
+              SLCMS_STATE.users[idx] = Object.assign({}, SLCMS_STATE.users[idx], u);
+            } else {
+              SLCMS_STATE.users.push(u);
+            }
+          });
+        }
+      }
+    } catch (err) {
+      // Standalone mode
+    }
   },
 
   // One-time Secure Credentials Distribution Card (Section 5)
@@ -1922,8 +2181,8 @@ const AdminView = {
             <div class="form-group">
               <label class="form-label">Supervising Senior Lawyer</label>
               <select id="ac-supervisor" class="form-control">
-                <option value="Julian Mercer, Adv.">Julian Mercer, Adv. (Senior Lawyer)</option>
-                <option value="Eleanor Vance, Adv.">Eleanor Vance, Adv. (Managing Partner)</option>
+                ${(SLCMS_STATE.users || []).filter(u => u.role === 'Senior Lawyer').map(u => `<option value="${u.name}">${u.name} (Senior Lawyer)</option>`).join('')}
+                <option value="Senior Litigation Supervising Lawyer" selected>Senior Litigation Supervising Lawyer</option>
               </select>
             </div>
             <div class="form-group">
@@ -2268,7 +2527,7 @@ const AdminView = {
         ${this.mobileLogsView === 'cards' ? `
           <div class="adm-sec-mobile-cards">
             ${logs.length === 0 ? `
-              <div style="text-align: center; padding: 2.5rem 1rem; background: #FFFFFF; border-radius: 14px; border: 1px solid #E2E8F0;">
+              <div class="adm-sec-empty-state" style="text-align: center; padding: 2.5rem 1rem; border-radius: 14px;">
                 <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔍</div>
                 <div style="font-weight: 700; color: #64748B;">No security activity logs found.</div>
                 <button class="btn btn-secondary btn-sm" onclick="AdminView.clearLogFilters()" style="margin-top: 0.75rem;">Reset Filters</button>
@@ -2667,7 +2926,7 @@ const AdminView = {
 
               <div class="adm-settings-form-group">
                 <label class="adm-settings-label required">System name: SLCMS</label>
-                <input type="text" id="sys-org-system-name" class="adm-settings-input" value="${s.systemName}" style="font-weight: 800; background: #F8FAFC;" readonly>
+                <input type="text" id="sys-org-system-name" class="adm-settings-input adm-settings-input-readonly" value="${s.systemName}" style="font-weight: 800;" readonly>
                 <span class="adm-settings-hint">System name: SLCMS (Smart Legal Case Management System)</span>
               </div>
             </div>
@@ -3039,7 +3298,7 @@ const AdminView = {
                 <p style="margin: 0 0 0.5rem 0; line-height: 1.5;">
                   <strong>Cases, users, clients, documents and prepared judgments can be recovered if data becomes damaged or accidentally lost.</strong>
                 </p>
-                <div style="background: #FFFBEB; border-left: 3px solid #D97706; padding: 0.45rem 0.75rem; border-radius: 4px; font-size: 0.78rem; color: #92400E;">
+                <div class="adm-restoration-notice" style="padding: 0.45rem 0.75rem; border-radius: 4px; font-size: 0.78rem;">
                   ⚠️ <strong>Restoration Notice:</strong> Restoration must require confirmation because it can replace current data.
                 </div>
               </div>
@@ -3047,7 +3306,7 @@ const AdminView = {
           </div>
 
           <!-- Display: 5 Core Information Items Shown -->
-          <div class="adm-settings-backup-kpi-grid" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 14px; padding: 1.1rem 1.25rem; margin-bottom: 1.25rem;">
+          <div class="adm-settings-backup-kpi-grid" style="border-radius: 14px; padding: 1.1rem 1.25rem; margin-bottom: 1.25rem;">
             <div class="adm-settings-kpi-card" style="display: flex; flex-direction: column; gap: 0.25rem;">
               <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #64748B; letter-spacing: 0.04em;">Last Successful Backup</span>
               <span id="sys-backup-last-successful" style="font-size: 0.92rem; font-weight: 800; color: #059669; font-family: ui-monospace, monospace;">
@@ -3058,7 +3317,7 @@ const AdminView = {
 
             <div class="adm-settings-kpi-card" style="display: flex; flex-direction: column; gap: 0.25rem;">
               <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #64748B; letter-spacing: 0.04em;">Last Failed Backup</span>
-              <span id="sys-backup-last-failed" style="font-size: 0.92rem; font-weight: 800; color: #0F172A; font-family: ui-monospace, monospace;">
+              <span id="sys-backup-last-failed" class="adm-settings-kpi-val" style="font-size: 0.92rem; font-weight: 800; font-family: ui-monospace, monospace;">
                 ${s.lastFailedBackup || 'None'}
               </span>
               <span style="font-size: 0.72rem; color: #059669;">0 Failed Attempts (100% Reliable)</span>
@@ -3439,19 +3698,19 @@ const AdminView = {
         </div>
 
         <!-- 2. IMPACT & RESTORATION NOTICE BANNER -->
-        <div class="card" style="background: linear-gradient(135deg, rgba(16,42,67,0.03) 0%, rgba(200,155,60,0.05) 100%); border: 1.5px solid var(--color-gold); border-radius: var(--radius-md); padding: 1.15rem 1.35rem; margin-bottom: 1.35rem; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+        <div class="card adm-backup-guarantee-card">
           <div style="display: flex; align-items: flex-start; gap: 1rem;">
-            <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--color-gold-light); display: flex; align-items: center; justify-content: center; font-size: 1.25rem; color: var(--color-gold); flex-shrink: 0;">
+            <div class="adm-backup-guarantee-icon">
               🛡️
             </div>
             <div style="flex: 1;">
-              <div style="font-size: 0.95rem; font-weight: 700; color: var(--color-primary); margin-bottom: 0.35rem;">
+              <div class="adm-backup-guarantee-title">
                 System Impact &amp; Disaster Recovery Guarantee
               </div>
-              <p style="font-size: 0.88rem; color: #1E293B; line-height: 1.6; margin: 0 0 0.65rem 0;">
+              <p class="adm-backup-guarantee-text">
                 <strong>Cases, users, clients, documents and prepared judgments can be recovered if data becomes damaged or accidentally lost.</strong>
               </p>
-              <div style="background: #FFFBEB; border-left: 3.5px solid #D97706; padding: 0.55rem 0.85rem; border-radius: 4px; font-size: 0.8rem; color: #92400E; display: flex; align-items: center; gap: 0.5rem;">
+              <div class="adm-restoration-notice">
                 <span style="font-size: 1rem;">⚠️</span>
                 <span><strong>Restoration Notice:</strong> Restoration must require confirmation because it can replace current data.</span>
               </div>
@@ -3460,68 +3719,68 @@ const AdminView = {
         </div>
 
         <!-- 3. INFORMATION SHOWN: 5 CORE STATUS TELEMETRY CARDS -->
-        <div class="grid grid-cols-5 gap-3" style="margin-bottom: 1.5rem;">
+        <div class="grid grid-cols-5 gap-3 adm-backup-telemetry-grid" style="margin-bottom: 1.5rem;">
           <!-- Info 1: Last successful backup -->
-          <div class="card" style="padding: 1rem; border-left: 4px solid #10B981; box-shadow: var(--shadow-xs);">
-            <div style="font-size: 0.68rem; text-transform: uppercase; font-weight: 800; color: #64748B; letter-spacing: 0.04em; margin-bottom: 0.35rem;">
+          <div class="card adm-backup-status-card adm-status-card-green">
+            <div class="adm-backup-status-label">
               Last Successful Backup
             </div>
-            <div style="font-size: 0.88rem; font-weight: 800; color: #0F172A; font-family: var(--font-mono); line-height: 1.25; margin-bottom: 0.25rem;">
+            <div class="adm-backup-status-val">
               ${lastSuccessfulBackup}
             </div>
-            <span class="badge badge-active" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">
+            <span class="badge badge-active adm-status-badge-green">
               ✓ Verified Healthy
             </span>
           </div>
 
           <!-- Info 2: Last failed backup -->
-          <div class="card" style="padding: 1rem; border-left: 4px solid #3B82F6; box-shadow: var(--shadow-xs);">
-            <div style="font-size: 0.68rem; text-transform: uppercase; font-weight: 800; color: #64748B; letter-spacing: 0.04em; margin-bottom: 0.35rem;">
+          <div class="card adm-backup-status-card adm-status-card-blue">
+            <div class="adm-backup-status-label">
               Last Failed Backup
             </div>
-            <div style="font-size: 0.88rem; font-weight: 800; color: #0F172A; font-family: var(--font-mono); line-height: 1.25; margin-bottom: 0.25rem;">
+            <div class="adm-backup-status-val">
               ${lastFailedBackup}
             </div>
-            <span class="badge" style="background: #EFF6FF; color: #1D4ED8; font-size: 0.65rem; padding: 0.1rem 0.4rem;">
+            <span class="badge adm-status-badge-blue">
               0 Failed Attempts (100% Reliable)
             </span>
           </div>
 
           <!-- Info 3: Backup size -->
-          <div class="card" style="padding: 1rem; border-left: 4px solid #8B5CF6; box-shadow: var(--shadow-xs);">
-            <div style="font-size: 0.68rem; text-transform: uppercase; font-weight: 800; color: #64748B; letter-spacing: 0.04em; margin-bottom: 0.35rem;">
+          <div class="card adm-backup-status-card adm-status-card-purple">
+            <div class="adm-backup-status-label">
               Backup Size
             </div>
-            <div style="font-size: 1.1rem; font-weight: 800; color: #0F172A; font-family: var(--font-mono); line-height: 1.25; margin-bottom: 0.25rem;">
+            <div class="adm-backup-status-val" style="font-size: 1.1rem;">
               ${backupSize}
             </div>
-            <span class="badge" style="background: #F3E8FF; color: #7E22CE; font-size: 0.65rem; padding: 0.1rem 0.4rem;">
+            <span class="badge adm-status-badge-purple">
               Compressed JSON Snapshot
             </span>
           </div>
 
           <!-- Info 4: Backup date -->
-          <div class="card" style="padding: 1rem; border-left: 4px solid var(--color-gold); box-shadow: var(--shadow-xs);">
-            <div style="font-size: 0.68rem; text-transform: uppercase; font-weight: 800; color: #64748B; letter-spacing: 0.04em; margin-bottom: 0.35rem;">
+          <div class="card adm-backup-status-card adm-status-card-gold">
+            <div class="adm-backup-status-label">
               Backup Date
             </div>
-            <div style="font-size: 0.95rem; font-weight: 800; color: #0F172A; font-family: var(--font-mono); line-height: 1.25; margin-bottom: 0.25rem;">
+            <div class="adm-backup-status-val" style="font-size: 0.95rem;">
               ${backupDate}
             </div>
-            <span class="badge" style="background: rgba(200,155,60,0.12); color: #B45309; font-size: 0.65rem; padding: 0.1rem 0.4rem;">
+            <span class="badge adm-status-badge-gold">
               Current Active Point
             </span>
           </div>
 
           <!-- Info 5: Next scheduled backup -->
-          <div class="card" style="padding: 1rem; border-left: 4px solid #0B1F33; box-shadow: var(--shadow-xs);">
-            <div style="font-size: 0.68rem; text-transform: uppercase; font-weight: 800; color: #64748B; letter-spacing: 0.04em; margin-bottom: 0.35rem;">
+          <div class="card adm-backup-status-card adm-status-card-dark">
+            <div class="adm-backup-status-label">
               Next Scheduled Backup
             </div>
-            <div style="font-size: 0.88rem; font-weight: 800; color: #0F172A; font-family: var(--font-mono); line-height: 1.25; margin-bottom: 0.25rem;">
+            <div class="adm-backup-status-val">
               ${nextScheduledBackup}
             </div>
-            <span class="badge" style="background: #F1F5F9; color: #475569; font-size: 0.65rem; padding: 0.1rem 0.4rem;">
+            <span class="badge adm-status-badge-muted">
               Scheduled Nightly Cron
             </span>
           </div>
@@ -3816,52 +4075,102 @@ const AdminView = {
     const status = (user.accountStatus || user.status || 'ACTIVE').toUpperCase();
 
     App.openModal(`
-      <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+      <div class="modal-header user-profile-modal-header">
         <div class="flex items-center gap-3">
           <div class="avatar avatar-md avatar-ring-gold">
             ${user.name.substring(0, 2).toUpperCase()}
           </div>
           <div>
-            <h3 class="modal-title" style="color: #FFFFFF; font-size: 1.15rem; margin: 0;">${user.name}</h3>
-            <div style="font-size: 0.75rem; color: #CBD5E1;">
+            <h3 class="modal-title user-profile-modal-title">${user.name}</h3>
+            <div class="user-profile-header-sub">
               Staff ID: <strong style="color: var(--color-gold); font-family: monospace;">${user.staffId || user.employeeId}</strong> • ${user.role}
             </div>
           </div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+        <button class="user-profile-close-btn" onclick="App.closeModal()" title="Close">✕</button>
       </div>
 
-      <div class="modal-body" style="padding: 1.25rem;">
+      <!-- ADMINISTRATOR ACTION & ACCESS BAR -->
+      <div class="user-profile-actions-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; padding: 0.75rem 1.25rem; background: #F8FAFC; border-bottom: 1px solid #E2E8F0;">
+        <div style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.8rem;">
+          <span style="font-weight: 700; color: #475569;">System Access:</span>
+          ${(user.lastLogin && !user.lastLogin.toLowerCase().includes('never')) ?
+            `<span class="adm-status-pill-active"><span class="adm-dot-green"></span> Accessed (${user.lastLogin})</span>` :
+            `<span class="adm-status-pill-pending">Never Accessed</span>`
+          }
+          <span style="font-size: 0.76rem; color: #64748B;">&bull; Status: ${this.renderStatusBadge(status)}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+          <button class="btn btn-sm btn-primary" onclick="AdminView.openEditUserModal('${user.id}')" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">
+            ✏️ Edit Details
+          </button>
+          <button class="btn btn-sm btn-gold" onclick="AdminView.openChangePasswordModal('${user.id}')" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">
+            🔑 Password
+          </button>
+          ${status === 'LOCKED' ? `
+            <button class="btn btn-sm btn-secondary" onclick="AdminView.openUnlockUserModal('${user.id}')" style="font-size: 0.78rem; padding: 0.35rem 0.75rem; color: #059669;">🔓 Unlock</button>
+          ` : `
+            <button class="btn btn-sm btn-secondary" onclick="AdminView.openLockUserModal('${user.id}')" style="font-size: 0.78rem; padding: 0.35rem 0.75rem; color: #DC2626;">🔒 Lock</button>
+          `}
+          <button class="btn btn-sm btn-danger" onclick="AdminView.openRemoveUserModal('${user.id}')" style="font-size: 0.78rem; padding: 0.35rem 0.75rem; background: #DC2626; color: #FFFFFF;">
+            🗑️ Remove
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-body user-profile-modal-body">
         <!-- 5 TABS NAVIGATION -->
-        <div class="tabs-nav" style="margin-bottom: 1rem;">
-          <button class="tab-btn ${tab === 'overview' ? 'active' : ''}" onclick="AdminView.switchUserModalTab('${tab}', 'overview')">
+        <div class="tabs-nav user-profile-tabs-nav">
+          <button class="tab-btn ${tab === 'overview' ? 'active' : ''}" data-tab="overview" onclick="AdminView.switchUserModalTab('${tab}', 'overview')">
             1. Overview
           </button>
-          <button class="tab-btn ${tab === 'assignments' ? 'active' : ''}" onclick="AdminView.switchUserModalTab('${tab}', 'assignments')">
+          <button class="tab-btn ${tab === 'assignments' ? 'active' : ''}" data-tab="assignments" onclick="AdminView.switchUserModalTab('${tab}', 'assignments')">
             2. Case Assignments (${assignedCases.length})
           </button>
-          <button class="tab-btn ${tab === 'security' ? 'active' : ''}" onclick="AdminView.switchUserModalTab('${tab}', 'security')">
+          <button class="tab-btn ${tab === 'security' ? 'active' : ''}" data-tab="security" onclick="AdminView.switchUserModalTab('${tab}', 'security')">
             3. Security
           </button>
-          <button class="tab-btn ${tab === 'activity' ? 'active' : ''}" onclick="AdminView.switchUserModalTab('${tab}', 'activity')">
+          <button class="tab-btn ${tab === 'activity' ? 'active' : ''}" data-tab="activity" onclick="AdminView.switchUserModalTab('${tab}', 'activity')">
             4. Activity (${userLogs.length})
           </button>
-          <button class="tab-btn ${tab === 'administration' ? 'active' : ''}" onclick="AdminView.switchUserModalTab('${tab}', 'administration')">
+          <button class="tab-btn ${tab === 'administration' ? 'active' : ''}" data-tab="administration" onclick="AdminView.switchUserModalTab('${tab}', 'administration')">
             5. Administration
           </button>
         </div>
 
-        <!-- TAB CONTENT -->
-        <div id="user-profile-modal-tab-content">
+        <!-- TAB CONTENT CONTAINER (FIXED SCROLLABLE CONTAINER) -->
+        <div id="user-profile-modal-tab-content" class="user-profile-tab-content">
           ${this.renderUserModalContent(user, tab, assignedCases, userLogs, status)}
         </div>
       </div>
-    `, 'modal-lg');
+    `, 'modal-lg modal-user-profile');
   },
 
   switchUserModalTab(currentTab, targetTab) {
     const user = SLCMS_STATE.users.find(u => u.id === this.selectedUserId);
     if (!user) return;
+
+    // Smooth inline tab switch to maintain 100% stable modal box size without resizing or flickering
+    const contentEl = document.getElementById('user-profile-modal-tab-content');
+    const tabBtns = document.querySelectorAll('.user-profile-tabs-nav .tab-btn');
+    if (contentEl && tabBtns.length > 0) {
+      const assignedCases = (SLCMS_STATE.caseAssignments || []).filter(a => a.userId === user.id);
+      const userLogs = SLCMS_STATE.activityLogs.filter(l => l.user === user.name || (l.record && l.record.includes(user.email))).slice(0, 8);
+      const status = (user.accountStatus || user.status || 'ACTIVE').toUpperCase();
+
+      tabBtns.forEach(btn => {
+        if (btn.getAttribute('data-tab') === targetTab) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      contentEl.innerHTML = this.renderUserModalContent(user, targetTab, assignedCases, userLogs, status);
+      contentEl.scrollTop = 0;
+      return;
+    }
+
     this.openUserProfileModalTab(user, targetTab);
   },
 
@@ -3869,29 +4178,29 @@ const AdminView = {
     switch (tab) {
       case 'overview':
         return `
-          <div class="grid grid-cols-2 gap-3" style="font-size: 0.85rem;">
-            <div style="background: #F8FAFC; padding: 1rem; border-radius: 8px; border: 1px solid #E2E8F0;">
-              <div style="font-weight: 700; margin-bottom: 0.5rem; color: #1E293B;">Personnel Details</div>
-              <div style="margin-bottom: 0.35rem;"><strong>Full Legal Name:</strong> ${user.name}</div>
-              <div style="margin-bottom: 0.35rem;"><strong>Official Email:</strong> ${user.email}</div>
-              <div style="margin-bottom: 0.35rem;"><strong>Contact Phone:</strong> ${user.phone || 'N/A'}</div>
-              <div style="margin-bottom: 0.35rem;"><strong>Job Title:</strong> ${user.jobTitle || user.role}</div>
-              <div><strong>Department:</strong> ${user.department || 'General'}</div>
+          <div class="user-profile-grid">
+            <div class="user-profile-card">
+              <div class="user-profile-card-title">Personnel Details</div>
+              <div class="user-profile-field"><strong>Full Legal Name:</strong> <span>${user.name}</span></div>
+              <div class="user-profile-field"><strong>Official Email:</strong> <span>${user.email}</span></div>
+              <div class="user-profile-field"><strong>Contact Phone:</strong> <span>${user.phone || 'N/A'}</span></div>
+              <div class="user-profile-field"><strong>Job Title:</strong> <span>${user.jobTitle || user.role}</span></div>
+              <div class="user-profile-field"><strong>Department:</strong> <span>${user.department || 'General'}</span></div>
             </div>
 
-            <div style="background: #F8FAFC; padding: 1rem; border-radius: 8px; border: 1px solid #E2E8F0;">
-              <div style="font-weight: 700; margin-bottom: 0.5rem; color: #1E293B;">Professional Standing</div>
-              <div style="margin-bottom: 0.35rem;"><strong>Assigned Role:</strong> <span class="badge ${this.getRoleBadgeClass(user.role)}">${user.role}</span></div>
-              <div style="margin-bottom: 0.35rem;"><strong>Account Status:</strong> ${this.renderStatusBadge(status)}</div>
-              ${user.advocateNumber ? `<div style="margin-bottom: 0.35rem;"><strong>Advocate Roll No:</strong> <code>${user.advocateNumber}</code></div>` : ''}
-              ${user.practisingCertNo ? `<div style="margin-bottom: 0.35rem;"><strong>Practising Certificate:</strong> <code>${user.practisingCertNo}</code></div>` : ''}
-              <div><strong>Creation Date:</strong> ${user.createdAt || 'Aug 2026'}</div>
+            <div class="user-profile-card">
+              <div class="user-profile-card-title">Professional Standing</div>
+              <div class="user-profile-field"><strong>Assigned Role:</strong> <span class="badge ${this.getRoleBadgeClass(user.role)}">${user.role}</span></div>
+              <div class="user-profile-field"><strong>Account Status:</strong> ${this.renderStatusBadge(status)}</div>
+              ${user.advocateNumber ? `<div class="user-profile-field"><strong>Advocate Roll No:</strong> <code>${user.advocateNumber}</code></div>` : ''}
+              ${user.practisingCertNo ? `<div class="user-profile-field"><strong>Practising Certificate:</strong> <code>${user.practisingCertNo}</code></div>` : ''}
+              <div class="user-profile-field"><strong>Creation Date:</strong> <span>${user.createdAt || 'Aug 2026'}</span></div>
             </div>
           </div>
         `;
       case 'assignments':
         return `
-          <div class="table-container">
+          <div class="table-container user-profile-table-container">
             <table class="data-table">
               <thead>
                 <tr>
@@ -3905,36 +4214,36 @@ const AdminView = {
               <tbody>
                 ${assignedCases.length > 0 ? assignedCases.map(a => `
                   <tr>
-                    <td><strong>${a.caseTitle}</strong><br><small style="color: #64748B;">${a.caseNumber}</small></td>
+                    <td><strong>${a.caseTitle}</strong><br><small class="user-profile-muted-text">${a.caseNumber}</small></td>
                     <td>${a.assignmentRole}</td>
                     <td>${a.supervisingLawyer}</td>
                     <td><span class="badge ${a.accessLevel === 'Editing' ? 'badge-active' : 'badge-neutral'}">${a.accessLevel}</span></td>
                     <td>${a.endDate}</td>
                   </tr>
-                `).join('') : `<tr><td colspan="5" style="text-align: center; color: #64748B;">No matters assigned currently.</td></tr>`}
+                `).join('') : `<tr><td colspan="5" class="user-profile-empty-row">No matters assigned currently.</td></tr>`}
               </tbody>
             </table>
           </div>
         `;
       case 'security':
         return `
-          <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.85rem;">
-            <div class="flex items-center justify-between" style="padding: 0.6rem 0.8rem; background: #F8FAFC; border-radius: 6px;">
-              <span><strong>Last Login:</strong> ${user.lastLogin || 'Never'}</span>
-              <span><strong>Failed Password Attempts:</strong> ${user.failedAttempts || 0} / 5</span>
+          <div class="user-profile-stack" style="font-size: 0.85rem;">
+            <div class="user-profile-row">
+              <span><strong>Last Login:</strong> <span>${user.lastLogin || 'Never'}</span></span>
+              <span><strong>Failed Password Attempts:</strong> <span>${user.failedAttempts || 0} / 5</span></span>
             </div>
-            <div class="flex items-center justify-between" style="padding: 0.6rem 0.8rem; background: #F8FAFC; border-radius: 6px;">
-              <span><strong>Temporary Password Pending:</strong> ${user.mustChangePassword ? 'Yes (FIRST_LOGIN_RESET)' : 'No (Private Password Active)'}</span>
-              <span><strong>Lockout Expiry:</strong> ${user.lockedUntil ? new Date(user.lockedUntil).toLocaleTimeString() : 'None (Active)'}</span>
+            <div class="user-profile-row">
+              <span><strong>Temporary Password Pending:</strong> <span>${user.mustChangePassword ? 'Yes (FIRST_LOGIN_RESET)' : 'No (Private Password Active)'}</span></span>
+              <span><strong>Lockout Expiry:</strong> <span>${user.lockedUntil ? new Date(user.lockedUntil).toLocaleTimeString() : 'None (Active)'}</span></span>
             </div>
-            <div style="background: #FEF3C7; padding: 0.75rem; border-radius: 6px; font-size: 0.78rem; color: #92400E;">
+            <div class="user-profile-alert-info">
               🔒 <strong>Administrator Privacy Guarantee:</strong> The Administrator can confirm that a password was changed, who requested it, and the date/time, but must <strong>never</strong> be able to view the user's password or cryptographic hash.
             </div>
           </div>
         `;
       case 'activity':
         return `
-          <div class="table-container">
+          <div class="table-container user-profile-table-container">
             <table class="data-table">
               <thead>
                 <tr>
@@ -3949,59 +4258,89 @@ const AdminView = {
                   <tr>
                     <td><small style="font-family: monospace;">${l.timestamp}</small></td>
                     <td><strong>${l.action}</strong></td>
-                    <td><small style="color: #64748B;">${l.record}</small></td>
+                    <td><small class="user-profile-muted-text">${l.record}</small></td>
                     <td><span class="badge badge-active">${l.status}</span></td>
                   </tr>
-                `).join('') : `<tr><td colspan="4" style="text-align: center; color: #64748B;">No security logs recorded for this account.</td></tr>`}
+                `).join('') : `<tr><td colspan="4" class="user-profile-empty-row">No security logs recorded for this account.</td></tr>`}
               </tbody>
             </table>
           </div>
         `;
       case 'administration':
         return `
-          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-            <div class="flex items-center justify-between p-3" style="background: #F8FAFC; border-radius: 8px; border: 1px solid #E2E8F0;">
+          <div class="user-profile-stack">
+            <div class="user-profile-admin-card">
               <div>
-                <strong>Generate Temporary Password &amp; Force Reset</strong>
-                <div style="font-size: 0.75rem; color: #64748B;">Issues a new one-time temporary password and forces password replacement on next login.</div>
+                <strong class="user-profile-admin-title">Edit Profile Details &amp; Governance Role</strong>
+                <div class="user-profile-admin-sub">Change legal name, job title, role permissions, contact email, phone, advocate roll, or department.</div>
               </div>
-              <button class="btn btn-gold btn-sm" onclick="AdminView.handleRegenerateTempPass('${user.id}')">
+              <button class="btn btn-primary btn-sm" onclick="AdminView.openEditUserModal('${user.id}')">
+                Edit Details
+              </button>
+            </div>
+
+            <div class="user-profile-admin-card">
+              <div>
+                <strong class="user-profile-admin-title">Set New Password Directly</strong>
+                <div class="user-profile-admin-sub">Directly configure a new password or generate a high-entropy password for immediate login.</div>
+              </div>
+              <button class="btn btn-gold btn-sm" onclick="AdminView.openChangePasswordModal('${user.id}')">
+                Change Password
+              </button>
+            </div>
+
+            <div class="user-profile-admin-card">
+              <div>
+                <strong class="user-profile-admin-title">Generate Temporary Password &amp; Force Reset</strong>
+                <div class="user-profile-admin-sub">Issues a new one-time temporary password and forces password replacement on next login.</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="AdminView.handleRegenerateTempPass('${user.id}')">
                 Generate Temp Pass
               </button>
             </div>
 
-            <div class="flex items-center justify-between p-3" style="background: #F8FAFC; border-radius: 8px; border: 1px solid #E2E8F0;">
+            <div class="user-profile-admin-card">
               <div>
-                <strong>Account Lock Status (${status})</strong>
-                <div style="font-size: 0.75rem; color: #64748B;">Toggle immediate administrative lock to block unauthorized usage.</div>
+                <strong class="user-profile-admin-title">Account Lock Status (${status})</strong>
+                <div class="user-profile-admin-sub">Toggle immediate administrative lock to block unauthorized usage.</div>
               </div>
               <div>
                 ${status === 'LOCKED' ? `
-                  <button class="btn btn-gold btn-sm" onclick="AdminView.unlockUser('${user.id}')">Unlock Account</button>
+                  <button class="btn btn-gold btn-sm" onclick="AdminView.openUnlockUserModal('${user.id}')">Unlock Account</button>
                 ` : `
-                  <button class="btn btn-secondary btn-sm" onclick="AdminView.lockUser('${user.id}')">Lock Account</button>
+                  <button class="btn btn-secondary btn-sm" onclick="AdminView.openLockUserModal('${user.id}')">Lock Account</button>
                 `}
               </div>
             </div>
 
-            <div class="flex items-center justify-between p-3" style="background: #F8FAFC; border-radius: 8px; border: 1px solid #E2E8F0;">
+            <div class="user-profile-admin-card">
               <div>
-                <strong>Account Lifecycle (Suspend / Deactivate)</strong>
-                <div style="font-size: 0.75rem; color: #64748B;">Suspend pending review, or permanently deactivate when employment ends.</div>
+                <strong class="user-profile-admin-title">Account Lifecycle (Suspend / Deactivate)</strong>
+                <div class="user-profile-admin-sub">Suspend pending review, or permanently deactivate when employment ends.</div>
               </div>
-              <div class="flex items-center gap-1.5">
+              <div class="flex items-center gap-1.5 user-profile-admin-btns">
                 <button class="btn btn-ghost btn-sm" onclick="AdminView.suspendUser('${user.id}')">Suspend</button>
-                <button class="btn btn-ghost btn-sm text-danger" onclick="AdminView.deactivateUser('${user.id}')">Deactivate</button>
+                <button class="btn btn-ghost btn-sm text-danger" onclick="AdminView.confirmDeactivateUser('${user.id}')">Deactivate</button>
               </div>
             </div>
 
-            <div class="flex items-center justify-between p-3" style="background: #F8FAFC; border-radius: 8px; border: 1px solid #E2E8F0;">
+            <div class="user-profile-admin-card">
               <div>
-                <strong>Terminate Active Sessions</strong>
-                <div style="font-size: 0.75rem; color: #64748B;">Immediately invalidates all active session tokens on any device.</div>
+                <strong class="user-profile-admin-title">Terminate Active Sessions</strong>
+                <div class="user-profile-admin-sub">Immediately invalidates all active session tokens on any device.</div>
               </div>
               <button class="btn btn-secondary btn-sm" onclick="AdminView.terminateSessions('${user.id}')">
                 Revoke Sessions
+              </button>
+            </div>
+
+            <div class="user-profile-admin-card" style="border: 1.5px solid rgba(220, 38, 38, 0.4);">
+              <div>
+                <strong class="user-profile-admin-title" style="color: #DC2626;">Permanently Remove User Account</strong>
+                <div class="user-profile-admin-sub">Completely delete this user from the system directory. Active sessions and case assignments will be revoked.</div>
+              </div>
+              <button class="btn btn-danger btn-sm" onclick="AdminView.openRemoveUserModal('${user.id}')" style="background: #DC2626; color: #FFFFFF;">
+                Remove User
               </button>
             </div>
           </div>
@@ -4022,15 +4361,11 @@ const AdminView = {
   },
 
   unlockUser(userId) {
-    SLCMS_STATE.unlockAccount(userId);
-    App.showToast('Account unlocked successfully.', 'success');
-    App.refreshCurrentView();
+    this.openUnlockUserModal(userId);
   },
 
   lockUser(userId) {
-    SLCMS_STATE.lockAccount(userId, 'Administrative manual lock');
-    App.showToast('Account locked.', 'info');
-    App.refreshCurrentView();
+    this.openLockUserModal(userId);
   },
 
   suspendUser(userId) {
@@ -4040,9 +4375,7 @@ const AdminView = {
   },
 
   deactivateUser(userId) {
-    SLCMS_STATE.deactivateAccount(userId, 'Administrative deactivation');
-    App.showToast('Account deactivated.', 'info');
-    App.refreshCurrentView();
+    this.confirmDeactivateUser(userId);
   },
 
   terminateSessions(userId) {
@@ -4053,6 +4386,408 @@ const AdminView = {
 
   openUserActionsMenu(userId) {
     this.viewUserDetails(userId);
+  },
+
+  // ==========================================================================
+  // REAL SECURITY & ACCESS ALERTS ENGINE (Dynamic Database-Driven)
+  // ==========================================================================
+  async loadSecurityAlerts() {
+    let alerts = [];
+    try {
+      const res = await fetch('/api/admin/security-alerts?status=unresolved');
+      if (res.ok) {
+        alerts = await res.json();
+      } else {
+        alerts = SLCMS_STATE.getSecurityAlerts({ status: 'unresolved' });
+      }
+    } catch (e) {
+      alerts = SLCMS_STATE.getSecurityAlerts({ status: 'unresolved' });
+    }
+    this.renderSecurityAlerts(alerts);
+  },
+
+  renderSecurityAlerts(alerts = []) {
+    const container = document.getElementById('adm-security-alerts-container');
+    const badge = document.getElementById('adm-alerts-count-badge');
+    const dot = document.getElementById('adm-alerts-indicator-dot');
+    const heroCount = document.getElementById('adm-hero-attention-count');
+    const coreVal = document.getElementById('adm-core-attention-val');
+    const coreBadge = document.getElementById('adm-core-attention-badge');
+    const coreSub = document.getElementById('adm-core-attention-sub');
+    const coreTag = document.getElementById('adm-core-attention-tag');
+
+    const count = alerts.length;
+
+    // Update Indicators & Badges
+    if (badge) {
+      badge.textContent = count > 0 ? `${count} ATTENTION` : '0 requiring attention';
+      badge.className = count > 0 ? 'adm-tag-danger-outline' : 'adm-tag-green-pill';
+    }
+    if (dot) {
+      dot.style.background = count > 0 ? '#EF4444' : '#10B981';
+    }
+    if (heroCount) {
+      heroCount.textContent = count;
+      heroCount.className = `adm-hero-pill-num ${count > 0 ? 'text-red' : 'text-teal'}`;
+    }
+    if (coreVal) {
+      coreVal.textContent = count;
+      coreVal.style.color = count > 0 ? '#DC2626' : '#059669';
+    }
+    if (coreBadge) {
+      coreBadge.textContent = count > 0 ? 'LOCK' : 'OK';
+      coreBadge.style.background = count > 0 ? '#FEE2E2' : '#ECFDF5';
+      coreBadge.style.color = count > 0 ? '#DC2626' : '#059669';
+    }
+    if (coreSub) {
+      coreSub.textContent = count > 0 ? 'Action Required' : 'All accounts normal';
+      coreSub.style.color = count > 0 ? '#DC2626' : '#64748B';
+    }
+    if (coreTag) {
+      coreTag.textContent = count > 0 ? 'Action Required' : 'Healthy';
+      coreTag.style.background = count > 0 ? '#FEE2E2' : '#ECFDF5';
+      coreTag.style.color = count > 0 ? '#DC2626' : '#059669';
+    }
+
+    if (!container) return;
+
+    // 0 requiring attention -> Render verified empty state
+    if (count === 0) {
+      container.innerHTML = `
+        <div class="adm-alerts-empty-state" style="padding: 2.25rem 1.5rem; text-align: center; border-radius: 10px; margin: 0.5rem 0;">
+          <div style="font-size: 2.25rem; margin-bottom: 0.75rem;">✅</div>
+          <div class="adm-alerts-empty-title" style="font-weight: 700; font-size: 1.05rem; margin-bottom: 0.4rem;">
+            All user accounts are operating normally.
+          </div>
+          <div class="adm-alerts-empty-sub" style="font-size: 0.85rem; max-width: 440px; margin: 0 auto; line-height: 1.5;">
+            There are no locked accounts, pending first-logins or unresolved security alerts.
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    // Render dynamic alert cards
+    container.innerHTML = alerts.map(alt => {
+      const user = SLCMS_STATE.users.find(u => u.id === alt.userId) || { name: alt.name, role: alt.role, staffId: alt.staffId };
+      const maskedIp = this.maskIp(alt.ipAddress || '197.250.48.12');
+      const timeAgo = this.formatAlertTime(alt.createdAt || alt.lockedAt);
+
+      if (alt.alertType === 'ACCOUNT_LOCKED') {
+        const isAuto = alt.lockedReason === 'TOO_MANY_FAILED_LOGINS';
+        return `
+          <div class="adm-alert-box adm-alert-border-red animate-fade">
+            <div class="adm-alert-icon-square" style="background: #FEE2E2; color: #DC2626;">🔒</div>
+            <div class="adm-alert-content">
+              <div class="adm-alert-row">
+                <span class="adm-alert-headline">${isAuto ? 'Account Locked Automatically' : 'Account Locked Manually by Administrator'}: ${alt.name}</span>
+                <span class="adm-pill-danger">${isAuto ? 'LOCKED' : 'ADMIN LOCK'}</span>
+              </div>
+              <div class="adm-alert-text">
+                ${isAuto ? `5 consecutive failed logins from IP ${maskedIp} &bull; ${alt.role || 'Staff'} (${alt.staffId || user.staffId || 'N/A'})` : `Locked by ${alt.lockedBy || 'Administrator'} &bull; Reason: ${alt.lockedReason || 'Administrative decision'}`}
+              </div>
+              <div class="adm-alert-footer-text">${timeAgo} &bull; ${isAuto ? 'Automated Security Lockout' : 'Manual Admin Governance'}</div>
+              <div class="flex items-center gap-2 mt-2" style="margin-top: 0.6rem;">
+                <button class="btn btn-gold btn-sm" onclick="AdminView.openUnlockUserModal('${alt.userId}')">
+                  Unlock Account
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="AdminView.confirmUnlockAndForcePasswordReset('${alt.userId}')">
+                  Unlock and Force Password Reset
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="AdminView.viewUserDetails('${alt.userId}')">
+                  Review Activity
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (alt.alertType === 'FIRST_LOGIN_PENDING') {
+        const expiresTime = alt.temporaryPasswordExpiresAt ? new Date(alt.temporaryPasswordExpiresAt) : null;
+        let expiresText = 'within 24 hours';
+        if (expiresTime) {
+          const diffMs = expiresTime.getTime() - Date.now();
+          const diffHours = Math.max(0, Math.round(diffMs / (1000 * 60 * 60)));
+          expiresText = diffHours > 0 ? `in ${diffHours} hour${diffHours > 1 ? 's' : ''}` : 'shortly';
+        }
+        return `
+          <div class="adm-alert-box adm-alert-border-yellow animate-fade">
+            <div class="adm-alert-icon-square" style="background: #FEF3C7; color: #D97706;">🔑</div>
+            <div class="adm-alert-content">
+              <div class="adm-alert-row">
+                <span class="adm-alert-headline">First Login Not Completed: ${alt.name}</span>
+                <span class="adm-pill-warning">FIRST LOGIN PENDING</span>
+              </div>
+              <div class="adm-alert-text">
+                ${alt.role || 'Staff'} (${alt.staffId || user.staffId || 'N/A'}) &bull; Created ${timeAgo}
+              </div>
+              <div class="adm-alert-footer-text">Temporary password expires ${expiresText} &bull; Mandatory password setup pending</div>
+              <div class="flex items-center gap-2 mt-2" style="margin-top: 0.6rem;">
+                <button class="btn btn-secondary btn-sm" onclick="AdminView.copyLoginLink('${alt.userId}')">
+                  Copy Login Link
+                </button>
+                <button class="btn btn-gold btn-sm" onclick="AdminView.resendTemporaryCredentials('${alt.userId}')">
+                  Resend Credentials
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (alt.alertType === 'TEMPORARY_PASSWORD_EXPIRED') {
+        return `
+          <div class="adm-alert-box adm-alert-border-red animate-fade">
+            <div class="adm-alert-icon-square" style="background: #FEE2E2; color: #DC2626;">⌛</div>
+            <div class="adm-alert-content">
+              <div class="adm-alert-row">
+                <span class="adm-alert-headline">Temporary Password Expired: ${alt.name}</span>
+                <span class="adm-pill-danger">EXPIRED</span>
+              </div>
+              <div class="adm-alert-text">
+                ${alt.role || 'Staff'} (${alt.staffId || user.staffId || 'N/A'}) &bull; Created ${timeAgo}
+              </div>
+              <div class="adm-alert-footer-text">Temporary password has expired &bull; Login blocked until credentials renewed</div>
+              <div class="flex items-center gap-2 mt-2" style="margin-top: 0.6rem;">
+                <button class="btn btn-gold btn-sm" onclick="AdminView.reissueTemporaryPassword('${alt.userId}')">
+                  Issue New Temporary Password
+                </button>
+                <button class="btn btn-ghost btn-sm text-danger" onclick="AdminView.confirmDeactivateUser('${alt.userId}')">
+                  Deactivate Account
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Default card
+      return `
+        <div class="adm-alert-box adm-alert-border-yellow animate-fade">
+          <div class="adm-alert-icon-square" style="background: #FEF3C7; color: #D97706;">⚠️</div>
+          <div class="adm-alert-content">
+            <div class="adm-alert-row">
+              <span class="adm-alert-headline">${alt.title || 'Security Alert'}: ${alt.name}</span>
+              <span class="adm-pill-warning">${alt.alertType || 'ALERT'}</span>
+            </div>
+            <div class="adm-alert-text">${alt.description || 'Action required on this user account.'}</div>
+            <div class="adm-alert-footer-text">${timeAgo}</div>
+            <div class="flex items-center gap-2 mt-2" style="margin-top: 0.6rem;">
+              <button class="btn btn-secondary btn-sm" onclick="AdminView.viewUserDetails('${alt.userId}')">
+                Review Account
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  maskIp(ip) {
+    if (!ip) return '197.250.xxx.12';
+    const parts = ip.split('.');
+    if (parts.length === 4) {
+      return `${parts[0]}.${parts[1]}.xxx.${parts[3]}`;
+    }
+    return ip;
+  },
+
+  formatAlertTime(dateStr) {
+    if (!dateStr) return 'Just now';
+    try {
+      const d = new Date(dateStr);
+      const diffSecs = Math.floor((Date.now() - d.getTime()) / 1000);
+      if (diffSecs < 60) return 'Just now';
+      const diffMins = Math.floor(diffSecs / 60);
+      if (diffMins < 60) return `${diffMins}m ago`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `${diffHours}h ago`;
+      const diffDays = Math.floor(diffHours / 24);
+      return `${diffDays}d ago`;
+    } catch (e) {
+      return 'Recently';
+    }
+  },
+
+  // Lock Account Confirmation Modal
+  openLockUserModal(userId) {
+    const user = SLCMS_STATE.users.find(u => u.id === userId);
+    if (!user) return;
+
+    App.openModal(`
+      <div class="modal-header" style="background: #DC2626; color: #FFFFFF;">
+        <h3 class="modal-title" style="color: #FFFFFF;">🔒 Confirm Account Lock: ${user.name}</h3>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem;">
+        <p style="font-size: 0.88rem; color: #475569; margin-bottom: 1.25rem;">
+          You are about to lock the account for <strong>${user.name}</strong> (${user.staffId || user.employeeId} &bull; ${user.role}).
+          Active sessions will be immediately terminated, and access will remain blocked indefinitely until an administrator unlocks the account.
+        </p>
+
+        <div style="margin-bottom: 1.25rem;">
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; color: #1E293B; margin-bottom: 0.5rem;">Select Reason for Locking:</label>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="radio" name="lockReason" value="Security concern" checked> Security concern
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="radio" name="lockReason" value="Employment review"> Employment review
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="radio" name="lockReason" value="Unauthorized activity"> Unauthorized activity
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="radio" name="lockReason" value="Administrator decision"> Administrator decision
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="radio" name="lockReason" value="Other" id="lock-reason-other-radio"> Other (specify below)
+            </label>
+            <input type="text" id="lock-reason-custom" class="form-control" placeholder="Specify other reason..." style="font-size: 0.85rem; padding: 0.4rem 0.6rem; border: 1px solid #CBD5E1; border-radius: 6px; margin-top: 0.25rem;">
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; color: #1E293B; margin-bottom: 0.4rem;">Confirm Administrator Password:</label>
+          <input type="password" id="lock-admin-password" class="form-control" placeholder="Enter administrator password" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #CBD5E1; border-radius: 6px; font-size: 0.9rem;">
+          <div id="lock-admin-pass-error" style="color: #DC2626; font-size: 0.8rem; margin-top: 0.35rem; display: none;"></div>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 1rem 1.5rem; background: #F8FAFC; border-top: 1px solid #E2E8F0; display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button class="btn btn-secondary btn-sm" onclick="App.closeModal()">Cancel</button>
+        <button class="btn btn-danger btn-sm" onclick="AdminView.submitLockUser('${user.id}')">Confirm Lock Account</button>
+      </div>
+    `);
+  },
+
+  submitLockUser(userId) {
+    const passwordInput = document.getElementById('lock-admin-password');
+    const errDiv = document.getElementById('lock-admin-pass-error');
+    if (!passwordInput || !passwordInput.value.trim()) {
+      if (errDiv) {
+        errDiv.textContent = 'Administrator password is required to lock an account.';
+        errDiv.style.display = 'block';
+      }
+      return;
+    }
+
+    let reason = document.querySelector('input[name="lockReason"]:checked')?.value || 'Administrator decision';
+    if (reason === 'Other') {
+      const custom = document.getElementById('lock-reason-custom')?.value.trim();
+      reason = custom || 'Other administrative reason';
+    }
+
+    const res = SLCMS_STATE.lockAccount(userId, reason);
+    if (res && res.success) {
+      App.closeModal();
+      App.showToast(`Account locked successfully. Reason: ${reason}`, 'info');
+      this.loadSecurityAlerts();
+      App.refreshCurrentView();
+    } else {
+      if (errDiv) {
+        errDiv.textContent = (res && res.message) || 'Failed to lock account.';
+        errDiv.style.display = 'block';
+      }
+    }
+  },
+
+  // Unlock Account Confirmation Modal
+  openUnlockUserModal(userId) {
+    const user = SLCMS_STATE.users.find(u => u.id === userId);
+    if (!user) return;
+
+    App.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+        <h3 class="modal-title" style="color: #FFFFFF;">🔓 Unlock Account: ${user.name}</h3>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem;">
+        <p style="font-size: 0.88rem; color: #475569; margin-bottom: 1.25rem;">
+          You are about to unlock the account for <strong>${user.name}</strong> (${user.staffId || user.employeeId} &bull; ${user.role}).
+          This will clear failed login counters, restore active access, and resolve the security alert.
+        </p>
+
+        <div style="margin-bottom: 1.25rem;">
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; color: #1E293B; margin-bottom: 0.5rem;">Reason for Unlocking:</label>
+          <input type="text" id="unlock-user-reason" class="form-control" value="Administrative review completed - Verified legitimate access" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #CBD5E1; border-radius: 6px; font-size: 0.88rem;">
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 1rem 1.5rem; background: #F8FAFC; border-top: 1px solid #E2E8F0; display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button class="btn btn-secondary btn-sm" onclick="App.closeModal()">Cancel</button>
+        <button class="btn btn-ghost btn-sm" onclick="AdminView.confirmUnlockAndForcePasswordReset('${user.id}')" style="color: #B45309;">Unlock &amp; Force Reset</button>
+        <button class="btn btn-gold btn-sm" onclick="AdminView.submitUnlockUser('${user.id}')">Unlock Account</button>
+      </div>
+    `);
+  },
+
+  submitUnlockUser(userId) {
+    const reasonInput = document.getElementById('unlock-user-reason');
+    const reason = reasonInput?.value.trim() || 'Administrative review completed';
+
+    const res = SLCMS_STATE.unlockAccount(userId, reason);
+    if (res && res.success) {
+      App.closeModal();
+      App.showToast('Account unlocked successfully.', 'success');
+      this.loadSecurityAlerts();
+      App.refreshCurrentView();
+    }
+  },
+
+  confirmUnlockAndForcePasswordReset(userId) {
+    const reason = 'Administrator unlocked with mandatory credential reset';
+    const res = SLCMS_STATE.unlockAndForcePasswordReset(userId, reason);
+    if (res && res.success) {
+      const user = SLCMS_STATE.users.find(u => u.id === userId);
+      App.closeModal();
+      this.openTemporaryCredentialsModal(user, res.temporaryPassword);
+      App.showToast('Account unlocked with password reset forced.', 'success');
+      this.loadSecurityAlerts();
+      App.refreshCurrentView();
+    }
+  },
+
+  copyLoginLink(userId) {
+    const loginUrl = window.location.origin + window.location.pathname;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(loginUrl).then(() => {
+        App.showToast('Login URL copied to clipboard.', 'success');
+      }).catch(() => {
+        App.showToast('Login URL: ' + loginUrl, 'info');
+      });
+    } else {
+      App.showToast('Login URL: ' + loginUrl, 'info');
+    }
+  },
+
+  resendTemporaryCredentials(userId) {
+    const user = SLCMS_STATE.users.find(u => u.id === userId);
+    if (!user) return;
+    const tempPass = user.temporaryPassword || user.passwordPlain || 'SecretLawFirm2026!';
+    this.openTemporaryCredentialsModal(user, tempPass);
+  },
+
+  reissueTemporaryPassword(userId) {
+    const res = SLCMS_STATE.generateNewTemporaryPassword(userId);
+    if (res && res.success) {
+      const user = SLCMS_STATE.users.find(u => u.id === userId);
+      this.openTemporaryCredentialsModal(user, res.temporaryPassword);
+      App.showToast('New temporary password issued successfully.', 'success');
+      this.loadSecurityAlerts();
+      App.refreshCurrentView();
+    }
+  },
+
+  confirmDeactivateUser(userId) {
+    const user = SLCMS_STATE.users.find(u => u.id === userId);
+    if (!user) return;
+
+    if (confirm(`Are you sure you want to deactivate the account for ${user.name} (${user.staffId || user.employeeId})? This will revoke all access.`)) {
+      SLCMS_STATE.deactivateAccount(userId, 'Administrator deactivation');
+      App.showToast('Account deactivated successfully.', 'info');
+      this.loadSecurityAlerts();
+      App.refreshCurrentView();
+    }
   },
 
   // ==========================================================================
@@ -4111,5 +4846,342 @@ const AdminView = {
         <button class="btn btn-primary" onclick="App.closeModal()">Close Policy</button>
       </div>
     `, 'modal-lg');
+  },
+
+  handleAccessFilter(val) {
+    this.accessFilter = val;
+    const container = document.getElementById('admin-tab-content');
+    if (container) {
+      container.innerHTML = this.renderActiveTabContent();
+    } else {
+      App.refreshCurrentView();
+    }
+  },
+
+  openEditUserModal(userId) {
+    const user = SLCMS_STATE.users.find(u => u.id === userId);
+    if (!user) return;
+
+    App.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #0B1F33, #16365C); color: #FFFFFF; border-top-left-radius: 16px; border-top-right-radius: 16px; padding: 1.25rem 1.5rem;">
+        <div>
+          <h3 class="modal-title" style="color: #FFFFFF; display: flex; align-items: center; gap: 0.5rem; font-size: 1.15rem;">
+            <span>✏️</span> Edit User Profile &amp; Role Details
+          </h3>
+          <p style="font-size: 0.8rem; color: #CBD5E1; margin-top: 0.2rem;">
+            Update legal name, job title, role permissions, contact info, and status for ${user.name}.
+          </p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem; max-height: 75vh; overflow-y: auto;">
+        <form id="adm-edit-user-form" onsubmit="event.preventDefault(); AdminView.submitEditUser('${user.id}');">
+          <!-- Identity Summary Banner -->
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <span style="font-size: 0.76rem; color: #64748B;">Staff ID:</span>
+              <strong style="font-family: var(--font-mono); color: #D97706; margin-left: 0.35rem;">${user.staffId || user.employeeId}</strong>
+            </div>
+            <div>
+              <span style="font-size: 0.76rem; color: #64748B;">System Access:</span>
+              <span style="margin-left: 0.35rem; font-weight: 700; color: #0F172A;">${user.lastLogin || 'Never'}</span>
+            </div>
+            <div>
+              <span style="font-size: 0.76rem; color: #64748B;">Status:</span>
+              <span style="margin-left: 0.35rem;">${this.getUserStatusBadgeHtml(user)}</span>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 700; font-size: 0.82rem; margin-bottom: 0.35rem; color: #1E293B;">Full Legal Name *</label>
+              <input type="text" id="edit-user-name" class="form-control" value="${user.name || ''}" required style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #CBD5E1; border-radius: 6px; font-size: 0.88rem;">
+            </div>
+            <div>
+              <label style="display: block; font-weight: 700; font-size: 0.82rem; margin-bottom: 0.35rem; color: #1E293B;">Job Title / Designation *</label>
+              <input type="text" id="edit-user-job-title" class="form-control" value="${user.jobTitle || user.roleTitle || user.role || ''}" required style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #CBD5E1; border-radius: 6px; font-size: 0.88rem;">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 700; font-size: 0.82rem; margin-bottom: 0.35rem; color: #1E293B;">System Role *</label>
+              <select id="edit-user-role" class="form-control" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #CBD5E1; border-radius: 6px; font-size: 0.88rem;" ${user.id === 'usr-001' ? 'disabled' : ''}>
+                <option value="Administrator" ${user.role === 'Administrator' ? 'selected' : ''}>Administrator</option>
+                <option value="Senior Lawyer" ${user.role === 'Senior Lawyer' ? 'selected' : ''}>Senior Lawyer</option>
+                <option value="Lawyer" ${user.role === 'Lawyer' ? 'selected' : ''}>Lawyer</option>
+                <option value="Legal Clerk" ${user.role === 'Legal Clerk' ? 'selected' : ''}>Legal Clerk</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-weight: 700; font-size: 0.82rem; margin-bottom: 0.35rem; color: #1E293B;">Department *</label>
+              <select id="edit-user-department" class="form-control" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #CBD5E1; border-radius: 6px; font-size: 0.88rem;">
+                <option value="Commercial Litigation" ${user.department === 'Commercial Litigation' ? 'selected' : ''}>Commercial Litigation</option>
+                <option value="Corporate & Commercial Law" ${user.department === 'Corporate & Commercial Law' ? 'selected' : ''}>Corporate &amp; Commercial Law</option>
+                <option value="Litigation & Dispute Resolution" ${user.department === 'Litigation & Dispute Resolution' ? 'selected' : ''}>Litigation &amp; Dispute Resolution</option>
+                <option value="Court Registry & Documentation" ${user.department === 'Court Registry & Documentation' ? 'selected' : ''}>Court Registry &amp; Documentation</option>
+                <option value="System Governance & Administration" ${user.department === 'System Governance & Administration' ? 'selected' : ''}>System Governance &amp; Administration</option>
+                <option value="Intellectual Property & Patents" ${user.department === 'Intellectual Property & Patents' ? 'selected' : ''}>Intellectual Property &amp; Patents</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 700; font-size: 0.82rem; margin-bottom: 0.35rem; color: #1E293B;">Official Email Address *</label>
+              <input type="email" id="edit-user-email" class="form-control" value="${user.email || ''}" required style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #CBD5E1; border-radius: 6px; font-size: 0.88rem;">
+            </div>
+            <div>
+              <label style="display: block; font-weight: 700; font-size: 0.82rem; margin-bottom: 0.35rem; color: #1E293B;">Contact Phone Number *</label>
+              <input type="tel" id="edit-user-phone" class="form-control" value="${user.phone || ''}" required style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #CBD5E1; border-radius: 6px; font-size: 0.88rem;">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 700; font-size: 0.82rem; margin-bottom: 0.35rem; color: #1E293B;">TLS Advocate Roll / Clerk ID</label>
+              <input type="text" id="edit-user-roll" class="form-control" value="${user.advocateNumber || ''}" placeholder="e.g. TLS/ADV/1864 or CLK/2026/048" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #CBD5E1; border-radius: 6px; font-size: 0.88rem;">
+            </div>
+            <div>
+              <label style="display: block; font-weight: 700; font-size: 0.82rem; margin-bottom: 0.35rem; color: #1E293B;">Office Location</label>
+              <input type="text" id="edit-user-office" class="form-control" value="${user.officeLocation || user.office || 'Dar es Salaam HQ, Floor 4'}" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #CBD5E1; border-radius: 6px; font-size: 0.88rem;">
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-weight: 700; font-size: 0.82rem; margin-bottom: 0.35rem; color: #1E293B;">Account Access Status</label>
+            <select id="edit-user-status" class="form-control" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #CBD5E1; border-radius: 6px; font-size: 0.88rem;">
+              <option value="ACTIVE" ${(user.accountStatus === 'ACTIVE' || user.status === 'ACTIVE') ? 'selected' : ''}>Active (Full System Access)</option>
+              <option value="FIRST_LOGIN_RESET" ${(user.accountStatus === 'FIRST_LOGIN_RESET' || user.status === 'FIRST_LOGIN_RESET') ? 'selected' : ''}>First Login Reset (Pending Password Setup)</option>
+              <option value="LOCKED" ${(user.accountStatus === 'LOCKED' || user.status === 'LOCKED') ? 'selected' : ''}>Locked (Security Hold)</option>
+              <option value="SUSPENDED" ${(user.accountStatus === 'SUSPENDED' || user.status === 'SUSPENDED') ? 'selected' : ''}>Suspended (Pending Review)</option>
+              <option value="DEACTIVATED" ${(user.accountStatus === 'DEACTIVATED' || user.status === 'DEACTIVATED') ? 'selected' : ''}>Deactivated (Access Revoked)</option>
+            </select>
+          </div>
+
+          <div id="adm-edit-user-error" style="display: none; color: #DC2626; font-size: 0.82rem; margin-bottom: 1rem; padding: 0.5rem 0.75rem; background: #FEE2E2; border-radius: 6px;"></div>
+
+          <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid #E2E8F0;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="App.closeModal()">Cancel</button>
+            <button type="submit" class="btn btn-gold btn-sm" style="font-weight: 700;">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    `, 'modal-md modal-admin-edit-user');
+  },
+
+  submitEditUser(userId) {
+    const name = document.getElementById('edit-user-name')?.value;
+    const jobTitle = document.getElementById('edit-user-job-title')?.value;
+    const roleSelect = document.getElementById('edit-user-role');
+    const role = roleSelect ? roleSelect.value : null;
+    const department = document.getElementById('edit-user-department')?.value;
+    const email = document.getElementById('edit-user-email')?.value;
+    const phone = document.getElementById('edit-user-phone')?.value;
+    const advocateNumber = document.getElementById('edit-user-roll')?.value;
+    const officeLocation = document.getElementById('edit-user-office')?.value;
+    const status = document.getElementById('edit-user-status')?.value;
+    const errEl = document.getElementById('adm-edit-user-error');
+
+    const res = SLCMS_STATE.updateUserDetails(userId, {
+      name, jobTitle, role, department, email, phone, advocateNumber, officeLocation, status
+    });
+
+    if (res && res.success) {
+      App.closeModal();
+      App.showToast(`User ${res.user.name} details updated successfully.`, 'success');
+      App.refreshCurrentView();
+    } else {
+      if (errEl) {
+        errEl.textContent = (res && res.message) || 'Failed to update user.';
+        errEl.style.display = 'block';
+      }
+    }
+  },
+
+  openChangePasswordModal(userId) {
+    const user = SLCMS_STATE.users.find(u => u.id === userId);
+    if (!user) return;
+
+    App.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #0B1F33, #1A365D); color: #FFFFFF; border-top-left-radius: 16px; border-top-right-radius: 16px; padding: 1.25rem 1.5rem;">
+        <div>
+          <h3 class="modal-title" style="color: #FFFFFF; display: flex; align-items: center; gap: 0.5rem; font-size: 1.15rem;">
+            <span>🔑</span> Administrative Password Management
+          </h3>
+          <p style="font-size: 0.8rem; color: #CBD5E1; margin-top: 0.2rem;">
+            Update password directly or generate secure credentials for ${user.name} (${user.staffId || user.employeeId}).
+          </p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem; max-height: 75vh; overflow-y: auto;">
+        <form id="adm-change-pwd-form" onsubmit="event.preventDefault(); AdminView.submitChangePassword('${user.id}');">
+          <!-- User Info Strip -->
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-weight: 800; font-size: 0.95rem; color: #0F172A;">${user.name}</div>
+              <div style="font-size: 0.78rem; color: #64748B;">${user.email} &bull; ${user.role}</div>
+            </div>
+            <span class="adm-staff-id-gold">${user.staffId || user.employeeId}</span>
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+              <label style="font-weight: 700; font-size: 0.82rem; margin-bottom: 0; color: #1E293B;">New Password *</label>
+              <button type="button" class="btn btn-ghost btn-xs" onclick="AdminView.generateQuickPassword()" style="font-size: 0.74rem; color: var(--color-gold, #C89B3C); font-weight: 700;">
+                ⚡ Generate Strong Password
+              </button>
+            </div>
+            <input type="text" id="adm-new-pwd-input" class="form-control" placeholder="Enter at least 8 characters" required style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #CBD5E1; border-radius: 6px; font-size: 0.88rem; font-family: monospace;">
+            <div style="font-size: 0.72rem; color: #64748B; margin-top: 0.35rem;">Must contain at least 8 characters.</div>
+          </div>
+
+          <div style="margin-bottom: 1.25rem;">
+            <label style="font-weight: 700; font-size: 0.82rem; margin-bottom: 0.35rem; display: block; color: #1E293B;">Confirm New Password *</label>
+            <input type="text" id="adm-confirm-pwd-input" class="form-control" placeholder="Re-enter new password" required style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #CBD5E1; border-radius: 6px; font-size: 0.88rem; font-family: monospace;">
+          </div>
+
+          <div style="margin-bottom: 1.25rem; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 0.75rem 1rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.84rem; font-weight: 600; color: #1E293B;">
+              <input type="checkbox" id="adm-force-pwd-reset-cb" checked>
+              Require user to change password on next login
+            </label>
+            <div style="font-size: 0.75rem; color: #64748B; margin-top: 0.25rem; margin-left: 1.5rem;">
+              When checked, the account status changes to First Login Reset and the user must establish a private password.
+            </div>
+          </div>
+
+          <div id="adm-pwd-error" style="display: none; color: #DC2626; font-size: 0.82rem; margin-bottom: 1rem; padding: 0.5rem 0.75rem; background: #FEE2E2; border-radius: 6px;"></div>
+
+          <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid #E2E8F0;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="App.closeModal()">Cancel</button>
+            <button type="submit" class="btn btn-gold btn-sm" style="font-weight: 700;">Update Password</button>
+          </div>
+        </form>
+      </div>
+    `, 'modal-md modal-admin-pwd');
+  },
+
+  submitChangePassword(userId) {
+    const newPwd = document.getElementById('adm-new-pwd-input')?.value;
+    const confirmPwd = document.getElementById('adm-confirm-pwd-input')?.value;
+    const forceReset = document.getElementById('adm-force-pwd-reset-cb')?.checked;
+    const errEl = document.getElementById('adm-pwd-error');
+
+    if (!newPwd || newPwd.length < 8) {
+      if (errEl) {
+        errEl.textContent = 'Password must be at least 8 characters long.';
+        errEl.style.display = 'block';
+      }
+      return;
+    }
+
+    if (newPwd !== confirmPwd) {
+      if (errEl) {
+        errEl.textContent = 'Passwords do not match. Please re-enter.';
+        errEl.style.display = 'block';
+      }
+      return;
+    }
+
+    const res = SLCMS_STATE.adminChangeUserPassword(userId, newPwd, forceReset);
+    if (res && res.success) {
+      App.closeModal();
+      App.showToast(`Password for ${res.user.name} updated successfully.`, 'success');
+      App.refreshCurrentView();
+    } else {
+      if (errEl) {
+        errEl.textContent = (res && res.message) || 'Failed to update password.';
+        errEl.style.display = 'block';
+      }
+    }
+  },
+
+  generateQuickPassword() {
+    const pass = SLCMS_STATE.generateTemporaryPassword();
+    const input = document.getElementById('adm-new-pwd-input');
+    const confirm = document.getElementById('adm-confirm-pwd-input');
+    if (input) input.value = pass;
+    if (confirm) confirm.value = pass;
+    App.showToast('Generated strong password: ' + pass, 'info');
+  },
+
+  openRemoveUserModal(userId) {
+    const user = SLCMS_STATE.users.find(u => u.id === userId);
+    if (!user) return;
+
+    const isSelf = SLCMS_STATE.currentUser && SLCMS_STATE.currentUser.id === userId;
+    const isRootAdmin = userId === 'usr-001' || (user.staffId || '').toUpperCase() === 'ADM-0001';
+
+    App.openModal(`
+      <div class="modal-header" style="background: #DC2626; color: #FFFFFF; border-top-left-radius: 16px; border-top-right-radius: 16px; padding: 1.25rem 1.5rem;">
+        <div>
+          <h3 class="modal-title" style="color: #FFFFFF; display: flex; align-items: center; gap: 0.5rem; font-size: 1.15rem;">
+            <span>⚠️</span> Remove User Account
+          </h3>
+          <p style="font-size: 0.8rem; color: #FEE2E2; margin-top: 0.2rem;">
+            Permanent administrative account deletion from law firm database.
+          </p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem;">
+        ${isSelf ? `
+          <div style="background: #FEE2E2; border: 1px solid #FCA5A5; border-radius: 10px; padding: 1rem; color: #991B1B; font-size: 0.88rem; margin-bottom: 1rem;">
+            <strong>Self-Deletion Prohibited:</strong> You are currently logged in as this administrator. You cannot delete your own active session account.
+          </div>
+          <div style="display: flex; justify-content: flex-end;">
+            <button class="btn btn-secondary btn-sm" onclick="App.closeModal()">Close</button>
+          </div>
+        ` : isRootAdmin ? `
+          <div style="background: #FEE2E2; border: 1px solid #FCA5A5; border-radius: 10px; padding: 1rem; color: #991B1B; font-size: 0.88rem; margin-bottom: 1rem;">
+            <strong>Protected Account:</strong> The Root System Administrator (ADM-0001) cannot be deleted under system governance rules.
+          </div>
+          <div style="display: flex; justify-content: flex-end;">
+            <button class="btn btn-secondary btn-sm" onclick="App.closeModal()">Close</button>
+          </div>
+        ` : `
+          <p style="font-size: 0.88rem; color: #1E293B; margin-bottom: 1rem;">
+            Are you sure you want to permanently delete the account for <strong>${user.name}</strong>?
+          </p>
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 1rem; margin-bottom: 1.25rem;">
+            <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem; font-size: 0.82rem;">
+              <span style="color: #64748B;">Staff ID:</span>
+              <span style="font-weight: 700; font-family: var(--font-mono); color: #D97706;">${user.staffId || user.employeeId}</span>
+              <span style="color: #64748B;">Role:</span>
+              <span style="font-weight: 700;">${user.role}</span>
+              <span style="color: #64748B;">Email:</span>
+              <span>${user.email}</span>
+              <span style="color: #64748B;">Last Login:</span>
+              <span>${user.lastLogin || 'Never'}</span>
+            </div>
+          </div>
+          <div style="background: rgba(220, 38, 38, 0.08); border-left: 4px solid #DC2626; padding: 0.75rem 1rem; border-radius: 0 8px 8px 0; margin-bottom: 1.25rem; font-size: 0.8rem; color: #991B1B;">
+            <strong>Warning:</strong> This will terminate active sessions, revoke case assignments, and permanently delete this account. This action will survive page reloads.
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid #E2E8F0;">
+            <button class="btn btn-secondary btn-sm" onclick="App.closeModal()">Cancel</button>
+            <button class="btn btn-danger btn-sm" onclick="AdminView.submitRemoveUser('${user.id}')" style="background: #DC2626; color: #FFFFFF; font-weight: 700;">
+              Confirm Delete User
+            </button>
+          </div>
+        `}
+      </div>
+    `, 'modal-sm modal-admin-remove');
+  },
+
+  submitRemoveUser(userId) {
+    const res = SLCMS_STATE.deleteUser(userId);
+    if (res && res.success) {
+      App.closeModal();
+      App.showToast(`User ${res.removedUser.name} permanently removed.`, 'success');
+      App.refreshCurrentView();
+    } else {
+      App.showToast((res && res.message) || 'Failed to remove user.', 'error');
+    }
   }
 };

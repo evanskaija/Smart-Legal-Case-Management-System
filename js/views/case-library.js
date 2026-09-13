@@ -1397,10 +1397,6 @@ const CaseLibraryView = {
                 style="padding-left: 2.6rem; width: 330px; max-width: 100%; height: 42px; font-size: 0.86rem; border-radius: var(--radius-sm); border: 1.5px solid var(--color-border); box-shadow: var(--shadow-xs);"
               />
             </div>
-            <button class="btn btn-gold case-lib-ai-btn" onclick="App.navigate('ai-assistant')" style="height: 42px; display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 0.86rem; padding: 0 1.25rem; white-space: nowrap; box-shadow: 0 2px 10px rgba(200,155,60,0.3);">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              <span>Ask SLCMS AI</span>
-            </button>
           </div>
         </div>
 

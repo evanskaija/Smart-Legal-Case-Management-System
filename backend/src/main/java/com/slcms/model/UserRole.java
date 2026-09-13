@@ -4,12 +4,11 @@ package com.slcms.model;
  * SLCMS System Roles defining distinct legal and administrative privilege tiers.
  */
 public enum UserRole {
-    MANAGING_PARTNER("Managing Partner", "View/manage all firm cases, approve final pleadings & reports, assign staff, view financial analytics."),
-    SENIOR_COUNSEL("Senior Counsel", "Lead assigned cases, supervise teams, approve legal drafts, use AI research, manage hearings and evidence."),
-    ASSOCIATE_LAWYER("Associate Lawyer", "Work on assigned cases, draft pleadings/reports, upload evidence, submit drafts for Senior Counsel approval."),
-    JUNIOR_LAWYER("Junior Lawyer", "Conduct research, read precedents, prepare draft summaries, update assigned tasks, submit drafts for review."),
+    ADMINISTRATOR("Administrator", "Create/manage accounts, configure security rules, monitor audit logs & system health, restore backups."),
+    SENIOR_LAWYER("Senior Lawyer", "Lead assigned cases, supervise teams, approve legal drafts, use AI research, manage hearings and evidence."),
+    LAWYER("Lawyer", "Work on assigned cases, draft pleadings/reports, upload evidence, submit drafts for Senior Lawyer review."),
     LEGAL_CLERK("Legal Clerk", "Register case info, upload/label documents, record court dates, maintain client contacts, prepare administrative forms."),
-    SYSTEM_ADMINISTRATOR("System Administrator", "Create/manage accounts, configure security rules, monitor audit logs & system health, restore backups.");
+    SYSTEM_ADMINISTRATOR("Administrator", "System Administrator");
 
     private final String displayName;
     private final String description;
@@ -30,6 +29,9 @@ public enum UserRole {
     public static UserRole fromString(String roleStr) {
         if (roleStr == null) return null;
         String clean = roleStr.trim().replace(" ", "_").toUpperCase();
+        if (clean.equals("SYSTEM_ADMINISTRATOR") || clean.equals("ADMIN")) return ADMINISTRATOR;
+        if (clean.equals("SENIOR_COUNSEL") || clean.equals("MANAGING_PARTNER")) return SENIOR_LAWYER;
+        if (clean.equals("ASSOCIATE_LAWYER") || clean.equals("JUNIOR_LAWYER")) return LAWYER;
         for (UserRole r : values()) {
             if (r.name().equalsIgnoreCase(clean) || r.displayName.equalsIgnoreCase(roleStr.trim())) {
                 return r;

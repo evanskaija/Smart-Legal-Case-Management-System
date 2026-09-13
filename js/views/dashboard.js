@@ -7,10 +7,10 @@
 const DashboardView = {
   render() {
     const user = SLCMS_STATE.currentUser;
-    const activeCasesCount = SLCMS_STATE.cases.filter(c => c.status === 'Active').length;
-    const clientsCount = SLCMS_STATE.clients.length;
-    const pendingTasksCount = SLCMS_STATE.tasks.filter(t => t.status !== 'completed').length;
-    const urgentDeadlines = SLCMS_STATE.tasks.filter(t => t.priority === 'High' && t.status !== 'completed');
+    const activeCasesCount = SLCMS_STATE.getActiveCasesCount();
+    const clientsCount = SLCMS_STATE.getClientsCount();
+    const pendingTasksCount = SLCMS_STATE.getPendingTasksCount();
+    const upcomingDeadlinesCount = SLCMS_STATE.getUpcomingDeadlinesCount();
 
     return `
       <div class="animate-fade">
@@ -33,10 +33,6 @@ const DashboardView = {
             <button class="btn" onclick="App.navigate('case-library')" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: #FFFFFF; font-weight: 600; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.45rem 0.95rem; border-radius: var(--radius-sm); transition: all 0.2s;">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
               <span>Case Library</span>
-            </button>
-            <button class="btn btn-gold" onclick="App.navigate('ai-assistant')" style="font-weight: 700; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.45rem 1rem; border-radius: var(--radius-sm);">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              <span>Ask SLCMS AI</span>
             </button>
           </div>
         </div>
@@ -64,24 +60,13 @@ const DashboardView = {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
               <span>Create Task</span>
             </button>
-
-            <div class="qa-divider"></div>
-
-            <button class="qa-btn-ai-draft" onclick="AIAssistantView.openDraftMode()" title="Synthesize demand notices, strategy memos and opinions">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-              <span>Draft with SLCMS AI</span>
-            </button>
-            <button class="qa-btn-ai-ask" onclick="App.navigate('ai-assistant')" title="Research Tanzanian court judgments and precedents with AI">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              <span>Ask SLCMS AI</span>
-            </button>
           </div>
         </div>
 
         <!-- 3. FOUR PRIMARY METRIC KPI CARDS -->
         <div class="stat-cards-grid" style="gap: 1rem; margin-bottom: 1.5rem;">
           <!-- 1. Active Cases -->
-          <div class="stat-card" onclick="App.navigate('cases')" style="cursor: pointer;">
+          <div class="stat-card" onclick="App.navigate('cases')" style="cursor: pointer;" id="kpi-active-cases-card">
             <div class="stat-card-top">
               <div>
                 <div class="stat-value">${activeCasesCount}</div>
@@ -95,13 +80,15 @@ const DashboardView = {
               </div>
             </div>
             <div class="stat-footer">
-              <span class="stat-trend-up">${SLCMS_STATE.cases.length} Total Matters</span>
+              <span class="${activeCasesCount === 0 ? 'stat-trend-muted' : 'stat-trend-up'}">
+                ${activeCasesCount === 0 ? 'No active cases' : `${activeCasesCount} active / ${SLCMS_STATE.cases.length} total`}
+              </span>
               <span style="color: var(--color-gold); font-weight: 600;">View Cases →</span>
             </div>
           </div>
 
           <!-- 2. Registered Clients -->
-          <div class="stat-card" onclick="App.navigate('clients')" style="cursor: pointer;">
+          <div class="stat-card" onclick="App.navigate('clients')" style="cursor: pointer;" id="kpi-registered-clients-card">
             <div class="stat-card-top">
               <div>
                 <div class="stat-value">${clientsCount}</div>
@@ -117,13 +104,15 @@ const DashboardView = {
               </div>
             </div>
             <div class="stat-footer">
-              <span class="stat-trend-up">Individuals &amp; Corporates</span>
+              <span class="${clientsCount === 0 ? 'stat-trend-muted' : 'stat-trend-up'}">
+                ${clientsCount === 0 ? 'No clients registered' : `${clientsCount} registered clients`}
+              </span>
               <span style="color: var(--color-gold); font-weight: 600;">Client Directory →</span>
             </div>
           </div>
 
           <!-- 3. Pending Tasks -->
-          <div class="stat-card" onclick="App.navigate('tasks')" style="cursor: pointer;">
+          <div class="stat-card" onclick="App.navigate('tasks')" style="cursor: pointer;" id="kpi-pending-tasks-card">
             <div class="stat-card-top">
               <div>
                 <div class="stat-value">${pendingTasksCount}</div>
@@ -137,19 +126,21 @@ const DashboardView = {
               </div>
             </div>
             <div class="stat-footer">
-              <span class="stat-trend-up">Actionable Items</span>
+              <span class="${pendingTasksCount === 0 ? 'stat-trend-muted' : 'stat-trend-up'}">
+                ${pendingTasksCount === 0 ? 'No pending tasks' : `${pendingTasksCount} actionable tasks`}
+              </span>
               <span style="color: var(--color-gold); font-weight: 600;">Task Board →</span>
             </div>
           </div>
 
           <!-- 4. Upcoming Deadlines -->
-          <div class="stat-card" onclick="App.navigate('tasks')" style="cursor: pointer;">
+          <div class="stat-card" onclick="if (typeof TasksView !== 'undefined') TasksView.activeView = 'calendar'; App.navigate('tasks');" style="cursor: pointer;" id="kpi-upcoming-deadlines-card">
             <div class="stat-card-top">
               <div>
-                <div class="stat-value" style="color: var(--color-danger);">${urgentDeadlines.length}</div>
+                <div class="stat-value" style="color: ${upcomingDeadlinesCount > 0 ? 'var(--color-danger)' : 'inherit'};">${upcomingDeadlinesCount}</div>
                 <div class="stat-label">Upcoming Deadlines</div>
               </div>
-              <div class="stat-icon-wrapper stat-icon-red">
+              <div class="stat-icon-wrapper ${upcomingDeadlinesCount > 0 ? 'stat-icon-red' : 'stat-icon-navy'}">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="12" r="10"/>
                   <polyline points="12 6 12 12 16 14"/>
@@ -157,7 +148,9 @@ const DashboardView = {
               </div>
             </div>
             <div class="stat-footer">
-              <span class="stat-trend-alert">⚡ High Priority</span>
+              <span class="${upcomingDeadlinesCount === 0 ? 'stat-trend-muted' : 'stat-trend-alert'}">
+                ${upcomingDeadlinesCount === 0 ? 'No upcoming deadlines' : `⚡ ${upcomingDeadlinesCount} scheduled deadlines`}
+              </span>
               <span style="color: var(--color-danger); font-weight: 600;">Calendar →</span>
             </div>
           </div>
@@ -302,53 +295,44 @@ const DashboardView = {
               <button class="btn btn-secondary btn-sm" onclick="TasksView.switchView('calendar'); App.navigate('tasks');">Calendar</button>
             </div>
 
-            <div class="dash-docket-card" onclick="App.navigate('cases')" style="cursor: pointer;">
-              <div class="dash-docket-date-badge">
-                <span class="dash-docket-month">SEP</span>
-                <span class="dash-docket-day">14</span>
-              </div>
-              <div style="flex: 1; min-width: 0;">
-                <div class="flex items-center gap-2 flex-wrap" style="margin-bottom: 0.2rem;">
-                  <strong style="color: var(--color-primary); font-size: 0.88rem;">Vanguard Capital vs. Apex Tech Holdings</strong>
-                  <span class="badge badge-priority-high" style="font-size: 0.65rem; padding: 0.1rem 0.45rem;">HIGH</span>
+            ${(() => {
+              const events = (typeof TasksView !== 'undefined' && Array.isArray(TasksView.courtEvents)) ? TasksView.courtEvents : (SLCMS_STATE.courtEvents || []);
+              if (events.length === 0) {
+                return `
+                  <div style="padding: 2rem 1rem; text-align: center; color: var(--color-text-muted);">
+                    <div style="font-size: 1.8rem; margin-bottom: 0.4rem;">📅</div>
+                    <div style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary);">No deadlines scheduled</div>
+                    <p style="font-size: 0.78rem; margin: 0.25rem 0 1rem 0; color: var(--color-text-secondary);">Court appearances and statutory deadlines will appear here once scheduled.</p>
+                    <button class="btn btn-secondary btn-sm" onclick="TasksView.activeView = 'calendar'; App.navigate('tasks');">Open Calendar</button>
+                  </div>
+                `;
+              }
+              return events.slice(0, 3).map(e => `
+                <div class="dash-docket-card" onclick="TasksView.activeView = 'calendar'; App.navigate('tasks');" style="cursor: pointer;">
+                  <div class="dash-docket-date-badge">
+                    <span class="dash-docket-month">${e.monthShort || 'DUE'}</span>
+                    <span class="dash-docket-day">${e.dayNum || '01'}</span>
+                  </div>
+                  <div style="flex: 1; min-width: 0;">
+                    <div class="flex items-center gap-2 flex-wrap" style="margin-bottom: 0.2rem;">
+                      <strong style="color: var(--color-primary); font-size: 0.88rem;">${e.title}</strong>
+                      <span class="badge badge-priority-${(e.priority || 'medium').toLowerCase()}" style="font-size: 0.65rem; padding: 0.1rem 0.45rem;">${(e.priority || 'Medium').toUpperCase()}</span>
+                    </div>
+                    <div style="font-size: 0.76rem; color: var(--color-text-secondary); display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                      <span>🏛️ ${e.court || 'High Court of Tanzania'}</span>
+                      <span>&bull;</span>
+                      <span>Case: <strong>${e.caseNumber || 'N/A'}</strong></span>
+                    </div>
+                  </div>
+                  <div class="text-right" style="flex-shrink: 0;">
+                    <span class="badge badge-active" style="font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.55rem;">
+                      ${e.type || 'SCHEDULED'}
+                    </span>
+                    <div style="font-size: 0.7rem; color: var(--color-danger); font-weight: 600; margin-top: 0.2rem;">${e.date || 'Upcoming'}</div>
+                  </div>
                 </div>
-                <div style="font-size: 0.76rem; color: var(--color-text-secondary); display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
-                  <span>🏛️ High Court (Commercial Division)</span>
-                  <span>&bull;</span>
-                  <span>Judge: <strong>Hon. Katherine Thorne</strong></span>
-                </div>
-              </div>
-              <div class="text-right" style="flex-shrink: 0;">
-                <span class="badge badge-active" style="font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.55rem;">
-                  ⚖️ HEARING
-                </span>
-                <div style="font-size: 0.7rem; color: var(--color-danger); font-weight: 600; margin-top: 0.2rem;">In 6 Days</div>
-              </div>
-            </div>
-
-            <div class="dash-docket-card" onclick="App.navigate('cases')" style="cursor: pointer;">
-              <div class="dash-docket-date-badge" style="background: rgba(200,155,60,0.1); border-color: rgba(200,155,60,0.3);">
-                <span class="dash-docket-month" style="color: var(--color-gold);">SEP</span>
-                <span class="dash-docket-day" style="color: var(--color-gold);">22</span>
-              </div>
-              <div style="flex: 1; min-width: 0;">
-                <div class="flex items-center gap-2 flex-wrap" style="margin-bottom: 0.2rem;">
-                  <strong style="color: var(--color-primary); font-size: 0.88rem;">AuraBio Pharmaceuticals Patent Infringement</strong>
-                  <span class="badge badge-priority-high" style="font-size: 0.65rem; padding: 0.1rem 0.45rem;">HIGH</span>
-                </div>
-                <div style="font-size: 0.76rem; color: var(--color-text-secondary); display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
-                  <span>🏛️ Court of Appeal of Tanzania</span>
-                  <span>&bull;</span>
-                  <span>Judge: <strong>Hon. Arthur Pendelton</strong></span>
-                </div>
-              </div>
-              <div class="text-right" style="flex-shrink: 0;">
-                <span class="badge badge-gold" style="font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.55rem;">
-                  📑 MOTION
-                </span>
-                <div style="font-size: 0.7rem; color: var(--color-gold); font-weight: 600; margin-top: 0.2rem;">In 14 Days</div>
-              </div>
-            </div>
+              `).join('');
+            })()}
           </div>
 
           <!-- WIDGET 2: Active Case Matters -->
@@ -364,13 +348,20 @@ const DashboardView = {
               <button class="btn btn-ghost btn-sm" onclick="App.navigate('cases')" style="font-weight: 600;">All Cases →</button>
             </div>
 
-            ${SLCMS_STATE.cases.slice(0, 3).map(c => `
+            ${SLCMS_STATE.cases.length === 0 ? `
+              <div style="padding: 2rem 1rem; text-align: center; color: var(--color-text-muted);">
+                <div style="font-size: 1.8rem; margin-bottom: 0.4rem;">📁</div>
+                <div style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary);">No cases yet</div>
+                <p style="font-size: 0.78rem; margin: 0.25rem 0 1rem 0; color: var(--color-text-secondary);">No active legal matters registered in the repository.</p>
+                <button class="btn btn-gold btn-sm" onclick="CasesView.openNewCaseModal()">+ Add New Case</button>
+              </div>
+            ` : SLCMS_STATE.cases.slice(0, 3).map(c => `
               <div class="dash-case-dossier-card" onclick="CasesView.openCaseDetails('${c.id}')">
                 <div class="flex items-center justify-between" style="margin-bottom: 0.35rem;">
                   <span style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: 800; color: var(--color-gold); background: rgba(200,155,60,0.1); padding: 0.15rem 0.45rem; border-radius: 4px;">
                     ${c.caseNumber}
                   </span>
-                  <span class="badge badge-${c.status.toLowerCase().replace(' ', '')}" style="font-size: 0.68rem; padding: 0.15rem 0.55rem;">
+                  <span class="badge badge-${(c.status || 'active').toLowerCase().replace(' ', '')}" style="font-size: 0.68rem; padding: 0.15rem 0.55rem;">
                     ${c.status}
                   </span>
                 </div>
@@ -379,10 +370,10 @@ const DashboardView = {
                 </div>
                 <div class="flex items-center justify-between" style="font-size: 0.75rem; color: var(--color-text-secondary); margin-bottom: 0.35rem;">
                   <span>🏢 <strong>${c.client}</strong></span>
-                  <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono);">${c.progressPct || 50}% Prepared</span>
+                  <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono);">${c.progressPct || 25}% Prepared</span>
                 </div>
                 <div class="progress-bar-container" style="height: 6px; background: var(--color-surface-subtle); border-radius: 3px; overflow: hidden; border: 1px solid var(--color-border-subtle);">
-                  <div class="progress-bar-fill" style="width: ${c.progressPct || 50}%; height: 100%; background: linear-gradient(90deg, #102A43 0%, #C89B3C 100%);"></div>
+                  <div class="progress-bar-fill" style="width: ${c.progressPct || 25}%; height: 100%; background: linear-gradient(90deg, #102A43 0%, #C89B3C 100%);"></div>
                 </div>
               </div>
             `).join('')}
@@ -401,7 +392,14 @@ const DashboardView = {
               <button class="btn btn-secondary btn-sm" onclick="TasksView.openNewTaskModal()">+ Add Task</button>
             </div>
 
-            ${SLCMS_STATE.tasks.slice(0, 3).map(t => `
+            ${SLCMS_STATE.tasks.length === 0 ? `
+              <div style="padding: 2rem 1rem; text-align: center; color: var(--color-text-muted);">
+                <div style="font-size: 1.8rem; margin-bottom: 0.4rem;">📋</div>
+                <div style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary);">No tasks assigned</div>
+                <p style="font-size: 0.78rem; margin: 0.25rem 0 1rem 0; color: var(--color-text-secondary);">No actionable litigation or administrative tasks assigned yet.</p>
+                <button class="btn btn-gold btn-sm" onclick="TasksView.openNewTaskModal()">+ Create Task</button>
+              </div>
+            ` : SLCMS_STATE.tasks.slice(0, 3).map(t => `
               <div class="dash-task-item-row">
                 <div class="flex items-center gap-2.5" style="flex: 1; min-width: 0;">
                   <input type="checkbox" ${t.status === 'completed' ? 'checked' : ''} onchange="TasksView.toggleTaskStatus('${t.id}')" style="cursor: pointer; width: 17px; height: 17px; accent-color: var(--color-gold); flex-shrink: 0;">
@@ -416,7 +414,7 @@ const DashboardView = {
                     </div>
                   </div>
                 </div>
-                <span class="badge badge-priority-${t.priority.toLowerCase()}" style="font-size: 0.68rem; margin-left: 0.5rem; flex-shrink: 0;">
+                <span class="badge badge-priority-${(t.priority || 'medium').toLowerCase()}" style="font-size: 0.68rem; margin-left: 0.5rem; flex-shrink: 0;">
                   ${t.priority}
                 </span>
               </div>

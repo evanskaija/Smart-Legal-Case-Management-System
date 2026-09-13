@@ -35,4 +35,15 @@ public class AIQueryController {
         AIQueryResponse response = aiResearchService.processLegalQuery(request);
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * Executes progressive streaming legal query retrieval sending small text chunks over SSE.
+     */
+    @PostMapping(value = "/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter streamLegalResearch(@RequestBody AIQueryRequest request) {
+        org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter = 
+                new org.springframework.web.servlet.mvc.method.annotation.SseEmitter(120_000L);
+        aiResearchService.streamLegalQuery(request, emitter);
+        return emitter;
+    }
 }

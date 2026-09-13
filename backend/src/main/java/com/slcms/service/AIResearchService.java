@@ -94,13 +94,26 @@ public class AIResearchService {
         String directAnswer;
         String explanation;
 
-        if (qLower.includes("muwinge") || qLower.includes("halima") || qLower.includes("10045") || qLower.includes("probate")) {
+        if (qLower.contains("criminal") || qLower.contains("jinai") || qLower.contains("crime") || qLower.contains("theft") || qLower.contains("offence")) {
+            directAnswer = "Criminal cases in Tanzania concern conduct alleged to be an offence under Tanzanian law. They are normally prosecuted by the Republic against the accused person.\n\n" +
+                    "I can help you with:\n\n" +
+                    "• Finding criminal judgments by title, citation, court, year or offence.\n" +
+                    "• Showing the facts and evidence presented in a specific case.\n" +
+                    "• Explaining the charge and its legal elements.\n" +
+                    "• Showing the prosecution’s and defence’s arguments.\n" +
+                    "• Identifying laws, statutory sections and earlier cases cited.\n" +
+                    "• Explaining the court’s reasoning.\n" +
+                    "• Showing the conviction, acquittal, sentence or other final orders.\n" +
+                    "• Opening the original judgment PDF or TanzLII source.\n\n" +
+                    "What would you like to search by: offence, case title, court, year or case number?";
+            explanation = "SLCMS provides legal-research assistance. Verify important information using the cited judgment and applicable Tanzanian law.";
+        } else if (qLower.contains("muwinge") || qLower.contains("halima") || qLower.contains("10045") || qLower.contains("probate")) {
             directAnswer = "Under Tanzanian probate law (<strong>Probate and Administration of Estates Act [Cap. 352 R.E. 2019]</strong>), a surviving spouse possesses statutory priority in the grant of Letters of Administration. In <em>Abdallah Salum Muwinge vs Halima Ismail [2020] TZHC 10045</em>, the High Court of Tanzania held that where a caveator alleges prior marriage dissolution under religious rites, the evidentiary burden strictly rests on the caveator to produce formal documentary proof or corroborated testimony.";
             explanation = "The High Court emphasized that marriage enjoys a strong legal presumption of validity under Tanzanian law. The caveator having failed to tender a written certificate of divorce (talaknama), the surviving spouse's legal status was confirmed, and the caveat was dismissed with costs. Furthermore, matrimonial residential property cannot be alienated prior to statutory estate administration.";
-        } else if (qLower.includes("injunction") || qLower.includes("temporary") || qLower.includes("xxxix")) {
+        } else if (qLower.contains("injunction") || qLower.contains("temporary") || qLower.contains("xxxix")) {
             directAnswer = "In Tanzania, temporary injunctions are granted pursuant to <strong>Order XXXIX of the Civil Procedure Code [Cap. 33 R.E. 2019]</strong> upon satisfying the tripartite test: (1) prima facie case with probability of success, (2) irreparable injury not compensable by damages, and (3) balance of convenience favoring the applicant (<em>Attilio v. Mbowe [1969] HCD 284</em>).";
             explanation = "Interlocutory relief is discretionary and requires counsel to establish clear irreparable loss. In commercial matters, unconditional bank guarantees will not be restrained absent proof of clear fraud.";
-        } else if (qLower.includes("contract") || qLower.includes("breach") || qLower.includes("345")) {
+        } else if (qLower.contains("contract") || qLower.contains("breach") || qLower.contains("345")) {
             directAnswer = "Under <strong>Section 73 of the Law of Contract Act [Cap. 345 R.E. 2019]</strong>, compensation for breach of contract is recoverable for losses that naturally arose in the usual course of things or were in contemplation of the parties (<em>Kibo Poultry Products Ltd [1983] TLR 6</em>).";
             explanation = "Where liquidated damages or penalty clauses are stipulated, Section 74 limits recovery to reasonable compensation not exceeding the named amount.";
         } else {
@@ -124,6 +137,51 @@ public class AIResearchService {
                 .build();
     }
 
+    /**
+     * Streams progressive text chunks and results over Server-Sent Events (SSE).
+     */
+    public void streamLegalQuery(AIQueryRequest request, org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter) {
+        new Thread(() -> {
+            try {
+                // Send genuine search status event if a search across library occurs
+                String query = request.getQuery() != null ? request.getQuery().trim() : "";
+                boolean isSearch = query.toLowerCase().contains("search") || 
+                                   query.toLowerCase().contains("find") || 
+                                   query.toLowerCase().contains("case") ||
+                                   query.toLowerCase().contains("202");
+                if (isSearch) {
+                    emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event()
+                            .name("status")
+                            .data(Map.of("message", "Searching the prepared Tanzanian case library…")));
+                    Thread.sleep(250);
+                }
+
+                AIQueryResponse response = processLegalQuery(request);
+                String fullText = response.getDirectAnswer();
+                if (response.getLegalExplanation() != null && !response.getLegalExplanation().isEmpty()) {
+                    fullText += "\n\n" + response.getLegalExplanation();
+                }
+
+                // Send line-by-line / progressive chunks
+                String[] lines = fullText.split("\n");
+                for (String line : lines) {
+                    emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event()
+                            .name("chunk")
+                            .data(Map.of("text", line + "\n")));
+                    Thread.sleep(60);
+                }
+
+                // Send completion payload
+                emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event()
+                        .name("done")
+                        .data(response));
+                emitter.complete();
+            } catch (Exception e) {
+                emitter.completeWithError(e);
+            }
+        }).start();
+    }
+
     private double calculatePassageRelevance(String passageText, String query) {
         if (passageText == null || query == null) return 0;
         String pLower = passageText.toLowerCase();
@@ -131,7 +189,7 @@ public class AIResearchService {
 
         int matchCount = 0;
         for (String word : queryWords) {
-            if (word.length() > 3 && pLower.includes(word)) {
+            if (word.length() > 3 && pLower.contains(word)) {
                 matchCount++;
             }
         }

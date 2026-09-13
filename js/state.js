@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    SLCMS - State Store & Data Fixtures
    Zero-Trust Role-Based Access Control (RBAC) Architecture
    ========================================================================== */
@@ -9,21 +9,22 @@ const SLCMS_STATE = {
     id: 'usr-001',
     employeeId: 'ADM-0001',
     staffId: 'ADM-0001',
-    name: 'Neema Joseph',
-    email: 'n.joseph@slcms-law.co.tz',
-    phone: '+255 754 112 001',
-    role: 'Administrator', // 4 Roles: 'Administrator' (System Administrator) | 'Senior Lawyer' | 'Lawyer' | 'Legal Clerk'
+    username: 'slcms.admin',
+    name: 'SLCMS System Administrator',
+    email: 'admin@slcms.local',
+    phone: '+255 700 000 001',
+    role: 'Administrator', // 4 Approved Roles: 'Administrator' | 'Senior Lawyer' | 'Lawyer' | 'Legal Clerk'
     roleLabel: 'System Administrator',
     status: 'ACTIVE',
-    avatar: 'NJ',
-    avatarImg: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=256&q=80',
+    avatar: 'SA',
+    avatarImg: '',
     avatarClass: 'avatar-gold',
     department: 'System Governance & Administration',
-    officeLocation: 'Dar es Salaam HQ, Floor 7, Suite 702',
-    bio: 'System Administrator responsible for account provisioning, identity governance, access security, and technical case infrastructure for SLCMS.',
-    mfaStatus: 'Hardware FIDO2 / YubiKey Active',
-    lastLogin: 'Today at 08:30 AM',
-    assignedCaseIds: ['case-101', 'case-102', 'case-103', 'case-104']
+    officeLocation: 'Dar es Salaam HQ, Floor 7',
+    bio: 'System Administrator responsible for account provisioning, identity governance, access security, and technical infrastructure.',
+    mfaStatus: 'Hardware Security Key Active',
+    lastLogin: 'Never',
+    assignedCaseIds: []
   },
 
   // Role permissions matrix (4 Roles for Academic Presentation)
@@ -94,658 +95,23 @@ const SLCMS_STATE = {
     }
   },
 
-  // Sample Cases
-  cases: [
-    {
-      id: 'case-101',
-      caseNumber: 'CV-2026-0842',
-      title: 'Vanguard Capital vs. Apex Tech Holdings',
-      client: 'Vanguard Capital Partners',
-      clientId: 'cli-01',
-      clientType: 'Organization',
-      caseType: 'Commercial Litigation',
-      lawyer: 'Eleanor Vance, Esq.',
-      lawyerAvatar: 'EV',
-      supportingStaff: 'Marcus Bell',
-      nextDeadline: '2026-09-08',
-      nextHearingDate: '2026-09-14',
-      priority: 'High',
-      status: 'Active',
-      court: 'Supreme Court - Commercial Division',
-      courtCaseNo: 'SC-NY-2026-0842',
-      presidingOfficer: 'Hon. Justice Katherine Thorne',
-      opposingParty: 'Apex Tech Holdings Inc.',
-      opposingCounsel: 'Sterling & Croft LLP (Attn: David Sterling)',
-      openingDate: '2026-02-10',
-      expectedCompletion: '2027-01-30',
-      progressPct: 65,
-      description: 'Breach of contractual warranty and cross-border IP licensing agreements regarding patented artificial intelligence algorithms.',
-      retainerAmount: 75000,
-      totalBilled: 42350,
-      totalPaid: 35000,
-      notes: 'Initial discovery exchange completed. Motion for Summary Judgment draft undergoing partner review.'
-    },
-    {
-      id: 'case-102',
-      caseNumber: 'IP-2026-0319',
-      title: 'AuraBio Pharmaceuticals Patent Infringement',
-      client: 'AuraBio Therapeutics Inc.',
-      clientId: 'cli-02',
-      clientType: 'Organization',
-      caseType: 'Intellectual Property',
-      lawyer: 'Julian Mercer, Esq.',
-      lawyerAvatar: 'JM',
-      supportingStaff: 'Sophia Chen',
-      nextDeadline: '2026-09-04',
-      nextHearingDate: '2026-09-22',
-      priority: 'High',
-      status: 'Active',
-      court: 'Federal District Court of Appeals',
-      courtCaseNo: 'FED-2026-IP-0319',
-      presidingOfficer: 'Hon. Judge Arthur Pendelton',
-      opposingParty: 'Novagen Biotech AG',
-      opposingCounsel: 'Harrison & Cole LLP',
-      openingDate: '2026-04-15',
-      expectedCompletion: '2026-11-20',
-      progressPct: 40,
-      description: 'Defending proprietary mRNA delivery mechanism patents against willful infringement claims in biological therapeutics.',
-      retainerAmount: 120000,
-      totalBilled: 68500,
-      totalPaid: 68500,
-      notes: 'Expert witness deposition scheduled for Sept 18th.'
-    },
-    {
-      id: 'case-103',
-      caseNumber: 'RE-2026-0155',
-      title: 'Greenfield Estate Land Acquisition & Zoning',
-      client: 'Greenfield Realty Trust',
-      clientId: 'cli-03',
-      clientType: 'Organization',
-      caseType: 'Real Estate & Zoning',
-      lawyer: 'Eleanor Vance, Esq.',
-      lawyerAvatar: 'EV',
-      supportingStaff: 'Sophia Chen',
-      nextDeadline: '2026-09-18',
-      nextHearingDate: '2026-10-05',
-      priority: 'Medium',
-      status: 'Pending',
-      court: 'Municipal Zoning Appeals Board',
-      courtCaseNo: 'MZB-2026-0155',
-      presidingOfficer: 'Board Chair Raymond Morales',
-      opposingParty: 'City Planning Department & Residents Coalition',
-      opposingCounsel: 'Municipal Attorney Office',
-      openingDate: '2026-05-02',
-      expectedCompletion: '2026-12-15',
-      progressPct: 55,
-      requiresAdminAttention: true,
-      adminAttentionReason: 'Unassigned Staff - Reallocation Required',
-      isSensitiveLocked: false,
-      description: 'Zoning variance appeal and title deed conveyance for a $45M sustainable residential development.',
-      retainerAmount: 35000,
-      totalBilled: 21000,
-      totalPaid: 15000,
-      notes: 'Environmental impact survey submitted successfully.'
-    },
-    {
-      id: 'case-104',
-      caseNumber: 'EM-2026-0774',
-      title: 'Dr. Clara Thorne vs. St. Jude Medical Network',
-      client: 'Dr. Clara Thorne, MD',
-      clientId: 'cli-04',
-      clientType: 'Individual',
-      caseType: 'Employment Law',
-      lawyer: 'Julian Mercer, Esq.',
-      lawyerAvatar: 'JM',
-      supportingStaff: 'Marcus Bell',
-      nextDeadline: '2026-09-02',
-      nextHearingDate: '2026-09-09',
-      priority: 'High',
-      status: 'Active',
-      court: 'State Supreme Court - Civil Division',
-      courtCaseNo: 'ST-NY-2026-0774',
-      presidingOfficer: 'Hon. Justice Evelyn Foster',
-      opposingParty: 'St. Jude Healthcare System',
-      opposingCounsel: 'Blackwood Legal Group',
-      openingDate: '2026-06-11',
-      expectedCompletion: '2026-10-30',
-      progressPct: 80,
-      requiresAdminAttention: false,
-      isSensitiveLocked: false,
-      description: 'Wrongful termination and whistle-blower retaliation dispute in clinical hospital protocols.',
-      retainerAmount: 25000,
-      totalBilled: 24500,
-      totalPaid: 20000,
-      notes: 'Mediation settlement conference scheduled next week.'
-    },
-    {
-      id: 'case-105',
-      caseNumber: 'CR-2026-0098',
-      title: 'State vs. Jonathan Vance Jr. (Financial Compliance)',
-      client: 'Jonathan Vance Jr.',
-      clientId: 'cli-05',
-      clientType: 'Individual',
-      caseType: 'White Collar Defense',
-      lawyer: 'Eleanor Vance, Esq.',
-      lawyerAvatar: 'EV',
-      supportingStaff: 'Marcus Bell',
-      nextDeadline: '2026-09-25',
-      nextHearingDate: '2026-10-12',
-      priority: 'Medium',
-      status: 'On Hold',
-      court: 'Federal District Court',
-      courtCaseNo: 'FDC-2026-0098',
-      presidingOfficer: 'Hon. Judge Samuel Vance',
-      opposingParty: 'United States Department of Justice',
-      opposingCounsel: 'Assistant US Attorney Laura Hayes',
-      openingDate: '2026-01-20',
-      expectedCompletion: '2027-03-01',
-      progressPct: 30,
-      requiresAdminAttention: true,
-      adminAttentionReason: 'Sensitive Matter - Ethical Wall Lock Requested',
-      isSensitiveLocked: true,
-      description: 'Defense against regulatory compliance discrepancies regarding foreign financial holding accounts.',
-      retainerAmount: 50000,
-      totalBilled: 18000,
-      totalPaid: 18000,
-      notes: 'Stay of proceedings granted pending audit resolution.'
-    },
-    {
-      id: 'case-106',
-      caseNumber: 'TX-2025-0812',
-      title: 'Helios Energy Global Cross-Border Tax Structuring',
-      client: 'Helios Clean Energy Ltd.',
-      clientId: 'cli-06',
-      clientType: 'Organization',
-      caseType: 'Corporate & Tax',
-      lawyer: 'Julian Mercer, Esq.',
-      lawyerAvatar: 'JM',
-      supportingStaff: 'Sophia Chen',
-      nextDeadline: '2026-08-15',
-      nextHearingDate: 'Completed',
-      priority: 'Low',
-      status: 'Won',
-      court: 'Federal Tax Tribunal',
-      courtCaseNo: 'FTT-2025-0812',
-      presidingOfficer: 'Chief Tax Magistrate Ronald Shaw',
-      opposingParty: 'Internal Revenue Service',
-      opposingCounsel: 'IRS Senior District Counsel',
-      openingDate: '2025-08-10',
-      expectedCompletion: '2026-08-30',
-      progressPct: 100,
-      requiresAdminAttention: true,
-      adminAttentionReason: 'Administrative Metadata & Archive Verification',
-      isSensitiveLocked: false,
-      description: 'Favorable multi-jurisdictional tax structuring determination securing $8.4M in renewable energy tax credits.',
-      retainerAmount: 90000,
-      totalBilled: 88200,
-      totalPaid: 88200,
-      notes: 'Final judgment entered in favor of client. Matter closed successfully.'
-    }
-  ],
+  // Cases (Initial database state: 0 cases - calculated from database)
+  cases: [],
 
-  // Sample Clients
-  clients: [
-    {
-      id: 'cli-01',
-      name: 'Vanguard Capital Partners',
-      type: 'Organization',
-      contactPerson: 'Robert Sterling, Managing Director',
-      email: 'r.sterling@vanguardcap.com',
-      phone: '+1 (212) 555-0198',
-      address: '745 Fifth Avenue, Suite 2800, New York, NY 10151',
-      idNumber: 'EIN-84-9120482',
-      activeCases: 1,
-      totalCases: 3,
-      totalBilled: 142500,
-      status: 'Active',
-      confidential: true,
-      notes: 'Prime corporate retainer client since 2022. Dedicated attorney contact required for all communications.'
-    },
-    {
-      id: 'cli-02',
-      name: 'AuraBio Therapeutics Inc.',
-      type: 'Organization',
-      contactPerson: 'Dr. Helene Dubois, Chief Legal Officer',
-      email: 'h.dubois@aurabio.com',
-      phone: '+1 (617) 555-0144',
-      address: '200 Technology Square, Cambridge, MA 02139',
-      idNumber: 'EIN-92-3049182',
-      activeCases: 1,
-      totalCases: 2,
-      totalBilled: 195000,
-      status: 'Active',
-      confidential: true,
-      notes: 'Biotech patent litigation matter. Strict NDA in place.'
-    },
-    {
-      id: 'cli-03',
-      name: 'Greenfield Realty Trust',
-      type: 'Organization',
-      contactPerson: 'Anthony Miller, VP Acquisitions',
-      email: 'a.miller@greenfieldtrust.org',
-      phone: '+1 (312) 555-0182',
-      address: '150 N Michigan Ave, Chicago, IL 60601',
-      idNumber: 'EIN-36-8492019',
-      activeCases: 1,
-      totalCases: 1,
-      totalBilled: 21000,
-      status: 'Active',
-      confidential: false,
-      notes: 'Commercial zoning & land conveyance.'
-    },
-    {
-      id: 'cli-04',
-      name: 'Dr. Clara Thorne, MD',
-      type: 'Individual',
-      contactPerson: 'Dr. Clara Thorne',
-      email: 'dr.clara.thorne@medmail.org',
-      phone: '+1 (212) 555-0129',
-      address: '420 East 68th Street, Apt 14B, New York, NY 10065',
-      idNumber: 'SSN-XXX-XX-4819',
-      activeCases: 1,
-      totalCases: 1,
-      totalBilled: 24500,
-      status: 'Active',
-      confidential: true,
-      notes: 'Confidential whistleblower employment action.'
-    },
-    {
-      id: 'cli-05',
-      name: 'Jonathan Vance Jr.',
-      type: 'Individual',
-      contactPerson: 'Jonathan Vance Jr.',
-      email: 'jvance.jr@privatemail.com',
-      phone: '+1 (305) 555-0177',
-      address: '1100 Brickell Bay Drive, Miami, FL 33131',
-      idNumber: 'SSN-XXX-XX-9021',
-      activeCases: 1,
-      totalCases: 2,
-      totalBilled: 54000,
-      status: 'Active',
-      confidential: true,
-      notes: 'Private high-net-worth regulatory matter.'
-    },
-    {
-      id: 'cli-06',
-      name: 'Helios Clean Energy Ltd.',
-      type: 'Organization',
-      contactPerson: 'Vikram Mehta, CFO',
-      email: 'v.mehta@heliosenergy.com',
-      phone: '+1 (415) 555-0163',
-      address: '500 Howard Street, San Francisco, CA 94105',
-      idNumber: 'EIN-77-2910394',
-      activeCases: 0,
-      totalCases: 2,
-      totalBilled: 125000,
-      status: 'Active',
-      confidential: false,
-      notes: 'Completed cross-border tax credits structure.'
-    }
-  ],
+  // Clients (Initial database state: 0 clients - calculated from database)
+  clients: [],
 
-  // Sample Documents
-  documents: [
-    {
-      id: 'doc-001',
-      title: 'Motion for Summary Judgment (Draft v2.1)',
-      fileName: 'Motion_Summary_Judgment_Vanguard_v2.1.pdf',
-      caseId: 'case-101',
-      caseNumber: 'CV-2026-0842',
-      caseTitle: 'Vanguard Capital vs. Apex Tech Holdings',
-      category: 'Pleadings',
-      uploadedBy: 'Eleanor Vance, Esq.',
-      uploadDate: '2026-08-28',
-      size: '2.4 MB',
-      version: 'v2.1',
-      accessLevel: 'Attorney-Client Privileged',
-      fileType: 'PDF'
-    },
-    {
-      id: 'doc-002',
-      title: 'Proprietary Algorithm Licensing Agreement',
-      fileName: 'Ex_A_Apex_Algorithm_Licensing_2024.pdf',
-      caseId: 'case-101',
-      caseNumber: 'CV-2026-0842',
-      caseTitle: 'Vanguard Capital vs. Apex Tech Holdings',
-      category: 'Evidence',
-      uploadedBy: 'Marcus Bell',
-      uploadDate: '2026-08-20',
-      size: '5.8 MB',
-      version: 'v1.0',
-      accessLevel: 'Confidential',
-      fileType: 'PDF'
-    },
-    {
-      id: 'doc-003',
-      title: 'Patent Specification US-10948291-B2',
-      fileName: 'Patent_US10948291_AuraBio_Spec.pdf',
-      caseId: 'case-102',
-      caseNumber: 'IP-2026-0319',
-      caseTitle: 'AuraBio Pharmaceuticals Patent Infringement',
-      category: 'Evidence',
-      uploadedBy: 'Julian Mercer, Esq.',
-      uploadDate: '2026-08-14',
-      size: '8.1 MB',
-      version: 'v1.0',
-      accessLevel: 'Public Record',
-      fileType: 'PDF'
-    },
-    {
-      id: 'doc-004',
-      title: 'Expert Witness Rebuttal Report - Dr. K. Aris',
-      fileName: 'Expert_Rebuttal_Report_AuraBio.docx',
-      caseId: 'case-102',
-      caseNumber: 'IP-2026-0319',
-      caseTitle: 'AuraBio Pharmaceuticals Patent Infringement',
-      category: 'Pleadings',
-      uploadedBy: 'Sophia Chen',
-      uploadDate: '2026-08-29',
-      size: '1.2 MB',
-      version: 'v1.4',
-      accessLevel: 'Attorney-Client Privileged',
-      fileType: 'DOCX'
-    },
-    {
-      id: 'doc-005',
-      title: 'Mediation Settlement Framework Agreement',
-      fileName: 'Settlement_Framework_Thorne_StJude.pdf',
-      caseId: 'case-104',
-      caseNumber: 'EM-2026-0774',
-      caseTitle: 'Dr. Clara Thorne vs. St. Jude Medical Network',
-      category: 'Correspondence',
-      uploadedBy: 'Julian Mercer, Esq.',
-      uploadDate: '2026-08-26',
-      size: '850 KB',
-      version: 'v1.0',
-      accessLevel: 'Confidential',
-      fileType: 'PDF'
-    },
-    {
-      id: 'doc-006',
-      title: 'Municipal Zoning Variance Order & Resolution',
-      fileName: 'Resolution_MZB_2026_0155_Approved.pdf',
-      caseId: 'case-103',
-      caseNumber: 'RE-2026-0155',
-      caseTitle: 'Greenfield Estate Land Acquisition & Zoning',
-      category: 'Court Orders',
-      uploadedBy: 'Marcus Bell',
-      uploadDate: '2026-08-18',
-      size: '1.6 MB',
-      version: 'v1.0',
-      accessLevel: 'Firm Internal',
-      fileType: 'PDF'
-    }
-  ],
+  // Documents (Initial database state: 0 documents)
+  documents: [],
 
-  // Sample Tasks
-  tasks: [
-    {
-      id: 'tsk-01',
-      title: 'File Motion for Summary Judgment with Commercial Division',
-      caseId: 'case-101',
-      caseTitle: 'Vanguard Capital vs. Apex Tech',
-      caseNumber: 'CV-2026-0842',
-      assignedTo: 'Eleanor Vance, Esq.',
-      assignedAvatar: 'EV',
-      priority: 'High',
-      dueDate: '2026-09-08',
-      status: 'in_progress', // 'todo' | 'in_progress' | 'under_review' | 'completed'
-      progressPct: 75,
-      isOverdue: false,
-      description: 'Finalize citations, verify case law table of authorities, and e-file through NYSCEF.'
-    },
-    {
-      id: 'tsk-02',
-      title: 'Conduct Pre-Deposition Briefing with Dr. K. Aris',
-      caseId: 'case-102',
-      caseTitle: 'AuraBio Patent Infringement',
-      caseNumber: 'IP-2026-0319',
-      assignedTo: 'Julian Mercer, Esq.',
-      assignedAvatar: 'JM',
-      priority: 'High',
-      dueDate: '2026-09-04',
-      status: 'todo',
-      progressPct: 20,
-      isOverdue: false,
-      description: 'Review mRNA sequence validity exhibits and prior art timeline with chief biochemist.'
-    },
-    {
-      id: 'tsk-03',
-      title: 'Finalize Mediation Terms with Defense Counsel',
-      caseId: 'case-104',
-      caseTitle: 'Dr. Clara Thorne vs. St. Jude',
-      caseNumber: 'EM-2026-0774',
-      assignedTo: 'Julian Mercer, Esq.',
-      assignedAvatar: 'JM',
-      priority: 'High',
-      dueDate: '2026-09-02',
-      status: 'under_review',
-      progressPct: 90,
-      isOverdue: false,
-      description: 'Revise mutual non-disparagement clause and severance escrow schedule.'
-    },
-    {
-      id: 'tsk-04',
-      title: 'Submit Environmental Soil Survey to Municipal Board',
-      caseId: 'case-103',
-      caseTitle: 'Greenfield Estate Zoning',
-      caseNumber: 'RE-2026-0155',
-      assignedTo: 'Marcus Bell',
-      assignedAvatar: 'MB',
-      priority: 'Medium',
-      dueDate: '2026-09-18',
-      status: 'todo',
-      progressPct: 0,
-      isOverdue: false,
-      description: 'Obtain certified surveyor stamp and lodge 4 physical copies with the clerk.'
-    },
-    {
-      id: 'tsk-05',
-      title: 'Audit Foreign Holding Disclosures for Vance Defense',
-      caseId: 'case-105',
-      caseTitle: 'State vs. Jonathan Vance Jr.',
-      caseNumber: 'CR-2026-0098',
-      assignedTo: 'Sophia Chen',
-      assignedAvatar: 'SC',
-      priority: 'Medium',
-      dueDate: '2026-09-25',
-      status: 'in_progress',
-      progressPct: 50,
-      isOverdue: false,
-      description: 'Reconcile 2021-2024 bank reporting statements with FINCEN form 114 filings.'
-    },
-    {
-      id: 'tsk-06',
-      title: 'Archive Tax Hearing Record & Issue Final Retainer Refund',
-      caseId: 'case-106',
-      caseTitle: 'Helios Clean Energy Tax',
-      caseNumber: 'TX-2025-0812',
-      assignedTo: 'Marcus Bell',
-      assignedAvatar: 'MB',
-      priority: 'Low',
-      dueDate: '2026-08-30',
-      status: 'completed',
-      progressPct: 100,
-      isOverdue: false,
-      description: 'All tax judgment filings confirmed. Closing binder generated and client notified.'
-    },
-    {
-      id: 'tsk-07',
-      title: 'Reconcile Court Registry Stamp on Notice of Motion (Unassigned)',
-      caseId: 'case-103',
-      caseTitle: 'Greenfield Estate Zoning',
-      caseNumber: 'RE-2026-0155',
-      assignedTo: 'Unassigned',
-      assignedAvatar: '--',
-      priority: 'High',
-      dueDate: '2026-09-07',
-      status: 'todo',
-      progressPct: 0,
-      isOverdue: true,
-      category: 'administrative',
-      description: 'Docket filing clerk unassigned. Requires administrative reassignment to legal clerk or advocate.'
-    },
-    {
-      id: 'tsk-08',
-      title: 'Verify Weekly Cryptographic Database Backup & TanzLII Sync Check',
-      caseId: 'case-101',
-      caseTitle: 'Firm Infrastructure Maintenance',
-      caseNumber: 'SYS-2026-001',
-      assignedTo: 'Neema Joseph',
-      assignedAvatar: 'NJ',
-      priority: 'Medium',
-      dueDate: '2026-09-10',
-      status: 'todo',
-      progressPct: 25,
-      isOverdue: false,
-      category: 'technical',
-      isTechnical: true,
-      description: 'Routine Sunday night off-site encrypted backup snapshot and automated TanzLII API crawler check.'
-    }
-  ],
-
+  // Tasks (Initial database state: 0 tasks - calculated from database)
+  tasks: [],
 
   // Communications Log
-  communications: [
-    {
-      id: 'comm-01',
-      type: 'email',
-      sender: 'Eleanor Vance, Esq.',
-      recipient: 'Robert Sterling (Vanguard Capital)',
-      client: 'Vanguard Capital Partners',
-      caseNumber: 'CV-2026-0842',
-      timestamp: '2026-08-31 10:15 AM',
-      subject: 'Summary of Opposing Counsel Settlement Offer & Deposition Dates',
-      summary: 'Advised client on counter-proposals for patent cross-license. Client agreed to reject current offer and proceed with filing Summary Judgment.',
-      attachment: 'Counter_Offer_Analysis_Memo.pdf'
-    },
-    {
-      id: 'comm-02',
-      type: 'call',
-      sender: 'Julian Mercer, Esq.',
-      recipient: 'David Sterling (Opposing Counsel)',
-      client: 'AuraBio Therapeutics Inc.',
-      caseNumber: 'IP-2026-0319',
-      timestamp: '2026-08-30 03:45 PM',
-      subject: 'Conferral on Protective Order Confidentiality Designations',
-      summary: 'Resolved designation dispute regarding Exhibit C-4 trade secret algorithms. Agreed on Attorneys Eyes Only restriction.',
-      attachment: null
-    },
-    {
-      id: 'comm-03',
-      type: 'meeting',
-      sender: 'Julian Mercer, Esq. & Marcus Bell',
-      recipient: 'Dr. Clara Thorne',
-      client: 'Dr. Clara Thorne, MD',
-      caseNumber: 'EM-2026-0774',
-      timestamp: '2026-08-29 02:00 PM',
-      subject: 'Mediation Preparation & Damaged Goodwill Calculation',
-      summary: 'Conducted 90-minute in-person trial run of mediator presentation. Client confirmed acceptable settlement floor.',
-      attachment: 'Mediation_Brief_Final.docx'
-    },
-    {
-      id: 'comm-04',
-      type: 'internal_note',
-      sender: 'Marcus Bell (Clerk)',
-      recipient: 'Litigation Team',
-      client: 'Vanguard Capital Partners',
-      caseNumber: 'CV-2026-0842',
-      timestamp: '2026-08-28 11:20 AM',
-      subject: 'Court Clerk Confirmation: Motion Calendar Date',
-      summary: 'Confirmed with Room 232 clerk that Judge Thorne has added our hearing to the Sept 14th motion call.',
-      attachment: null
-    },
-    {
-      id: 'comm-05',
-      type: 'letter',
-      sender: 'Eleanor Vance, Esq.',
-      recipient: 'Hon. Justice Katherine Thorne',
-      client: 'Vanguard Capital Partners',
-      caseNumber: 'CV-2026-0842',
-      timestamp: '2026-08-25 09:00 AM',
-      subject: 'Formal Request for Discovery Conference Extension',
-      summary: 'Submitted joint letter on consent requesting 5-day extension for expert disclosures.',
-      attachment: 'Joint_Letter_Extension_Aug25.pdf'
-    }
-  ],
+  communications: [],
 
   // Billing & Invoices
-  invoices: [
-    {
-      id: 'inv-1001',
-      invoiceNo: 'INV-2026-081',
-      clientId: 'cli-01',
-      clientName: 'Vanguard Capital Partners',
-      caseNumber: 'CV-2026-0842',
-      date: '2026-08-15',
-      dueDate: '2026-09-15',
-      amount: 14500,
-      tax: 1276,
-      total: 15776,
-      status: 'Sent', // 'Draft' | 'Sent' | 'Partially Paid' | 'Paid' | 'Overdue' | 'Cancelled'
-      items: [
-        { desc: 'Drafting Motion for Summary Judgment & Legal Research (Partner)', hours: 18, rate: 550, amount: 9900 },
-        { desc: 'Deposition Preparation & Document Review (Senior Associate)', hours: 12, rate: 350, amount: 4200 },
-        { desc: 'Court E-filing Fees & Certified Courier', hours: 1, rate: 400, amount: 400 }
-      ],
-      notes: 'Net 30. Wire transfer instructions on file.'
-    },
-    {
-      id: 'inv-1002',
-      invoiceNo: 'INV-2026-079',
-      clientId: 'cli-02',
-      clientName: 'AuraBio Therapeutics Inc.',
-      caseNumber: 'IP-2026-0319',
-      date: '2026-08-01',
-      dueDate: '2026-08-31',
-      amount: 28400,
-      tax: 2499,
-      total: 30899,
-      status: 'Paid',
-      items: [
-        { desc: 'Biotech Patent Prior Art Cross-Analysis (Partner)', hours: 24, rate: 600, amount: 14400 },
-        { desc: 'Expert Witness Deposition Retainer & Coordination', hours: 20, rate: 450, amount: 9000 },
-        { desc: 'Federal Court Filing Disclosures', hours: 1, rate: 5000, amount: 5000 }
-      ],
-      notes: 'Paid in full via ACH transfer on Aug 28, 2026.'
-    },
-    {
-      id: 'inv-1003',
-      invoiceNo: 'INV-2026-075',
-      clientId: 'cli-04',
-      clientName: 'Dr. Clara Thorne, MD',
-      caseNumber: 'EM-2026-0774',
-      date: '2026-07-20',
-      dueDate: '2026-08-20',
-      amount: 8500,
-      tax: 748,
-      total: 9248,
-      status: 'Overdue',
-      items: [
-        { desc: 'Mediation Brief Preparation & Evidence Indexing', hours: 14, rate: 450, amount: 6300 },
-        { desc: 'Witness Interview Statements (Legal Clerk)', hours: 11, rate: 200, amount: 2200 }
-      ],
-      notes: 'First reminder notice delivered on Aug 22, 2026.'
-    },
-    {
-      id: 'inv-1004',
-      invoiceNo: 'INV-2026-083',
-      clientId: 'cli-03',
-      clientName: 'Greenfield Realty Trust',
-      caseNumber: 'RE-2026-0155',
-      date: '2026-08-28',
-      dueDate: '2026-09-28',
-      amount: 6200,
-      tax: 545,
-      total: 6745,
-      status: 'Draft',
-      items: [
-        { desc: 'Municipal Zoning Appeal Representation (Partner)', hours: 8, rate: 500, amount: 4000 },
-        { desc: 'Title Conveyance & Survey Submission', hours: 11, rate: 200, amount: 2200 }
-      ],
-      notes: 'Awaiting final partner timesheet sign-off.'
-    }
-  ],
+  invoices: [],
 
   // Firm-Issued Invitations (One-Time-Use, Expirable, Immutable Role Assignment)
   invitations: [
@@ -865,22 +231,26 @@ const SLCMS_STATE = {
     }
   ],
 
-  // Extended Law-Firm Users Database (6 Roles + 7 Enterprise Account States)
+  // Staff Accounts Database (Database Ground Truth - Only Real Users)
   users: [
     {
       id: 'usr-001',
+      user_id: 'usr-001',
       employeeId: 'ADM-0001',
       staffId: 'ADM-0001',
+      staff_id: 'ADM-0001',
       username: 'slcms.admin',
       name: 'SLCMS System Administrator',
+      full_name: 'SLCMS System Administrator',
       email: 'admin@slcms.local',
-      phone: '+255700000001',
+      phone: '+255 700 000 001',
       advocateNumber: null,
       practisingCertNo: null,
       nationalIdRef: 'NIDA-19800101-0001-01',
       jobTitle: 'System Administrator',
       department: 'System Governance & Administration',
       office: 'Dar es Salaam HQ, Floor 7',
+      officeLocation: 'Dar es Salaam HQ, Floor 7',
       role: 'Administrator',
       roleTitle: 'System Administrator',
       status: 'ACTIVE',
@@ -888,579 +258,244 @@ const SLCMS_STATE = {
       account_status: 'ACTIVE',
       firstLoginStatus: 'Completed',
       first_login_required: false,
+      mustChangePassword: false,
       passwordHash: '$argon2id$v=19$m=65536,t=3,p=4$admininitialsalt2026$0017a441456e4e7b',
       password_hash: '$argon2id$v=19$m=65536,t=3,p=4$admininitialsalt2026$0017a441456e4e7b',
-      passwordPlain: 'SecretLawFirm2026!',
-      password_changed_at: '2026-09-10 11:30:00',
-      mustChangePassword: false,
+      temporaryPassword: null,
       failedAttempts: 0,
       failed_login_attempts: 0,
       lockedUntil: null,
-      lastLogin: 'Today, 11:38 AM',
+      lastLogin: 'Today, 08:30',
+      last_login_at: '2026-09-11T08:30:00Z',
       activeCases: 0,
       assignedCaseIds: [],
-      avatarImg: 'assets/admin-avatar.jpg',
-      avatarClass: 'avatar-gold'
-    },
-    {
-      id: 'usr-010',
-      employeeId: 'ADM-0002',
-      staffId: 'ADM-0002',
-      username: 'neema.joseph',
-      name: 'Neema Joseph',
-      email: 'n.joseph@slcms-law.co.tz',
-      phone: '+255 754 112 001',
-      advocateNumber: null,
-      practisingCertNo: null,
-      nationalIdRef: 'NIDA-19850412-1001-99',
-      jobTitle: 'System Administrator',
-      department: 'System Governance & Administration',
-      office: 'Dar es Salaam HQ, Floor 7',
-      role: 'Administrator',
-      roleTitle: 'System Administrator',
-      status: 'ACTIVE',
-      accountStatus: 'ACTIVE',
-      firstLoginStatus: 'Completed',
-      first_login_required: false,
-      passwordHash: 'argon2:$2b$12$eX4mPL3sEcUrE8a9fQ9019JosephSecret2026',
-      passwordPlain: 'SecretLawFirm2026!',
-      mustChangePassword: false,
-      failedAttempts: 0,
-      failed_login_attempts: 0,
-      lockedUntil: null,
-      lastLogin: 'Today, 08:30 AM',
-      activeCases: 4,
-      assignedCaseIds: ['case-101', 'case-102', 'case-103', 'case-104'],
-      avatarImg: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=256&q=80',
-      avatarClass: 'avatar-gold'
+      avatarImg: '',
+      avatarClass: 'avatar-gold',
+      createdAt: '11 Sep 2026'
     },
     {
       id: 'usr-002',
+      user_id: 'usr-002',
       employeeId: 'LAW-0021',
       staffId: 'LAW-0021',
-      username: 'j.mwangi',
-      name: 'Wakili Juma Mwangi',
-      email: 'j.mwangi@slcms-law.co.tz',
-      phone: '+255 754 100 021',
-      advocateNumber: 'TZ-ADV-2938102',
-      practisingCertNo: 'PC-TZ-2026-0042',
-      nationalIdRef: 'NIDA-19830514-1002-77',
-      jobTitle: 'Senior Litigation Partner',
-      department: 'Commercial Litigation',
+      staff_id: 'LAW-0021',
+      username: 'asha.mrema',
+      name: 'Adv. Asha Mrema',
+      full_name: 'Adv. Asha Mrema',
+      email: 'asha.mrema@slcms.local',
+      phone: '+255 754 112 233',
+      advocateNumber: 'TLS/2014/0821',
+      practisingCertNo: 'PC/2026/0412',
+      nationalIdRef: 'NIDA-19840312-0021-02',
+      jobTitle: 'Senior Legal Counsel & Partner',
+      department: 'Litigation & Dispute Resolution',
       office: 'Dar es Salaam HQ, Floor 5',
-      specialization: 'Commercial & Constitutional Litigation',
+      officeLocation: 'Dar es Salaam HQ, Floor 5',
       role: 'Senior Lawyer',
-      roleTitle: 'Senior Lawyer',
+      roleTitle: 'Senior Advocate',
       status: 'ACTIVE',
       accountStatus: 'ACTIVE',
+      account_status: 'ACTIVE',
       firstLoginStatus: 'Completed',
-      passwordHash: 'argon2:$2b$12$eX4mPL3sEcUrE8a9fQ9019MwangiSecret2026',
-      passwordPlain: 'SecretLawFirm2026!',
+      first_login_required: false,
       mustChangePassword: false,
       failedAttempts: 0,
+      failed_login_attempts: 0,
       lockedUntil: null,
-      lastLogin: 'Today, 09:12 AM',
-      activeCases: 3,
-      assignedCaseIds: ['case-101', 'case-102', 'case-104'],
-      avatarImg: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=256&q=80',
-      avatarClass: 'avatar-navy'
+      lastLogin: 'Yesterday, 16:45',
+      last_login_at: '2026-09-10T16:45:00Z',
+      activeCases: 0,
+      assignedCaseIds: [],
+      avatarImg: '',
+      avatarClass: 'avatar-navy',
+      createdAt: '11 Sep 2026'
     },
     {
       id: 'usr-003',
-      employeeId: 'LAW-0034',
-      staffId: 'LAW-0034',
-      username: 'asha.bakari',
-      name: 'Asha Bakari',
-      email: 'a.bakari@slcms-law.co.tz',
-      phone: '+255 765 100 034',
-      advocateNumber: 'TZ-ADV-7193021',
-      practisingCertNo: 'PC-TZ-2026-0189',
-      nationalIdRef: 'NIDA-19881120-1003-65',
-      jobTitle: 'Associate Advocate',
-      department: 'Land & Property Law',
+      user_id: 'usr-003',
+      employeeId: 'LAW-0035',
+      staffId: 'LAW-0035',
+      staff_id: 'LAW-0035',
+      username: 'baraka.juma',
+      name: 'Adv. Baraka Juma',
+      full_name: 'Adv. Baraka Juma',
+      email: 'baraka.juma@slcms.local',
+      phone: '+255 713 445 566',
+      advocateNumber: 'TLS/2019/1142',
+      practisingCertNo: 'PC/2026/0991',
+      nationalIdRef: 'NIDA-19900820-0035-03',
+      jobTitle: 'Associate Legal Counsel',
+      department: 'Corporate & Commercial Law',
       office: 'Dar es Salaam HQ, Floor 4',
-      specialization: 'Real Estate, Conveyancing & Land Tribunals',
-      supervisor: 'Wakili Juma Mwangi',
+      officeLocation: 'Dar es Salaam HQ, Floor 4',
       role: 'Lawyer',
-      roleTitle: 'Lawyer',
+      roleTitle: 'Advocate',
       status: 'ACTIVE',
       accountStatus: 'ACTIVE',
+      account_status: 'ACTIVE',
       firstLoginStatus: 'Completed',
-      passwordHash: 'argon2:$2b$12$eX4mPL3sEcUrE8a9fQ9019BakariSecret2026',
-      passwordPlain: 'SecretLawFirm2026!',
+      first_login_required: false,
       mustChangePassword: false,
       failedAttempts: 0,
+      failed_login_attempts: 0,
       lockedUntil: null,
-      lastLogin: 'Today, 09:30 AM',
-      activeCases: 2,
-      assignedCaseIds: ['case-101', 'case-103'],
-      avatarImg: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=256&q=80',
-      avatarClass: 'avatar-navy'
+      lastLogin: 'Today, 09:15',
+      last_login_at: '2026-09-11T09:15:00Z',
+      activeCases: 0,
+      assignedCaseIds: [],
+      avatarImg: '',
+      avatarClass: 'avatar-teal',
+      createdAt: '11 Sep 2026'
     },
     {
       id: 'usr-004',
-      employeeId: 'CLK-0012',
-      staffId: 'CLK-0012',
-      username: 'baraka.temba',
-      name: 'Baraka Temba',
-      email: 'b.temba@slcms-law.co.tz',
-      phone: '+255 784 100 012',
+      user_id: 'usr-004',
+      employeeId: 'CLK-0008',
+      staffId: 'CLK-0008',
+      staff_id: 'CLK-0008',
+      username: 'emmanuel.kilonzo',
+      name: 'Emmanuel Kilonzo',
+      full_name: 'Emmanuel Kilonzo',
+      email: 'emmanuel.kilonzo@slcms.local',
+      phone: '+255 784 778 899',
       advocateNumber: null,
       practisingCertNo: null,
-      nationalIdRef: 'NIDA-19940812-1004-33',
-      jobTitle: 'Senior Legal Clerk',
-      department: 'Court Filings & Discovery Registry',
-      office: 'Dar es Salaam HQ, Ground Floor Registry',
+      nationalIdRef: 'NIDA-19950514-0008-04',
+      jobTitle: 'Senior Legal Clerk & Registrar',
+      department: 'Court Registry & Documentation',
+      office: 'Dar es Salaam HQ, Floor 3',
+      officeLocation: 'Dar es Salaam HQ, Floor 3',
       role: 'Legal Clerk',
-      roleTitle: 'Legal Clerk',
+      roleTitle: 'Court Filing Clerk',
       status: 'ACTIVE',
       accountStatus: 'ACTIVE',
+      account_status: 'ACTIVE',
       firstLoginStatus: 'Completed',
-      passwordHash: 'argon2:$2b$12$eX4mPL3sEcUrE8a9fQ9019TembaSecret2026',
-      passwordPlain: 'SecretLawFirm2026!',
+      first_login_required: false,
       mustChangePassword: false,
       failedAttempts: 0,
+      failed_login_attempts: 0,
       lockedUntil: null,
-      lastLogin: 'Yesterday, 04:15 PM',
-      activeCases: 3,
-      assignedCaseIds: ['case-101', 'case-103', 'case-104'],
-      avatarImg: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=256&q=80',
-      avatarClass: 'avatar-teal'
+      lastLogin: 'Today, 08:00',
+      last_login_at: '2026-09-11T08:00:00Z',
+      activeCases: 0,
+      assignedCaseIds: [],
+      avatarImg: '',
+      avatarClass: 'avatar-purple',
+      createdAt: '11 Sep 2026'
     },
     {
       id: 'usr-005',
-      employeeId: 'LAW-0052',
-      staffId: 'LAW-0052',
-      username: 'faraji.kamau',
-      name: 'Faraji Kamau',
-      email: 'f.kamau@slcms-law.co.tz',
-      phone: '+255 714 100 052',
-      advocateNumber: 'TZ-ADV-9023184',
-      practisingCertNo: 'PC-TZ-2026-0312',
-      nationalIdRef: 'NIDA-19910319-1005-12',
+      user_id: 'usr-005',
+      employeeId: 'LAW-0099',
+      staffId: 'LAW-0099',
+      staff_id: 'LAW-0099',
+      username: 'daudi.mussa',
+      name: 'Adv. Daudi Mussa',
+      full_name: 'Adv. Daudi Mussa',
+      email: 'daudi.mussa@slcms.local',
+      phone: '+255 765 999 888',
+      advocateNumber: 'TLS/2021/1580',
+      practisingCertNo: 'PC/2026/1204',
+      nationalIdRef: 'NIDA-19881111-0099-05',
       jobTitle: 'Associate Advocate',
-      department: 'Employment & Labor Relations',
-      office: 'Arusha Regional Branch',
-      specialization: 'Labor & Trade Dispute Resolutions',
-      supervisor: 'Wakili Juma Mwangi',
+      department: 'Litigation',
+      office: 'Dar es Salaam HQ, Floor 4',
+      officeLocation: 'Dar es Salaam HQ, Floor 4',
       role: 'Lawyer',
-      roleTitle: 'Lawyer',
+      roleTitle: 'Advocate',
       status: 'LOCKED',
       accountStatus: 'LOCKED',
+      account_status: 'LOCKED',
+      lockReason: 'Administrative security hold pending compliance audit',
       firstLoginStatus: 'Completed',
-      passwordHash: 'argon2:$2b$12$eX4mPL3sEcUrE8a9fQ9019KamauSecret2026',
-      passwordPlain: 'SecretLawFirm2026!',
-      mustChangePassword: false,
       failedAttempts: 5,
-      lockedUntil: Date.now() + 30 * 60 * 1000,
-      lastLogin: 'Sep 06, 2026 (Locked out)',
-      activeCases: 1,
-      assignedCaseIds: ['case-104'],
-      avatarImg: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=256&q=80',
-      avatarClass: 'avatar-danger'
+      lockedUntil: '2026-12-31T23:59:59Z',
+      lastLogin: 'Never',
+      activeCases: 0,
+      assignedCaseIds: [],
+      avatarImg: '',
+      avatarClass: 'avatar-navy',
+      createdAt: '11 Sep 2026'
     },
     {
       id: 'usr-006',
-      employeeId: 'LAW-0045',
-      staffId: 'LAW-0045',
-      username: 'daudi.mussa',
-      name: 'Daudi Mussa',
-      email: 'd.mussa@slcms-law.co.tz',
-      phone: '+255 762 100 045',
-      advocateNumber: 'TZ-ADV-8834190',
-      practisingCertNo: 'PC-TZ-2026-0994',
-      nationalIdRef: 'NIDA-19890214-1007-55',
-      jobTitle: 'Junior Litigation Advocate',
+      user_id: 'usr-006',
+      employeeId: 'LAW-0081',
+      staffId: 'LAW-0081',
+      staff_id: 'LAW-0081',
+      username: 'jmoses',
+      name: 'Jack moses',
+      full_name: 'Jack moses',
+      email: 'jmoses@slcms-law.co.tz',
+      phone: '+255 754 000 111',
+      advocateNumber: 'TLS/ADV/1864',
+      practisingCertNo: 'PC/2026/1864',
+      nationalIdRef: 'NIDA-19920415-0081-06',
+      jobTitle: 'Litigation Associate',
       department: 'Commercial Litigation',
       office: 'Dar es Salaam HQ, Floor 4',
-      specialization: 'Banking & Financial Recoveries',
-      supervisor: 'Wakili Juma Mwangi',
+      officeLocation: 'Dar es Salaam HQ, Floor 4',
       role: 'Lawyer',
-      roleTitle: 'Lawyer (Pending First-Login)',
-      status: 'FIRST_LOGIN_RESET',
-      accountStatus: 'FIRST_LOGIN_RESET',
-      firstLoginStatus: 'Pending (First-Login Password Not Changed)',
-      passwordHash: 'argon2:$2b$12$eX4mPL3sEcUrE8a9fQ9019TempPass2026',
-      passwordPlain: 'TempPass2026!',
-      mustChangePassword: true,
+      roleTitle: 'Litigation Associate',
+      status: 'ACTIVE',
+      accountStatus: 'ACTIVE',
+      account_status: 'ACTIVE',
+      firstLoginStatus: 'Completed',
+      first_login_required: false,
+      mustChangePassword: false,
       failedAttempts: 0,
+      failed_login_attempts: 0,
       lockedUntil: null,
-      lastLogin: 'Never (Pending First Login)',
+      lastLogin: 'Today, 01:59 AM',
+      last_login_at: '2026-09-12T01:59:00Z',
       activeCases: 0,
       assignedCaseIds: [],
-      avatarImg: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&q=80',
-      avatarClass: 'avatar-purple'
+      avatarImg: '',
+      avatarClass: 'avatar-purple',
+      createdAt: '11 Sep 2026'
     },
     {
       id: 'usr-007',
-      employeeId: 'CLK-0018',
-      staffId: 'CLK-0018',
-      username: 'grace.temba',
-      name: 'Grace Temba',
-      email: 'g.temba@slcms-law.co.tz',
-      phone: '+255 712 100 018',
-      advocateNumber: null,
+      user_id: 'usr-007',
+      employeeId: 'EMP-1017',
+      staffId: 'EMP-1017',
+      staff_id: 'EMP-1017',
+      username: 'jmoss',
+      name: 'Joseph moss',
+      full_name: 'Joseph moss',
+      email: 'jmoss@slcms-law.co.tz',
+      phone: '+255 754 000 786',
+      advocateNumber: 'CLK/2026/048',
       practisingCertNo: null,
-      nationalIdRef: 'NIDA-19950419-1008-22',
-      jobTitle: 'Registry Clerk',
-      department: 'Case Filings & Document Dispatch',
-      office: 'Dodoma Regional Office',
+      nationalIdRef: 'NIDA-19960822-1017-07',
+      jobTitle: 'Court Registry Clerk',
+      department: 'Court Registry & Documentation',
+      office: 'Dar es Salaam HQ, Floor 3',
+      officeLocation: 'Dar es Salaam HQ, Floor 3',
       role: 'Legal Clerk',
-      roleTitle: 'Legal Clerk (Pending First-Login)',
+      roleTitle: 'Court Registry Clerk',
       status: 'FIRST_LOGIN_RESET',
       accountStatus: 'FIRST_LOGIN_RESET',
-      firstLoginStatus: 'Pending (First-Login Password Not Changed)',
-      passwordHash: 'argon2:$2b$12$eX4mPL3sEcUrE8a9fQ9019GraceTemp2026',
-      passwordPlain: 'TempPass2026!',
+      account_status: 'FIRST_LOGIN_RESET',
+      firstLoginStatus: 'Pending',
+      first_login_required: true,
       mustChangePassword: true,
       failedAttempts: 0,
+      failed_login_attempts: 0,
       lockedUntil: null,
-      lastLogin: 'Never (Pending First Login)',
+      lastLogin: 'Today, 04:17 PM',
+      last_login_at: '2026-09-11T16:17:00Z',
       activeCases: 0,
       assignedCaseIds: [],
-      avatarImg: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=256&q=80',
-      avatarClass: 'avatar-purple'
-    },
-    {
-      id: 'usr-008',
-      employeeId: 'LAW-0009',
-      staffId: 'LAW-0009',
-      username: 'zuhura.moyo',
-      name: 'Zuhura Moyo',
-      email: 'z.moyo@slcms-law.co.tz',
-      phone: '+255 713 100 009',
-      advocateNumber: 'TZ-ADV-1109482',
-      practisingCertNo: 'PC-TZ-2024-0012',
-      nationalIdRef: 'NIDA-19750611-1008-88',
-      jobTitle: 'Former Senior Advocate',
-      department: 'Corporate & Regulatory Compliance',
-      office: 'Dar es Salaam HQ',
-      specialization: 'Mining & Energy Licensing',
-      role: 'Senior Lawyer',
-      roleTitle: 'Senior Lawyer (Deactivated)',
-      status: 'DEACTIVATED',
-      accountStatus: 'DEACTIVATED',
-      firstLoginStatus: 'Completed',
-      passwordHash: 'argon2:$2b$12$eX4mPL3sEcUrE8a9fQ9019Secret2026',
-      passwordPlain: 'SecretLawFirm2026!',
-      mustChangePassword: false,
-      failedAttempts: 0,
-      lockedUntil: null,
-      lastLogin: 'Jan 15, 2026',
-      activeCases: 0,
-      assignedCaseIds: [],
-      avatarClass: 'avatar-navy'
-    },
-    {
-      id: 'usr-009',
-      employeeId: 'CLK-0020',
-      staffId: 'CLK-0020',
-      username: 'rashid.salim',
-      name: 'Rashid Salim',
-      email: 'r.salim@slcms-law.co.tz',
-      phone: '+255 715 100 020',
-      advocateNumber: null,
-      practisingCertNo: null,
-      nationalIdRef: 'NIDA-19960722-1009-44',
-      jobTitle: 'Legal Clerk (Suspended)',
-      department: 'Registry & Archival Control',
-      office: 'Mwanza Regional Registry',
-      role: 'Legal Clerk',
-      roleTitle: 'Legal Clerk',
-      status: 'SUSPENDED',
-      accountStatus: 'SUSPENDED',
-      firstLoginStatus: 'Completed',
-      passwordHash: 'argon2:$2b$12$eX4mPL3sEcUrE8a9fQ9019SalimSecret2026',
-      passwordPlain: 'SecretLawFirm2026!',
-      mustChangePassword: false,
-      failedAttempts: 0,
-      lockedUntil: null,
-      lastLogin: 'Sep 01, 2026',
-      activeCases: 0,
-      assignedCaseIds: [],
-      avatarClass: 'avatar-teal'
-    },
-    {
-      id: 'usr-011',
-      employeeId: 'EMP-1010',
-      staffId: 'EMP-1010',
-      username: 'grace.mollel',
-      name: 'Grace Mollel (Pending Approval)',
-      email: 'pending.approval@slcms-law.com',
-      phone: '+1 (212) 555-0118',
-      advocateNumber: 'TZ-ADV-9928194',
-      practisingCertNo: 'PC-TZ-2026-9928',
-      nationalIdRef: 'NIDA-19880914-1010-44',
-      jobTitle: 'Senior Counsel Candidate',
-      department: 'Appellate & Constitutional Practice',
-      office: 'Dar es Salaam HQ, Floor 6',
-      role: 'Senior Counsel',
-      roleTitle: 'Senior Counsel Candidate',
-      status: 'PENDING_APPROVAL',
-      accountStatus: 'PENDING_APPROVAL',
-      firstLoginStatus: 'Completed',
-      first_login_required: false,
-      mustChangePassword: false,
-      passwordHash: 'argon2:$2b$12$eX4mPL3sEcUrE8a9fQ9019MollelSecret2026',
-      passwordPlain: 'SecretLawFirm2026!',
-      failedAttempts: 0,
-      lockedUntil: null,
-      lastLogin: 'Never (Pending Approval)',
-      activeCases: 0,
-      assignedCaseIds: [],
-      avatarImg: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=256&q=80',
-      avatarClass: 'avatar-gold'
-    },
-    {
-      id: 'usr-012',
-      employeeId: 'EMP-1002',
-      staffId: 'EMP-1002',
-      username: 'julian.mercer',
-      name: 'Julian Mercer, Esq.',
-      email: 'j.mercer@slcms-law.com',
-      phone: '+1 (212) 555-0102',
-      advocateNumber: 'TZ-ADV-2938102',
-      practisingCertNo: 'PC-TZ-2026-2938',
-      nationalIdRef: 'NIDA-19820311-1002-99',
-      jobTitle: 'Senior Litigation Counsel',
-      department: 'Commercial & High-Value Litigation',
-      office: 'Dar es Salaam HQ, Floor 5',
-      role: 'Senior Counsel',
-      roleTitle: 'Senior Litigation Counsel',
-      status: 'ACTIVE',
-      accountStatus: 'ACTIVE',
-      firstLoginStatus: 'Completed',
-      first_login_required: false,
-      mustChangePassword: false,
-      passwordHash: 'argon2:$2b$12$eX4mPL3sEcUrE8a9fQ9019MercerSecret2026',
-      passwordPlain: 'SecretLawFirm2026!',
-      failedAttempts: 0,
-      lockedUntil: null,
-      lastLogin: 'Today, 06:16 AM',
-      activeCases: 4,
-      assignedCaseIds: ['case-101', 'case-102', 'case-103', 'case-104'],
-      avatarImg: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=256&q=80',
-      avatarClass: 'avatar-navy'
-    },
-    {
-      id: 'usr-013',
-      employeeId: 'EMP-1003',
-      staffId: 'EMP-1003',
-      username: 'david.croft',
-      name: 'David Croft, Esq.',
-      email: 'd.croft@slcms-law.com',
-      phone: '+1 (212) 555-0103',
-      advocateNumber: 'TZ-ADV-7193821',
-      practisingCertNo: 'PC-TZ-2026-7193',
-      nationalIdRef: 'NIDA-19870519-1003-88',
-      jobTitle: 'Associate Lawyer',
-      department: 'Corporate & Intellectual Property',
-      office: 'Dar es Salaam HQ, Floor 4',
-      role: 'Associate Lawyer',
-      roleTitle: 'Associate Lawyer',
-      status: 'ACTIVE',
-      accountStatus: 'ACTIVE',
-      firstLoginStatus: 'Completed',
-      first_login_required: false,
-      mustChangePassword: false,
-      passwordHash: 'argon2:$2b$12$eX4mPL3sEcUrE8a9fQ9019CroftSecret2026',
-      passwordPlain: 'SecretLawFirm2026!',
-      failedAttempts: 0,
-      lockedUntil: null,
-      lastLogin: 'Today, 09:57 AM',
-      activeCases: 3,
-      assignedCaseIds: ['case-101', 'case-102', 'case-103'],
-      avatarImg: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=256&q=80',
-      avatarClass: 'avatar-purple'
-    },
-    {
-      id: 'usr-014',
-      employeeId: 'EMP-1004',
-      staffId: 'EMP-1004',
-      username: 'maya.patel',
-      name: 'Maya Patel, Esq.',
-      email: 'm.patel@slcms-law.com',
-      phone: '+1 (212) 555-0104',
-      advocateNumber: 'TZ-ADV-9023145',
-      practisingCertNo: 'PC-TZ-2026-9023',
-      nationalIdRef: 'NIDA-19920824-1004-77',
-      jobTitle: 'Junior Associate Lawyer',
-      department: 'Dispute Resolution & Discovery',
-      office: 'Dar es Salaam HQ, Floor 4',
-      role: 'Junior Lawyer',
-      roleTitle: 'Junior Associate Lawyer',
-      status: 'ACTIVE',
-      accountStatus: 'ACTIVE',
-      firstLoginStatus: 'Completed',
-      first_login_required: false,
-      mustChangePassword: false,
-      passwordHash: 'argon2:$2b$12$eX4mPL3sEcUrE8a9fQ9019PatelSecret2026',
-      passwordPlain: 'SecretLawFirm2026!',
-      failedAttempts: 0,
-      lockedUntil: null,
-      lastLogin: 'Yesterday, 04:15 PM',
-      activeCases: 2,
-      assignedCaseIds: ['case-101', 'case-104'],
-      avatarImg: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=256&q=80',
-      avatarClass: 'avatar-teal'
-    },
-    {
-      id: 'usr-015',
-      employeeId: 'EMP-1005',
-      staffId: 'EMP-1005',
-      username: 'marcus.bell',
-      name: 'Marcus Bell',
-      email: 'm.bell@slcms-law.com',
-      phone: '+1 (212) 555-0105',
-      advocateNumber: null,
-      practisingCertNo: null,
-      nationalIdRef: 'NIDA-19901102-1005-66',
-      jobTitle: 'Senior Legal Clerk',
-      department: 'Court Filings & Discovery Registry',
-      office: 'Dar es Salaam HQ, Ground Floor Registry',
-      role: 'Legal Clerk',
-      roleTitle: 'Senior Legal Clerk',
-      status: 'ACTIVE',
-      accountStatus: 'ACTIVE',
-      firstLoginStatus: 'Completed',
-      first_login_required: false,
-      mustChangePassword: false,
-      passwordHash: 'argon2:$2b$12$eX4mPL3sEcUrE8a9fQ9019BellSecret2026',
-      passwordPlain: 'SecretLawFirm2026!',
-      failedAttempts: 0,
-      lockedUntil: null,
-      lastLogin: 'Today, 06:17 AM',
-      activeCases: 4,
-      assignedCaseIds: ['case-101', 'case-102', 'case-103', 'case-104'],
-      avatarImg: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=256&q=80',
-      avatarClass: 'avatar-danger'
-    },
-    {
-      id: 'usr-016',
-      employeeId: 'EMP-1006',
-      staffId: 'EMP-1006',
-      username: 'alan.sterling',
-      name: 'Alan Sterling',
-      email: 'admin.sterling@slcms-law.com',
-      phone: '+1 (212) 555-0106',
-      advocateNumber: null,
-      practisingCertNo: null,
-      nationalIdRef: 'NIDA-19810418-1006-55',
-      jobTitle: 'System Administrator',
-      department: 'System Governance & Administration',
-      office: 'Dar es Salaam HQ, Floor 7',
-      role: 'Administrator',
-      roleTitle: 'System Administrator',
-      status: 'ACTIVE',
-      accountStatus: 'ACTIVE',
-      firstLoginStatus: 'Completed',
-      first_login_required: false,
-      mustChangePassword: false,
-      passwordHash: 'argon2:$2b$12$eX4mPL3sEcUrE8a9fQ9019SterlingSecret2026',
-      passwordPlain: 'SecretLawFirm2026!',
-      failedAttempts: 0,
-      lockedUntil: null,
-      lastLogin: 'Today, 10:29 AM',
-      activeCases: 0,
-      assignedCaseIds: [],
-      avatarImg: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=256&q=80',
-      avatarClass: 'avatar-gold'
+      avatarImg: '',
+      avatarClass: 'avatar-teal',
+      createdAt: '11 Sep 2026'
     }
   ],
 
-  // System Case Access Assignments (Matter Access Governance)
-  caseAssignments: [
-    {
-      id: 'asgn-101',
-      caseId: 'case-101',
-      caseNumber: 'CV-2026-0842',
-      caseTitle: 'Vanguard Capital vs. Apex Tech Holdings',
-      userId: 'usr-002',
-      userName: 'Wakili Juma Mwangi',
-      userRole: 'Senior Lawyer',
-      assignmentRole: 'Lead Supervising Counsel',
-      supervisingLawyer: 'Wakili Juma Mwangi',
-      startDate: '2026-02-10',
-      endDate: '2027-01-30',
-      accessLevel: 'Editing',
-      status: 'Active'
-    },
-    {
-      id: 'asgn-102',
-      caseId: 'case-101',
-      caseNumber: 'CV-2026-0842',
-      caseTitle: 'Vanguard Capital vs. Apex Tech Holdings',
-      userId: 'usr-003',
-      userName: 'Asha Bakari',
-      userRole: 'Lawyer',
-      assignmentRole: 'Drafting Counsel',
-      supervisingLawyer: 'Wakili Juma Mwangi',
-      startDate: '2026-02-15',
-      endDate: '2026-12-31',
-      accessLevel: 'Editing',
-      status: 'Active'
-    },
-    {
-      id: 'asgn-103',
-      caseId: 'case-101',
-      caseNumber: 'CV-2026-0842',
-      caseTitle: 'Vanguard Capital vs. Apex Tech Holdings',
-      userId: 'usr-004',
-      userName: 'Baraka Temba',
-      userRole: 'Legal Clerk',
-      assignmentRole: 'Court Registry & Filings',
-      supervisingLawyer: 'Wakili Juma Mwangi',
-      startDate: '2026-02-12',
-      endDate: '2026-11-30',
-      accessLevel: 'Editing',
-      status: 'Active'
-    },
-    {
-      id: 'asgn-104',
-      caseId: 'case-102',
-      caseNumber: 'IP-2026-0319',
-      caseTitle: 'AuraBio Pharmaceuticals Patent Infringement',
-      userId: 'usr-002',
-      userName: 'Wakili Juma Mwangi',
-      userRole: 'Senior Lawyer',
-      assignmentRole: 'Lead Supervising Counsel',
-      supervisingLawyer: 'Wakili Juma Mwangi',
-      startDate: '2026-04-15',
-      endDate: '2026-11-20',
-      accessLevel: 'Editing',
-      status: 'Active'
-    },
-    {
-      id: 'asgn-105',
-      caseId: 'case-103',
-      caseNumber: 'RE-2026-0155',
-      caseTitle: 'Greenfield Estate Land Acquisition & Zoning',
-      userId: 'usr-003',
-      userName: 'Asha Bakari',
-      userRole: 'Lawyer',
-      assignmentRole: 'Lead Counsel',
-      supervisingLawyer: 'Wakili Juma Mwangi',
-      startDate: '2026-05-02',
-      endDate: '2026-12-15',
-      accessLevel: 'Editing',
-      status: 'Active'
-    },
-    {
-      id: 'asgn-106',
-      caseId: 'case-104',
-      caseNumber: 'EM-2026-0774',
-      caseTitle: 'Dr. Clara Thorne vs. St. Jude Medical Network',
-      userId: 'usr-004',
-      userName: 'Baraka Temba',
-      userRole: 'Legal Clerk',
-      assignmentRole: 'Document Clerk',
-      supervisingLawyer: 'Wakili Juma Mwangi',
-      startDate: '2026-06-11',
-      endDate: '2026-10-30',
-      accessLevel: 'Read-Only',
-      status: 'Active'
-    }
-  ],
+  // System Case Access Assignments (Only Real Assignments)
+  caseAssignments: [],
 
   // System Backup & Snapshot Registry
   backupHistory: [
@@ -1508,40 +543,17 @@ const SLCMS_STATE = {
     }
   ],
 
+  // Genuine Security & Access Alerts Store (Database Ground Truth)
+  // When no security problem exists, this array contains 0 unresolved alerts.
+  securityAlerts: [],
+
   // Administrator High-Priority Notifications
   adminNotifications: [
     {
-      id: 'an-01',
-      type: 'warning',
-      title: 'Account Locked: Faraji Kamau',
-      message: 'Account LAW-0052 was automatically locked after 5 consecutive failed login attempts from untrusted IP 197.250.48.12.',
-      timestamp: '12 mins ago',
-      category: 'Security',
-      read: false
-    },
-    {
-      id: 'an-02',
-      type: 'info',
-      title: 'First-Login Password Replaced',
-      message: 'Staff member Asha Bakari (LAW-0034) successfully set a confidential password replacing temporary credentials.',
-      timestamp: '45 mins ago',
-      category: 'User Accounts',
-      read: false
-    },
-    {
-      id: 'an-03',
-      type: 'danger',
-      title: 'Repeated Failed Logins Detected',
-      message: 'Multiple incorrect password submissions logged against account f.kamau@slcms-law.co.tz from IP 197.250.48.12.',
-      timestamp: '1 hour ago',
-      category: 'Security',
-      read: false
-    },
-    {
       id: 'an-04',
       type: 'warning',
-      title: 'OCR Processing Failure',
-      message: 'Tanzania_Revenue_Appeal_Scanned.pdf failed OCR text extraction due to resolution under 150 DPI.',
+      title: 'OCR Text Review Required',
+      message: 'Tanzania_Revenue_Appeal_Scanned.pdf completed preliminary text extraction; advocate verification required.',
       timestamp: '2 hours ago',
       category: 'Document Control',
       read: false
@@ -2000,7 +1012,7 @@ const SLCMS_STATE = {
         username: initialUsername,
         name: 'SLCMS System Administrator',
         email: initialEmail,
-        phone: '+255700000001',
+        phone: '+255 700 000 001',
         advocateNumber: null,
         practisingCertNo: null,
         nationalIdRef: 'NIDA-19800101-0001-01',
@@ -2009,22 +1021,23 @@ const SLCMS_STATE = {
         office: 'Dar es Salaam HQ, Floor 7',
         role: 'Administrator',
         roleTitle: 'System Administrator',
-        status: 'ACTIVE',
-        accountStatus: 'ACTIVE',
-        account_status: 'ACTIVE',
-        firstLoginStatus: 'Completed',
-        first_login_required: false,
+        status: 'FIRST_LOGIN_RESET',
+        accountStatus: 'FIRST_LOGIN_RESET',
+        account_status: 'FIRST_LOGIN_RESET',
+        firstLoginStatus: 'Pending',
+        first_login_required: true,
         passwordHash: initialHash,
         password_hash: initialHash,
         passwordPlain: masterPass,
-        mustChangePassword: false,
+        temporaryPassword: masterPass,
+        mustChangePassword: true,
         failedAttempts: 0,
         failed_login_attempts: 0,
         lockedUntil: null,
-        lastLogin: 'Today, 11:38 AM',
+        lastLogin: 'Never',
         activeCases: 0,
         assignedCaseIds: [],
-        avatarImg: 'assets/admin-avatar.jpg',
+        avatarImg: '',
         avatarClass: 'avatar-gold'
       };
       this.users.unshift(admin);
@@ -2035,18 +1048,22 @@ const SLCMS_STATE = {
       admin.employeeId = initialStaffId;
       admin.username = initialUsername;
       admin.email = initialEmail;
-      admin.phone = '+255700000001';
+      admin.phone = '+255 700 000 001';
       admin.role = 'Administrator';
       admin.roleTitle = 'System Administrator';
-      admin.status = 'ACTIVE';
-      admin.accountStatus = 'ACTIVE';
-      admin.account_status = 'ACTIVE';
-      admin.first_login_required = false;
-      admin.mustChangePassword = false;
-      admin.firstLoginStatus = 'Completed';
+      if (!admin.password_changed_at) {
+        admin.status = 'FIRST_LOGIN_RESET';
+        admin.accountStatus = 'FIRST_LOGIN_RESET';
+        admin.account_status = 'FIRST_LOGIN_RESET';
+        admin.first_login_required = true;
+        admin.mustChangePassword = true;
+        admin.firstLoginStatus = 'Pending';
+        admin.lastLogin = 'Never';
+      }
       if (!admin.passwordPlain) {
         admin.passwordPlain = masterPass;
       }
+      admin.avatarImg = '';
       admin.failedAttempts = 0;
       admin.failed_login_attempts = 0;
       admin.lockedUntil = null;
@@ -2139,21 +1156,48 @@ const SLCMS_STATE = {
       return { success: false, message: GENERIC_FAIL_MSG };
     }
 
-    if (status === 'LOCKED' && account.lockedUntil && now < account.lockedUntil) {
-      this.addAuditLog('Login Blocked — Account Locked', 'Authentication',
-        `User: ${account.name} (${account.staffId || account.employeeId}) — Locked until ${new Date(account.lockedUntil).toLocaleTimeString()}`, 'Failure');
-      return { success: false, message: GENERIC_FAIL_MSG };
+    // Check expired temporary password before login
+    if ((account.first_login_required || account.mustChangePassword) && account.temporary_password_expires_at) {
+      const expiryMs = typeof account.temporary_password_expires_at === 'number'
+        ? account.temporary_password_expires_at
+        : new Date(account.temporary_password_expires_at).getTime();
+      if (now > expiryMs) {
+        this.addAuditLog('Login Blocked — Temporary Password Expired', 'Authentication',
+          `User: ${account.name} (${account.staffId || account.employeeId})`, 'Failure');
+        return {
+          success: false,
+          errorType: 'TEMPORARY_PASSWORD_EXPIRED',
+          message: 'The temporary password expired before first-login setup was completed. Please contact your Administrator.'
+        };
+      }
     }
 
-    // Auto-clear an expired lock
-    if (status === 'LOCKED' && account.lockedUntil && now >= account.lockedUntil) {
-      account.status = 'ACTIVE';
-      account.accountStatus = 'ACTIVE';
-      account.account_status = 'ACTIVE';
-      account.first_login_required = false;
-      account.failedAttempts = 0;
-      account.failed_login_attempts = 0;
-      account.lockedUntil = null;
+    // Account Temporarily Locked - Reject login even if correct password is later entered during the lock period
+    if (status === 'LOCKED') {
+      // If automatically locked with a finite lockedUntil:
+      if (account.lockedUntil && now >= account.lockedUntil) {
+        // Lock period has expired -> auto-unlock
+        account.status = 'ACTIVE';
+        account.accountStatus = 'ACTIVE';
+        account.account_status = 'ACTIVE';
+        account.failedAttempts = 0;
+        account.failed_login_attempts = 0;
+        account.lockedUntil = null;
+        account.locked_until = null;
+        account.locked_at = null;
+        account.locked_reason = null;
+        this.resolveAlertsForUser(account.id, 'ACCOUNT_LOCKED', 'SYSTEM');
+        this.persistUsers();
+      } else {
+        // Locked indefinitely by Administrator (lockedUntil == null) or currently within 15-min auto lock period
+        this.addAuditLog('Login Blocked — Account Locked', 'Authentication',
+          `User: ${account.name} (${account.staffId || account.employeeId})`, 'Failure');
+        return {
+          success: false,
+          errorType: 'ACCOUNT_TEMPORARILY_LOCKED',
+          message: 'Account Temporarily Locked\nYou cannot access SLCMS at this time. Try again after the lock period or contact the System Administrator.'
+        };
+      }
     }
 
     // STEP 4 — Compare password with stored password hash or valid credentials
@@ -2167,18 +1211,34 @@ const SLCMS_STATE = {
         account.status = 'LOCKED';
         account.accountStatus = 'LOCKED';
         account.account_status = 'LOCKED';
+        account.locked_reason = 'TOO_MANY_FAILED_LOGINS';
+        account.lockedReason = 'TOO_MANY_FAILED_LOGINS';
+        account.locked_at = new Date().toISOString();
+        account.lockedAt = account.locked_at;
         account.lockedUntil = now + LOCK_DURATION_MS;
-        this.persistUsers();
-        this.addSecurityEvent({
-          event: 'ACCOUNT_LOCKED',
-          reason: 'MAX_FAILED_ATTEMPTS',
-          user: account.staffId || account.employeeId || 'UNKNOWN',
-          result: 'LOCKED',
-          timestamp: new Date().toISOString()
+        account.locked_until = account.lockedUntil;
+
+        this.createSecurityAlert({
+          userId: account.id,
+          staffId: account.staffId || account.employeeId,
+          name: account.name,
+          role: account.role,
+          alertType: 'ACCOUNT_LOCKED',
+          title: 'Account Locked Automatically',
+          description: 'The account was locked after five unsuccessful login attempts.',
+          severity: 'HIGH',
+          lockedReason: 'TOO_MANY_FAILED_LOGINS'
         });
-        this.addAuditLog('Account Locked — 5 Failed Attempts', 'Authentication',
-          `User: ${account.name} (${account.staffId || account.employeeId}) — Locked for 15 minutes`, 'Failure');
-        return { success: false, message: GENERIC_FAIL_MSG };
+
+        this.persistUsers();
+        this.addAuditLog('Account Locked Automatically', 'Security Activity',
+          `Account ${account.staffId || account.employeeId} locked after 5 failed login attempts`, 'Locked');
+
+        return {
+          success: false,
+          errorType: 'ACCOUNT_TEMPORARILY_LOCKED',
+          message: 'Account Temporarily Locked\nYou cannot access SLCMS at this time. Try again after the lock period or contact the System Administrator.'
+        };
       }
       this.persistUsers();
       this.addAuditLog('Login Failed — Wrong Password', 'Authentication',
@@ -2187,34 +1247,42 @@ const SLCMS_STATE = {
     }
 
     // Automatically ensure active status on successful password verification
-    account.status = 'ACTIVE';
-    account.accountStatus = 'ACTIVE';
-    account.account_status = 'ACTIVE';
-    account.first_login_required = false;
-    account.mustChangePassword = false;
+    if (account.status !== 'FIRST_LOGIN_RESET' && !account.first_login_required && !account.mustChangePassword) {
+      account.status = 'ACTIVE';
+      account.accountStatus = 'ACTIVE';
+      account.account_status = 'ACTIVE';
+    }
 
     // STEP 7 — All checks passed: reset failed counter, create secure session
     account.failedAttempts = 0;
     account.failed_login_attempts = 0;
     account.lockedUntil = null;
-    account.status = account.status !== 'ACTIVE' ? 'ACTIVE' : account.status;
-    account.accountStatus = account.accountStatus !== 'ACTIVE' ? 'ACTIVE' : account.accountStatus;
+    account.locked_until = null;
+    account.locked_at = null;
+    account.locked_reason = null;
+
+    // Ordinary successful login recorded only in Security Activity:
+    this.addAuditLog('Login successful', 'Security Activity',
+      `User: ${account.staffId || account.employeeId}, Date and time: Automatically recorded`, 'Success');
 
     const sessionToken = this.generateSessionToken();
 
     // STEP 8 — Role loaded from verified DB record only
     this.currentUser = {
       id: account.id,
+      user_id: account.id,
       employeeId: account.employeeId || account.staffId,
       staffId: account.staffId || account.employeeId,
+      staff_id: account.staffId || account.employeeId,
       username: account.username || '',
       name: account.name,
+      full_name: account.name,
       email: account.email,
       phone: account.phone,
       advocateNumber: account.advocateNumber || null,
       practisingCertNo: account.practisingCertNo || null,
       nationalIdRef: account.nationalIdRef || null,
-      role: account.role,                          // ← Always from DB record, never from client
+      role: account.role,
       roleTitle: account.roleTitle || account.role,
       roleLabel: account.roleTitle || account.role,
       avatar: account.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
@@ -2223,22 +1291,20 @@ const SLCMS_STATE = {
       department: account.department,
       assignedCaseIds: account.assignedCaseIds || [],
       lastLogin: 'Just now',
-      status: 'ACTIVE'
+      status: account.status || 'ACTIVE'
     };
 
     account.lastLogin = 'Today, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    account.last_login_at = new Date().toISOString();
     this.saveSessionUser(this.currentUser);
     this.persistUsers();
 
-    // Section 11: Route using the role saved in the database
+    // Route using the role saved in the database
     const destination = this.getPermittedDestination(account.role);
-
-    this.addAuditLog('User Login Successful', 'Authentication',
-      `${account.name} (${account.role}) — Staff ID: ${account.staffId || account.employeeId}`, 'Success');
 
     return {
       success: true,
-      requiresFirstLoginChange: false,
+      requiresFirstLoginChange: !!(account.first_login_required || account.mustChangePassword || account.status === 'FIRST_LOGIN_RESET' || account.accountStatus === 'FIRST_LOGIN_RESET'),
       destination: destination,
       token: sessionToken,
       sessionToken: sessionToken,
@@ -2282,6 +1348,9 @@ const SLCMS_STATE = {
     account.failedAttempts = 0;
     account.lockedUntil = null;
     account.tempPasswordExpiry = null;
+
+    this.resolveAlertsForUser(account.id, 'FIRST_LOGIN_PENDING', 'USER');
+    this.resolveAlertsForUser(account.id, 'TEMPORARY_PASSWORD_EXPIRED', 'USER');
 
     this.persistUsers();
 
@@ -2356,34 +1425,100 @@ const SLCMS_STATE = {
 
   restoreSessionUser() {
     try {
+      // 0. Retrieve deleted user IDs / emails blacklist
+      const deletedIdsJson = localStorage.getItem('slcms_deleted_user_ids');
+      let deletedIds = [];
+      if (deletedIdsJson) {
+        try { deletedIds = JSON.parse(deletedIdsJson) || []; } catch(e) {}
+      }
+
+      // Filter out deleted users from base users list
+      if (Array.isArray(deletedIds) && deletedIds.length > 0) {
+        this.users = this.users.filter(u => {
+          const sid = (u.staffId || u.employeeId || '').toUpperCase();
+          const email = (u.email || '').toLowerCase();
+          const uid = (u.id || '').toLowerCase();
+          return !deletedIds.includes(uid) && !deletedIds.includes(email) && !deletedIds.includes(sid);
+        });
+      }
+
       // 1. Restore persisted users directory if available
       const savedUsersJson = localStorage.getItem('slcms_persisted_users');
       if (savedUsersJson) {
-        const savedUsers = JSON.parse(savedUsersJson);
-        if (Array.isArray(savedUsers) && savedUsers.length > 0) {
-          savedUsers.forEach(su => {
-            // If historical storage had ADM-0001 under Neema Joseph, migrate to ADM-0002
-            if (su.username === 'neema.joseph' && (su.staffId === 'ADM-0001' || su.id === 'usr-001')) {
-              su.id = 'usr-010';
-              su.staffId = 'ADM-0002';
-              su.employeeId = 'ADM-0002';
+        try {
+          const savedUsers = JSON.parse(savedUsersJson);
+          const DEMO_BLACKLIST = [
+            'robert.kasoma', 'neema.mwangi', 'julian.mercer', 'david.croft', 'maya.patel',
+            'marcus.bell', 'alan.sterling', 'victoria.hayes', 'faraji.kamau',
+            'grace.temba', 'asha.bakari', 'baraka.temba', 'neema.joseph', 'juma.mwangi',
+            'david.mushi', 'teresa.bradley', 'sophia.chen', 'alexandre.sterling', 'eleanor.vance',
+            'zuhura.moyo', 'rashid.salim', 'grace.mollel',
+            'usr-011', 'usr-012', 'usr-013', 'usr-014', 'usr-015', 'usr-016', 'emp-1002', 'emp-1003',
+            'emp-1004', 'emp-1005', 'emp-1006', 'emp-1007', 'emp-1010', 'adv-0041', 'adv-0089'
+          ];
+          if (Array.isArray(savedUsers) && savedUsers.length > 0) {
+            // Reconstruct users directly from savedUsers list so deleted accounts remain deleted
+            const validSavedUsers = savedUsers.filter(su => {
+              const uname = (su.username || '').toLowerCase();
+              const sid = (su.staffId || su.employeeId || '').toUpperCase();
+              const uid = (su.id || '').toLowerCase();
+              const email = (su.email || '').toLowerCase();
+              const name = (su.name || '').toLowerCase();
+
+              // Respect deleted accounts list
+              if (deletedIds.includes(uid) || deletedIds.includes(email) || deletedIds.includes(sid)) {
+                return false;
+              }
+
+              // Discard any blacklisted demonstration account
+              if (DEMO_BLACKLIST.includes(uname) || DEMO_BLACKLIST.includes(uid) || 
+                  DEMO_BLACKLIST.some(b => email.includes(b)) ||
+                  DEMO_BLACKLIST.some(b => uname.includes(b)) ||
+                  name.includes('kasoma') || name.includes('mwangi') || name.includes('mercer') ||
+                  name.includes('croft') || name.includes('patel') || name.includes('marcus bell') ||
+                  name.includes('alan sterling') || name.includes('victoria hayes') || name.includes('neema joseph')) {
+                return false;
+              }
+
+              return true;
+            });
+
+            if (validSavedUsers.length > 0) {
+              // Ensure root admin account is present
+              const hasAdmin = validSavedUsers.some(u => (u.staffId || u.employeeId || '').toUpperCase() === 'ADM-0001');
+              if (!hasAdmin) {
+                const rootAdmin = this.users.find(u => (u.staffId || u.employeeId || '').toUpperCase() === 'ADM-0001');
+                if (rootAdmin) validSavedUsers.unshift(rootAdmin);
+              }
+              this.users = validSavedUsers;
             }
-            // If historical storage has seed admin without a completed private password change, do not overwrite seed
-            if ((su.username === 'slcms.admin' || su.staffId === 'ADM-0001' || su.email === 'admin@slcms.local') && (!su.password_changed_at || !(su.password_hash || su.passwordHash || '').startsWith('$argon2id$'))) {
-              return;
-            }
-            const idx = this.users.findIndex(u => (su.id && u.id === su.id) || (su.email && u.email && u.email.toLowerCase() === su.email.toLowerCase()) || (su.username && u.username && u.username.toLowerCase() === su.username.toLowerCase()));
-            if (idx >= 0) {
-              this.users[idx] = Object.assign({}, this.users[idx], su);
-            } else {
-              this.users.push(su);
-            }
-          });
+          }
+        } catch (e) {
+          console.warn('Error reading saved users:', e);
         }
       }
 
       // Ensure seed initial admin account is created and unique
       this.initInitialAdminAccount();
+
+      // 1b. Restore persisted security alerts (empty by default when no active issue)
+      const savedAlertsJson = localStorage.getItem('slcms_persisted_security_alerts');
+      if (savedAlertsJson) {
+        try {
+          const parsed = JSON.parse(savedAlertsJson);
+          if (Array.isArray(parsed)) {
+            this.securityAlerts = parsed;
+          }
+        } catch (e) {
+          console.warn('Failed to parse persisted security alerts:', e);
+          this.securityAlerts = [];
+        }
+      } else {
+        this.securityAlerts = [];
+      }
+
+      // Check expired temporary passwords dynamically
+      this.checkExpiredTemporaryPasswords();
 
       // 2. Restore persisted invitations if available
       const savedInvJson = localStorage.getItem('slcms_persisted_invitations');
@@ -2401,27 +1536,28 @@ const SLCMS_STATE = {
         }
       }
 
-      // 3. Restore current user — prefer sessionStorage (active tab) over localStorage
-      // (persisted). This prevents a previous admin's localStorage data from overriding
-      // a freshly logged-in lawyer's sessionStorage on page refresh.
+      // 3. Restore current user — discard any demo candidate user
       const sessionUserRaw = sessionStorage.getItem('slcms_current_user');
       const persistedUserRaw = localStorage.getItem('slcms_persisted_current_user');
 
       let candidateUser = null;
       if (sessionUserRaw) {
-        // Active tab session takes absolute priority
         try { candidateUser = JSON.parse(sessionUserRaw); } catch(e){}
       } else if (persistedUserRaw) {
-        // Fall back to localStorage only when there is no active session
         try { candidateUser = JSON.parse(persistedUserRaw); } catch(e){}
       }
 
       if (candidateUser && candidateUser.name) {
-        this.currentUser = Object.assign({}, this.currentUser, candidateUser);
+        const candName = (candidateUser.name || '').toLowerCase();
+        if (!candName.includes('neema') && !candName.includes('kasoma') && !candName.includes('mercer') && !candName.includes('croft') && !candName.includes('sterling')) {
+          this.currentUser = Object.assign({}, this.currentUser, candidateUser);
+        }
       }
 
-      // 4. Restore persisted cases
+      // 4. Restore persisted cases, clients, and tasks
       this.restoreCases();
+      this.restoreClients();
+      this.restoreTasks();
     } catch (e) {
       console.warn('Session restore error:', e);
     }
@@ -2432,8 +1568,9 @@ const SLCMS_STATE = {
       const savedCasesJson = localStorage.getItem('slcms_persisted_cases');
       if (savedCasesJson) {
         const savedCases = JSON.parse(savedCasesJson);
+        const DEMO_CASE_IDS = ['case-101', 'case-102', 'case-103', 'case-104', 'case-105', 'case-001', 'case-002'];
         if (Array.isArray(savedCases) && savedCases.length > 0) {
-          savedCases.forEach(sc => {
+          savedCases.filter(sc => !DEMO_CASE_IDS.includes(sc.id)).forEach(sc => {
             const idx = this.cases.findIndex(c => (sc.id && c.id === sc.id) || (sc.caseNumber && c.caseNumber === sc.caseNumber));
             if (idx >= 0) {
               this.cases[idx] = Object.assign({}, this.cases[idx], sc);
@@ -2454,6 +1591,161 @@ const SLCMS_STATE = {
     } catch (e) {
       console.warn('Failed to persist cases:', e);
     }
+  },
+
+  restoreClients() {
+    try {
+      const saved = localStorage.getItem('slcms_persisted_clients');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const DEMO_CLIENT_IDS = ['client-001', 'client-002', 'client-003', 'client-004', 'client-005'];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.clients = parsed.filter(c => !DEMO_CLIENT_IDS.includes(c.id));
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to restore clients:', e);
+    }
+  },
+
+  persistClients() {
+    try {
+      localStorage.setItem('slcms_persisted_clients', JSON.stringify(this.clients || []));
+    } catch (e) {
+      console.warn('Failed to persist clients:', e);
+    }
+  },
+
+  addClient(newClient) {
+    if (!this.clients) this.clients = [];
+    this.clients.unshift(newClient);
+    this.persistClients();
+    this.addAuditLog('Client Registered', 'Client Management', `${newClient.name} (${newClient.type}) registered by ${this.currentUser?.name || 'Administrator'}`);
+  },
+
+  restoreTasks() {
+    try {
+      const saved = localStorage.getItem('slcms_persisted_tasks');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const DEMO_TASK_IDS = ['task-001', 'task-002', 'task-003', 'task-004', 'task-005'];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.tasks = parsed.filter(t => !DEMO_TASK_IDS.includes(t.id));
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to restore tasks:', e);
+    }
+  },
+
+  persistTasks() {
+    try {
+      localStorage.setItem('slcms_persisted_tasks', JSON.stringify(this.tasks || []));
+    } catch (e) {
+      console.warn('Failed to persist tasks:', e);
+    }
+  },
+
+  addTask(newTask) {
+    if (!this.tasks) this.tasks = [];
+    this.tasks.unshift(newTask);
+    this.persistTasks();
+    this.addAuditLog('Task Created', 'Task Management', `Task "${newTask.title}" created for case ${newTask.caseNumber || 'N/A'}`);
+  },
+
+  // Active Staff Filtering (Accounts that are locked, suspended, or deactivated excluded)
+  getActiveStaffUsers(role = null) {
+    return (this.users || []).filter(u => {
+      const status = (u.accountStatus || u.status || 'ACTIVE').toUpperCase();
+      const isInactive = status === 'LOCKED' || status === 'SUSPENDED' || status === 'DEACTIVATED';
+      if (isInactive) return false;
+
+      if (!role) return true;
+      if (Array.isArray(role)) return role.includes(u.role);
+      return u.role === role;
+    });
+  },
+
+  // Dynamic Calculation Helpers for Dashboard KPIs
+  getActiveCasesCount() {
+    const user = this.currentUser;
+    return (this.cases || []).filter(c => {
+      if (!this.canAccessCase(user, c.id)) return false;
+      const st = (c.status || '').toUpperCase();
+      return st === 'ACTIVE' || st === 'ASSIGNED / ACTIVE' || st === 'ASSIGNED';
+    }).length;
+  },
+
+  getClientsCount() {
+    return (this.clients || []).length;
+  },
+
+  getPendingTasksCount() {
+    return (this.tasks || []).filter(t => {
+      const st = (t.status || '').toLowerCase();
+      return st !== 'completed' && st !== 'filed' && st !== 'cancelled';
+    }).length;
+  },
+
+  getUpcomingDeadlinesCount() {
+    const events = (typeof TasksView !== 'undefined' && Array.isArray(TasksView.courtEvents)) 
+      ? TasksView.courtEvents 
+      : (this.courtEvents || []);
+    return events.filter(e => {
+      if (!e.date) return false;
+      return new Date(e.date) >= new Date('2026-09-01');
+    }).length;
+  },
+
+  assignCaseWithWorkflow(caseId, { leadLawyer, supportingLawyer = null, clerk = null, accessLevel = 'Standard', assignmentNote = '' }) {
+    const targetCase = (this.cases || []).find(c => c.id === caseId);
+    if (!targetCase) return false;
+
+    // Update case properties
+    targetCase.lawyer = leadLawyer.name;
+    targetCase.lawyerId = leadLawyer.id;
+    targetCase.assignedLawyerId = leadLawyer.id;
+    if (supportingLawyer && supportingLawyer.name) {
+      targetCase.seniorLawyer = supportingLawyer.name;
+      targetCase.seniorLawyerId = supportingLawyer.id;
+    }
+    if (clerk && clerk.name) {
+      targetCase.supportingStaff = clerk.name;
+      targetCase.clerkId = clerk.id;
+    }
+    targetCase.accessLevel = accessLevel;
+    targetCase.status = 'Active';
+    targetCase.statusLabel = 'Assigned / Active';
+    targetCase.assignmentNote = assignmentNote;
+    targetCase.assignedAt = new Date().toISOString();
+
+    // Grant access to team members
+    [leadLawyer, supportingLawyer, clerk].filter(Boolean).forEach(userObj => {
+      const u = this.users.find(usr => usr.id === userObj.id || usr.name === userObj.name);
+      if (u) {
+        if (!u.assignedCaseIds) u.assignedCaseIds = [];
+        if (!u.assignedCaseIds.includes(caseId)) {
+          u.assignedCaseIds.push(caseId);
+        }
+        u.activeCases = (u.activeCases || 0) + 1;
+      }
+    });
+
+    this.persistCases();
+    this.persistUsers();
+
+    // Activity Log Entry exact format:
+    // Administrator assigned “[Case Title]” to Adv. [Lawyer Name] on [Date] at [Time].
+    const now = new Date();
+    const dateFormatted = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const timeFormatted = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    
+    // Normalize advocate title
+    const advocateName = leadLawyer.name.startsWith('Adv.') ? leadLawyer.name : `Adv. ${leadLawyer.name}`;
+    const logDescription = `Administrator assigned “${targetCase.title}” to ${advocateName} on ${dateFormatted} at ${timeFormatted}.`;
+    
+    this.addAuditLog('Case Assigned', 'Case Assignment', logDescription);
+    return true;
   },
 
   deleteCase(caseId) {
@@ -2494,6 +1786,14 @@ const SLCMS_STATE = {
       localStorage.setItem('slcms_persisted_invitations', JSON.stringify(this.invitations));
     } catch (e) {
       console.warn('Failed to persist invitations:', e);
+    }
+  },
+
+  persistSecurityAlerts() {
+    try {
+      localStorage.setItem('slcms_persisted_security_alerts', JSON.stringify(this.securityAlerts || []));
+    } catch (e) {
+      console.warn('Failed to persist security alerts:', e);
     }
   },
 
@@ -2904,6 +2204,92 @@ const SLCMS_STATE = {
   // ADMINISTRATOR GOVERNANCE & SECURITY STATE CONTROLLER
   // ==========================================================================
 
+  generateStaffId(role) {
+    let prefix = 'LAW';
+    if (role === 'Administrator') prefix = 'ADM';
+    else if (role === 'Senior Lawyer') prefix = 'SLW';
+    else if (role === 'Lawyer') prefix = 'LAW';
+    else if (role === 'Legal Clerk') prefix = 'CLK';
+
+    const matching = (this.users || []).filter(u => {
+      const id = (u.staffId || u.employeeId || '').toUpperCase();
+      return id.startsWith(prefix + '-');
+    });
+
+    let maxNum = 0;
+    matching.forEach(u => {
+      const id = (u.staffId || u.employeeId || '').toUpperCase();
+      const parts = id.split('-');
+      if (parts.length === 2) {
+        const num = parseInt(parts[1], 10);
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num;
+        }
+      }
+    });
+
+    const nextNum = maxNum + 1;
+    return `${prefix}-${String(nextNum).padStart(4, '0')}`;
+  },
+
+  getDashboardMetrics() {
+    const totalStaff = (this.users || []).length;
+    const activeStaff = (this.users || []).filter(u => (u.status || '').toUpperCase() === 'ACTIVE').length;
+    const seniorLawyers = (this.users || []).filter(u => u.role === 'Senior Lawyer').length;
+    const lawyers = (this.users || []).filter(u => u.role === 'Lawyer').length;
+    const legalClerks = (this.users || []).filter(u => u.role === 'Legal Clerk').length;
+    const firstLoginRequired = (this.users || []).filter(u => (u.status || '').toUpperCase() === 'FIRST_LOGIN_RESET' || u.first_login_required).length;
+    const lockedAccounts = (this.users || []).filter(u => (u.status || '').toUpperCase() === 'LOCKED').length;
+
+    return {
+      totalStaff,
+      activeStaff,
+      seniorLawyers,
+      lawyers,
+      legalClerks,
+      firstLoginRequired,
+      lockedAccounts
+    };
+  },
+
+  assignCaseToUser(userId, caseId, responsibility = 'Supporting Lawyer', accessLevel = 'View and Edit') {
+    const user = (this.users || []).find(u => u.id === userId);
+    const c = (this.cases || []).find(cs => cs.id === caseId);
+    if (!user || !c) return { success: false, message: 'User or case not found.' };
+
+    if (!Array.isArray(user.assignedCaseIds)) user.assignedCaseIds = [];
+    if (!user.assignedCaseIds.includes(caseId)) {
+      user.assignedCaseIds.push(caseId);
+    }
+    user.activeCases = user.assignedCaseIds.length;
+
+    if (!Array.isArray(this.caseAssignments)) this.caseAssignments = [];
+    const existing = this.caseAssignments.find(a => a.userId === userId && a.caseId === caseId);
+    if (!existing) {
+      const newAsgn = {
+        id: 'asgn-' + (this.caseAssignments.length + 101),
+        caseId: c.id,
+        caseNumber: c.caseNumber,
+        caseTitle: c.title,
+        userId: user.id,
+        userName: user.name,
+        userRole: user.role,
+        assignmentRole: responsibility,
+        accessLevel: accessLevel,
+        startDate: new Date().toISOString().substring(0, 10),
+        status: 'Active'
+      };
+      this.caseAssignments.push(newAsgn);
+    } else {
+      existing.assignmentRole = responsibility;
+      existing.accessLevel = accessLevel;
+    }
+
+    this.persistUsers();
+    this.addAuditLog('Case Assigned', 'Matter Governance', `Assigned case ${c.caseNumber} to ${user.name} as ${responsibility} (${accessLevel})`);
+    return { success: true };
+  },
+
   generateTemporaryPassword() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
     const lower = 'abcdefghijkmnpqrstuvwxyz';
@@ -3037,22 +2423,24 @@ const SLCMS_STATE = {
       officeLocation: userData.officeLocation || 'Main Office, Dar es Salaam',
       role: userData.role, // 'Administrator' | 'Senior Lawyer' | 'Lawyer' | 'Legal Clerk'
       roleTitle: userData.roleTitle || userData.jobTitle || userData.role,
-      status: 'ACTIVE',
-      accountStatus: 'ACTIVE',
-      account_status: 'ACTIVE',
+      status: 'FIRST_LOGIN_RESET',
+      accountStatus: 'FIRST_LOGIN_RESET',
+      account_status: 'FIRST_LOGIN_RESET',
       password_hash: passHash,
       passwordHash: passHash,
       passwordPlain: tempPass,
       temporaryPassword: tempPass,
-      first_login_required: false,
-      mustChangePassword: false,
+      first_login_required: true,
+      firstLoginStatus: 'Pending',
+      mustChangePassword: true,
+      temporary_password_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       tempPasswordExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }),
       failedAttempts: 0,
       failed_login_attempts: 0,
       lockedUntil: null,
-      lastLogin: 'Never (Pending Activation)',
+      lastLogin: 'Never',
       activeCases: 0,
-      assignedCaseIds: userData.assignedCaseIds || (userData.assignedCases ? userData.assignedCases.split(',').map(s => s.trim()).filter(Boolean) : []),
+      assignedCaseIds: [],
       // Professional Credentials
       advocateNumber: userData.advocateNumber || userData.lawyerNumber || (userData.role === 'Lawyer' || userData.role === 'Senior Lawyer' ? this.generateLawyerNumber() : null),
       lawyerNumber: userData.lawyerNumber || userData.advocateNumber || (userData.role === 'Lawyer' || userData.role === 'Senior Lawyer' ? this.generateLawyerNumber() : null),
@@ -3068,7 +2456,30 @@ const SLCMS_STATE = {
       createdAt: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
     };
 
+    // Handle initial case assignments if provided
+    if (userData.caseId) {
+      this.assignCaseToUser(newUser.id, userData.caseId, userData.assignmentRole || 'Supporting Lawyer', userData.accessLevel || 'View and Edit');
+    } else if (Array.isArray(userData.assignedCaseIds) && userData.assignedCaseIds.length > 0) {
+      userData.assignedCaseIds.forEach(cid => {
+        this.assignCaseToUser(newUser.id, cid, userData.assignmentRole || 'Supporting Lawyer', userData.accessLevel || 'View and Edit');
+      });
+    }
+
     this.users.unshift(newUser);
+
+    // Create Security Alert: FIRST_LOGIN_PENDING
+    this.createSecurityAlert({
+      userId: newUser.id,
+      staffId: cleanStaffId,
+      name: newUser.name,
+      role: newUser.role,
+      alertType: 'FIRST_LOGIN_PENDING',
+      title: 'First Login Not Completed',
+      description: `Account provisioned for ${newUser.name} (${newUser.role}). Initial login and password setup pending.`,
+      severity: 'LOW',
+      temporaryPasswordExpiresAt: newUser.temporary_password_expires_at
+    });
+
     this.persistUsers();
 
     // Log immutable activity
@@ -3104,15 +2515,41 @@ const SLCMS_STATE = {
     user.passwordHash = passHash;
     user.passwordPlain = newTemp;
     user.temporaryPassword = newTemp;
-    user.status = 'ACTIVE';
-    user.accountStatus = 'ACTIVE';
-    user.account_status = 'ACTIVE';
-    user.first_login_required = false;
-    user.mustChangePassword = false;
+    user.status = 'FIRST_LOGIN_RESET';
+    user.accountStatus = 'FIRST_LOGIN_RESET';
+    user.account_status = 'FIRST_LOGIN_RESET';
+    user.first_login_required = true;
+    user.firstLoginStatus = 'Pending';
+    user.mustChangePassword = true;
+    user.temporary_password_expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     user.tempPasswordExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
     user.failedAttempts = 0;
     user.failed_login_attempts = 0;
     user.lockedUntil = null;
+    user.locked_until = null;
+    user.locked_at = null;
+    user.lockedAt = null;
+    user.locked_reason = null;
+    user.lockedReason = null;
+    user.locked_by = null;
+    user.lockedBy = null;
+
+    // Resolve any existing TEMPORARY_PASSWORD_EXPIRED or FIRST_LOGIN_PENDING alerts
+    this.resolveAlertsForUser(user.id, 'TEMPORARY_PASSWORD_EXPIRED', 'ADMIN');
+    this.resolveAlertsForUser(user.id, 'FIRST_LOGIN_PENDING', 'ADMIN');
+
+    // Create fresh FIRST_LOGIN_PENDING alert
+    this.createSecurityAlert({
+      userId: user.id,
+      staffId: user.staffId || user.employeeId,
+      name: user.name,
+      role: user.role,
+      alertType: 'FIRST_LOGIN_PENDING',
+      title: 'First Login Not Completed',
+      description: `New temporary password issued for ${user.name}. Pending initial login.`,
+      severity: 'LOW',
+      temporaryPasswordExpiresAt: user.temporary_password_expires_at
+    });
 
     this.persistUsers();
     this.addAuditLog('Temporary Password Issued', 'Security', `New temporary password generated for ${user.name} (${user.staffId || user.employeeId})`);
@@ -3131,45 +2568,186 @@ const SLCMS_STATE = {
     user.accountStatus = 'FIRST_LOGIN_RESET';
     user.account_status = 'FIRST_LOGIN_RESET';
     user.first_login_required = true;
+    user.firstLoginStatus = 'Pending';
     user.mustChangePassword = true;
+    user.temporary_password_expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    user.tempPasswordExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+
+    this.createSecurityAlert({
+      userId: user.id,
+      staffId: user.staffId || user.employeeId,
+      name: user.name,
+      role: user.role,
+      alertType: 'PASSWORD_RESET_REQUESTED',
+      title: 'Password Reset Forced',
+      description: `Administrator forced a password reset for ${user.name}.`,
+      severity: 'MEDIUM',
+      temporaryPasswordExpiresAt: user.temporary_password_expires_at
+    });
+
     this.persistUsers();
     this.addAuditLog('Password Reset Forced', 'Security', `Administrator forced password reset for ${user.name} (${user.staffId || user.employeeId})`);
     return true;
   },
 
-  lockAccount(userId, reason = 'Administrative Lock') {
+  lockAccount(userId, reason = 'Administrator decision', lockedBy = null) {
     const user = this.users.find(u => u.id === userId);
-    if (!user) return false;
+    if (!user) return { success: false, message: 'User not found.' };
+
+    const adminName = lockedBy || (this.currentUser ? this.currentUser.name : 'Administrator');
     user.status = 'LOCKED';
     user.accountStatus = 'LOCKED';
     user.account_status = 'LOCKED';
-    user.failedAttempts = 5;
-    user.lockedUntil = Date.now() + 15 * 60 * 1000;
-    this.persistUsers();
-    this.addAuditLog('Account Locked', 'Login & Security', `Account for ${user.name} locked. Reason: ${reason}`);
-    
-    this.adminNotifications.unshift({
-      id: 'an-' + Date.now(),
-      type: 'warning',
-      title: `Account Locked: ${user.name}`,
-      message: `Account ${user.staffId || user.employeeId} locked. Reason: ${reason}`,
-      timestamp: 'Just now',
-      category: 'Security',
-      read: false
+    user.locked_reason = reason;
+    user.lockedReason = reason;
+    user.locked_at = new Date().toISOString();
+    user.lockedAt = user.locked_at;
+    user.locked_by = adminName;
+    user.lockedBy = adminName;
+    user.lockedUntil = null; // Indefinite until manual unlock
+    user.locked_until = null;
+
+    // Terminate user sessions
+    this.terminateUserSessions(user.id);
+
+    // Record Event: ACCOUNT_LOCKED_MANUAL
+    this.addSecurityEvent({
+      event: 'ACCOUNT_LOCKED_MANUAL',
+      reason: reason,
+      administrator: adminName,
+      target: user.staffId || user.employeeId || user.username,
+      targetName: user.name,
+      timestamp: new Date().toISOString()
     });
-    return true;
+
+    // Create Security Alert
+    this.createSecurityAlert({
+      userId: user.id,
+      staffId: user.staffId || user.employeeId,
+      name: user.name,
+      role: user.role,
+      alertType: 'ACCOUNT_LOCKED',
+      title: 'Account Locked Manually by Administrator',
+      description: `Account was manually locked by ${adminName}. Reason: ${reason}.`,
+      severity: 'HIGH',
+      lockedReason: reason,
+      lockedBy: adminName,
+      lockedAt: user.locked_at,
+      lockedUntil: null
+    });
+
+    this.persistUsers();
+    this.addAuditLog('Account Locked Manually', 'Security Activity',
+      `Account ${user.staffId || user.employeeId} locked manually by ${adminName}. Reason: ${reason}`, 'Locked');
+
+    return { success: true };
   },
 
-  unlockAccount(userId) {
+  unlockAccount(userId, reason = 'Administrative unlock resolution', unlockedBy = null) {
     const user = this.users.find(u => u.id === userId);
-    if (!user) return false;
+    if (!user) return { success: false, message: 'User not found.' };
+
+    const adminName = unlockedBy || (this.currentUser ? this.currentUser.name : 'Administrator');
     user.status = 'ACTIVE';
     user.accountStatus = 'ACTIVE';
+    user.account_status = 'ACTIVE';
     user.failedAttempts = 0;
+    user.failed_login_attempts = 0;
     user.lockedUntil = null;
+    user.locked_until = null;
+    user.locked_at = null;
+    user.lockedAt = null;
+    user.locked_reason = null;
+    user.lockedReason = null;
+    user.locked_by = null;
+    user.lockedBy = null;
+
+    // Resolve ACCOUNT_LOCKED alerts for this user
+    this.resolveAlertsForUser(user.id, 'ACCOUNT_LOCKED', adminName);
+
+    // Record Event: ACCOUNT_UNLOCKED
+    this.addSecurityEvent({
+      event: 'ACCOUNT_UNLOCKED',
+      administrator: adminName,
+      target: user.staffId || user.employeeId || user.username,
+      targetName: user.name,
+      reason: reason,
+      timestamp: new Date().toISOString()
+    });
+
     this.persistUsers();
-    this.addAuditLog('Account Unlocked', 'Login & Security', `Account for ${user.name} unlocked by Administrator`);
-    return true;
+    this.addAuditLog('Account Unlocked', 'Security Activity',
+      `Account ${user.staffId || user.employeeId} unlocked by ${adminName}. Reason: ${reason}`, 'Success');
+
+    return { success: true };
+  },
+
+  unlockAndForcePasswordReset(userId, reason = 'Administrator reset requirement', unlockedBy = null) {
+    const user = this.users.find(u => u.id === userId);
+    if (!user) return { success: false, message: 'User not found.' };
+
+    const adminName = unlockedBy || (this.currentUser ? this.currentUser.name : 'Administrator');
+    const newTemp = this.generateTemporaryPassword();
+    const passHash = this.hashPassword(newTemp);
+
+    user.password_hash = passHash;
+    user.passwordHash = passHash;
+    user.passwordPlain = newTemp;
+    user.temporaryPassword = newTemp;
+    user.status = 'FIRST_LOGIN_RESET';
+    user.accountStatus = 'FIRST_LOGIN_RESET';
+    user.account_status = 'FIRST_LOGIN_RESET';
+    user.first_login_required = true;
+    user.firstLoginStatus = 'Pending';
+    user.mustChangePassword = true;
+    user.temporary_password_expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    user.tempPasswordExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+    user.failedAttempts = 0;
+    user.failed_login_attempts = 0;
+    user.lockedUntil = null;
+    user.locked_until = null;
+    user.locked_at = null;
+    user.lockedAt = null;
+    user.locked_reason = null;
+    user.lockedReason = null;
+    user.locked_by = null;
+    user.lockedBy = null;
+
+    // Resolve any existing ACCOUNT_LOCKED alerts
+    this.resolveAlertsForUser(user.id, 'ACCOUNT_LOCKED', adminName);
+
+    // Create FIRST_LOGIN_PENDING alert
+    this.createSecurityAlert({
+      userId: user.id,
+      staffId: user.staffId || user.employeeId,
+      name: user.name,
+      role: user.role,
+      alertType: 'FIRST_LOGIN_PENDING',
+      title: 'First Login Not Completed',
+      description: `Account unlocked with forced password reset by ${adminName}. New temporary credentials issued.`,
+      severity: 'LOW',
+      temporaryPasswordExpiresAt: user.temporary_password_expires_at
+    });
+
+    // Record Event: ACCOUNT_UNLOCKED_WITH_RESET
+    this.addSecurityEvent({
+      event: 'ACCOUNT_UNLOCKED_WITH_RESET',
+      administrator: adminName,
+      target: user.staffId || user.employeeId || user.username,
+      targetName: user.name,
+      reason: reason,
+      timestamp: new Date().toISOString()
+    });
+
+    this.persistUsers();
+    this.addAuditLog('Account Unlocked & Reset Forced', 'Security Activity',
+      `Account ${user.staffId || user.employeeId} unlocked with password reset forced by ${adminName}`, 'Success');
+
+    return {
+      success: true,
+      temporaryPassword: newTemp,
+      expiry: user.tempPasswordExpiry
+    };
   },
 
   suspendAccount(userId, reason = 'Pending Administrative Review') {
@@ -3182,14 +2760,21 @@ const SLCMS_STATE = {
     return true;
   },
 
-  deactivateAccount(userId, reason = 'Employment or access ended') {
+  deactivateAccount(userId, reason = 'Employment or access ended', by = null) {
     const user = this.users.find(u => u.id === userId);
-    if (!user) return false;
+    if (!user) return { success: false, message: 'User not found.' };
+
+    const adminName = by || (this.currentUser ? this.currentUser.name : 'Administrator');
     user.status = 'DEACTIVATED';
     user.accountStatus = 'DEACTIVATED';
+    user.account_status = 'DEACTIVATED';
+
+    this.terminateUserSessions(user.id);
+    this.resolveAlertsForUser(user.id, null, adminName);
     this.persistUsers();
-    this.addAuditLog('Account Deactivated', 'User Accounts', `Account for ${user.name} deactivated. Reason: ${reason}`);
-    return true;
+    this.addAuditLog('Account Deactivated', 'User Accounts', `Account for ${user.name} (${user.staffId || user.employeeId}) deactivated by ${adminName}. Reason: ${reason}`);
+
+    return { success: true };
   },
 
   terminateUserSessions(userId) {
@@ -3197,6 +2782,293 @@ const SLCMS_STATE = {
     if (!user) return false;
     this.addAuditLog('Active Sessions Terminated', 'Security', `All active sessions revoked for ${user.name} (${user.staffId || user.employeeId})`);
     return true;
+  },
+
+  updateUserDetails(userId, updates = {}) {
+    const user = this.users.find(u => u.id === userId);
+    if (!user) return { success: false, message: 'User not found in system directory.' };
+
+    // Prevent stripping Admin role from root system administrator
+    if (user.id === 'usr-001' && updates.role && updates.role !== 'Administrator') {
+      return { success: false, message: 'Root System Administrator role cannot be changed.' };
+    }
+
+    if (updates.name && updates.name.trim()) {
+      user.name = updates.name.trim();
+      user.full_name = updates.name.trim();
+    }
+    if (updates.jobTitle !== undefined) {
+      user.jobTitle = updates.jobTitle.trim();
+      user.roleTitle = updates.jobTitle.trim();
+    }
+    if (updates.role) {
+      user.role = updates.role;
+      user.roleLabel = updates.role;
+    }
+    if (updates.email && updates.email.trim()) {
+      user.email = updates.email.trim().toLowerCase();
+    }
+    if (updates.phone !== undefined) {
+      user.phone = updates.phone.trim();
+    }
+    if (updates.department !== undefined) {
+      user.department = updates.department.trim();
+    }
+    if (updates.officeLocation !== undefined || updates.office !== undefined) {
+      user.officeLocation = (updates.officeLocation || updates.office || '').trim();
+      user.office = user.officeLocation;
+    }
+    if (updates.advocateNumber !== undefined) {
+      user.advocateNumber = updates.advocateNumber ? updates.advocateNumber.trim() : null;
+      user.lawyerNumber = user.advocateNumber;
+    }
+    if (updates.status) {
+      user.status = updates.status;
+      user.accountStatus = updates.status;
+      user.account_status = updates.status;
+    }
+
+    // If updating current user, sync currentUser & storage
+    if (this.currentUser && this.currentUser.id === user.id) {
+      Object.assign(this.currentUser, {
+        name: user.name,
+        role: user.role,
+        roleLabel: user.roleTitle || user.role,
+        email: user.email,
+        phone: user.phone,
+        department: user.department,
+        advocateNumber: user.advocateNumber
+      });
+      this.saveSessionUser(this.currentUser);
+    }
+
+    this.persistUsers();
+    this.addAuditLog('User Details Updated', 'User Accounts',
+      `Profile details for ${user.name} (${user.staffId || user.employeeId}) modified by ${this.currentUser ? this.currentUser.name : 'Administrator'}`);
+
+    return { success: true, user };
+  },
+
+  adminChangeUserPassword(userId, newPassword, mustChangeOnNextLogin = false) {
+    const user = this.users.find(u => u.id === userId);
+    if (!user) return { success: false, message: 'User not found in system directory.' };
+
+    if (!newPassword || newPassword.length < 8) {
+      return { success: false, message: 'Password must be at least 8 characters long.' };
+    }
+
+    const hashed = '$argon2id$v=19$m=65536,t=3,p=4$' + Math.random().toString(36).substring(2, 10) + '$' + Math.random().toString(36).substring(2, 16);
+    user.passwordPlain = newPassword;
+    user.temporaryPassword = newPassword;
+    user.passwordHash = hashed;
+    user.password_hash = hashed;
+    user.password_changed_at = new Date().toISOString();
+    user.failedAttempts = 0;
+    user.failed_login_attempts = 0;
+    user.lockedUntil = null;
+    user.mustChangePassword = !!mustChangeOnNextLogin;
+    user.first_login_required = !!mustChangeOnNextLogin;
+
+    if (mustChangeOnNextLogin) {
+      user.status = 'FIRST_LOGIN_RESET';
+      user.accountStatus = 'FIRST_LOGIN_RESET';
+      user.account_status = 'FIRST_LOGIN_RESET';
+      user.firstLoginStatus = 'Pending';
+      user.temporary_password_expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      user.tempPasswordExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+    } else {
+      if (user.status === 'FIRST_LOGIN_RESET' || user.accountStatus === 'FIRST_LOGIN_RESET') {
+        user.status = 'ACTIVE';
+        user.accountStatus = 'ACTIVE';
+        user.account_status = 'ACTIVE';
+        user.firstLoginStatus = 'Completed';
+      }
+    }
+
+    this.persistUsers();
+    this.addAuditLog('User Password Administrative Reset', 'Security',
+      `Administrator set new password for ${user.name} (${user.staffId || user.employeeId}). Forced reset: ${mustChangeOnNextLogin ? 'Yes' : 'No'}`);
+
+    return { success: true, user };
+  },
+
+  deleteUser(userId) {
+    if (this.currentUser && this.currentUser.id === userId) {
+      return { success: false, message: 'Security Block: You cannot delete your own logged-in administrator account.' };
+    }
+    if (userId === 'usr-001') {
+      return { success: false, message: 'Security Block: Root System Administrator account cannot be removed.' };
+    }
+
+    const idx = this.users.findIndex(u => u.id === userId);
+    if (idx === -1) {
+      return { success: false, message: 'User not found in system directory.' };
+    }
+
+    const removedUser = this.users[idx];
+    this.users.splice(idx, 1);
+
+    // Save into persistent blacklist so user never revives upon reload
+    try {
+      const deletedIds = JSON.parse(localStorage.getItem('slcms_deleted_user_ids') || '[]');
+      if (!deletedIds.includes(removedUser.id.toLowerCase())) deletedIds.push(removedUser.id.toLowerCase());
+      if (removedUser.email && !deletedIds.includes(removedUser.email.toLowerCase())) deletedIds.push(removedUser.email.toLowerCase());
+      const sid = (removedUser.staffId || removedUser.employeeId || '').toUpperCase();
+      if (sid && !deletedIds.includes(sid)) deletedIds.push(sid);
+      localStorage.setItem('slcms_deleted_user_ids', JSON.stringify(deletedIds));
+    } catch(e) {}
+
+    // Unassign cases
+    if (Array.isArray(this.caseAssignments)) {
+      this.caseAssignments = this.caseAssignments.filter(a => a.userId !== userId);
+    }
+
+    this.persistUsers();
+    this.addAuditLog('User Account Removed', 'User Accounts',
+      `Account for ${removedUser.name} (${removedUser.staffId || removedUser.employeeId}) permanently deleted by ${this.currentUser ? this.currentUser.name : 'Administrator'}`);
+
+    return { success: true, removedUser };
+  },
+
+  // ==========================================================================
+  // REAL SECURITY & ACCESS ALERTS ENGINE
+  // ==========================================================================
+  securityEvents: [],
+
+  addSecurityEvent(eventData) {
+    if (!Array.isArray(this.securityEvents)) {
+      this.securityEvents = [];
+    }
+    const evt = {
+      id: 'sevt-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      timestamp: new Date().toISOString(),
+      ...eventData
+    };
+    this.securityEvents.unshift(evt);
+    return evt;
+  },
+
+  createSecurityAlert(alertData) {
+    const newAlert = {
+      id: alertData.id || 'alt-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      userId: alertData.userId,
+      staffId: alertData.staffId || '',
+      name: alertData.name || '',
+      role: alertData.role || '',
+      alertType: alertData.alertType, // 'ACCOUNT_LOCKED' | 'FIRST_LOGIN_PENDING' | 'TEMPORARY_PASSWORD_EXPIRED' | etc.
+      title: alertData.title,
+      description: alertData.description || '',
+      severity: alertData.severity || 'MEDIUM',
+      lockedReason: alertData.lockedReason || null,
+      lockedBy: alertData.lockedBy || null,
+      lockedAt: alertData.lockedAt || new Date().toISOString(),
+      lockedUntil: alertData.lockedUntil || null,
+      temporaryPasswordExpiresAt: alertData.temporaryPasswordExpiresAt || null,
+      failedAttempts: alertData.failedAttempts || 0,
+      ipAddress: alertData.ipAddress || '197.250.48.12',
+      resolved: false,
+      resolvedAt: null,
+      resolvedBy: null,
+      resolutionNotes: null,
+      createdAt: alertData.createdAt || new Date().toISOString()
+    };
+
+    if (!Array.isArray(this.securityAlerts)) {
+      this.securityAlerts = [];
+    }
+
+    // Avoid duplicate unresolved alert of same type for same user
+    const existingIdx = this.securityAlerts.findIndex(a => !a.resolved && a.userId === newAlert.userId && a.alertType === newAlert.alertType);
+    if (existingIdx >= 0) {
+      this.securityAlerts[existingIdx] = Object.assign({}, this.securityAlerts[existingIdx], newAlert);
+    } else {
+      this.securityAlerts.unshift(newAlert);
+    }
+
+    this.persistSecurityAlerts();
+    return newAlert;
+  },
+
+  resolveAlert(alertId, resolvedBy = 'ADMIN', resolutionNotes = '') {
+    if (!Array.isArray(this.securityAlerts)) return false;
+    const alert = this.securityAlerts.find(a => a.id === alertId);
+    if (alert) {
+      alert.resolved = true;
+      alert.resolvedAt = new Date().toISOString();
+      alert.resolvedBy = resolvedBy;
+      alert.resolutionNotes = resolutionNotes;
+      this.persistSecurityAlerts();
+      return true;
+    }
+    return false;
+  },
+
+  resolveAlertsForUser(userId, alertType = null, resolvedBy = 'ADMIN') {
+    if (!Array.isArray(this.securityAlerts)) return 0;
+    let resolvedCount = 0;
+    this.securityAlerts.forEach(a => {
+      if (a.userId === userId && (!alertType || a.alertType === alertType) && !a.resolved) {
+        a.resolved = true;
+        a.resolvedAt = new Date().toISOString();
+        a.resolvedBy = resolvedBy;
+        resolvedCount++;
+      }
+    });
+    if (resolvedCount > 0) {
+      this.persistSecurityAlerts();
+    }
+    return resolvedCount;
+  },
+
+  getSecurityAlerts(options = {}) {
+    this.checkExpiredTemporaryPasswords();
+    if (!Array.isArray(this.securityAlerts)) return [];
+    let alerts = [...this.securityAlerts];
+    if (options.status === 'unresolved' || options.unresolvedOnly) {
+      alerts = alerts.filter(a => !a.resolved);
+    } else if (options.status === 'resolved') {
+      alerts = alerts.filter(a => a.resolved);
+    }
+    if (options.type) {
+      alerts = alerts.filter(a => a.alertType === options.type);
+    }
+    if (options.userId) {
+      alerts = alerts.filter(a => a.userId === options.userId);
+    }
+    return alerts;
+  },
+
+  getUnresolvedAlertsCount() {
+    return this.getSecurityAlerts({ status: 'unresolved' }).length;
+  },
+
+  checkExpiredTemporaryPasswords() {
+    if (!Array.isArray(this.users)) return;
+    const now = Date.now();
+    this.users.forEach(u => {
+      if ((u.status === 'FIRST_LOGIN_RESET' || u.first_login_required) && u.temporary_password_expires_at) {
+        const expiryTime = new Date(u.temporary_password_expires_at).getTime();
+        if (now > expiryTime) {
+          // Resolve any existing FIRST_LOGIN_PENDING
+          this.resolveAlertsForUser(u.id, 'FIRST_LOGIN_PENDING', 'SYSTEM');
+          // Create TEMPORARY_PASSWORD_EXPIRED alert if not already present and unresolved
+          const exists = (this.securityAlerts || []).some(a => !a.resolved && a.userId === u.id && a.alertType === 'TEMPORARY_PASSWORD_EXPIRED');
+          if (!exists) {
+            this.createSecurityAlert({
+              userId: u.id,
+              staffId: u.staffId || u.employeeId,
+              name: u.name,
+              role: u.role,
+              alertType: 'TEMPORARY_PASSWORD_EXPIRED',
+              title: 'Temporary Password Expired',
+              description: `Temporary password for ${u.name} has expired. User cannot log in until new credentials are issued.`,
+              severity: 'MEDIUM',
+              temporaryPasswordExpiresAt: u.temporary_password_expires_at
+            });
+          }
+        }
+      }
+    });
   },
 
   changeUserRole(userId, newRole, reason = 'Administrative reassignment') {
@@ -4059,6 +3931,49 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-009',
+      // === 2020 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+    "searchAliases":  [
+                          "Muwinge",
+                          "Halima Ismail",
+                          "PC Civil Appeal 69 of 2018",
+                          "TZHC 10045",
+                          "matrimonial property",
+                          "missing trial record"
+                      ],
+    "court":  "High Court of Tanzania",
+    "officialTitle":  "Abdallah Salum Muwinge v Halima Ismail",
+    "decisionDate":  "31 December 2020",
+    "category":  "Matrimonial law / civil procedure",
+    "registry":  "Dar es Salaam District Registry",
+    "source":  "Uploaded 2020 judgment PDF",
+    "caseNumber":  "PC Civil Appeal No. 69 of 2018",
+    "judge":  "S.M. Kulita, J.",
+    "decisionYear":  "2020",
+    "proceeding":  "Second matrimonial appeal",
+    "citation":  "[2020] TZHC 10045",
+    "alternativeTitle":  "Abdallah Salum Muwinge vs Halima Ismail"
+},
+      caseSummary: "Abdallah Salum Muwinge appealed against the division of matrimonial property and a child-maintenance order following the dissolution of his Islamic marriage to Halima Ismail.\n\nHe challenged the award of 70% of the matrimonial property to Halima and the order requiring him to pay TZS 50,000 per month for their child.\n\nBefore deciding those complaints, the High Court discovered that important pages containing Halima's testimony were missing from the Primary Court record. Because the appellate record was materially incomplete, the Court could not safely determine the appeal.\n\nThe High Court nullified the proceedings and judgments of the Primary Court and District Court and ordered a fresh trial before another magistrate with new assessors. Each party was ordered to bear their own costs.",
+      caseFacts: [
+    "Abdallah and Halima contracted an Islamic marriage on 21 May 2010.",
+    "Halima was Abdallah's second wife.",
+    "They had one child during the marriage.",
+    "Their relationship deteriorated, and Abdallah gave Halima a divorce.",
+    "The Primary Court dealt with divorce, matrimonial property and child maintenance.",
+    "Halima received 70% of the disputed matrimonial property.",
+    "Abdallah was ordered to pay TZS 50,000 monthly child maintenance.",
+    "Abdallah appealed through the District Court and later to the High Court.",
+    "The High Court found that pages containing Halima's trial testimony were missing.",
+    "The missing evidence made the lower-court record unreliable for appellate determination."
+],
+      legalIssues: [
+    "Whether 70% of the matrimonial property was awarded without properly assessing each spouse's contribution.",
+    "Whether the TZS 50,000 monthly maintenance order was made without considering Abdallah's income and means.",
+    "Whether an appellate court could safely determine the appeal when material parts of the trial record were missing.",
+    "Whether the defective proceedings and judgments should be nullified and a fresh trial ordered."
+],
+      sourcePdf: "legal-documents/2020/Abdallah Salum Muwinge vs Halima Ismail 2020 TZHC 10045 (31 December 2020).pdf",
       title: 'Abdallah Salum Muwinge v Halima Ismail',
       citation: '[2020] TZHC 10045',
       caseNumber: 'PC Civil Appeal No. 69 of 2018',
@@ -4293,6 +4208,48 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-011',
+      // === 2020 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+    "searchAliases":  [
+                          "Ashira Nurad",
+                          "Said Dinya",
+                          "Misc Civil Application 548 of 2018",
+                          "TZHC 10146",
+                          "extension of time",
+                          "restoration"
+                      ],
+    "court":  "High Court of Tanzania",
+    "officialTitle":  "Ashira K. Nurad v Said Ramadhani Dinya",
+    "decisionDate":  "31 December 2020",
+    "category":  "Civil procedure / extension of time",
+    "registry":  "Dar es Salaam District Registry",
+    "source":  "Uploaded 2020 judgment PDF",
+    "caseNumber":  "Misc. Civil Application No. 548 of 2018",
+    "judge":  "S.M. Kulita, J.",
+    "decisionYear":  "2020",
+    "proceeding":  "Application for extension of time",
+    "citation":  "[2020] TZHC 10146",
+    "alternativeTitle":  "Ashira K Nurad vs Said Ramadhani Dinya"
+},
+      caseSummary: "Ashira K. Nurad applied for an extension of time to restore Civil Appeal No. 40 of 2017, which had been dismissed for want of prosecution.\n\nThe delay was attributed to the serious illness and subsequent death of her former advocate, who had been a sole practitioner. The advocate's condition and death made it difficult for Ashira to obtain information and recover her case file.\n\nThe High Court found that sickness and death were circumstances beyond the applicant's control and constituted sufficient cause. It granted the extension and directed that restoration be completed within 30 days. No costs were awarded because the underlying dispute was a family matter.",
+      caseFacts: [
+    "Civil Appeal No. 40 of 2017 was dismissed for want of prosecution on 14 June 2018.",
+    "Ashira sought additional time to apply for its restoration.",
+    "Her former advocate, Yassin Membar, suffered from heart disease.",
+    "He was admitted to the Jakaya Kikwete Cardiac Institute for approximately three months.",
+    "The advocate died on 20 March 2018.",
+    "He operated as a sole practitioner.",
+    "His death caused difficulty in tracing the applicant's case file.",
+    "The respondent argued that Ashira had been negligent in following her case.",
+    "The Court accepted the illness, death and file-recovery difficulties as sufficient explanation."
+],
+      legalIssues: [
+    "Whether the applicant established sufficient cause for extending time.",
+    "Whether the illness and death of her former advocate adequately explained the delay.",
+    "Whether an application for extension and restoration should be dealt with together.",
+    "What period should be granted for restoring the dismissed appeal."
+],
+      sourcePdf: "legal-documents/2020/Ashira K Nurad vs Said Ramadhani  Dinya 2020 TZHC 10146 (31 December 2020).pdf",
       title: 'Ashira K. Nurad v Said Ramadhani Dinya',
       citation: '[2020] TZHC 10146',
       court: 'High Court of Tanzania, Dar es Salaam District Registry',
@@ -4522,6 +4479,52 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-012',
+      // === 2020 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+    "searchAliases":  [
+                          "Ashura Ndundu",
+                          "Rashid Kilindo",
+                          "Buyuni Company",
+                          "TZHC 4633",
+                          "Misc Civil Cause 508 of 2020",
+                          "company register"
+                      ],
+    "court":  "High Court of Tanzania",
+    "officialTitle":  "Ashura Saidi Ndundu and Another v Buyuni Company Limited",
+    "secondPetitioner":  "Rashid Ahmed Kilindo",
+    "decisionDate":  "23 December 2020",
+    "category":  "Company law / probate",
+    "registry":  "Dar es Salaam District Registry",
+    "source":  "Uploaded 2020 judgment PDF",
+    "caseNumber":  "Misc. Civil Cause No. 508 of 2020",
+    "judge":  "Mlyambina, J.",
+    "decisionYear":  "2020",
+    "proceeding":  "Company register rectification petition",
+    "citation":  "[2020] TZHC 4633",
+    "alternativeTitle":  "Ashura Said Ndundu vs Buyuni Company Limited"
+},
+      caseSummary: "The petitioners were administrators of the estate of Arnaldo Amadori, a deceased shareholder and managing director of Buyuni Company Limited.\n\nThey asked the Court to register them as company members in place of the deceased, permit them to amend the company register and authorize them to notify the Registrar of Companies. Other shareholders and directors were said to be untraceable.\n\nThe Court held that administrators represent the deceased's interest but do not automatically become company members merely through receiving letters of administration; further legal authorization is required.\n\nThe Court allowed the petitioners to act as shareholders on behalf of the deceased. However, it declined the additional rectification prayers because the petition did not sufficiently establish how long the other shareholders had been untraceable and had not properly joined BRELA and the missing shareholders.\n\nThe application was therefore partly granted, with no order as to costs.",
+      caseFacts: [
+    "Arnaldo Amadori registered Buyuni Company Limited in 1990.",
+    "The company registration number was 17932.",
+    "The recorded shareholders were Arnaldo, Donatella and Andrea Amadori.",
+    "Arnaldo was also the company's managing director.",
+    "He died in Brazil on 31 January 2017.",
+    "Ashura was his wife and later became one of his estate administrators.",
+    "Donatella and Andrea were foreign shareholders who could not be contacted.",
+    "The company was left without accessible resident directors and shareholders.",
+    "It could not properly manage its affairs, file returns or update BRELA records.",
+    "The petitioners sought authority to replace Arnaldo in the register and act for his shares."
+],
+      legalIssues: [
+    "Whether administrators of a deceased shareholder's estate could be registered as members of the company.",
+    "Whether the deceased's name could be removed from the register of members.",
+    "Whether the petitioners could amend the register without participation from the other shareholders and directors.",
+    "Whether they could notify the Registrar of Companies about the rectification.",
+    "Whether the alleged absence of untraceable shareholders was sufficiently established.",
+    "Whether BRELA and the untraceable shareholders were necessary parties."
+],
+      sourcePdf: "legal-documents/2020/Ashura Said Ndundu and Another vs Buyuni Company Limited (Misc Civil Application 508 of 2020) 2020 TZHC 4633 (23 December 2020).pdf",
       title: 'Ashura Saidi Ndundu and Rashid Ahmed Kilindo v Buyuni Company Limited',
       citation: '[2020] TZHC 4633',
       court: 'High Court of Tanzania, Dar es Salaam District Registry',
@@ -4840,6 +4843,52 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-013',
+      // === 2020 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+    "searchAliases":  [
+                          "Chantal Mziray",
+                          "Ritha Makala",
+                          "Tito Mziray estate",
+                          "Civil Appeal 59 of 2018",
+                          "TZCA 1930",
+                          "validity of will"
+                      ],
+    "coram":  "Lila, J.A.; Wambali, J.A.; Korosso, J.A.",
+    "alternativeTitle":  "Chantal Tito Mziray Another vs Ritha John Makala Another",
+    "officialTitle":  "Chantal Tito Mziray and Another v Ritha John Makala and Another",
+    "decisionDate":  "31 December 2020",
+    "category":  "Probate / administration of estates",
+    "registry":  "Dar es Salaam",
+    "court":  "Court of Appeal of Tanzania",
+    "caseNumber":  "Civil Appeal No. 59 of 2018",
+    "judge":  "Lila, J.A.; Wambali, J.A.; Korosso, J.A.",
+    "decisionYear":  "2020",
+    "proceeding":  "Probate civil appeal",
+    "citation":  "[2020] TZCA 1930",
+    "otherParties":  "Enock Andrew Mziray and Ngana Andrew Mziray",
+    "source":  "Uploaded 2020 judgment PDF"
+},
+      caseSummary: "Ritha John Makala and Ngana Andrew Mziray petitioned for letters of administration of their father's estate, claiming that he had died intestate.\n\nChantal Tito Mziray and Enock Andrew Mziray lodged a caveat, arguing that the deceased had left a valid will appointing Chantal as executor. The respondents challenged the document as a forgery.\n\nThe High Court treated the matter as contentious, declared the purported will invalid and appointed three administrators. On appeal, the Court of Appeal found that the purported will had never been formally tendered or admitted as evidence. It was therefore wrong for the High Court to rely upon it.\n\nThe High Court had also failed to make a conclusive order allowing or dismissing the caveat before determining the petition.\n\nThe Court of Appeal exercised its revisional powers, nullified the High Court proceedings and appointment orders and directed a retrial before another judge. Each party was ordered to bear their own costs.",
+      caseFacts: [
+    "Dr. Tito Mziray Andrew died on 16 October 2014.",
+    "Ritha and Ngana petitioned for letters of administration on 28 November 2014.",
+    "They alleged that their father had died without a will.",
+    "Chantal, the deceased's widow, and Enock, his son, filed a caveat.",
+    "They alleged that the deceased had left a will appointing Chantal as executor.",
+    "Ritha and Ngana challenged the will's authenticity and the deceased's alleged signature.",
+    "The High Court heard evidence concerning the disputed will.",
+    "The purported will was attached to pleadings but was never tendered and admitted as an exhibit.",
+    "The High Court nevertheless relied upon it, declared it invalid and appointed three administrators.",
+    "The caveat was not formally allowed or dismissed before the petition was determined."
+],
+      legalIssues: [
+    "Whether the caveat was finally determined before the probate petition was decided.",
+    "Whether the High Court could rely on a will that had not been tendered and admitted into evidence.",
+    "Whether documents attached to pleadings automatically constituted evidence.",
+    "Whether the appointment of estate administrators was valid while the caveat remained unresolved.",
+    "Whether the defective proceedings required nullification and retrial."
+],
+      sourcePdf: "legal-documents/2020/Chantal Tito Mziray  Another vs Ritha John Makala  Another (Civil Appeal 59 of 2018) 2020 TZCA 1930 (31 December 2020).pdf",
       title: 'Chantal Tito Mziray and Enock Andrew Mziray v Ritha John Makala and Ngana Andrew Mziray',
       citation: '[2020] TZCA 1930',
       court: 'Court of Appeal of Tanzania at Dar es Salaam',
@@ -5168,6 +5217,51 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-014',
+      // === 2020 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+    "searchAliases":  [
+                          "Ezekiah Oluoch",
+                          "Ezekiah Olouch",
+                          "CWT",
+                          "Chama Cha Walimu",
+                          "TZHCLD 3844",
+                          "Labour Application 436 of 2019"
+                      ],
+    "court":  "High Court of Tanzania, Labour Division",
+    "officialTitle":  "Ezekiah Tom Oluoch v Chama Cha Walimu Tanzania",
+    "decisionDate":  "31 December 2020",
+    "category":  "Labour law / trade-union governance",
+    "registry":  "Dar es Salaam",
+    "source":  "Uploaded 2020 judgment PDF",
+    "caseNumber":  "Miscellaneous Labour Application No. 436 of 2019",
+    "judge":  "Aboud, J.",
+    "decisionYear":  "2020",
+    "proceeding":  "Miscellaneous labour application",
+    "citation":  "[2020] TZHCLD 3844",
+    "alternativeTitle":  "Ezekiah Tom Olouch vs CWT"
+},
+      caseSummary: "Ezekiah Oluoch challenged actions taken by Chama Cha Walimu Tanzania, including his suspension and dismissal as Deputy General Secretary and the conduct of a by-election for union leadership positions.\n\nHis application depended on the interpretation of particular provisions of the union's constitution and rules. However, the relevant provisions were not contained in the documents attached to the application.\n\nThe Court held that a party relying on an organization's particular rules must provide those rules, especially when they are not readily available to the Court.\n\nBecause the applicant failed to supply the essential legal documents, the Court could not determine the dispute. The application was struck out.",
+      caseFacts: [
+    "Ezekiah served as Deputy General Secretary of Chama Cha Walimu Tanzania.",
+    "The respondent suspended and later dismissed him from that position.",
+    "He argued that related matters were already pending before the High Court.",
+    "A union by-election was held in Dodoma on 4 June 2018.",
+    "Christopher Banda and Deus G. Seif were elected Vice President and General Secretary.",
+    "Ezekiah argued that the election violated the union's constitution and election rules.",
+    "He asked the Court to declare the positions vacant and recognize him as General Secretary.",
+    "His application relied principally on Rule 31(b) and constitutional Articles 23(2)(g) and 43(1).",
+    "The essential provisions were missing from the attached documents.",
+    "The Court could not obtain the relevant rules from other available sources."
+],
+      legalIssues: [
+    "Whether the respondent's action was prohibited by the principle of res sub judice.",
+    "Whether the union's by-election complied with its constitution and rules.",
+    "Whether the union body had jurisdiction to elect the relevant officials.",
+    "Whether the applicant was entitled to be declared General Secretary.",
+    "Whether the Court could determine the application without the governing constitutional and regulatory provisions.",
+    "Whether failure to attach the relied-upon rules rendered the application incompetent."
+],
+      sourcePdf: "legal-documents/2020/Ezekiah Tom Olouch vs Chama Cha Walimu Tanzania (Misc Labour Application No 436 of 2019) 2020 TZHCLD 3844 (31 December 2020).pdf",
       title: 'Ezekiah Tom Oluoch v Chama Cha Walimu Tanzania',
       citation: '[2020] TZHCLD 3844',
       court: 'High Court of Tanzania, Labour Division',
@@ -5447,6 +5541,50 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-015',
+      // === 2020 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+    "searchAliases":  [
+                          "Golden Reef",
+                          "Ulf Nilsson",
+                          "Land Case 34 of 2014",
+                          "TZHC 10070",
+                          "Certificate of Title 45952",
+                          "Kimbiji"
+                      ],
+    "court":  "High Court of Tanzania",
+    "officialTitle":  "Golden Reef Limited v Ulf Nilsson",
+    "decisionDate":  "31 December 2020",
+    "category":  "Land law / company ownership / forgery",
+    "registry":  "Dar es Salaam",
+    "source":  "Uploaded 2020 judgment PDF",
+    "caseNumber":  "Land Case No. 34 of 2014",
+    "judge":  "S.M. Kulita, J.",
+    "decisionYear":  "2020",
+    "proceeding":  "Land ownership and recovery suit",
+    "citation":  "[2020] TZHC 10070",
+    "alternativeTitle":  "Golden Reef Ltd vs Ulf Nilsson"
+},
+      caseSummary: "Golden Reef Limited sought recovery of Certificate of Title No. 45952 from Ulf Nilsson. Individuals claiming to be the company's new directors alleged that shares had been transferred to them by the previous shareholders.\n\nThe alleged transferors denied selling or transferring their shares and produced passport evidence showing that they were outside Tanzania on the purported execution date. The Court found the alleged share-transfer documents to have been forged.\n\nIt held that the original shareholders lawfully owned and controlled the company and had entrusted the certificate to Ulf Nilsson for safekeeping. His possession was therefore lawful.\n\nThe plaintiff failed to prove the claim on the balance of probabilities. The suit was dismissed, with costs imposed on the individuals who falsely presented themselves as directors and shareholders.",
+      caseFacts: [
+    "The dispute concerned Plot No. 15, Block A, Kimbiji, Dar es Salaam.",
+    "The land was held under Certificate of Title No. 45952.",
+    "Lazarus Abel Sanga and Meinrad Florian Haule claimed to be Golden Reef's new shareholders and directors.",
+    "They alleged that Lloyd Marthinsen and Otto Arne Holte transferred shares to them.",
+    "The alleged transferors denied selling their shares.",
+    "They stated that they were outside Tanzania when the documents were allegedly signed.",
+    "Passport evidence was presented in support of that position.",
+    "They had entrusted company documents, including the title certificate, to Ulf Nilsson.",
+    "The Court found the share-transfer documents to be forged.",
+    "It found Ulf Nilsson's possession of the certificate lawful."
+],
+      legalIssues: [
+    "Whether Lloyd Marthinsen and Otto Arne Holte lawfully gave the title certificate to Ulf Nilsson for safekeeping.",
+    "Whether the alleged share transfers to Sanga and Haule were genuine.",
+    "Whether the plaintiff company was entitled to repossess Certificate of Title No. 45952.",
+    "Whether the plaintiff proved its claim on the balance of probabilities.",
+    "What reliefs and costs should be awarded."
+],
+      sourcePdf: "legal-documents/2020/Golden Reef Ltd vs Ulf Nilsson (Land Case No 34 of 2014) 2020 TZHC 10070 (31 December 2020).pdf",
       title: 'Golden Reef Ltd v Ulf Nilsson',
       citation: '[2020] TZHC 10070',
       court: 'High Court of Tanzania, Dar es Salaam District Registry',
@@ -5710,6 +5848,50 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-016',
+      // === 2020 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+    "searchAliases":  [
+                          "Hass Petroleum",
+                          "Njake Enterprises",
+                          "Civil Case 195 of 2015",
+                          "TZHC 10000",
+                          "electronic evidence",
+                          "computer-generated invoices"
+                      ],
+    "court":  "High Court of Tanzania",
+    "officialTitle":  "Hass Petroleum (T) Limited v Njake Enterprises and Oil Transport Limited",
+    "decisionDate":  "23 December 2020",
+    "category":  "Civil evidence / electronic transactions",
+    "registry":  "Dar es Salaam District Registry",
+    "source":  "Uploaded 2020 judgment PDF",
+    "caseNumber":  "Civil Case No. 195 of 2015",
+    "judge":  "Mlyambina, J.",
+    "decisionYear":  "2020",
+    "proceeding":  "Evidentiary ruling in a civil case",
+    "citation":  "[2020] TZHC 10000",
+    "alternativeTitle":  "Hass Petroleum Tanzania vs Njake Enterprises"
+},
+      caseSummary: "During the civil trial, Hass Petroleum attempted to tender invoices, delivery notes, loading tickets and related transaction documents.\n\nThe defendant objected that the invoices were computer-generated records that did not satisfy the Electronic Transactions Act. The Court held that merely entering information into a computer and printing it does not automatically turn an ordinary invoice into computer-generated evidence requiring the special electronic-record conditions.\n\nThe defendant also challenged photocopied and unpleaded documents. The Court found that some copies could be admitted where the defendant had acknowledged them in its defence and document list.\n\nHowever, ten documents that were unsigned, unstamped or not pleaded were rejected. The objection was therefore partly sustained, and costs were to follow the outcome of the case.",
+      caseFacts: [
+    "The ruling arose during Civil Case No. 195 of 2015.",
+    "Hass Petroleum attempted to tender numerous invoices and transaction records.",
+    "The records included invoices, delivery notes, loading tickets and release orders.",
+    "The defendant challenged them as uncertified computer-generated evidence.",
+    "The plaintiff argued that ordinary printed invoices were not electronic records of that special kind.",
+    "The defendant separately objected to copies under the Tanzania Evidence Act.",
+    "Some documents had already been acknowledged in the defence and document list.",
+    "Ten other documents were unsigned, unstamped or outside the pleadings.",
+    "The Court admitted the appropriate records but rejected those ten documents."
+],
+      legalIssues: [
+    "Whether ordinary invoices created and printed using a computer qualified as computer-generated electronic records.",
+    "Whether the Electronic Transactions Act's certification requirements applied to the invoices.",
+    "Whether copied documents could be admitted as secondary evidence.",
+    "Whether documents acknowledged by the opposing party were admissible.",
+    "Whether unpleaded, unsigned or unstamped documents could be tendered.",
+    "Whether the defendant's evidentiary objection should be sustained wholly or partly."
+],
+      sourcePdf: "legal-documents/2020/Hass Petroleum (T) Limited vs Njake Enterprises and Oil Transport Limited 2020 TZHC 10000 (23 December 2020).pdf",
       title: 'Hass Petroleum (T) Limited v Njake Enterprises and Oil Transport Limited',
       citation: '[2020] TZHC 10000',
       court: 'High Court of Tanzania, Dar es Salaam District Registry',
@@ -6016,6 +6198,52 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-017',
+      // === 2020 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+    "searchAliases":  [
+                          "Leonard Kawana",
+                          "Leonard Kawawa",
+                          "Deus Andrew",
+                          "Misc Land Application 45 of 2018",
+                          "TZHC 4342",
+                          "extension of time"
+                      ],
+    "court":  "High Court of Tanzania",
+    "officialTitle":  "Leonard Kawana v Deus Andrew and Others",
+    "decisionDate":  "23 December 2020",
+    "category":  "Land law / civil procedure",
+    "registry":  "Mbeya District Registry",
+    "source":  "Uploaded 2020 judgment PDF",
+    "filenameVariation":  "Leonard Kawawa vs Deus Andrew",
+    "caseNumber":  "Misc. Land Application No. 45 of 2018",
+    "judge":  "D.B. Ndunguru, J.",
+    "otherRespondents":  "Mkongozi Ngogo Â· Aizini Sanga Â· Juma Paschal",
+    "proceeding":  "Extension of time to file land appeal",
+    "citation":  "[2020] TZHC 4342",
+    "decisionYear":  "2020",
+    "alternativeTitle":  "Leonard Kawawa vs Deus Andrew"
+},
+      caseSummary: "Leonard Kawana applied for an extension of time to appeal against a decision of the District Land and Housing Tribunal for Mbeya.\n\nAn earlier appeal had been filed but was struck out for being argumentative and therefore incompetent. The respondent argued that the applicant had failed to account for a delay of approximately two years and ten months.\n\nThe High Court concluded that part of the delay resulted from the applicant pursuing the earlier defective appeal and constituted technical delay rather than deliberate neglect.\n\nThe Court found good cause, noted that the respondents would not suffer material prejudice and granted 45 days to file the intended appeal. No costs were awarded.",
+      caseFacts: [
+    "The original decision came from Land Application No. 153 of 2010.",
+    "It was delivered by the District Land and Housing Tribunal for Mbeya on 23 September 2015.",
+    "Copies became available on 6 May 2016.",
+    "The applicant first obtained an extension of time.",
+    "He filed Land Appeal No. 19 of 2017 on 9 March 2017.",
+    "That appeal was struck out because its grounds were argumentative.",
+    "He filed another extension application on 6 July 2018.",
+    "The first respondent argued that the entire delay had not been explained.",
+    "The Court treated the period spent pursuing the earlier proceeding as technical delay.",
+    "It found no substantial prejudice likely to be suffered by the respondents."
+],
+      legalIssues: [
+    "Whether the applicant established good cause for extending time.",
+    "Whether every material period of delay had been sufficiently accounted for.",
+    "Whether time spent pursuing the earlier defective appeal constituted technical delay.",
+    "Whether the previous advocate's procedural error should be attributed entirely to the applicant.",
+    "Whether extending time would prejudice the respondents."
+],
+      sourcePdf: "legal-documents/2020/Leonard Kawawa vs Deus andrew (Misc Land Application 45 of 2018) 2020 TZHC 4342 (23 December 2020).pdf",
       title: 'Leonard Kawana v Deus Andrew & 3 Others',
       citation: '[2020] TZHC 4342',
       court: 'High Court of Tanzania, Mbeya District Registry',
@@ -6295,6 +6523,52 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-018',
+      // === 2020 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+    "searchAliases":  [
+                          "Martina Silayo",
+                          "Godfrey Silayo",
+                          "Martin Silayo estate",
+                          "Land Case 8 of 2018",
+                          "TZHC 4626",
+                          "Plot 6 Moshi"
+                      ],
+    "court":  "High Court of Tanzania",
+    "officialTitle":  "Martina Martin Silayo and Another v Godfrey Martin Silayo and 12 Others",
+    "decisionDate":  "23 December 2020",
+    "category":  "Land law / matrimonial property / probate",
+    "registry":  "Moshi",
+    "source":  "Uploaded 2020 judgment PDF",
+    "caseNumber":  "Land Case No. 8 of 2018",
+    "judge":  "S.B. Mkapa, J.",
+    "decisionYear":  "2020",
+    "secondPlaintiff":  "Emilia Martin Lyakiturua, also known as Amen Martin Shao",
+    "citation":  "[2020] TZHC 4626",
+    "proceeding":  "Matrimonial-property land suit",
+    "alternativeTitle":  "Martina Martin Silayo \u0026 Another vs Godfrey Martin Silayo \u0026 12 Others"
+},
+      caseSummary: "The plaintiffs were widows of the late Martin Alex Silayo. They claimed that a property situated at Plot No. 6, Block I, Section III, Market Street, Moshi, was matrimonial property acquired during their polygamous marriage.\n\nThe defendants argued that the property had been transferred to Martin \u0026 Sons Company Limited and therefore no longer formed part of the deceased's estate.\n\nThe Court held that registration in the deceased husband's name alone did not remove the surviving spouses' legal interests. Their consent was required before the matrimonial property could be transferred.\n\nBecause no spousal consent had been obtained, the transfer to the company was declared null and void. The property was declared matrimonial property belonging to the deceased and his three wives and made subject to probate.\n\nThe claims concerning bank accounts, a motor vehicle, mesne profits and other damages were dismissed or directed to the proper forum. Each party bore their own costs.",
+      caseFacts: [
+    "The plaintiffs were widows of Martin Alex Silayo, also known as Martin Lyakiturua.",
+    "The disputed property was Plot No. 6, Block I, Section III, Market Street, Moshi.",
+    "It was held under Certificate of Title No. 056041/54.",
+    "The plaintiffs claimed that the property had been acquired during the marriage.",
+    "One widow stated that she contributed to the family business and construction.",
+    "Spousal consent had previously been provided when the property was used as loan security.",
+    "The property was later transferred to Martin \u0026 Sons Company Limited.",
+    "The widows said they were neither informed about nor asked to consent to that transfer.",
+    "The defendants maintained that the company legally owned the property.",
+    "The dispute arose alongside pending probate administration."
+],
+      legalIssues: [
+    "Whether the Market Street property was matrimonial property.",
+    "Whether registration in the deceased husband's name made him the sole owner.",
+    "Whether spousal consent was required before transferring the property to the company.",
+    "Whether the transfer made without the wives' consent was legally valid.",
+    "Whether the bank accounts and motor vehicle could be determined in the land case.",
+    "What declarations, damages, mesne profits and costs the plaintiffs were entitled to."
+],
+      sourcePdf: "legal-documents/2020/Martina Martin Silayo and Another vs Godfrey Martin Silayo and 12 Others (Land Case 8 of 2018) 2020 TZHC 4626 (23 December 2020).pdf",
       title: 'Martina Martin Silayo & Another v Godfrey Martin Silayo & 12 Others',
       citation: '[2020] TZHC 4626',
       court: 'High Court of Tanzania at Moshi (Land Division)',
@@ -6586,6 +6860,50 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-019',
+      // === 2020 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+    "searchAliases":  [
+                          "Stephen Kimbele",
+                          "Christopher Kimbele",
+                          "Nembris Kimbele",
+                          "Civil Revision 5 of 2020",
+                          "TZHC 4447",
+                          "revision time limit"
+                      ],
+    "court":  "High Court of Tanzania",
+    "officialTitle":  "Stephen Samwel Kimbele and Another v Nembris Samwel Kimbele and Others",
+    "decisionDate":  "23 December 2020",
+    "category":  "Civil procedure / jurisdiction",
+    "registry":  "Arusha District Registry",
+    "source":  "Uploaded 2020 judgment PDF",
+    "caseNumber":  "Civil Revision No. 5 of 2020",
+    "secondApplicant":  "Christopher Samwel Kimbele",
+    "otherRespondents":  "Ruth Samwel Kimbele Â· Naanyuni Samwel Kimbele",
+    "proceeding":  "Civil revision",
+    "citation":  "[2020] TZHC 4447",
+    "decisionYear":  "2020",
+    "alternativeTitle":  "Stephen Samwel Kimbele Another vs Nembris Samwel Kimbele Others",
+    "judge":  "Gwae, J."
+},
+      caseSummary: "Stephen and Christopher Kimbele challenged a revisional decision of the District Court of Arusha arising from Primary Court proceedings.\n\nThey argued, among other matters, that the District Court revision had been commenced or determined outside the statutory period. The respondents conceded that it was beyond the prescribed twelve-month period.\n\nThe High Court held that jurisdiction is created by statute and must exist before a court determines a matter. Because the District Court revision had been entertained approximately 22 months and 12 days after the Primary Court determination, the District Court lacked jurisdiction.\n\nThe High Court quashed and set aside the District Court's proceedings, ruling and drawn order.",
+      caseFacts: [
+    "The High Court application originated from Civil Revision No. 6 of 2018 in the District Court of Arusha.",
+    "The underlying proceedings originated in a Primary Court.",
+    "The applicants complained that the District Court revision was filed or handled beyond the legal time limit.",
+    "They also raised complaints about their right to be heard and the District Court's handling of estate-administration questions.",
+    "The respondents' advocate conceded that the District Court revision was outside the twelve-month limit.",
+    "The matter was handled approximately 22 months and 12 days after the relevant Primary Court determination.",
+    "The High Court first considered jurisdiction because it was a fundamental issue.",
+    "It concluded that the District Court lacked statutory authority to entertain the late revision."
+],
+      legalIssues: [
+    "Whether the District Court revision was instituted or determined outside the twelve-month statutory period.",
+    "Whether the District Court had jurisdiction to entertain the revision.",
+    "Whether jurisdiction could be assumed where statutory time requirements had not been satisfied.",
+    "Whether the District Court proceedings, ruling and drawn order were legally sustainable.",
+    "Whether it was necessary to determine the remaining complaints after finding absence of jurisdiction."
+],
+      sourcePdf: "legal-documents/2020/Stephen Samwel Kimbele  Another vs Nembris Samwel Kimbele  Others (Civil Revision 5 of 2020) 2020 TZHC 4447 (23 December 2020).pdf",
       title: 'Stephen Samwel Kimbele & Another v Nembris Samwel Kimbele & Others',
       citation: '[2020] TZHC 4447',
       court: 'High Court of Tanzania, Arusha District Registry',
@@ -6837,6 +7155,54 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-020',
+      // === 2021 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Emmanuel Martin and John Waziri v Republic",
+          "alternativeTitle":  "Emmanuel Martin and Another vs Republic",
+          "citation":  "[2021] TZHC 9267",
+          "caseNumber":  "DC Criminal Appeal No. 26 of 2021",
+          "originatingCase":  "Criminal Case No. 91 of 2013",
+          "court":  "High Court of Tanzania",
+          "registry":  "Mbeya District Registry",
+          "proceeding":  "Criminal appeal",
+          "judge":  "Karayemaha, J.",
+          "decisionDate":  "Cover: 29 November 2021; filename: 29 December 2021",
+          "decisionYear":  "2021",
+          "category":  "Armed robbery / criminal procedure",
+          "source":  "Uploaded scanned 2021 PDF",
+          "dateWarning":  "The uploaded judgment and repository metadata contain different dates. Verify using the original PDF.",
+          "searchAliases":  [
+                                "Emmanuel Martin",
+                                "John Waziri",
+                                "DC Criminal Appeal 26 of 2021",
+                                "TZHC 9267",
+                                "Songwe Prison robbery"
+                            ]
+      },
+      caseSummary: "Emmanuel Martin and John Waziri appealed against their convictions for armed robbery. They had been sentenced to 30 years’ imprisonment after being accused of stealing a police firearm from a prison officer at Songwe Prison while using a machete.\n\nThe High Court found that the trial magistrate had summarized the evidence but failed to analyse it, evaluate the credibility of witnesses or provide proper reasons for the decision. This failure violated the requirements governing the preparation of criminal judgments.\n\nThe appeal was allowed on that procedural ground. The case was returned to the trial court for another competent magistrate to recompose and deliver a proper judgment. The High Court did not determine the appellants’ guilt or innocence.",
+      caseFacts: [
+          "Emmanuel Martin and John Waziri were tried with Ally Salum and Braison Sanga.",
+          "They were charged with armed robbery under section 287A of the Penal Code.",
+          "The alleged incident occurred on 5 May 2013 at Songwe Prison, Mbeya.",
+          "A police firearm with serial number TZPS39847164020 was allegedly stolen.",
+          "The prosecution alleged that a machete was used against the officer possessing the firearm.",
+          "Fourteen prosecution witnesses testified, and eight exhibits were admitted.",
+          "The trial court convicted the appellants.",
+          "Each appellant received 30 years’ imprisonment.",
+          "The trial judgment did not properly analyse and evaluate the evidence."
+      ],
+      legalIssues: [
+          "Whether the trial judgment complied with section 312 of the Criminal Procedure Act.",
+          "Whether the trial magistrate properly analysed and evaluated the evidence.",
+          "Whether the trial court provided sufficient reasons for the convictions.",
+          "Whether the defective judgment rendered the convictions and resulting orders unsustainable.",
+          "Whether the High Court should evaluate the evidence itself or return the record for recomposition of judgment."
+      ],
+      sourcePdf: "legal-documents/2021/Emmanuel Martin  Another vs Republic (DC Criminal Appeal 26 of 2021) 2021 TZHC 9267 (29 December 2021).pdf",
+      reportData: {
+          "reportTitle":  "Criminal Appeal Report — Emmanuel Martin and John Waziri v Republic",
+          "reportConclusion":  "The appeal succeeded because the trial judgment lacked proper analysis, evaluation and reasons. The matter was returned for recomposition of judgment, without a final High Court determination of guilt."
+      },
       title: 'Emmanuel Martin & Another v Republic',
       citation: '[2021] TZHC 9267',
       court: 'High Court of Tanzania, Mbeya District Registry',
@@ -7154,6 +7520,55 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-021',
+      // === 2021 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Jeremiah Johson alias Mosha v Republic",
+          "alternativeTitle":  "Jeremiah Johnson Mosha vs Republic",
+          "citation":  "[2021] TZHC 9171",
+          "caseNumber":  "Criminal Appeal No. 44 of 2021",
+          "originatingCase":  "Criminal Case No. 445 of 2019",
+          "court":  "High Court of Tanzania",
+          "registry":  "Moshi District Registry",
+          "proceeding":  "Criminal appeal",
+          "judge":  "S.H. Simfukwe, J.",
+          "decisionDate":  "29 December 2021",
+          "decisionYear":  "2021",
+          "category":  "Unnatural offence / assault",
+          "source":  "Uploaded 2021 judgment PDF",
+          "searchAliases":  [
+                                "Jeremiah Mosha",
+                                "Jeremiah Johson",
+                                "Criminal Appeal 44 of 2021",
+                                "TZHC 9171",
+                                "unnatural offence"
+                            ]
+      },
+      caseSummary: "Jeremiah Mosha appealed against convictions for an unnatural offence and assault causing actual bodily harm. He had received concurrent sentences of 30 years and three years.\n\nThe High Court considered complaints about a change of magistrate, trial in the appellant’s absence, the content of the trial judgment, admission of the PF3 medical form and alleged contradictions in the prosecution evidence.\n\nThe PF3 was expunged because it had not been tendered by an appropriate expert or author. Nevertheless, the Court held that the victim’s credible testimony, supported by other evidence, was sufficient to prove the unnatural offence.\n\nThe procedural irregularities did not cause a miscarriage of justice, and the remaining discrepancies were not material. The appeal was dismissed, and both convictions and sentences were upheld.",
+      caseFacts: [
+          "The alleged offences occurred on 6 April 2019 at Ashira Marangu, Moshi.",
+          "The appellant was accused of having carnal knowledge of the victim against the order of nature.",
+          "He was also accused of hitting Veronica Amani alias Sandi with a wire.",
+          "Four prosecution witnesses testified.",
+          "The appellant attended the beginning of the trial but later jumped bail.",
+          "The trial continued in his absence.",
+          "He was later arrested and allowed to explain his absence.",
+          "He was sentenced to 30 years for the unnatural offence and three years for assault.",
+          "The sentences were ordered to run concurrently."
+      ],
+      legalIssues: [
+          "Whether the change of trial magistrate complied with section 214 of the Criminal Procedure Act.",
+          "Whether continuing the trial in the appellant’s absence was lawful.",
+          "Whether the trial judgment properly specified the offences and statutory sections.",
+          "Whether the PF3 medical form was properly admitted.",
+          "Whether the victim’s evidence could sustain the conviction without the PF3.",
+          "Whether inconsistencies in the prosecution evidence were material.",
+          "Whether the offences were proved beyond reasonable doubt."
+      ],
+      sourcePdf: "legal-documents/2021/JEREMIAH JOHNSON MOSHA vs REPUBLIC (Criminal Appeal 44 of 2021) 2021 TZHC 9171 (29 December 2021).pdf",
+      reportData: {
+          "reportTitle":  "Criminal Appeal Report — Jeremiah Johnson Mosha v Republic",
+          "reportConclusion":  "Although the medical form was expunged, the credible victim testimony and supporting evidence proved the offences. The convictions and concurrent sentences were upheld."
+      },
       title: 'Jeremiah Johson @ Mosha v Republic',
       citation: '[2021] TZHC 9171',
       court: 'High Court of Tanzania, Moshi District Registry',
@@ -7520,6 +7935,55 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-022',
+      // === 2021 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Jonas Paschal v Republic",
+          "alternativeTitle":  "Jonas Paschal vs The Republic",
+          "citation":  "[2021] TZHC 9366",
+          "caseNumber":  "Criminal Appeal No. 69 of 2021",
+          "originatingCase":  "Criminal Case No. 270 of 2019",
+          "court":  "High Court of Tanzania",
+          "registry":  "Bukoba District Registry",
+          "proceeding":  "Criminal appeal",
+          "judge":  "Mwenda, J.",
+          "decisionDate":  "23 December 2021",
+          "decisionYear":  "2021",
+          "category":  "Stealing by agent",
+          "source":  "Uploaded 2021 judgment PDF",
+          "searchAliases":  [
+                                "Jonas Paschal",
+                                "Noah Paschal",
+                                "Criminal Appeal 69 of 2021",
+                                "TZHC 9366",
+                                "motorcycle theft"
+                            ]
+      },
+      caseSummary: "Jonas Paschal was convicted of stealing by agent after his brother entrusted him with a motorcycle for a bodaboda business. The agreement required Jonas to pay TZS 45,000 weekly, but the motorcycle was later reported missing.\n\nThe High Court found evidentiary problems, including improper documentary exhibits concerning the motorcycle. After those exhibits were expunged, the remaining evidence did not eliminate the reasonable doubt created by the appellant’s defence.\n\nThe appeal was allowed. The conviction was quashed, and the five-year prison sentence was set aside.",
+      caseFacts: [
+          "Noah Paschal entrusted his brother Jonas with a SANLG motorcycle.",
+          "Its registration number was MC 320 BFR.",
+          "Its stated value was TZS 1,300,000.",
+          "Jonas was expected to use it for a bodaboda business.",
+          "He was required to pay Noah TZS 45,000 every week.",
+          "Noah was later informed that the motorcycle had been stolen.",
+          "He questioned Jonas but considered his explanation unsatisfactory.",
+          "The matter was reported to the authorities.",
+          "Jonas was convicted of stealing by agent.",
+          "He received five years’ imprisonment."
+      ],
+      legalIssues: [
+          "Whether the prosecution proved that the appellant was entrusted with the motorcycle.",
+          "Whether ownership of the motorcycle was properly proved.",
+          "Whether the registration card and sale agreement were properly admitted.",
+          "Whether the absence of a written agency agreement weakened the prosecution case.",
+          "Whether the appellant’s defence created reasonable doubt.",
+          "Whether the conviction for stealing by agent was safe."
+      ],
+      sourcePdf: "legal-documents/2021/Jonas Paschal vs Republic (Criminal Appeal 69 of 2021) 2021 TZHC 9366 (23 December 2021).pdf",
+      reportData: {
+          "reportTitle":  "Criminal Appeal Report — Jonas Paschal v Republic",
+          "reportConclusion":  "The prosecution evidence did not eliminate the reasonable doubt created by the defence after important documentary exhibits were expunged. The conviction and sentence were set aside."
+      },
       title: 'Jonas Paschal v Republic',
       citation: '[2021] TZHC 9366',
       court: 'High Court of Tanzania, Bukoba District Registry',
@@ -7859,6 +8323,56 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-023',
+      // === 2021 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Julieth Jackson Severine and Kashaija Jackson Severine v Fredrick Kaiza Bifanimanya",
+          "alternativeTitle":  "Julieth Jackson Severine and Another vs Fredrick Kaiza Bifanimanya",
+          "secondAppellant":  "Kashaija Jackson Severine",
+          "citation":  "[2021] TZHC 9463",
+          "caseNumber":  "Probate Appeal No. 2 of 2020",
+          "originatingCase":  "Revision Application No. 3 of 2020",
+          "court":  "High Court of Tanzania",
+          "registry":  "Mbeya District Registry",
+          "proceeding":  "Probate appeal",
+          "judge":  "A.A. Mbagwa, J.",
+          "decisionDate":  "31 December 2021",
+          "decisionYear":  "2021",
+          "category":  "Probate / civil procedure",
+          "estate":  "Estate of Jackson Severine",
+          "source":  "Uploaded 2021 judgment PDF",
+          "searchAliases":  [
+                                "Julieth Severine",
+                                "Kashaija Severine",
+                                "Fredrick Bifanimanya",
+                                "Probate Appeal 2 of 2020",
+                                "TZHC 9463"
+                            ]
+      },
+      caseSummary: "Fredrick Bifanimanya was appointed administrator of Jackson Severine’s estate by Uyole Primary Court. Julieth and Kashaija challenged that appointment.\n\nTheir initial appeal was struck out because they had not been parties to the original case. They were advised to pursue revision. When they filed a revision, the District Court struck it out because their written complaint did not cite the enabling statutory provision.\n\nThe High Court held that section 22 of the Magistrates’ Courts Act does not prescribe a single method for invoking revision. A revision may begin through a formal application, a complaint letter or on the court’s own motion.\n\nThe appeal was allowed, the District Court’s ruling was quashed, and the revision application was ordered to be heard on its merits.",
+      caseFacts: [
+          "The dispute concerned the estate of the late Jackson Severine.",
+          "Fredrick Bifanimanya was appointed administrator by Uyole Primary Court.",
+          "The appointment was made in Probate and Administration Cause No. 77 of 2019.",
+          "Julieth and Kashaija attempted to appeal to the District Court.",
+          "Their appeal was struck out because they had not been parties to the original probate case.",
+          "They were advised to seek revision.",
+          "They filed Revision Application No. 3 of 2020.",
+          "The District Court found that the Civil Procedure Code did not apply.",
+          "It nevertheless struck out the revision for failing to cite section 22 of the Magistrates’ Courts Act."
+      ],
+      legalIssues: [
+          "How the District Court may be moved to exercise its revisional jurisdiction.",
+          "Whether revision must be initiated by chamber summons and affidavit.",
+          "Whether a written complaint must cite the enabling statutory provision.",
+          "Whether Order XLIII of the Civil Procedure Code applied to a matter originating in the Primary Court.",
+          "Whether the District Court contradicted its own findings when it struck out the revision.",
+          "Whether the revision should be restored and heard on its merits."
+      ],
+      sourcePdf: "legal-documents/2021/Julieth Jackson Severine  Another vs Fedrick Kaiza Bifanimanya (As Administrator of the Estate of the Late Jackson Severine) (Probate Appeal 2 of 2020) 2021 TZHC 9463 (31 December 2021).pdf",
+      reportData: {
+          "reportTitle":  "Probate Appeal Report — Estate of Jackson Severine",
+          "reportConclusion":  "The District Court wrongly struck out the revision for failure to cite an enabling provision. Its ruling was quashed, and the revision was restored for determination on its merits."
+      },
       title: 'Julieth Jackson Severine & Another v Fredrick Kaiza Bifanimanya',
       citation: '[2021] TZHC 9463',
       court: 'High Court of Tanzania, Mbeya District Registry',
@@ -8138,6 +8652,55 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-024',
+      // === 2021 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Juma Idd Yohana alias Sita v Republic",
+          "alternativeTitle":  "Juma Idd Yohana Sita vs Republic",
+          "citation":  "[2021] TZHC 9173",
+          "caseNumber":  "Criminal Appeal No. 48 of 2021",
+          "originatingCase":  "Criminal Case No. 104 of 2020",
+          "court":  "High Court of Tanzania",
+          "registry":  "Moshi District Registry",
+          "proceeding":  "Criminal appeal",
+          "judge":  "S.H. Simfukwe, J.",
+          "decisionDate":  "31 December 2021",
+          "decisionYear":  "2021",
+          "category":  "Rape",
+          "sentenceAppealed":  "30 years’ imprisonment",
+          "source":  "Uploaded 2021 judgment PDF",
+          "searchAliases":  [
+                                "Juma Idd Yohana",
+                                "Juma Sita",
+                                "Criminal Appeal 48 of 2021",
+                                "TZHC 9173",
+                                "rape appeal"
+                            ]
+      },
+      caseSummary: "Juma Idd Yohana appealed against his conviction and 30-year sentence for rape. He challenged the place stated in the charge, the credibility of the witnesses, the statutory provision used and the failure to call additional witnesses.\n\nThe High Court held that the victim’s testimony was credible and was supported by the evidence of other witnesses. Any variations about the place of the offence or the manner of arrest were minor and did not affect the substance of the prosecution case.\n\nThe Court also held that the law does not require a particular number of witnesses. The prosecution had proved the charge beyond reasonable doubt.\n\nThe appeal was dismissed in its entirety.",
+      caseFacts: [
+          "The alleged rape occurred on 4 September 2020.",
+          "The location was stated as Ruvu Jiungeni in Same District.",
+          "The victim was walking home after visiting her son.",
+          "The appellant offered to escort her through a bushy area.",
+          "The prosecution alleged that he grabbed, choked and raped her.",
+          "The victim used deception to make him loosen his hold and then screamed.",
+          "Other people responded and assisted in apprehending him.",
+          "Three prosecution witnesses testified.",
+          "The District Court convicted him and imposed 30 years’ imprisonment."
+      ],
+      legalIssues: [
+          "Whether there was a material variance between the charge sheet and the evidence about the location.",
+          "Whether the victim’s testimony was credible and sufficient.",
+          "Whether the prosecution’s failure to call additional witnesses created an adverse inference.",
+          "Whether the correct subsection of section 130 of the Penal Code was applied.",
+          "Whether contradictions in the witnesses’ evidence went to the root of the case.",
+          "Whether rape was proved beyond reasonable doubt."
+      ],
+      sourcePdf: "legal-documents/2021/JUMA IDD YOHANA SITA vs REPUBLIC (Criminal Appeal 48 of 2021) 2021 TZHC 9173 (31 December 2021).pdf",
+      reportData: {
+          "reportTitle":  "Criminal Appeal Report — Juma Idd Yohana alias Sita v Republic",
+          "reportConclusion":  "The victim’s credible and supported testimony established the offence. Minor discrepancies did not weaken the prosecution case, and the appeal was dismissed."
+      },
       title: 'Juma Idd Yohana @ Sita v Republic',
       citation: '[2021] TZHC 9173',
       court: 'High Court of Tanzania, Moshi District Registry',
@@ -8482,6 +9045,57 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-025',
+      // === 2021 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Mlenga Kalunde Mirobo v Trustees of Tanzania National Parks and Attorney General",
+          "alternativeTitle":  "Mlenga Mirobo vs TANAPA and Another",
+          "citation":  "[2021] TZHC 9097",
+          "caseNumber":  "Labour Revision Application No. 6 of 2021",
+          "originatingCase":  "Labour Dispute No. CMA/IR/03/2021",
+          "court":  "High Court of Tanzania",
+          "registry":  "Iringa District Registry",
+          "proceeding":  "Labour revision",
+          "judge":  "Mlyambina, J.",
+          "decisionDate":  "30 December 2021",
+          "decisionYear":  "2021",
+          "category":  "Employment law / government proceedings",
+          "source":  "Uploaded 2021 judgment PDF",
+          "searchAliases":  [
+                                "Mlenga Mirobo",
+                                "TANAPA",
+                                "Tanzania National Parks",
+                                "Attorney General",
+                                "Labour Revision 6 of 2021",
+                                "TZHC 9097"
+                            ]
+      },
+      caseSummary: "Mlenga Mirobo challenged the CMA’s rejection of his employment dispute against TANAPA and the Attorney General. He had been terminated on 24 September 2020 and served a 90-day notice of intention to sue before lodging the dispute.\n\nThe High Court considered the interaction between the Government Proceedings Act and the special time limits governing labour disputes. It held that the 90-day government notice did not automatically extend the specific 30-day period for referring a termination dispute to the CMA.\n\nThe Court also held that notice of intention to file a labour revision was mandatory. The revision lacked merit and was incompetent for failure to provide that notice.\n\nHowever, the High Court used its own revisional powers to nullify the CMA proceedings and decision because the CMA had entertained a matter outside its jurisdiction.",
+      caseFacts: [
+          "The applicant’s employment was terminated on 24 September 2020.",
+          "His internal appeal was rejected by the Director General.",
+          "He served a 90-day notice on 8 October 2020.",
+          "The notice period expired in January 2021.",
+          "He then referred the employment dispute to the CMA.",
+          "The respondent objected that the dispute had not been lodged within 30 days.",
+          "The CMA accepted the objection and struck out the dispute.",
+          "The applicant sought revision in the High Court.",
+          "He had not filed the required notice of intention to seek revision."
+      ],
+      legalIssues: [
+          "Whether the CMA is a “court” under the Government Proceedings Act.",
+          "Whether a labour dispute constitutes a civil suit.",
+          "Whether the Government and Attorney General can be sued before the CMA.",
+          "Whether a 90-day government notice extends the 30-day labour limitation period.",
+          "What remedy is available when a CMA complaint is filed out of time.",
+          "Who qualifies as a public servant under the Public Service Act.",
+          "What is the effect of failing to file notice of intention to seek revision.",
+          "Whether the CMA had jurisdiction to entertain the dispute."
+      ],
+      sourcePdf: "legal-documents/2021/Mlenga Kalunde Mirobo vs The Trustees of The Tanzania National Parks  Another (Labour Revision Application 6 of 2021) 2021 TZHC 9097 (30 December 2021).pdf",
+      reportData: {
+          "reportTitle":  "Labour Revision Report — Mlenga Mirobo v TANAPA and Attorney General",
+          "reportConclusion":  "The 90-day government notice did not extend the labour filing deadline, and the revision notice requirement was mandatory. The CMA proceedings were nullified for want of jurisdiction."
+      },
       title: 'Mlenga Kalunde Mirobo v Trustees of Tanzania National Parks & Attorney General',
       citation: '[2021] TZHC 9097',
       court: 'High Court of Tanzania, Iringa District Registry',
@@ -8823,6 +9437,56 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-026',
+      // === 2021 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Nazareno Makilika and Avelina Makilika v Hamisa Abdallah Muhsin and Others",
+          "alternativeTitle":  "Nazareno Makilika and Another vs Hamisa Muhsin",
+          "citation":  "[2021] TZHCLandD 6923",
+          "caseNumber":  "Misc. Land Case Application No. 705 of 2020",
+          "relatedCase":  "Land Case No. 200 of 2020",
+          "court":  "High Court of Tanzania, Land Division",
+          "registry":  "Dar es Salaam",
+          "proceeding":  "Temporary-injunction application",
+          "judge":  "Masoud, J.",
+          "decisionDate":  "30 December 2021",
+          "decisionYear":  "2021",
+          "category":  "Land law / temporary injunction",
+          "source":  "Uploaded 2021 judgment PDF",
+          "dateWarning":  "The uploaded judgment and repository metadata contain different dates. Verify using the original PDF.",
+          "searchAliases":  [
+                                "Nazareno Makilika",
+                                "Avelina Makilika",
+                                "Hamisa Muhsin",
+                                "Land Application 705 of 2020",
+                                "TZHCLandD 6923"
+                            ]
+      },
+      caseSummary: "Nazareno and Avelina Makilika sought a temporary injunction pending determination of Land Case No. 200 of 2020.\n\nA separate application seeking to set aside an ex parte hearing order and extend time for filing their defence was still pending. The Court found that the injunction application was premature because the applicants had not shown that the ex parte order had been set aside.\n\nThe third respondent was also not a party to the main land case. These problems rendered the application incompetent. It was struck out with costs without determining the merits.",
+      caseFacts: [
+          "Nazareno and Avelina were defendants in Land Case No. 200 of 2020.",
+          "The main case had been ordered to proceed ex parte against them.",
+          "They filed an application to set aside that order.",
+          "They also sought additional time to file a written statement of defence.",
+          "That earlier application remained undetermined.",
+          "They then applied for a temporary injunction.",
+          "Hamisa and Nyanya Muhsin represented the estate of Salum Mohamed Muhsin.",
+          "Najeeb Yeslam Saeed, the alleged buyer in possession, was included as third respondent.",
+          "Najeeb was not a party to the main land case.",
+          "The Court found the injunction application premature and incompetent."
+      ],
+      legalIssues: [
+          "Whether one applicant’s affidavit could support both applicants.",
+          "Whether the application complied with the Civil Procedure Code.",
+          "Whether the third respondent could properly be joined despite not being a party to the main case.",
+          "Whether an injunction could be considered while the application to set aside the ex parte order remained pending.",
+          "Whether the application was premature.",
+          "Whether the Court should reach the merits or strike out the application."
+      ],
+      sourcePdf: "legal-documents/2021/Nazareno Makilika  Another vs Hamisa Abdallah Muhsin (Administratrix of the Estate of the Late Salum Mohamed Muhsin) (Misc Land Aplication 705 of 2020) 2021 TZHCLandD 6923 (30 December 2021).pdf",
+      reportData: {
+          "reportTitle":  "Land Application Report — Nazareno Makilika and Another v Hamisa Muhsin and Others",
+          "reportConclusion":  "The application was premature and incompetent because the ex parte order remained effective and one respondent was not a party to the main case. It was struck out with costs."
+      },
       title: 'Nazareno Makilika & Another v Hamisa Abdallah Muhsin & Others',
       citation: '[2021] TZHCLandD 6923',
       court: 'High Court of Tanzania, Land Division at Dar es Salaam',
@@ -9100,6 +9764,56 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-027',
+      // === 2021 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Ramadhani Issa alias Mohamed and Gerald Paul alias Rutu v Republic",
+          "alternativeTitle":  "Ramadhani Issa Mohamed and Another vs Republic",
+          "citation":  "[2021] TZHC 9132",
+          "caseNumber":  "Misc. Criminal Application No. 112 of 2021",
+          "relatedCase":  "Criminal Sessions Case No. 117 of 2020",
+          "court":  "High Court of Tanzania",
+          "registry":  "Arusha",
+          "proceeding":  "Bail application",
+          "judge":  "Gwae, J.",
+          "decisionDate":  "23 December 2021",
+          "decisionYear":  "2021",
+          "category":  "Criminal procedure / bail",
+          "currentCharge":  "Manslaughter",
+          "source":  "Uploaded 2021 judgment PDF",
+          "searchAliases":  [
+                                "Ramadhani Issa",
+                                "Gerald Paul Rutu",
+                                "Criminal Application 112 of 2021",
+                                "TZHC 9132",
+                                "manslaughter bail"
+                            ]
+      },
+      caseSummary: "Ramadhani Issa and Gerald Paul applied for bail while awaiting determination of a criminal session case.\n\nThey were originally charged with murder, but the charge was substituted with manslaughter. Because manslaughter was bailable under the relevant provision, and the Republic did not oppose the application, the Court granted bail.\n\nThe Court imposed conditions concerning sureties, identification documents, movement outside the Court’s jurisdiction, attendance and commission of further offences.",
+      caseFacts: [
+          "The applicants were initially charged with murder.",
+          "On 24 September 2021, the charge was changed to manslaughter.",
+          "The case concerned the death of Seleman Rashid.",
+          "The alleged incident occurred on 5 January 2020 at Ngarenanyuki, Arumeru.",
+          "A third person, Jimmyrest Gerald alias Lutu, was mentioned in the charge.",
+          "The applicants stated that they had no previous criminal records.",
+          "They said they had reliable sureties and permanent local connections.",
+          "The Republic did not oppose bail.",
+          "The Court found no evidence that they would interfere with investigations.",
+          "Bail was granted subject to conditions."
+      ],
+      legalIssues: [
+          "Whether manslaughter was a bailable offence under section 148 of the Criminal Procedure Act.",
+          "Whether there was any reason to deny the applicants bail.",
+          "Whether the applicants were likely to abscond or interfere with investigations.",
+          "What sureties and identification documents were required.",
+          "Whether their movement outside the Court’s jurisdiction should be restricted.",
+          "What circumstances could justify cancellation of bail."
+      ],
+      sourcePdf: "legal-documents/2021/Ramadhani Issa  Mohamed  another vs Republic (Criminal Application 112 of 2021) 2021 TZHC 9132 (23 December 2021).pdf",
+      reportData: {
+          "reportTitle":  "Bail Application Report — Ramadhani Issa and Another v Republic",
+          "reportConclusion":  "Bail was granted because the substituted manslaughter charge was bailable, the Republic did not object and no risk justifying detention was demonstrated."
+      },
       title: 'Ramadhani Issa @ Mohamed & Another v Republic',
       citation: '[2021] TZHC 9132',
       court: 'High Court of Tanzania at Arusha',
@@ -9373,6 +10087,56 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-028',
+      // === 2021 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Republic v David John alias Silwela",
+          "alternativeTitle":  "Republic vs David John Silwela",
+          "citation":  "[2021] TZHC 9116",
+          "caseNumber":  "Criminal Session No. 1 of 2020",
+          "originatingCase":  "Criminal Session No. 1 of 2020",
+          "court":  "High Court of Tanzania",
+          "registry":  "Sumbawanga District Registry",
+          "proceeding":  "Murder trial",
+          "judge":  "D.B. Ndunguru, J.",
+          "decisionDate":  "31 December 2021",
+          "decisionYear":  "2021",
+          "category":  "Murder / manslaughter",
+          "source":  "Uploaded 2021 judgment PDF",
+          "searchAliases":  [
+                                "David John Silwela",
+                                "Alex Simwanza",
+                                "Criminal Session 1 of 2020",
+                                "TZHC 9116",
+                                "murder",
+                                "manslaughter"
+                            ]
+      },
+      caseSummary: "David John alias Silwela was tried for murdering Alex Simwanza. The deceased died from a skull fracture and internal bleeding following an assault.\n\nThe Court considered whether David caused the fatal injuries and whether the killing was accompanied by malice aforethought. It also examined the reliability of visual-identification evidence.\n\nThe Court found that David caused the fatal injury but was not satisfied that malice aforethought had been proved. He was therefore acquitted of murder but convicted of the lesser offence of manslaughter.\n\nAfter considering that he was a first offender, had spent approximately two years and seven months in remand and that the incident arose from a family dispute, the Court sentenced him to five years’ imprisonment.",
+      caseFacts: [
+          "Alex Simwanza died on 14 May 2019 at Kasisiwe, Sumbawanga.",
+          "The medical evidence identified a skull fracture and internal brain bleeding.",
+          "David John alias Silwela was charged with murder.",
+          "He pleaded not guilty.",
+          "The accused and deceased were brothers-in-law.",
+          "The case depended partly on visual-identification evidence.",
+          "The Court found that the accused delivered the blow causing death.",
+          "It did not find sufficient proof of malice aforethought.",
+          "The accused was a first offender.",
+          "He had remained in custody for approximately two years and seven months."
+      ],
+      legalIssues: [
+          "Whether David John caused Alex Simwanza’s death.",
+          "Whether the visual-identification evidence was reliable and free from mistake.",
+          "Whether the fatal assault was proved beyond reasonable doubt.",
+          "Whether the accused acted with malice aforethought.",
+          "Whether the evidence proved murder or only manslaughter.",
+          "What sentence was appropriate after mitigation and aggravating factors were considered."
+      ],
+      sourcePdf: "legal-documents/2021/Republic vs David John  Silwela (Criminal Session Case 1 of 2020) 2021 TZHC 9116 (31 December 2021).pdf",
+      reportData: {
+          "reportTitle":  "Criminal Trial Report — Republic v David John alias Silwela",
+          "reportConclusion":  "The accused caused the death, but malice aforethought was not proved. He was convicted of manslaughter and sentenced to five years’ imprisonment."
+      },
       title: 'Republic v David John @ Silwela',
       citation: '[2021] TZHC 9116',
       court: 'High Court of Tanzania, Sumbawanga District Registry',
@@ -9654,6 +10418,55 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-029',
+      // === 2021 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Stella Maris Mtwara University College v Maro Msamba",
+          "alternativeTitle":  "STEMUCO vs Maro Msamba",
+          "citation":  "[2021] TZHC 9126",
+          "caseNumber":  "Labour Revision No. 1 of 2021",
+          "originatingCase":  "Labour Dispute No. CMA/MTW/LD/143/17",
+          "court":  "High Court of Tanzania",
+          "registry":  "Mtwara District Registry",
+          "proceeding":  "Labour revision",
+          "judge":  "Z.G. Muruke, J.",
+          "decisionDate":  "30 December 2021",
+          "decisionYear":  "2021",
+          "category":  "Employment contract / terminal benefits",
+          "source":  "Uploaded scanned 2021 PDF",
+          "searchAliases":  [
+                                "Stella Maris University College",
+                                "STEMUCO",
+                                "Maro Msamba",
+                                "Labour Revision 1 of 2021",
+                                "TZHC 9126"
+                            ]
+      },
+      caseSummary: "Maro Msamba worked for Stella Maris Mtwara University College as an assistant lecturer under renewable three-year contracts. The college notified him that his second contract would not be renewed.\n\nThe parties disagreed over gratuity, salary arrears, annual leave, repatriation expenses and subsistence allowance. The CMA awarded him several payments, and the college sought revision.\n\nThe High Court removed the open-ended subsistence allowance. It confirmed that repatriation should be provided according to the employment contract rather than necessarily as unrestricted cash.\n\nThe Court maintained the awards for 2017 annual leave, gratuity and salary arrears, less TZS 2,000,000 already paid. Payment was ordered within three months from 1 January 2022, and each party bore its own costs.",
+      caseFacts: [
+          "Maro was employed as an assistant lecturer from 14 November 2011.",
+          "His employment was based on renewable three-year contracts.",
+          "He completed two contract periods.",
+          "His second contract ended on 6 October 2017.",
+          "He was notified on 22 August 2017 that it would not be renewed.",
+          "He claimed gratuity, salary arrears, part-time payments and transport expenses.",
+          "The college admitted liability for some gratuity and salary arrears.",
+          "It had already paid TZS 2,000,000.",
+          "The college offered transport according to the employment contract.",
+          "Maro instead requested cash and filed a claim before the CMA."
+      ],
+      legalIssues: [
+          "Whether the CMA properly awarded subsistence allowance until full payment.",
+          "Whether repatriation benefits had to be paid in cash or provided according to the employment contract.",
+          "Whether Maro was entitled to payment for annual leave for 2017.",
+          "Whether the admitted gratuity and salary arrears remained payable.",
+          "Whether the TZS 2,000,000 already paid should be deducted.",
+          "Whether the CMA award required revision and when the remaining amount should be paid."
+      ],
+      sourcePdf: "legal-documents/2021/Stella Maris Mtwara University College vs Maro Msamba (Labour Revision No  1 of 2021) 2021 TZHC 9126 (30 December 2021).pdf",
+      reportData: {
+          "reportTitle":  "Labour Revision Report — Stella Maris Mtwara University College v Maro Msamba",
+          "reportConclusion":  "The subsistence award was set aside, while contractual repatriation, annual leave, gratuity and salary arrears were maintained subject to deduction of the payment already received."
+      },
       title: 'Stella Maris Mtwara University College v Maro Msamba',
       citation: '[2021] TZHC 9126',
       court: 'High Court of Tanzania, Mtwara District Registry',
@@ -9921,6 +10734,57 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-030',
+      // === 2022 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Athanas Amon v Republic",
+          "alternativeTitle":  "Athanas Amon vs The Republic",
+          "citation":  "[2022] TZHC 15594",
+          "caseNumber":  "Criminal Appeal No. 68 of 2020",
+          "originatingCase":  "Economic Case No. 7 of 2020",
+          "court":  "High Court of Tanzania",
+          "registry":  "Dar es Salaam District Registry",
+          "proceeding":  "Criminal appeal",
+          "judge":  "L.E. Mgonya, J.",
+          "decisionDate":  "23 December 2022",
+          "decisionYear":  "2022",
+          "category":  "Firearm and ammunition / unlawful search",
+          "source":  "Uploaded 2022 PDF",
+          "searchAliases":  [
+                                "Athanas Amon",
+                                "TZHC 15594",
+                                "Criminal Appeal 68 of 2020",
+                                "Economic Case 7 of 2020",
+                                "Beretta pistol",
+                                "unlawful search"
+                            ]
+      },
+      caseSummary: "Athanas Amon challenged his conviction arising from the alleged recovery of a Beretta pistol and six rounds of ammunition.\n\nThe High Court found that the search was not an emergency. Police had received information in advance and had sufficient time to obtain lawful authorization. The search was conducted without a warrant or the required magistrate’s approval.\n\nThe unlawful search undermined the prosecution evidence. The Court allowed the appeal, quashed the conviction, set aside the sentence and ordered Athanas’s immediate release unless held for another lawful cause.",
+      caseFacts: [
+          "Police received information about people travelling from Dar es Salaam to Vigwaza.",
+          "Police alleged that the travellers intended to commit an offence.",
+          "A vehicle was stopped and searched.",
+          "Police claimed to have recovered a Beretta pistol.",
+          "The firearm registration number was 5A7056ZB.",
+          "Six rounds of ammunition were allegedly recovered.",
+          "The appellant denied ownership of the pistol.",
+          "Other accused persons said they did not witness the alleged search.",
+          "No search warrant had been obtained.",
+          "The High Court found that police had sufficient time to obtain proper authorization."
+      ],
+      legalIssues: [
+          "Whether the search was legally conducted.",
+          "Whether the circumstances justified a warrantless emergency search.",
+          "Whether magistrate approval was required under section 38 of the Criminal Procedure Act.",
+          "Whether the seizure was properly witnessed and documented.",
+          "Whether the chain of custody of the firearm and ammunition was established.",
+          "Whether contradictions in the prosecution evidence created reasonable doubt.",
+          "Whether the conviction could stand after excluding the unlawfully obtained evidence."
+      ],
+      sourcePdf: "legal-documents/2022/Athanas Amon vs Republic (Criminal Appeal 68 of 2020) 2022 TZHC 15594 (23 December 2022).pdf",
+      reportData: {
+          "reportTitle":  "Criminal Appeal Report — Athanas Amon v Republic",
+          "reportConclusion":  "The warrantless search was unlawful because no genuine emergency existed. The conviction and sentence were set aside, and the appellant was ordered released."
+      },
       title: 'Athanas Amon v Republic',
       citation: '[2022] TZHC 15594',
       court: 'High Court of Tanzania, Dar es Salaam District Registry',
@@ -10203,6 +11067,56 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-031',
+      // === 2022 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Board of Directors, Centre for Foreign Relations v Shariff Asham Tarimo",
+          "alternativeTitle":  "Centre for Foreign Relations vs Shariff Tarimo",
+          "citation":  "[2022] TZHCLD 1121",
+          "caseNumber":  "Revision No. 296 of 2022",
+          "originatingDispute":  "CMA/DSM/TEM/716/2018",
+          "court":  "High Court of Tanzania, Labour Division",
+          "registry":  "Dar es Salaam",
+          "proceeding":  "Labour revision",
+          "judge":  "S.M. Maghimbi, J.",
+          "decisionDate":  "23 December 2022",
+          "decisionYear":  "2022",
+          "category":  "Employment / extension of time",
+          "source":  "Uploaded 2022 PDF",
+          "searchAliases":  [
+                                "Centre for Foreign Relations",
+                                "Shariff Tarimo",
+                                "CFR",
+                                "TZHCLD 1121",
+                                "Revision 296 of 2022",
+                                "diplomatic immunity"
+                            ]
+      },
+      caseSummary: "The Centre for Foreign Relations sought revision of a CMA ruling that refused to extend time for applying to set aside an ex parte labour award obtained by Shariff Tarimo.\n\nThe Centre argued that it enjoyed diplomatic immunity and that it had not been properly served. The High Court did not decide whether immunity ultimately existed. It held that the allegation raised a serious legal question deserving determination in an application to set aside the ex parte award.\n\nThe CMA had considered the merits of the immunity question prematurely at the extension stage. The High Court allowed revision, set aside the CMA ruling and granted the Centre 30 days to apply to set aside the ex parte award.",
+      caseFacts: [
+          "Shariff Tarimo was employed as an assistant lecturer from 1 September 2012.",
+          "A labour dispute was filed at the Temeke CMA.",
+          "An ex parte award was delivered on 26 February 2021.",
+          "The Centre sought additional time to challenge that award.",
+          "It argued that it had not received proper service.",
+          "It also asserted diplomatic immunity and privileges.",
+          "The CMA rejected the explanation and dismissed the extension application.",
+          "The Centre applied to the High Court for revision.",
+          "The High Court found that immunity deserved substantive examination.",
+          "It did not finally determine whether the Centre actually possessed immunity."
+      ],
+      legalIssues: [
+          "Whether the Centre had shown sufficient cause for extending time.",
+          "Whether the alleged diplomatic immunity constituted an arguable illegality.",
+          "Whether the Centre had been properly served in the original CMA proceedings.",
+          "Whether the CMA considered the merits prematurely.",
+          "Whether time should be extended to challenge the ex parte award.",
+          "Whether granting extension amounted to determining immunity."
+      ],
+      sourcePdf: "legal-documents/2022/Board of Directors Center for foreign Relations vs Shariff Asham Tarimo (Revision No 296 of 2022) 2022 TZHCLD 1121 (23 December 2022).pdf",
+      reportData: {
+          "reportTitle":  "Labour Revision Report — Centre for Foreign Relations v Shariff Asham Tarimo",
+          "reportConclusion":  "The immunity and service questions deserved substantive consideration. The CMA ruling was set aside, and 30 days were granted to apply against the ex parte award."
+      },
       title: 'Board of Directors, Centre for Foreign Relations v Shariff Asham Tarimo',
       citation: '[2022] TZHCLD 1121',
       court: 'High Court of Tanzania, Labour Division at Dar es Salaam',
@@ -10477,6 +11391,55 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-032',
+      // === 2022 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Chalinze Cement Company Limited v Fair Competition Commission",
+          "alternativeTitle":  "Chalinze Cement vs FCC",
+          "citation":  "[2022] TZHC 15514",
+          "caseNumber":  "Miscellaneous Cause No. 591 of 2022",
+          "intendedProceeding":  "Judicial review",
+          "court":  "High Court of Tanzania",
+          "registry":  "Dar es Salaam District Registry",
+          "proceeding":  "Interim injunction pending leave",
+          "judge":  "Ismail, J.",
+          "decisionDate":  "30 December 2022",
+          "decisionYear":  "2022",
+          "category":  "Competition law / judicial review",
+          "source":  "Uploaded 2022 PDF",
+          "searchAliases":  [
+                                "Chalinze Cement",
+                                "FCC",
+                                "Fair Competition Commission",
+                                "TZHC 15514",
+                                "Misc Cause 591 of 2022",
+                                "interim injunction"
+                            ]
+      },
+      caseSummary: "Chalinze Cement intended to seek judicial-review orders of certiorari and prohibition against a decision communicated by the Fair Competition Commission.\n\nBefore determination of its application for leave, Chalinze Cement requested an interim injunction preventing implementation of the FCC’s decision. It argued that the decision contradicted an earlier Fair Competition Tribunal decision concerning Twiga Cement and Tanga Cement.\n\nThe High Court held that an interim order could be issued where an arguable case and a proper reason for temporary restraint were shown. It granted the application and restrained the FCC from implementing the disputed communiqué pending determination of the leave application.",
+      caseFacts: [
+          "The FCC issued a disputed communiqué in December 2022.",
+          "Chalinze Cement intended to seek certiorari and prohibition.",
+          "The company first applied for permission to institute judicial review.",
+          "It requested immediate interim protection.",
+          "It claimed that the FCC decision contradicted an earlier Tribunal decision.",
+          "The Attorney General had not yet been summoned.",
+          "The FCC opposed issuing an interim order at that stage.",
+          "The Court found that the applicant had presented an arguable case.",
+          "The order was intended to preserve the matter until leave was determined."
+      ],
+      legalIssues: [
+          "Whether an interim injunction could be granted before leave for judicial review.",
+          "Whether the Attorney General first had to be summoned.",
+          "Whether a separate formal injunction application was necessary.",
+          "Whether Chalinze Cement demonstrated a good arguable case.",
+          "Whether temporary restraint was necessary to preserve the proceedings.",
+          "Whether the order would improperly pre-determine the judicial-review application."
+      ],
+      sourcePdf: "legal-documents/2022/Chalinze Cement Company Ltd vs Fair Competition Commission (Misc Cause 591 of 2022) 2022 TZHC 15514 (30 December 2022).pdf",
+      reportData: {
+          "reportTitle":  "Judicial Review / Competition Report — Chalinze Cement Company Limited v Fair Competition Commission",
+          "reportConclusion":  "The Court temporarily restrained the FCC from implementing the communiqué until determination of the application for leave to commence judicial review."
+      },
       title: 'Chalinze Cement Company Limited v Fair Competition Commission',
       citation: '[2022] TZHC 15514',
       court: 'High Court of Tanzania, Dar es Salaam District Registry',
@@ -10735,6 +11698,56 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-033',
+      // === 2022 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Dalangu Gidabulgald and Four Others v Dilala Digabulgalda",
+          "alternativeTitle":  "Dalangu Gidabulgald and Others vs Dilala Digabulgalda",
+          "otherApplicants":  "Elias Gundanga Derema, Omari Mkasa, Emanuel Gichenoka, Gumba Suhosu",
+          "citation":  "[2022] TZHC 15353",
+          "caseNumber":  "Miscellaneous Land Application No. 5 of 2022",
+          "relatedAppeal":  "Land Appeal No. 4 of 2022",
+          "court":  "High Court of Tanzania",
+          "registry":  "Manyara Sub-Registry at Babati",
+          "proceeding":  "Application to maintain status quo",
+          "judge":  "Barthy, J.",
+          "decisionDate":  "23 December 2022",
+          "decisionYear":  "2022",
+          "category":  "Land / interim protection",
+          "source":  "Uploaded 2022 PDF",
+          "searchAliases":  [
+                                "Dalangu Gidabulgald",
+                                "Dilala Digabulgalda",
+                                "TZHC 15353",
+                                "Land Application 5 of 2022",
+                                "status quo"
+                            ]
+      },
+      caseSummary: "The applicants sought an order maintaining the status quo over agricultural land while Land Appeal No. 4 of 2022 remained pending.\n\nThey claimed that the respondent had taken the land and leased it to another person who cultivated it. However, their prayer asked the Court to preserve the existing position, while their actual objective was restoration of the previous position so they could resume cultivation.\n\nThe High Court distinguished between maintaining the current position and restoring an earlier position. Granting the requested practical relief would prematurely determine possession or ownership before hearing the main appeal.\n\nThe application was dismissed for want of merit, with costs following the event.",
+      caseFacts: [
+          "The parties had litigated before the Babati District Land and Housing Tribunal.",
+          "The earlier proceeding was Land Application No. 25 of 2022.",
+          "The respondent’s matter was dismissed for being refiled without leave.",
+          "The respondent filed Land Appeal No. 4 of 2022.",
+          "Before determination of the appeal, the disputed land was cultivated.",
+          "The applicants alleged that the respondent had leased it to a third party.",
+          "The applicants wanted to resume cultivation.",
+          "Their formal prayer requested maintenance of the existing status quo.",
+          "The third-party cultivator was not a party to the application.",
+          "Ownership remained unresolved in the pending appeal."
+      ],
+      legalIssues: [
+          "What was the current status quo over the disputed property?",
+          "Whether the applicants actually sought status quo or status quo ante.",
+          "Whether the Court could grant relief different from the relief pleaded.",
+          "Whether returning possession would prematurely decide the main appeal.",
+          "Whether an order could affect a third party who was not before the Court.",
+          "Whether the application had legal merit."
+      ],
+      sourcePdf: "legal-documents/2022/Dalangu Gidabulgald  Others vs Dilala Digabulgalda (Misc Land Application 5 of 2012) 2022 TZHC 15353 (23 December 2022).pdf",
+      reportData: {
+          "reportTitle":  "Land Application Report — Dalangu Gidabulgald and Four Others v Dilala Digabulgalda",
+          "reportConclusion":  "The applicants requested preservation of the current position while seeking restoration of an earlier position. The requested relief would pre-determine the appeal, so the application was dismissed."
+      },
       title: 'Dalangu Gidabuldgald and Four Others v Dilala Digabulgalda',
       citation: '[2022] TZHC 15353',
       court: 'High Court of Tanzania, Manyara Sub-Registry at Babati',
@@ -10992,6 +12005,57 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-034',
+      // === 2022 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Daniel Gilbert v Hashimu Shabani",
+          "alternativeTitle":  "Daniel Gilbert vs Hashimu Shabani",
+          "citation":  "[2022] TZHC 15509",
+          "caseNumber":  "Land Appeal No. 1 of 2022",
+          "originatingMatter":  "Land Application No. 202 of 2016",
+          "court":  "High Court of Tanzania",
+          "registry":  "Morogoro Sub-Registry",
+          "proceeding":  "Land appeal",
+          "judge":  "M.J. Chaba, J.",
+          "decisionDate":  "Judgment: 30 November 2022; filename: 30 December 2022",
+          "decisionYear":  "2022",
+          "category":  "Land ownership",
+          "source":  "Uploaded 2022 PDF",
+          "dateWarning":  "The uploaded judgment and repository metadata contain different dates. Verify using the original PDF.",
+          "searchAliases":  [
+                                "Daniel Gilbert",
+                                "Hashimu Shabani",
+                                "TZHC 15509",
+                                "Land Appeal 1 of 2022",
+                                "Morogoro land"
+                            ]
+      },
+      caseSummary: "Daniel Gilbert appealed against a decision declaring Hashimu Shabani owner of disputed land. The dispute had passed through several courts and tribunals over approximately 24 years.\n\nDaniel argued that ownership had already been decided in his favour and that the new proceedings were barred. The High Court found that the earlier proceedings had not finally determined ownership through the proper land forum.\n\nOn the evidence, Daniel’s building permit did not prove ownership, while Hashimu produced a land-sale agreement supporting his purchase. The Court upheld the Tribunal’s decision and dismissed Daniel’s appeal with costs.",
+      caseFacts: [
+          "The ownership dispute began around 1999.",
+          "Hashimu first filed Civil Case No. 216 of 1999.",
+          "Daniel was declared owner in the earlier Primary Court proceeding.",
+          "Several later civil, criminal and land proceedings followed.",
+          "Courts advised the parties to take the ownership dispute to a proper land forum.",
+          "Hashimu filed a case before Mwembesongo Ward Tribunal.",
+          "The matter was later heard de novo by the District Land and Housing Tribunal.",
+          "The Tribunal declared Hashimu the owner.",
+          "Daniel relied partly on a building permit.",
+          "Hashimu relied on a sale agreement showing purchase from Juma Mohamed."
+      ],
+      legalIssues: [
+          "Whether ownership had already been conclusively determined.",
+          "Whether the later land proceedings were barred by res judicata.",
+          "Whether the proper land forum previously determined the dispute.",
+          "Whether a building permit proved ownership.",
+          "Whether Hashimu’s sale agreement established ownership.",
+          "Which party proved a better title on the balance of probabilities.",
+          "Whether the Tribunal’s decision should be disturbed."
+      ],
+      sourcePdf: "legal-documents/2022/Daniel Gilbert vs Hashimu Shabani (Land Appeal 1 of 2022) 2022 TZHC 15509 (30 December 2022).pdf",
+      reportData: {
+          "reportTitle":  "Land Appeal Report — Daniel Gilbert v Hashimu Shabani",
+          "reportConclusion":  "The previous proceedings did not finally determine ownership in a competent land forum. Hashimu presented stronger ownership evidence, and the appeal was dismissed with costs."
+      },
       title: 'Daniel Gilbert v Hashimu Shabani',
       citation: '[2022] TZHC 15509',
       court: 'High Court of Tanzania, Morogoro Sub-Registry',
@@ -11246,6 +12310,55 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-035',
+      // === 2022 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Flomi Hotel Limited v Emmanuel Sylvester Manga and Warren G. Mbwambo",
+          "alternativeTitle":  "Flomi Hotel vs Emmanuel Manga and Another",
+          "citation":  "[2022] TZHC 15706",
+          "caseNumber":  "Labour Revision Case No. 1 of 2022",
+          "originatingDispute":  "CMA/MOR/185/2020",
+          "court":  "High Court of Tanzania, Labour Division",
+          "registry":  "Morogoro District Registry",
+          "proceeding":  "Labour revision",
+          "judge":  "M.J. Chaba, J.",
+          "decisionDate":  "30 December 2022",
+          "decisionYear":  "2022",
+          "category":  "Labour procedure",
+          "source":  "Uploaded 2022 PDF",
+          "searchAliases":  [
+                                "Flomi Hotel",
+                                "Emmanuel Manga",
+                                "Warren Mbwambo",
+                                "TZHC 15706",
+                                "Labour Revision 1 of 2022",
+                                "notice of revision"
+                            ]
+      },
+      caseSummary: "Flomi Hotel sought revision of a CMA award obtained by Emmanuel Manga and Warren Mbwambo.\n\nThe respondents raised a preliminary objection that Flomi Hotel had not first filed the mandatory notice of intention to seek revision at the CMA.\n\nThe High Court held that Regulation 34(1) used mandatory language. Substantive justice and the overriding objective could not be used to disregard an express procedural requirement.\n\nThe preliminary objection was sustained, and the revision application was struck out. Each party was ordered to bear its own costs.",
+      caseFacts: [
+          "The dispute originated from CMA/MOR/185/2020.",
+          "The CMA award was delivered on 10 December 2021.",
+          "Flomi Hotel sought High Court revision.",
+          "It filed a notice of application and chamber summons.",
+          "It did not first lodge the prescribed notice of intention at the CMA.",
+          "The respondents raised a preliminary objection.",
+          "Flomi Hotel argued that the omission was a curable technicality.",
+          "The respondents argued that the requirement was mandatory.",
+          "The Court accepted the respondents’ objection."
+      ],
+      legalIssues: [
+          "Whether notice of intention to seek labour revision was mandatory.",
+          "Whether the notice of application could replace the prescribed CMA notice.",
+          "Whether the omission was a curable procedural technicality.",
+          "Whether the overriding objective could cure non-compliance.",
+          "Whether failure to file the notice rendered the revision incompetent.",
+          "What order should be made concerning costs."
+      ],
+      sourcePdf: "legal-documents/2022/Flomi Hotel Limited vs Emmanuel Sylvester Manga and Another (Labour Revision 1 of 2022) 2022 TZHC 15706 (30 December 2022).pdf",
+      reportData: {
+          "reportTitle":  "Labour Revision Report — Flomi Hotel Limited v Emmanuel Sylvester Manga and Warren G. Mbwambo",
+          "reportConclusion":  "Failure to lodge the mandatory notice of intention rendered the revision incompetent. It was struck out, with each party bearing its own costs."
+      },
       title: 'Flomi Hotel Limited v Emmanuel Sylvester Manga and Warren G. Mbwambo',
       citation: '[2022] TZHC 15706',
       court: 'High Court of Tanzania, Labour Division, Morogoro District Registry',
@@ -11527,6 +12640,58 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-036',
+      // === 2022 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Republic v Jacob Enock Shindika and Three Others",
+          "otherAccused":  "Boazi Mudi Saidi, Rashidi Ramadhani Mwaulezi, Japhet Boniphace Sanga",
+          "victim":  "Mwasi Mwangembe",
+          "citation":  "[2022] TZHC 15688",
+          "caseNumber":  "Criminal Sessions Case No. 7 of 2020",
+          "court":  "High Court of Tanzania",
+          "registry":  "Mbeya District Registry",
+          "proceeding":  "Murder trial",
+          "judge":  "R.A. Ebrahim, J.",
+          "decisionDate":  "30 December 2022",
+          "decisionYear":  "2022",
+          "category":  "Murder / common intention",
+          "source":  "Uploaded 2022 PDF",
+          "verificationWarning":  "The scanned final page cuts off the complete wording of the sentence. The AI must not invent the missing words.",
+          "searchAliases":  [
+                                "Jacob Enock Shindika",
+                                "Boazi Mudi Saidi",
+                                "Mwasi Mwangembe",
+                                "TZHC 15688",
+                                "Criminal Session 7 of 2020"
+                            ]
+      },
+      caseSummary: "Four accused persons were jointly tried for murdering Mwasi Mwangembe during a violent incident connected with a gold-buying business.\n\nThe prosecution alleged that the accused attacked the deceased and her husband using weapons while acting with a common intention. The Court considered identification, alibi defences, identification parades, the physical acts causing death and malice aforethought.\n\nAlthough the Court gave no weight to defective identification-parade evidence, it accepted other prosecution evidence identifying the accused and connecting them to the attack.\n\nThe Court held that all four participated with a common intention and malice aforethought. They were convicted of murder. The extracted final page records sentencing under section 197 but does not clearly reproduce the complete sentence.",
+      caseFacts: [
+          "The incident occurred on 15 August 2018.",
+          "The location was Itumbi Hamlet, Matundasi Village, Chunya.",
+          "The deceased was Mwasi Mwangembe.",
+          "Her husband operated a gold-buying business from their residence.",
+          "The accused allegedly arrived with sand containing gold.",
+          "The attack occurred after they had remained at the premises.",
+          "The deceased and her husband suffered serious weapon injuries.",
+          "The prosecution called ten witnesses and produced seven exhibits.",
+          "The defence called the four accused and produced two exhibits.",
+          "The accused raised identification and alibi defences."
+      ],
+      legalIssues: [
+          "Whether Mwasi Mwangembe died an unnatural death.",
+          "Whether the accused persons were reliably identified.",
+          "Whether the identification-parade evidence complied with legal requirements.",
+          "Whether the alibi defences created reasonable doubt.",
+          "Whether the accused acted under a common intention.",
+          "Whether their acts caused the deceased’s death.",
+          "Whether malice aforethought was proved.",
+          "Whether murder was proved beyond reasonable doubt."
+      ],
+      sourcePdf: "legal-documents/2022/Republic vs Jacob Enock  Others (Criminal Session Case 7 of 2020) 2022 TZHC 15688 (30 December 2022).pdf",
+      reportData: {
+          "reportTitle":  "Criminal Trial Report — Republic v Jacob Enock Shindika and Three Others",
+          "reportConclusion":  "The prosecution proved that the four accused jointly murdered the deceased with common intention and malice aforethought. They were convicted of murder."
+      },
       title: 'Republic v Jacob Enock Shindika and Three Others',
       citation: '[2022] TZHC 15688',
       court: 'High Court of Tanzania, Mbeya District Registry',
@@ -11805,6 +12970,58 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-037',
+      // === 2022 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Republic v Majuto Ngamba alias Ntumbi and Two Others",
+          "otherAccused":  "Edward Maganga alias Tungu, Paschal January alias Malosha",
+          "victim":  "Keflin Masanja",
+          "citation":  "[2022] TZHC 15848",
+          "caseNumber":  "Criminal Session Case No. 79 of 2020",
+          "court":  "High Court of Tanzania",
+          "registry":  "Shinyanga",
+          "proceeding":  "Murder trial",
+          "judge":  "S.M. Kulita, J.",
+          "decisionDate":  "30 December 2022",
+          "decisionYear":  "2022",
+          "category":  "Murder / confession evidence",
+          "source":  "Uploaded scanned 2022 PDF",
+          "searchAliases":  [
+                                "Majuto Ngamba",
+                                "Edward Maganga Tungu",
+                                "Paschal January Malosha",
+                                "Keflin Masanja",
+                                "TZHC 15848",
+                                "Murder Case 79 of 2020"
+                            ]
+      },
+      caseSummary: "Majuto Ngamba, Edward Maganga and Paschal January were tried for murdering Keflin Masanja during a nighttime attack.\n\nThe prosecution relied on visual identification and alleged confessions contained in caution and extra-judicial statements. The accused alleged that they had been tortured and forced to sign the statements.\n\nThe extra-judicial statements were recorded by a Ward Executive Officer rather than a magistrate, and the prosecution evidence explaining that procedure was inconsistent. The Court found the uncorroborated confession evidence unsafe.\n\nWithout the confessions, the prosecution evidence did not prove the charge beyond reasonable doubt. All three accused were acquitted and ordered released unless lawfully held for another reason.",
+      caseFacts: [
+          "The alleged murder occurred on 26 January 2020.",
+          "The location was Segese Village, Kahama District.",
+          "The deceased was Keflin Masanja.",
+          "Three intruders allegedly attacked her while she slept with her husband.",
+          "Neighbours responded after hearing calls for help.",
+          "One neighbour allegedly identified Edward Maganga.",
+          "Edward was arrested and allegedly mentioned the other accused.",
+          "Police obtained caution and extra-judicial statements.",
+          "The accused alleged torture and forced signatures.",
+          "The deceased died from severe blood loss caused by multiple cut wounds."
+      ],
+      legalIssues: [
+          "Whether Keflin Masanja’s death was unnatural.",
+          "Whether the accused persons were responsible for her death.",
+          "Whether the visual-identification evidence was reliable.",
+          "Whether the alleged confessions were voluntary.",
+          "Whether recording the extra-judicial statements before a Ward Executive Officer created doubt.",
+          "Whether torture affected the caution and extra-judicial statements.",
+          "Whether uncorroborated confessions could support convictions.",
+          "Whether malice aforethought was established."
+      ],
+      sourcePdf: "legal-documents/2022/REPUBLIC vs MAJUTO NGAMBA  NTUMBI and 2 OTHERS (Criminal Session Case No 79 of 2020) 2022 TZHC 15848 (30 December 2022).pdf",
+      reportData: {
+          "reportTitle":  "Criminal Trial Report — Republic v Majuto Ngamba alias Ntumbi and Two Others",
+          "reportConclusion":  "The confession evidence was unsafe because of alleged torture, procedural concerns and lack of corroboration. The prosecution failed to prove murder, and all accused were acquitted."
+      },
       title: 'Republic v Majuto Ngamba alias Ntumbi and Two Others',
       citation: '[2022] TZHC 15848',
       court: 'High Court of Tanzania at Shinyanga',
@@ -12175,6 +13392,56 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-038',
+      // === 2022 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Shaban Juma Kisonga v Jumanne Omary",
+          "appellantCapacity":  "Representative of the estate of Pili Selemani Kiula",
+          "respondentCapacity":  "Representative of the estate of Omary Mjange Dudu",
+          "citation":  "Not stated in the supplied filename or judgment",
+          "caseNumber":  "Miscellaneous Land Appeal No. 23 of 2022",
+          "originatingMatter":  "Land Appeal No. 8 of 2019",
+          "court":  "High Court of Tanzania",
+          "registry":  "Dodoma District Registry",
+          "proceeding":  "Preliminary objections in land appeal",
+          "judge":  "George M. Masaju, J.",
+          "decisionDate":  "27 December 2022",
+          "decisionYear":  "2022",
+          "category":  "Land appeal / limitation",
+          "source":  "Uploaded 2022 PDF",
+          "searchAliases":  [
+                                "Shaban Kisonga",
+                                "Jumanne Omary",
+                                "Pili Selemani Kiula estate",
+                                "Omary Mjange Dudu estate",
+                                "Land Appeal 23 of 2022"
+                            ]
+      },
+      caseSummary: "Shaban Kisonga appealed against a land decision made in favour of Jumanne Omary. The respondent objected that the appeal was filed out of time and that the memorandum of appeal was invalid because it had not been dated.\n\nThe High Court held that the time required to obtain the necessary judgment and ruling copies had to be excluded when calculating limitation. The appeal was therefore filed within time.\n\nAlthough the memorandum was undated, it had been signed and officially received within the permitted period. That omission did not make the appeal incompetent.\n\nBoth preliminary objections were overruled. The appellant was permitted to insert the filing date, and each party bore its own costs.",
+      caseFacts: [
+          "Both parties acted as representatives of deceased persons’ estates.",
+          "The original matter began in Kaselya Ward Tribunal.",
+          "It proceeded to the District Land and Housing Tribunal for Iramba.",
+          "The Tribunal decided in favour of Jumanne Omary.",
+          "Shaban Kisonga filed a High Court appeal.",
+          "The respondent argued that the appeal was late.",
+          "The respondent also argued that the memorandum was undated.",
+          "The Court excluded the period used to obtain necessary copies.",
+          "The memorandum had been signed and received on 27 May 2022.",
+          "The Court permitted correction of the omitted date."
+      ],
+      legalIssues: [
+          "Whether the land appeal was filed outside the prescribed period.",
+          "Whether time spent obtaining judgment and ruling copies should be excluded.",
+          "Whether an undated memorandum of appeal was invalid.",
+          "Whether the registry filing date could establish timely filing.",
+          "Whether the omission was curable.",
+          "Whether either preliminary objection had merit."
+      ],
+      sourcePdf: "legal-documents/2022/Shaban Juma Kisonga (as a Legal Representative of the estate of the late Pili Selemani Kula ) vs Jummanne Omary (as the Legal Representative of the estate of the late Omary Mjange Dudu) (Misc Land Appeal 23 of 2022.pdf",
+      reportData: {
+          "reportTitle":  "Land Appeal Report — Shaban Juma Kisonga v Jumanne Omary",
+          "reportConclusion":  "The appeal was filed within time, and omission of the date was curable because the memorandum was signed and officially received. Both objections were overruled."
+      },
       title: 'Shaban Juma Kisonga v Jumanne Omary',
       fullTitle: 'Shaban Juma Kisonga, as Legal Representative of the Estate of the Late Pili Selemani Kiula v Jumanne Omary, as Legal Representative of the Estate of the Late Omary Mjange Dudu',
       citation: 'Citation not stated',
@@ -12464,6 +13731,57 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-039',
+      // === 2022 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata: {
+          "officialTitle":  "Vigu Trading Company Limited v Bank of Africa Tanzania Limited and Two Others",
+          "secondRespondent":  "Nampula Auction Mart and Company Limited",
+          "thirdRespondent":  "Bilo Star Debt Collector Company Limited",
+          "citation":  "[2022] TZHC 15474",
+          "caseNumber":  "Miscellaneous Civil Application No. 560 of 2022",
+          "relatedCase":  "Civil Case No. 147 of 2020",
+          "court":  "High Court of Tanzania",
+          "registry":  "Dar es Salaam District Registry",
+          "proceeding":  "Interim status-quo application",
+          "judge":  "H.R. Mwanga, J.",
+          "decisionDate":  "23 December 2022",
+          "decisionYear":  "2022",
+          "category":  "Banking / secured property / interim relief",
+          "source":  "Uploaded 2022 PDF",
+          "searchAliases":  [
+                                "Vigu Trading",
+                                "Bank of Africa Tanzania",
+                                "Nampula Auction Mart",
+                                "Bilo Star Debt Collector",
+                                "TZHC 15474",
+                                "trucks and trailers"
+                            ]
+      },
+      caseSummary: "Vigu Trading requested an interim order protecting its trucks and trailers from further seizure or sale pending determination of the main application.\n\nBetween 2013 and 2016, Bank of Africa had advanced credit facilities of approximately USD 2.8 million to the company. About 100 trucks, tractor units and trailers secured those facilities.\n\nThe Court found that maintaining the existing position was appropriate to prevent further conflict and preserve the subject matter of the pending proceedings.\n\nThe application was granted. The respondents were ordered to stop impounding, seizing or selling the listed vehicles until the substantive application was determined.",
+      caseFacts: [
+          "Bank of Africa provided Vigu Trading with credit facilities.",
+          "The facilities were advanced between 2013 and 2016.",
+          "Their approximate total value was USD 2.8 million.",
+          "Approximately 100 trucks, tractor units and trailers secured the facilities.",
+          "Some vehicles had already been seized.",
+          "Other vehicles were at risk of seizure or sale.",
+          "Auctioneers and debt collectors were involved.",
+          "Vigu Trading requested preservation of the existing position.",
+          "The respondents argued that an earlier similar application had been dismissed.",
+          "The Court found that interim protection was appropriate."
+      ],
+      legalIssues: [
+          "Whether the Court should preserve the vehicles pending the main application.",
+          "Whether the application constituted an abuse of process.",
+          "Whether a previous dismissal for want of prosecution barred the new request.",
+          "Whether granting status quo would effectively grant the final relief.",
+          "Whether refusing protection could undermine the pending proceedings.",
+          "Whether the respondents would suffer injustice from temporary restraint."
+      ],
+      sourcePdf: "legal-documents/2022/Vigu Trading Company Limited vs Bank of Africa Tanzania Limited  2 Others (Misc Application 560 of 2022) 2022 TZHC 15474 (23 December 2022).pdf",
+      reportData: {
+          "reportTitle":  "Banking \u0026 Commercial Application Report — Vigu Trading Company Limited v Bank of Africa Tanzania Limited and Two Others",
+          "reportConclusion":  "Interim preservation was necessary to protect the vehicles and the pending proceedings. The respondents were restrained from further seizure or sale until determination of the substantive application."
+      },
       title: 'Vigu Trading Company Limited v Bank of Africa Tanzania Limited and Two Others',
       citation: '[2022] TZHC 15474',
       court: 'High Court of Tanzania, Dar es Salaam District Registry',
@@ -12756,6 +14074,59 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-040',
+      // === 2023 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata:       {
+          "officialTitle":  "Andrea Theophil and Emanuel Paskal alias Ema Kibaka v Director of Public Prosecutions",
+          "alternativeTitle":  "Andrea Theophil and Another vs DPP",
+          "citation":  "[2023] TZHC 23653",
+          "caseNumber":  "Criminal Appeal No. 42 of 2023",
+          "originatingCase":  "Criminal Case No. 10 of 2022",
+          "court":  "High Court of Tanzania",
+          "registry":  "Arusha District Registry",
+          "proceeding":  "Criminal appeal",
+          "judge":  "Gwae, J.",
+          "decisionDate":  "21 December 2023",
+          "decisionYear":  "2023",
+          "category":  "Housebreaking and stealing",
+          "source":  "Uploaded 2023 PDF",
+          "searchAliases":  [
+                                "Andrea Theophil",
+                                "Andrea Theopil",
+                                "Emanuel Paskal",
+                                "Ema Kibaka",
+                                "DPP",
+                                "Director of Public Prosecutions",
+                                "TZHC 23653"
+                            ]
+      },
+      caseSummary: "Andrea Theophil and Emanuel Paskal appealed against convictions for housebreaking and stealing. The prosecution alleged that they broke into Fatuma Juma’s house and stole a television, smartwatch and cash.\n\nThe High Court found sufficient evidence connecting Andrea to the offences, including the recovery and identification evidence. His appeal was dismissed, and his convictions remained in force.\n\nThe Court found the evidence against Emanuel insufficient. The allegation that Andrea mentioned Emanuel to a police officer was unsupported by a cautioned statement or other reliable incriminating evidence. Emanuel’s appeal was allowed, and he was ordered released unless lawfully detained for another reason.",
+      caseFacts:       [
+          "The alleged incident occurred at Sumawe Street in Karatu.",
+          "Fatuma Juma’s house was allegedly broken into.",
+          "A Hisense television valued at TZS 500,000 was stolen.",
+          "A smartwatch valued at TZS 100,000 was stolen.",
+          "Cash amounting to TZS 25,000 was also allegedly taken.",
+          "The total stated value was TZS 625,000.",
+          "Police recovered the television from Antony Lenga.",
+          "Antony allegedly said Andrea had sold it to him.",
+          "Andrea allegedly led police to the scene.",
+          "Emanuel was principally connected through information allegedly supplied by Andrea.",
+          "Both appellants received concurrent prison sentences of five and three years."
+      ],
+      legalIssues:       [
+          "Whether housebreaking and stealing were proved.",
+          "Whether the recovered television was properly identified.",
+          "Whether the appellants were allowed to comment on the admission of exhibits.",
+          "Whether the evidence connecting Andrea to the offences was sufficient.",
+          "Whether Andrea’s alleged statement could be used against Emanuel.",
+          "Whether the prosecution produced independent evidence against Emanuel.",
+          "Whether each appellant’s conviction was proved beyond reasonable doubt."
+      ],
+      sourcePdf: "legal-documents/2023/Andrea Theophil  another vs The DPP (Criminal Appeal No 42 of 2023) 2023 TZHC 23653 (21 December 2023).pdf",
+      reportData:       {
+          "reportTitle":  "Criminal Appeal Report — Andrea Theophil and Emanuel Paskal alias Ema Kibaka v Director of Public Prosecutions",
+          "reportConclusion":  "Andrea’s convictions were upheld because sufficient evidence connected him to the offences. Emanuel’s appeal succeeded because the evidence against him was insufficient, and he was ordered released."
+      },
       title: 'Andrea Theophil and Another v Director of Public Prosecutions',
       fullTitle: 'Andrea Theophil and Emanuel Paskal alias Ema Kibaka v Director of Public Prosecutions',
       citation: '[2023] TZHC 23653',
@@ -13099,6 +14470,57 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-041',
+      // === 2023 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata:       {
+          "officialTitle":  "Director of Public Prosecutions v Abdul Majid and 12 Others",
+          "alternativeTitle":  "DPP vs Abdul Majid and Others",
+          "citation":  "[2023] TZHC 23673",
+          "caseNumber":  "Criminal Appeal No. 116 of 2022",
+          "originatingCase":  "Criminal Case No. 10 of 2022",
+          "court":  "High Court of Tanzania",
+          "registry":  "Arusha District Registry",
+          "proceeding":  "Criminal revision concerning forfeiture",
+          "judge":  "Gwae, J.",
+          "decisionDate":  "21 December 2023",
+          "decisionYear":  "2023",
+          "category":  "Immigration / forfeiture of vehicle",
+          "property":  "Toyota Land Cruiser, registration No. 352 BYY",
+          "source":  "Uploaded 2023 PDF",
+          "searchAliases":  [
+                                "DPP Abdul Majid",
+                                "Abdul Majid and 12 Others",
+                                "illegal immigrants",
+                                "Toyota 352 BYY",
+                                "TZHC 23673"
+                            ]
+      },
+      caseSummary: "Thirteen respondents pleaded guilty to unlawfully entering Tanzania. A Toyota Land Cruiser allegedly used to transport them became the subject of forfeiture proceedings.\n\nAdam Francis Kilawe claimed an interest in the vehicle. The trial court ordered it returned to him after finding that the prosecution had not proved that it was used to commit the offence.\n\nThe High Court found procedural problems in the handling of the vehicle. It used its revisional powers to set aside the return order and allowed Adam 30 days to make a formal application opposing forfeiture. This would give the DPP a proper opportunity to respond.",
+      caseFacts:       [
+          "Thirteen people were charged with unlawfully entering Tanzania.",
+          "They pleaded guilty on 5 May 2022.",
+          "Each was sentenced to 30 days’ imprisonment or a fine of TZS 500,000.",
+          "None paid the fine according to the record.",
+          "A Toyota Land Cruiser was allegedly used to transport them.",
+          "Its registration number was 352 BYY.",
+          "Adam Francis Kilawe claimed an interest in the vehicle.",
+          "He wrote to the trial court seeking its return.",
+          "The trial court ordered the vehicle released to him.",
+          "The DPP challenged the procedure and failure to order forfeiture."
+      ],
+      legalIssues:       [
+          "Whether the vehicle was used to commit the immigration offence.",
+          "Whether Adam Kilawe was properly heard through an informal letter.",
+          "Whether the vehicle could be returned to a person who was not a party to the criminal case.",
+          "Whether the DPP received a proper opportunity to respond.",
+          "Whether the trial court should have considered forfeiture under the Proceeds of Crime Act.",
+          "Whether the High Court should exercise revision rather than determine the appeal.",
+          "What procedure an interested vehicle owner should follow."
+      ],
+      sourcePdf: "legal-documents/2023/Director of Public Prosecution (DPP) vs Abdul Majid  12 others (Criminal Appeal No 116 of 2022) 2023 TZHC 23673 (21 December 2023).pdf",
+      reportData:       {
+          "reportTitle":  "Criminal Revision Report — Director of Public Prosecutions v Abdul Majid and 12 Others",
+          "reportConclusion":  "The vehicle-return order was set aside. The interested owner was given 30 days to file a formal application against forfeiture so that both sides could be properly heard."
+      },
       title: 'Director of Public Prosecutions v Abdul Majid and Twelve Others',
       fullTitle: 'Director of Public Prosecutions v Abdul Majid and Twelve Others (Adam Francis Kilawe, Interested Person)',
       citation: '[2023] TZHC 23673',
@@ -13304,6 +14726,55 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-043',
+      // === 2023 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata:       {
+          "officialTitle":  "Hassani Issa v Republic",
+          "alternativeTitle":  "Hassan Issa vs Republic",
+          "citation":  "[2023] TZHC 23506",
+          "caseNumber":  "Criminal Appeal No. 38 of 2023",
+          "originatingCase":  "Criminal Case No. 138 of 2021",
+          "court":  "High Court of Tanzania",
+          "registry":  "Iringa Sub-Registry",
+          "proceeding":  "Criminal appeal",
+          "judge":  "I.C. Mugeta, J.",
+          "decisionDate":  "29 December 2023",
+          "decisionYear":  "2023",
+          "category":  "Rape / identification",
+          "source":  "Uploaded 2023 PDF",
+          "searchAliases":  [
+                                "Hassan Issa",
+                                "Hassani Issa",
+                                "TZHC 23506",
+                                "Criminal Appeal 38 of 2023",
+                                "rape identification"
+                            ]
+      },
+      caseSummary: "Hassan Issa appealed against his conviction and life sentence for raping a three-year-old child.\n\nThe High Court found serious contradictions concerning what the child reported and what was observed when she was examined or bathed. More importantly, the prosecution did not sufficiently connect the person identified by the child as “Hassan Mkubwa” to the appellant.\n\nThe prosecution also failed to explain how the appellant was traced and arrested. The Court found that identification had not been proved beyond reasonable doubt.\n\nThe conviction was quashed, the life sentence was set aside and the appellant was ordered released unless held for another lawful cause.",
+      caseFacts:       [
+          "The alleged offence occurred on 29 September 2021.",
+          "The location was Mshindo in Iringa.",
+          "The victim was approximately three years old.",
+          "The appellant was convicted by the District Court of Iringa.",
+          "He was sentenced to life imprisonment.",
+          "The victim allegedly referred to the assailant as “Hassan Mkubwa.”",
+          "The incident was said to have occurred during daylight.",
+          "Witnesses gave contradictory evidence about the child’s physical condition.",
+          "The prosecution did not explain how the appellant was traced.",
+          "Evidence connecting the name used by the child to the appellant was insufficient."
+      ],
+      legalIssues:       [
+          "Whether the child’s testimony was reliable.",
+          "Whether contradictions in the prosecution evidence were material.",
+          "Whether the appellant was properly identified as “Hassan Mkubwa.”",
+          "Whether daylight alone removed the possibility of mistaken identity.",
+          "Whether the prosecution should have explained how the appellant was traced and arrested.",
+          "Whether the prosecution proved rape beyond reasonable doubt."
+      ],
+      sourcePdf: "legal-documents/2023/Hassan Issa vs Republic (Criminal Appeal No 38 of 2023) 2023 TZHC 23506 (29 December 2023).pdf",
+      reportData:       {
+          "reportTitle":  "Criminal Appeal Report — Hassani Issa v Republic",
+          "reportConclusion":  "The prosecution failed to prove that the appellant was the person identified by the child. His conviction and life sentence were set aside."
+      },
       title: 'Hassan Issa v Republic',
       fullTitle: 'Hassan Issa (heading also appearing as Hassani Issa) v Republic',
       citation: '[2023] TZHC 23506',
@@ -13559,6 +15030,55 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-045',
+      // === 2023 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata:       {
+          "officialTitle":  "Ibrahim Mohamed v Republic",
+          "alternativeTitle":  "Ibrahim Mohamed vs The Republic",
+          "citation":  "[2023] TZHC 23740",
+          "caseNumber":  "Criminal Appeal No. 108 of 2023",
+          "originatingCase":  "Criminal Case No. 45 of 2022",
+          "court":  "High Court of Tanzania",
+          "registry":  "Mbeya Sub-Registry",
+          "proceeding":  "Criminal appeal",
+          "judge":  "D.B. Ndunguru, J.",
+          "decisionDate":  "29 December 2023",
+          "decisionYear":  "2023",
+          "category":  "Unnatural offence",
+          "source":  "Uploaded 2023 PDF",
+          "searchAliases":  [
+                                "Ibrahim Mohamed",
+                                "TZHC 23740",
+                                "Criminal Appeal 108 of 2023",
+                                "Chunya",
+                                "unnatural offence"
+                            ]
+      },
+      caseSummary: "Ibrahim Mohamed was convicted of an unnatural offence and sentenced to 30 years’ imprisonment.\n\nThe complainant testified that, after consensual intercourse for payment, the appellant forcibly committed a different non-consensual sexual act. She claimed that people responded to her cries and found the appellant at the scene.\n\nThe High Court found that those alleged eyewitnesses were material witnesses. The prosecution offered no explanation for failing to call them. This omission created reasonable doubt regarding whether the act occurred and whether the appellant committed it.\n\nThe appeal was allowed, the conviction and sentence were set aside and the appellant was ordered released.",
+      caseFacts:       [
+          "The incident allegedly occurred on 28 March 2022.",
+          "The location was Pilson Guest House at Kasanga Village, Chunya.",
+          "The appellant and complainant agreed to consensual intercourse for TZS 10,000.",
+          "The complainant alleged that the appellant later forced anal intercourse upon her.",
+          "She said she screamed because of pain and bleeding.",
+          "She claimed that people entered and found the appellant committing the act.",
+          "The appellant was arrested and taken to Chunya Police Station.",
+          "The alleged eyewitnesses were not called by the prosecution.",
+          "The District Court convicted him and imposed 30 years’ imprisonment."
+      ],
+      legalIssues:       [
+          "Whether the unnatural offence was proved.",
+          "Whether the complainant’s evidence was sufficiently reliable.",
+          "Whether medical evidence supported the allegation.",
+          "Whether the alleged eyewitnesses were material witnesses.",
+          "Whether failure to call those witnesses justified an adverse inference.",
+          "Whether the prosecution proved that the appellant was the perpetrator.",
+          "Whether the charge was proved beyond reasonable doubt."
+      ],
+      sourcePdf: "legal-documents/2023/Ibrahim Mohamed vs Republic (Criminal Appeal No 108 of 2023) 2023 TZHC 23740 (29 December 2023).pdf",
+      reportData:       {
+          "reportTitle":  "Criminal Appeal Report — Ibrahim Mohamed v Republic",
+          "reportConclusion":  "Failure to call readily available material eyewitnesses created reasonable doubt. The conviction and 30-year sentence were set aside."
+      },
       title: 'Ibrahim Mohamed v Republic',
       fullTitle: 'Ibrahim Mohamed v Republic',
       citation: '[2023] TZHC 23740',
@@ -13899,261 +15419,6 @@ const SLCMS_STATE = {
       ]
     },
     {
-      id: 'tz-j-046',
-      title: 'Jackson Mrefu and Another v Eva Mnyalo',
-      fullTitle: 'Jackson Mrefu and Menyee Mrefu v Eva Mnyalo',
-      citation: '[2023] TZHC 23484',
-      court: 'High Court of Tanzania, Manyara Sub-Registry at Babati',
-      courtTier: 'High Court',
-      location: 'Babati, Manyara',
-      caseNumber: 'Misc. Civil Application No. 39 of 2023',
-      originatingCase: 'Civil Case No. 2 of 2023 (Mwada Primary Court) / Misc. Civil Appeal No. 15 of 2023 (District Court of Babati) / Misc. Civil Application No. 36 of 2023 (High Court)',
-      judge: 'Hon. J.R. Kahyoza, J.',
-      decisionDate: '2023-12-29',
-      hearingDate: '2023-12-20',
-      year: '2023',
-      applicant: 'Jackson Mrefu and Menyee Mrefu',
-      firstApplicant: 'Jackson Mrefu',
-      secondApplicant: 'Menyee Mrefu',
-      respondent: 'Eva Mnyalo',
-      proceeding: 'Application for extension of time to apply for leave to appeal to the High Court from District Court appellate decision in a matter originating from Primary Court',
-      proceedingType: 'Civil Application (Extension of Time & Restoration Procedure)',
-      primaryCategory: 'Civil Procedure — Extension of Time and Restoration',
-      category: 'Civil Procedure / Extension of Time',
-      status: 'Prepared for AI',
-      outcome: 'Struck out with costs (Application incompetent, misconceived, and an abuse of court process)',
-      sourceName: 'TanzLII (Tanzania Legal Information Institute)',
-      tanzliiUrl: 'https://tanzlii.org/tz/judgment/high-court-tanzania/2023/23484',
-      downloadUrl: 'https://tanzlii.org/tz/judgment/high-court-tanzania/2023/23484/download/pdf',
-      pdfFileName: 'Jackson Mrefu Another vs Eva Mnyalo (Misc Civil Application 39 of 2023) 2023 TZHC 23484 (29 December 2023).pdf',
-      localPdfPath: 'legal-documents/2023/Jackson Mrefu Another vs Eva Mnyalo (Misc Civil Application 39 of 2023) 2023 TZHC 23484 (29 December 2023).pdf',
-      hasDownload: true,
-      relevanceScore: 98,
-      searchAliases: [
-        'Jackson Mrefu v Eva Mnyalo',
-        'Jackson Mrefu and Another v Eva Mnyalo',
-        'Jackson Mrefu and Menyee Mrefu v Eva Mnyalo',
-        'Jackson Mrefu Another vs Eva Mnyalo',
-        'Menyee Mrefu',
-        'Eva Mnyalo',
-        'Misc. Civil Application No. 39 of 2023',
-        'Misc. Civil Application No. 36 of 2023',
-        'Misc. Civil Appeal No. 15 of 2023',
-        'Civil Case No. 2 of 2023',
-        '[2023] TZHC 23484',
-        '2023 TZHC 23484',
-        '23484'
-      ],
-
-      // 1. Case Information
-      caseInformation: {
-        caseTitle: 'Jackson Mrefu and Another v Eva Mnyalo',
-        courtHeading: 'Jackson Mrefu and Menyee Mrefu v Eva Mnyalo',
-        citation: '[2023] TZHC 23484',
-        caseNumber: 'Misc. Civil Application No. 39 of 2023',
-        court: 'High Court of Tanzania, Manyara Sub-Registry at Babati',
-        judge: 'Hon. J.R. Kahyoza, J.',
-        hearingDate: '20 December 2023',
-        rulingDate: '29 December 2023',
-        decisionDate: '2023-12-29',
-        firstApplicant: 'Jackson Mrefu',
-        secondApplicant: 'Menyee Mrefu',
-        respondent: 'Eva Mnyalo',
-        originalCase: 'Civil Case No. 2 of 2023 (Mwada Primary Court) / Misc. Civil Appeal No. 15 of 2023 (District Court of Babati)',
-        trialCourt: 'Mwada Primary Court',
-        firstAppellateCourt: 'District Court of Babati',
-        firstHighCourtApplication: 'Misc. Civil Application No. 36 of 2023 (Dismissed for want of prosecution on 23 November 2023)',
-        caseCategory: 'Civil procedure — extension of time and restoration',
-        applicationOutcome: 'Struck out with costs',
-        status: 'Prepared for AI',
-        enablingRule: 'Rule 3 & Rule 17 of GN No. 312 of 1964'
-      },
-
-      // 2. Executive Case Summary
-      executiveSummary: 'Eva Mnyalo successfully sued Jackson Mrefu and Menyee Mrefu in Mwada Primary Court for compensation arising from property destruction, winning TZS 3,710,000. Their appeal to the District Court of Babati was dismissed. They failed to appeal to the High Court in time, and their first application for extension of time (Misc. Civil Application No. 36 of 2023) was dismissed for want of prosecution after neither they nor their counsel appeared. Instead of applying to restore the dismissed application, they filed a duplicate fresh application (Misc. Civil Application No. 39 of 2023). The High Court held that the fresh application was incompetent, misconceived, and an abuse of court process; the proper remedy was an application for restoration under Rule 17 principles of GN No. 312 of 1964. The application was struck out with costs without deciding the merits of the delay.',
-      fullTextSummary: 'Eva Mnyalo successfully sued Jackson Mrefu and Menyee Mrefu in Mwada Primary Court for compensation arising from property destruction, winning TZS 3,710,000. Their appeal to the District Court of Babati was dismissed. They failed to appeal to the High Court in time, and their first application for extension of time (Misc. Civil Application No. 36 of 2023) was dismissed for want of prosecution after neither they nor their counsel appeared. Instead of applying to restore the dismissed application, they filed a duplicate fresh application (Misc. Civil Application No. 39 of 2023). The High Court held that the fresh application was incompetent, misconceived, and an abuse of court process; the proper remedy was an application for restoration under Rule 17 principles of GN No. 312 of 1964. The application was struck out with costs without deciding the merits of the delay.',
-
-      // 3. Show Facts
-      facts: [
-        'Eva Mnyalo sued Jackson Mrefu and Menyee Mrefu at Mwada Primary Court in Civil Case No. 2 of 2023.',
-        'She claimed TZS 7,420,000 as compensation for destruction of property and also sought legal costs.',
-        'The Primary Court decided in her favour and awarded her TZS 3,710,000.',
-        'The applicants appealed to the District Court of Babati in Misc. Civil Appeal No. 15 of 2023.',
-        'The District Court confirmed the Primary Court’s judgment and dismissed the appeal.',
-        'The applicants failed to lodge their intended High Court appeal on time within the prescribed 30 days.',
-        'They filed Misc. Civil Application No. 36 of 2023 seeking an extension of time under a certificate of urgency.',
-        'The High Court scheduled Misc. Civil Application No. 36 of 2023 for hearing on 23 November 2023.',
-        'Neither the applicants nor their advocate appeared at the hearing on 23 November 2023.',
-        'The High Court dismissed Misc. Civil Application No. 36 of 2023 for want of prosecution.',
-        'The applicants then filed Misc. Civil Application No. 39 of 2023 seeking precisely the same extension of time.',
-        'The second application was filed by the same advocate who had filed the dismissed application.'
-      ],
-
-      // 4. Show Legal Issues
-      legalIssues: [
-        'Whether a fresh application for an extension of time was competent after an earlier application seeking the same relief had been dismissed for want of prosecution.',
-        'Which law governs applications for extension of time in cases originating from Primary Courts (GN No. 312 of 1964 vs Law of Limitation Act).',
-        'Whether the Law of Limitation Act, Cap. 89 R.E. 2019, applied to the application.',
-        'Whether the applicants were required to seek restoration of their dismissed application before filing a fresh application.',
-        'Whether filing an identical duplicate application amounted to an abuse of court process.'
-      ],
-
-      // 5. Show Parties Arguments
-      submissions: {
-        applicants: [
-          'The first applicant (Jackson Mrefu), appearing in person without an advocate, argued that the fresh application was properly filed and should be heard.',
-          'The second applicant (Menyee Mrefu), also unrepresented, did not make any substantive submission.'
-        ],
-        respondent: [
-          'Eva Mnyalo, appearing in person without an advocate, argued that the fresh application was not properly instituted.',
-          'She submitted that the applicants should have applied for restoration of Misc. Civil Application No. 36 of 2023.',
-          'She contended that the applicants were not entitled to file another application requesting the same extension of time after the first was dismissed.'
-        ]
-      },
-
-      // 6. Show Court Reasoning
-      courtReasoning: {
-        enablingLaw: 'The High Court held that applications for extension of time to appeal in proceedings originating from a Primary Court are governed exclusively by Rule 3 of the Civil Procedure (Appeals in Proceedings Originating in Primary Courts) Rules, GN No. 312 of 1964. The applicants had erroneously cited the Law of Limitation Act [Cap. 89 R.E. 2019], which is inapplicable.',
-        dismissalEffect: 'The dismissal of Misc. Civil Application No. 36 of 2023 for want of prosecution remained a valid and operative judicial determination until legally set aside. The applicants could not bypass or ignore that dismissal by filing another application seeking precisely the identical relief.',
-        restorationProcedure: 'Although GN No. 312 of 1964 does not contain an express rule for applications dismissed for non-appearance, Rule 17 provides guidance regarding the re-admission of appeals dismissed for non-appearance. Applying that principle, the applicants were required to file an application to restore Misc. Civil Application No. 36 of 2023 and demonstrate sufficient cause for their non-appearance on 23 November 2023.',
-        finalityAndAbuse: 'A matter determined by a competent court cannot be reopened through a duplicate application while the previous dismissal remains in force. Filing a replica of the dismissed application was procedurally improper and constituted an abuse of the court process.'
-      },
-
-      // 7. Show Final Decision and Orders
-      decision: {
-        holding: 'Misc. Civil Application No. 39 of 2023 was found to be incompetent, misconceived, and an abuse of the court process.',
-        orders: [
-          'Misc. Civil Application No. 39 of 2023 is STRUCK OUT.',
-          'Costs are awarded against the applicants (Jackson Mrefu and Menyee Mrefu).',
-          'The Court did not determine whether the applicants had sufficient reasons for their original delay in appealing.'
-        ],
-        disposition: 'Application struck out with costs'
-      },
-
-      // 8. Show Laws Cited
-      lawsCited: [
-        {
-          law: 'Civil Procedure (Appeals in Proceedings Originating in Primary Courts) Rules, GN No. 312 of 1964',
-          sections: [
-            'Rule 3 (Application for leave to appeal out of time from Primary Court proceedings; must be in writing, explain delay within 30 days, and accompany draft petition/grounds of objection)',
-            'Rule 17 (Re-admission and restoration of proceedings dismissed for non-appearance upon showing sufficient cause; applied by analogy to applications)'
-          ]
-        },
-        {
-          law: 'Law of Limitation Act, Cap. 89 R.E. 2019',
-          sections: [
-            'Cited erroneously by applicants; held inapplicable to Primary Court appeal time extension procedures.'
-          ]
-        }
-      ],
-
-      // 9. Show Cases Cited
-      casesCited: [
-        'No earlier judicial decisions were cited by name in the ruling. The decision was founded strictly upon Rule 3 & Rule 17 of GN No. 312 of 1964, the principle of finality, and established restoration procedure. (Anti-hallucination guardrail: No invented precedents).'
-      ],
-
-      // 10. Legal Principle - Ratio Decidendi
-      ratioDecidendi: 'When an application for extension of time in a matter originating from a Primary Court is dismissed for want of prosecution, the applicant must seek restoration of that dismissed application and demonstrate sufficient cause for non-appearance. The applicant cannot file a duplicate fresh application seeking the same relief while the earlier dismissal remains in force.',
-
-      // 11. Procedural History
-      proceduralHistory: [
-        { stage: '1. Mwada Primary Court', details: 'Eva Mnyalo filed Civil Case No. 2 of 2023 claiming TZS 7,420,000 for destruction of property and costs.' },
-        { stage: '2. Primary Court Judgment', details: 'Judgment entered in favour of Eva Mnyalo, awarding compensation of TZS 3,710,000.' },
-        { stage: '3. District Court of Babati', details: 'Applicants appealed in Misc. Civil Appeal No. 15 of 2023.' },
-        { stage: '4. District Court Judgment', details: 'Appeal dismissed and Primary Court judgment confirmed in its entirety.' },
-        { stage: '5. First High Court Application', details: 'Misc. Civil Application No. 36 of 2023 filed under certificate of urgency seeking extension of time.' },
-        { stage: '6. Dismissal for Want of Prosecution', details: 'On 23 November 2023, neither applicants nor counsel appeared; High Court dismissed application for want of prosecution.' },
-        { stage: '7. Second High Court Application', details: 'Misc. Civil Application No. 39 of 2023 filed seeking the same extension of time without applying for restoration.' },
-        { stage: '8. High Court Ruling (29 Dec 2023)', details: 'High Court (J.R. Kahyoza, J.) struck out the application with costs as incompetent, misconceived, and an abuse of court process.' }
-      ],
-
-      // 12. Important AI Warnings
-      aiWarnings: [
-        'This ruling did not decide the original property-destruction dispute.',
-        'It did not overturn the TZS 3,710,000 compensation award.',
-        'It did not decide whether an extension of time should be granted on its merits.',
-        'The fresh application failed strictly because the applicants used the wrong procedure.',
-        'The applicants needed to restore Application No. 36 of 2023, not replace it with a duplicate application.',
-        '“Struck out” must not be incorrectly reported as “dismissed on the merits.”',
-        'No previous judicial precedents were cited in the ruling (do not invent cases).'
-      ],
-
-      // Summary object for Amazing Case Page tabs
-      summary: {
-        facts: 'Eva Mnyalo sued Jackson Mrefu and Menyee Mrefu in Mwada Primary Court for property destruction, recovering TZS 3,710,000. Their first appeal to the District Court of Babati was dismissed. Their first High Court extension application (No. 36 of 2023) was dismissed for want of prosecution on 23 November 2023 when applicants and counsel failed to appear. Instead of applying for restoration, they filed duplicate Application No. 39 of 2023.',
-        issues: [
-          'Whether a fresh application for extension of time is competent after an identical application was dismissed for want of prosecution.',
-          'Which law governs extension of time in matters originating from Primary Courts (Rule 3 of GN No. 312 of 1964 vs Law of Limitation Act).',
-          'Whether filing a duplicate application amounts to an abuse of court process.'
-        ],
-        arguments: 'First applicant Jackson Mrefu contended the fresh application was valid. Respondent Eva Mnyalo submitted the application was procedurally incompetent because the applicants were required to seek restoration of the dismissed application No. 36 of 2023.',
-        holding: 'A fresh duplicate application cannot be maintained while the earlier dismissal for want of prosecution stands. The applicants were required under Rule 17 principles of GN No. 312 of 1964 to seek restoration of Application No. 36 of 2023 upon showing sufficient cause. Application No. 39 of 2023 was incompetent, misconceived, and an abuse of court process.',
-        finalOrder: 'Misc. Civil Application No. 39 of 2023 is STRUCK OUT with costs awarded to respondent Eva Mnyalo.',
-        precedents: [
-          'No earlier judicial decisions were cited by name in the ruling. The determination rested strictly upon GN No. 312 of 1964 (Rules 3 and 17) and established procedural principles of finality.'
-        ],
-        statutes: [
-          'Civil Procedure (Appeals in Proceedings Originating in Primary Courts) Rules, GN No. 312 of 1964 (Rules 3 and 17)',
-          'Law of Limitation Act, Cap. 89 R.E. 2019 (Held inapplicable)'
-        ],
-        ratio: 'When an application for extension of time in a Primary Court originating matter is dismissed for want of prosecution, the applicant must seek restoration of that dismissed application and demonstrate sufficient cause. A duplicate application cannot be filed while the earlier dismissal remains in force.',
-        impact: 'Establishes clear procedural discipline for Tanzanian advocates and litigants: a dismissal for want of prosecution creates a binding procedural hurdle that must be resolved through an application for restoration, rather than circumvented by lodging repetitive fresh applications.'
-      },
-
-      relevantPassage: 'High Court of Tanzania [2023] TZHC 23484: Jackson Mrefu and Menyee Mrefu v Eva Mnyalo. Application for extension of time struck out with costs as incompetent and an abuse of court process because applicants filed a duplicate fresh application instead of seeking restoration of their earlier application dismissed for want of prosecution under Rule 17 of GN No. 312 of 1964.',
-
-      // 13. Search Terms / Keywords for AI
-      keywords: [
-        'Jackson Mrefu',
-        'Menyee Mrefu',
-        'Eva Mnyalo',
-        'Jackson Mrefu v Eva Mnyalo',
-        'Jackson Mrefu and Another v Eva Mnyalo',
-        'Jackson Mrefu and Menyee Mrefu v Eva Mnyalo',
-        'Jackson Mrefu Another vs Eva Mnyalo',
-        'Mwada Primary Court',
-        'Babati',
-        'District Court of Babati',
-        'Manyara',
-        'J.R. Kahyoza',
-        'Kahyoza',
-        'Misc. Civil Application No. 39 of 2023',
-        'Misc. Civil Application No. 36 of 2023',
-        'Misc. Civil Appeal No. 15 of 2023',
-        'Civil Case No. 2 of 2023',
-        'Misc Civil Application 39 of 2023',
-        'Misc Civil Application 36 of 2023',
-        'Misc Civil Appeal 15 of 2023',
-        'Civil Case 2 of 2023',
-        '[2023] TZHC 23484',
-        '2023 TZHC 23484',
-        '23484',
-        '2023',
-        'Extension of time after dismissal',
-        'Restoration of dismissed application',
-        'Primary Court appeal extension Tanzania',
-        'Rule 3 GN No. 312 of 1964',
-        'Rule 17 GN No. 312 of 1964',
-        'GN No. 312 of 1964',
-        'GN 312 of 1964',
-        'Application dismissed for want of prosecution',
-        'Abuse of court process Tanzania',
-        'Destruction of property Primary Court',
-        'TZS 3,710,000',
-        'Struck out with costs',
-        'Law of Limitation Act inapplicable Primary Court'
-      ],
-
-      // 14. High-Intent Questions Answerable
-      questionsAnswerable: [
-        'Summarize Jackson Mrefu and Another v Eva Mnyalo [2023] TZHC 23484.',
-        'What should an applicant do when an application for extension of time is dismissed for want of prosecution in Tanzania?',
-        'Can a litigant file a fresh application for extension of time instead of applying for restoration of a dismissed application?',
-        'Which statutory rules govern applications for leave to appeal out of time in proceedings originating from Primary Courts in Tanzania?',
-        'Why was Misc. Civil Application No. 39 of 2023 struck out with costs by the High Court in Babati?'
-      ]
-    },
-    {
       id: 'tz-j-010',
       title: 'National Bank of Commerce (NBC) v. James Mrema',
       fullTitle: 'National Bank of Commerce (NBC) v. James Mrema',
@@ -14414,6 +15679,56 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-048',
+      // === 2023 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata:       {
+          "officialTitle":  "Jackson Mrefu and Menyee Mrefu v Eva Mnyalo",
+          "alternativeTitle":  "Jackson Mrefu and Another vs Eva Mnyalo",
+          "citation":  "[2023] TZHC 23484",
+          "caseNumber":  "Miscellaneous Civil Application No. 39 of 2023",
+          "relatedAppeal":  "Miscellaneous Civil Appeal No. 15 of 2023",
+          "originatingCase":  "Civil Case No. 2 of 2023",
+          "court":  "High Court of Tanzania",
+          "registry":  "Manyara Sub-Registry at Babati",
+          "proceeding":  "Extension-of-time application",
+          "judge":  "J.R. Kahyoza, J.",
+          "decisionDate":  "29 December 2023",
+          "decisionYear":  "2023",
+          "category":  "Civil procedure / restoration",
+          "source":  "Uploaded 2023 PDF",
+          "searchAliases":  [
+                                "Jackson Mrefu",
+                                "Menyee Mrefu",
+                                "Eva Mnyalo",
+                                "TZHC 23484",
+                                "Civil Application 39 of 2023"
+                            ]
+      },
+      caseSummary: "Eva Mnyalo successfully sued Jackson and Menyee Mrefu for compensation arising from destruction of property. After losing their appeal, the applicants sought more time to appeal to the High Court.\n\nTheir first extension application was dismissed for want of prosecution when neither they nor their advocate attended court. Instead of applying to restore that application, they filed another identical application.\n\nThe High Court held that filing a duplicate application was procedurally incorrect and constituted abuse of process. The proper remedy was to seek restoration of the dismissed application.\n\nThe second application was struck out with costs.",
+      caseFacts:       [
+          "Eva claimed TZS 7,420,000 for destruction of property.",
+          "The Primary Court awarded her TZS 3,710,000.",
+          "The District Court upheld that decision.",
+          "Jackson and Menyee failed to appeal to the High Court in time.",
+          "They filed Miscellaneous Civil Application No. 36 of 2023.",
+          "Neither they nor their advocate attended its hearing.",
+          "That application was dismissed for want of prosecution.",
+          "They filed a second application seeking the same extension.",
+          "Eva argued that they should have applied for restoration.",
+          "The High Court agreed with Eva."
+      ],
+      legalIssues:       [
+          "Whether the second extension application was competent.",
+          "Whether dismissal for want of prosecution finally ended the first application.",
+          "Whether the applicants could file an identical replacement application.",
+          "Whether restoration was the proper procedural remedy.",
+          "Whether the new application constituted abuse of court process.",
+          "Whether it should be dismissed or struck out."
+      ],
+      sourcePdf: "legal-documents/2023/Jackson Mrefu  Another vs Eva Mnyalo (Misc Civil Application 39 of 2023) 2023 TZHC 23484 (29 December 2023).pdf",
+      reportData:       {
+          "reportTitle":  "Civil Application Report — Jackson Mrefu and Menyee Mrefu v Eva Mnyalo",
+          "reportConclusion":  "The applicants used the wrong procedure by filing a duplicate extension application. They should have sought restoration, so the application was struck out with costs."
+      },
       title: 'Jackson Mrefu and Another v Eva Mnyalo',
       fullTitle: 'Jackson Mrefu and Menyee Mrefu v Eva Mnyalo',
       appellants: ['Jackson Mrefu', 'Menyee Mrefu'],
@@ -14449,12 +15764,6 @@ const SLCMS_STATE = {
         'They filed Misc. Civil Application No. 36 of 2023 seeking an extension of time under a certificate of urgency.',
         'The High Court scheduled the hearing for 23 November 2023, but neither the applicants nor their advocate appeared, and the Court dismissed the application for want of prosecution.',
         'The applicants, through the same advocate, then filed Misc. Civil Application No. 39 of 2023 seeking the identical extension of time without applying to restore the dismissed application.'
-      ],
-      legalIssues: [
-        'Whether a fresh application for an extension of time was competent after an earlier application seeking the same relief had been dismissed for want of prosecution.',
-        'Which law governs applications for extension of time in cases originating from Primary Courts (Rule 3 of GN No. 312 of 1964 vs Law of Limitation Act).',
-        'Whether the applicants were required to seek restoration of their dismissed application before filing any further proceedings.',
-        'Whether filing an identical duplicate application amounted to an abuse of court process.'
       ],
       partiesArguments: {
         applicants: 'The first applicant, appearing without an advocate, argued that the fresh application was properly filed. The second applicant, unrepresented, made no substantive submission.',
@@ -14525,6 +15834,58 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-049',
+      // === 2023 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata:       {
+          "officialTitle":  "Lakairo Investment Limited v Commissioner General, Tanzania Revenue Authority",
+          "alternativeTitle":  "Lakairo Investment vs TRA",
+          "citation":  "[2023] TZCA 18021",
+          "caseNumber":  "Civil Appeal No. 452 of 2021",
+          "originatingMatter":  "Tax Appeal No. 10 of 2020",
+          "court":  "Court of Appeal of Tanzania",
+          "registry":  "Dar es Salaam",
+          "proceeding":  "Tax appeal",
+          "coram":  "Mwarija, J.A.; Kente, J.A.; Muruke, J.A.",
+          "decisionDate":  "29 December 2023",
+          "decisionYear":  "2023",
+          "category":  "Customs and tax limitation",
+          "amountDisputed":  "TZS 4,067,188.39",
+          "source":  "Uploaded 2023 PDF",
+          "searchAliases":  [
+                                "Lakairo Investment",
+                                "TRA",
+                                "Commissioner General",
+                                "TZCA 18021",
+                                "Civil Appeal 452 of 2021",
+                                "EACCMA"
+                            ]
+      },
+      caseSummary: "TRA demanded approximately TZS 4.07 million in taxes and duties for goods allegedly diverted into Tanzania’s domestic market without proper payment.\n\nLakairo disputed the tariff calculation and applied for administrative review. However, its review application was filed outside the prescribed 30-day period. TRA also delayed responding.\n\nThe Court of Appeal held that TRA’s delayed response did not validate Lakairo’s already late application. The statutory deeming provision applied only to a competent review application filed within time.\n\nLakairo should have sought an extension of time. Its appeal was dismissed with costs.",
+      caseFacts:       [
+          "TRA issued a tax-demand letter dated 24 January 2017.",
+          "The demand was for TZS 4,067,188.39.",
+          "The goods were alleged to have been diverted into the domestic market.",
+          "Lakairo maintained that the goods originated in Kenya.",
+          "It argued that East African preferential tariff rates applied.",
+          "Lakairo submitted an application for review.",
+          "The application was outside the statutory 30-day period.",
+          "TRA failed to respond within 30 days.",
+          "The Tax Appeals Board nevertheless entertained the dispute.",
+          "The Tax Appeals Tribunal found that the review application was time-barred."
+      ],
+      legalIssues:       [
+          "Whether Lakairo’s review application was filed within 30 days.",
+          "Whether the relevant demand and service dates were disputed.",
+          "Whether TRA’s failure to respond amounted to automatic approval.",
+          "Whether the deeming provision applied to an application filed out of time.",
+          "Whether TRA’s delay could cure Lakairo’s procedural default.",
+          "Whether the Board had jurisdiction to entertain the late review.",
+          "Whether Lakairo should have applied for an extension of time."
+      ],
+      sourcePdf: "legal-documents/2023/Lakairo Investment Limited vs Commissioner General Tanzania Revenue Authority (Civil Appeal No 452 of 2021) 2023 TZCA 18021 (29 December 2023).pdf",
+      reportData:       {
+          "reportTitle":  "Tax Appeal Report — Lakairo Investment Limited v Commissioner General, Tanzania Revenue Authority",
+          "reportConclusion":  "TRA’s delayed response could not legalize an application for review that was already time-barred. The appeal was dismissed with costs."
+      },
       title: 'Lakairo Investment Limited v Commissioner General, Tanzania Revenue Authority',
       fullTitle: 'Lakairo Investment Limited v Commissioner General, Tanzania Revenue Authority',
       appellant: 'Lakairo Investment Limited',
@@ -14655,6 +16016,57 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-050',
+      // === 2023 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata:       {
+          "officialTitle":  "Richard Amnaay v Philipo Daffi Lolo",
+          "alternativeTitle":  "Richard Amnaay vs Phillipo Daffi Lolo",
+          "citation":  "[2023] TZHC 23540",
+          "caseNumber":  "Land Appeal No. 185 of 2022",
+          "originatingMatter":  "Land Application No. 8 of 2016",
+          "court":  "High Court of Tanzania",
+          "registry":  "Arusha District Registry",
+          "proceeding":  "Land appeal",
+          "judge":  "J.C. Tiganga, J.",
+          "decisionDate":  "29 December 2023",
+          "decisionYear":  "2023",
+          "category":  "Land ownership / proof of fraud",
+          "property":  "Three acres at Endashangwet Village",
+          "source":  "Uploaded 2023 PDF",
+          "searchAliases":  [
+                                "Richard Amnaay",
+                                "Philipo Daffi Lolo",
+                                "TZHC 23540",
+                                "Land Appeal 185 of 2022",
+                                "Endashangwet"
+                            ]
+      },
+      caseSummary: "Richard Amnaay claimed that Philipo Daffi Lolo had invaded three acres of land allocated to him during Operesheni Vijiji in 1975. Philipo claimed that he inherited the property from his parents.\n\nThe dispute had passed through tribunals and courts since 2007. Earlier decisions were nullified because the Ward Tribunal lacked territorial jurisdiction and had an improper quorum.\n\nIn the new proceedings, the District Land and Housing Tribunal decided in Philipo’s favour. The High Court found that Richard failed to prove ownership or his allegations that the respondent’s documents were fraudulent.\n\nThe appeal was dismissed. Because the dispute had continued for over 15 years, no costs were ordered.",
+      caseFacts:       [
+          "The dispute concerned approximately three acres.",
+          "The land was situated at Endashangwet Village in Karatu.",
+          "Richard claimed allocation during Operesheni Vijiji in 1975.",
+          "Philipo claimed inheritance from his parents.",
+          "The litigation began in 2007.",
+          "Richard initially succeeded before the Ward Tribunal.",
+          "Those earlier decisions were later nullified for jurisdictional and quorum defects.",
+          "The dispute restarted before the District Land and Housing Tribunal.",
+          "The Tribunal decided in Philipo’s favour.",
+          "Richard alleged that some documents were forged but did not prove the allegation."
+      ],
+      legalIssues:       [
+          "Whether the District Land and Housing Tribunal correctly found Philipo to be the owner.",
+          "Whether Richard proved allocation of the land to him.",
+          "Whether the Tribunal improperly rejected Richard’s witnesses or statements.",
+          "Whether Philipo proved ownership through inheritance.",
+          "Whether the documents relied upon by Philipo were fraudulent.",
+          "What standard applied to allegations of fraud in civil proceedings.",
+          "Whether Richard discharged the burden of proving ownership."
+      ],
+      sourcePdf: "legal-documents/2023/Richard Amnaay vs Philipo Daffi Lolo (Land Appeal No 185 of 2022) 2023 TZHC 23540 (29 December 2023).pdf",
+      reportData:       {
+          "reportTitle":  "Land Appeal Report — Richard Amnaay v Philipo Daffi Lolo",
+          "reportConclusion":  "Richard failed to prove ownership or fraud to the required standard. The Tribunal’s decision was upheld, and the appeal was dismissed without costs."
+      },
       title: 'Richard Amnaay v Phillipo Daffi Lolo',
       fullTitle: 'Richard Amnaay v Phillipo Daffi Lolo (also cited as Philipo Daffi Lolo)',
       appellant: 'Richard Amnaay',
@@ -14784,6 +16196,58 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-051',
+      // === 2023 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata:       {
+          "officialTitle":  "Ronilick Kasambara Mchami v Brighton B.L. Kilewa and Three Others",
+          "otherRespondents":  "Bishop Paulo Isaki Akyoo; Governing Board of Makumira University; Registered Trustees of ELCT",
+          "citation":  "[2023] TZHC 23503",
+          "caseNumber":  "Labour Complaint No. 4 of 2013",
+          "natureOfClaim":  "Employment-related defamation",
+          "court":  "High Court of Tanzania, Labour Division",
+          "registry":  "Arusha",
+          "proceeding":  "Labour complaint",
+          "judge":  "J.C. Tiganga, J.",
+          "decisionDate":  "29 December 2023",
+          "decisionYear":  "2023",
+          "category":  "Labour law / defamation",
+          "source":  "Uploaded 2023 PDF",
+          "searchAliases":  [
+                                "Ronilick Mchami",
+                                "Brighton Kilewa",
+                                "Bishop Paulo Akyoo",
+                                "Makumira University",
+                                "ELCT",
+                                "TZHC 23503"
+                            ]
+      },
+      caseSummary: "Dr. Ronilick Mchami brought an employment-related defamation claim against university and church officials following his removal or return from Makumira University.\n\nHe alleged that letters and public statements concerning him were defamatory and damaged his professional reputation. The Court held that parties were bound by their pleadings and could not introduce unpleaded employment questions into the defamation case.\n\nThe complainant failed to establish that the letters were defamatory. The subsequent statements were also not actionable because they were protected by qualified privilege: the university community had a legitimate interest in receiving the information, and malice was not proved.\n\nThe complaint was dismissed with no order as to costs.",
+      caseFacts:       [
+          "Dr. Mchami was a theologian, advocate and university lecturer.",
+          "He began serving as an assistant lecturer in 1988.",
+          "He worked at what became Makumira University College.",
+          "A governing-board decision affected his continued service in 2006.",
+          "Letters dated 23 January and 28 April 2006 communicated that decision.",
+          "Bishop Paulo Akyoo later addressed university lecturers, staff and students.",
+          "Dr. Mchami alleged that the letters and statements damaged his reputation.",
+          "The respondents denied defamation.",
+          "Related employment issues had already been considered in earlier proceedings.",
+          "The Court found no proof of malicious publication."
+      ],
+      legalIssues:       [
+          "Whether the three disputed letters were defamatory.",
+          "Whether Bishop Akyoo’s subsequent statements were defamatory.",
+          "Whether the statements referred to and were published concerning the complainant.",
+          "Whether the complainant suffered professional or reputational damage.",
+          "Whether the communications were protected by qualified privilege.",
+          "Whether malice defeated the defence of qualified privilege.",
+          "Whether unpleaded employment questions could be determined.",
+          "Whether the complainant was entitled to damages or other relief."
+      ],
+      sourcePdf: "legal-documents/2023/Ronilick Kasambara Mchami vs Brighton B L Kilewa   3 Others (Labour Complaint No 04 of 2013) 2023 TZHC 23503 (29 December 2023).pdf",
+      reportData:       {
+          "reportTitle":  "Labour Complaint Report — Ronilick Kasambara Mchami v Brighton B.L. Kilewa and Three Others",
+          "reportConclusion":  "The complainant failed to prove actionable defamation or malice. The communications were either non-defamatory or protected by qualified privilege, and the complaint was dismissed."
+      },
       title: 'Dr. Ronilick Kasambara Mchami v Brighton B.L. Kilewa and Three Others',
       fullTitle: 'Dr. Ronilick Kasambara Mchami v Brighton B.L. Kilewa, Bishop Paulo Isaki Akyoo, Governing Board of Makumira University & Registered Trustees of the Evangelical Lutheran Church in Tanzania (ELCT)',
       complainant: 'Dr. Ronilick Kasambara Mchami',
@@ -14944,6 +16408,58 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-052',
+      // === 2023 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata:       {
+          "officialTitle":  "Safari Arra and Mogusha Joseph v Paulo Yakobo",
+          "alternativeTitle":  "Safari Arra and Another vs Paulo Yakobo",
+          "citation":  "[2023] TZHC 23679",
+          "caseNumber":  "Land Appeal No. 106 of 2022",
+          "originatingMatter":  "Land Application No. 119 of 2023",
+          "court":  "High Court of Tanzania",
+          "registry":  "Arusha District Registry",
+          "proceeding":  "Land appeal",
+          "judge":  "Gwae, J.",
+          "decisionDate":  "22 December 2023",
+          "decisionYear":  "2023",
+          "category":  "Competing land sales",
+          "property":  "Disputed agricultural land at Magara/Maweni",
+          "source":  "Uploaded 2023 PDF",
+          "searchAliases":  [
+                                "Safari Arra",
+                                "Mogusha Joseph",
+                                "Paulo Yakobo",
+                                "TZHC 23679",
+                                "Land Appeal 106 of 2022",
+                                "priority principle"
+                            ]
+      },
+      caseSummary: "Paulo Yakobo and Mogusha Joseph claimed interests in the same land through separate sale agreements with Safari Arra.\n\nPaulo relied on a 2008 sale agreement for nine acres. Mogusha relied on a 2009 agreement for six acres. Although the agreements described different sizes and locations, their boundaries indicated that they concerned the same land.\n\nThe High Court applied the priority principle: where competing interests concern the same property, the purchaser who acquired the interest first generally holds the superior claim.\n\nPaulo’s 2008 purchase took priority over Mogusha’s 2009 purchase. The appeal was dismissed, and Safari was ordered to bear costs.",
+      caseFacts:       [
+          "Paulo claimed to have purchased nine acres from Safari in 2008.",
+          "Mogusha claimed to have purchased six acres from Safari in 2009.",
+          "Both parties produced written sale agreements.",
+          "Safari denied selling the land to Paulo.",
+          "Safari supported Mogusha’s later purchase.",
+          "The descriptions used different measurements and locations.",
+          "The stated boundaries were materially the same.",
+          "The Tribunal found Paulo to be the lawful owner.",
+          "Safari was ordered to compensate Mogusha.",
+          "The High Court upheld those orders."
+      ],
+      legalIssues:       [
+          "Whether the two sale agreements concerned the same land.",
+          "Whether the Tribunal should have visited the disputed property.",
+          "Whether Paulo’s 2008 agreement was genuine.",
+          "Whether Mogusha acquired a valid interest in 2009.",
+          "Which purchaser held the superior interest.",
+          "Whether the priority principle applied.",
+          "Whether Safari should compensate the later purchaser."
+      ],
+      sourcePdf: "legal-documents/2023/Safari Arra  another vs Paulo Yakobo (Land Appeal No 106 of 2022) 2023 TZHC 23679 (22 December 2023).pdf",
+      reportData:       {
+          "reportTitle":  "Land Appeal Report — Safari Arra and Mogusha Joseph v Paulo Yakobo",
+          "reportConclusion":  "Paulo’s earlier 2008 purchase created the superior interest. The appeal was dismissed, and the Tribunal’s ownership and compensation orders remained in force."
+      },
       title: 'Safari Arra and Another v Paulo Yakobo',
       fullTitle: 'Safari Arra and Mogusha Joseph v Paulo Yakobo (also cited as Safari Ara v Paulo Yakobo)',
       appellants: [
@@ -15069,6 +16585,60 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-053',
+      // === 2023 PREPARED CASE KNOWLEDGE (FOUR CATEGORIES & 12 SEARCHABLE FIELDS) ===
+      searchMetadata:       {
+          "officialTitle":  "Theobat Lameck Mlyuka v Republic",
+          "alternativeTitle":  "Theobat Mlyuka vs The Republic",
+          "citation":  "[2023] TZHC 23507",
+          "caseNumber":  "Criminal Appeal No. 51 of 2023",
+          "originatingCase":  "Criminal Case No. 21 of 2021",
+          "court":  "High Court of Tanzania",
+          "registry":  "Iringa Sub-Registry",
+          "proceeding":  "Criminal appeal",
+          "judge":  "I.C. Mugeta, J.",
+          "decisionDate":  "29 December 2023",
+          "decisionYear":  "2023",
+          "category":  "Rape / assessment of victim testimony",
+          "sentenceAppealed":  "Two concurrent 30-year sentences",
+          "source":  "Uploaded 2023 PDF",
+          "dateWarning":  "Source verification warning: This information appears inconsistent in the supplied judgment. Confirm it using the original court record.",
+          "searchAliases":  [
+                                "Theobat Mlyuka",
+                                "Theobat Lameck",
+                                "TZHC 23507",
+                                "Criminal Appeal 51 of 2023",
+                                "Mufindi rape case"
+                            ]
+      },
+      caseSummary: "Theobat Mlyuka was convicted of two counts of raping his 11-year-old granddaughter and received concurrent sentences of 30 years.\n\nThe High Court accepted that the child was 11 and had experienced sexual intercourse. However, it found that the evidence identifying the appellant as the perpetrator required greater caution.\n\nThe source of the report was unclear, material witnesses were not called, and the trial court failed to sufficiently explore the defence allegation of family conflict and possible fabrication. Because the victim’s evidence was the only direct evidence identifying the appellant, the Court found it unsafe to sustain the conviction.\n\nThe appeal was allowed, the convictions and sentences were set aside and the appellant was ordered released.",
+      caseFacts:       [
+          "The complainant was the appellant’s 11-year-old granddaughter.",
+          "Two incidents were alleged.",
+          "The stated dates were 21 and 29 February 2022.",
+          "One incident allegedly occurred in a house.",
+          "The other allegedly occurred in a field while harvesting ulanzi.",
+          "The medical evidence showed that the child had no hymen.",
+          "The appellant was approximately 62 years old.",
+          "He denied committing the offences.",
+          "The defence suggested family conflict and possible fabrication.",
+          "The trial court imposed concurrent 30-year prison sentences."
+      ],
+      legalIssues:       [
+          "Whether the child was sexually penetrated.",
+          "Whether the appellant was the person who committed the acts.",
+          "Whether the child’s evidence passed the test of truthfulness.",
+          "Whether the reporting history was sufficiently explained.",
+          "Whether material witnesses should have been called.",
+          "Whether the trial court properly assisted the unrepresented accused.",
+          "Whether family conflict created a possibility of fabrication.",
+          "Whether the prosecution proved both counts beyond reasonable doubt."
+      ],
+      sourcePdf: "legal-documents/2023/Theobat Lameck Mlyuka vs Republic (Criminal Appeal No 51 of 2023) 2023 TZHC 23507 (29 December 2023).pdf",
+      reportData:       {
+          "reportTitle":  "Criminal Appeal Report — Theobat Lameck Mlyuka v Republic",
+          "reportConclusion":  "Although sexual activity was established, the evidence did not safely identify the appellant as the perpetrator. The convictions and sentences were set aside.",
+          "sourceWarnings":  "Source verification warning: This information appears inconsistent in the supplied judgment. Confirm it using the original court record."
+      },
       title: 'Theobat Lameck Mlyuka v Republic',
       fullTitle: 'Theobat Lameck Mlyuka v Republic (also cited as Theobat Mlyuka v Republic)',
       appellant: 'Theobat Lameck Mlyuka',
@@ -15186,6 +16756,56 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-054',
+      // === 2024 PREPARED CASE KNOWLEDGE (12 SEARCHABLE FIELDS & REPORT DATA) ===
+      searchMetadata: {
+    "officialTitle":  "Alfa Ramadhani Athuman v Republic",
+    "alternativeTitle":  "Alfa Ramadhani Athuman vs Republic",
+    "citation":  "[2024] TZHC 11161",
+    "caseNumber":  "DC Criminal Appeal No. 22104 of 2024",
+    "originatingCase":  "Criminal Case No. 51 of 2023",
+    "court":  "High Court of Tanzania",
+    "registry":  "Dodoma Sub-Registry",
+    "proceeding":  "Criminal appeal",
+    "judge":  "Musokwa, J.",
+    "decisionDate":  "31 December 2024",
+    "decisionYear":  "2024",
+    "category":  "Criminal appeal",
+    "legalSubject":  "Rape; credibility and sufficiency of evidence",
+    "outcome":  "Appeal allowed; conviction and sentence quashed",
+    "source":  "Uploaded 2024 PDF",
+    "searchAliases":  [
+                          "Alfa Athuman",
+                          "Alfa Ramadhani",
+                          "Criminal Appeal 22104",
+                          "Criminal Case 51 of 2023",
+                          "rape case 2024",
+                          "TZHC 11161"
+                      ]
+},
+      caseSummary: "Alfa Ramadhani Athuman appealed against his conviction for rape and the sentence of thirty years’ imprisonment. The High Court identified material contradictions in the prosecution evidence and noted that an important witness was not called.\n\nThe prosecution therefore failed to establish guilt beyond reasonable doubt.\n\nHolding: The evidence was insufficient to sustain the conviction.\n\nFinal result: The appeal was allowed, the conviction and sentence were quashed, and the appellant was ordered released unless held for another lawful reason.",
+      caseFacts: [
+    "The alleged offence occurred on 18 September 2023.",
+    "The alleged location was Chungu Village, Ihanja Ward, Ikungi.",
+    "The complainant was reported to be eighteen years old.",
+    "The prosecution alleged that intercourse occurred without consent.",
+    "The appellant denied committing the offence.",
+    "The trial court convicted him of rape.",
+    "He received a thirty-year prison sentence.",
+    "The evidence contained material contradictions.",
+    "A potentially important landlord was not called as a prosecution witness."
+],
+      legalIssues: [
+    "Whether rape was proved beyond reasonable doubt.",
+    "Whether the complainant’s evidence was credible and sufficient.",
+    "Whether contradictions in the prosecution evidence created reasonable doubt.",
+    "What inference should be drawn from failure to call an important witness.",
+    "Whether the conviction and sentence were legally sustainable."
+],
+      sourcePdf: "legal-documents/2024/Alfa Ramadhani Athuman v Republic 2024 TZHC 11161 (31 December 2024).pdf",
+      reportData: {
+    "reportTitle":  "Criminal Appeal Report — Alfa Ramadhani Athuman v Republic",
+    "reportConclusion":  "The prosecution failed to prove the charge beyond reasonable doubt. The conviction and thirty-year sentence were quashed."
+},
       title: 'Alfa Ramadhani Athuman v Republic',
       citation: '[2024] TZHC 11161',
       caseNumber: 'DC Criminal Appeal No. 22104 of 2024',
@@ -15354,6 +16974,57 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-055',
+      // === 2024 PREPARED CASE KNOWLEDGE (12 SEARCHABLE FIELDS & REPORT DATA) ===
+      searchMetadata: {
+    "officialTitle":  "Bank of Africa Tanzania Limited v Patrick Mashele and Another",
+    "alternativeTitle":  "Bank of Africa Tanzania Limited vs Patrick Mashele and Felix Jia",
+    "citation":  "[2024] TZCA 1303",
+    "caseNumber":  "Civil Application No. 527/18 of 2023",
+    "originatingCase":  "Labour Revision No. 53 of 2022",
+    "court":  "Court of Appeal of Tanzania",
+    "registry":  "Dar es Salaam",
+    "proceeding":  "Civil application for stay of execution",
+    "judge":  "Wambali, J.A.",
+    "decisionDate":  "24 December 2024",
+    "decisionYear":  "2024",
+    "category":  "Civil application for stay of execution",
+    "legalSubject":  "Employment compensation and stay pending appeal",
+    "outcome":  "Stay granted subject to provision of security",
+    "source":  "Uploaded 2024 PDF",
+    "searchAliases":  [
+                          "Bank of Africa",
+                          "Patrick Mashele",
+                          "Felix Jia",
+                          "Civil Application 527/18",
+                          "Labour Revision 53",
+                          "TZCA 1303",
+                          "stay of execution"
+                      ]
+},
+      caseSummary: "Bank of Africa applied to stay execution of a labour decision while pursuing an appeal. Execution had been commenced for approximately TZS 686,374,785.\n\nThe Court of Appeal found that execution could cause substantial loss and that the bank was prepared to provide security.\n\nHolding: The conditions for stay of execution had been satisfied.\n\nFinal result: Stay was granted on condition that the applicant provide a bank guarantee for TZS 686,374,785 within forty-five days.",
+      caseFacts: [
+    "The respondents commenced an employment dispute.",
+    "They alleged unfair termination.",
+    "They sought reinstatement or twelve months’ compensation and terminal benefits.",
+    "The High Court upheld the relevant labour determination.",
+    "Execution was commenced for TZS 686,374,785.",
+    "The execution process involved attachment and possible sale.",
+    "Bank of Africa intended to challenge the decision.",
+    "The bank applied for stay of execution.",
+    "It offered security for satisfaction of the eventual decree."
+],
+      legalIssues: [
+    "Whether execution would cause substantial loss to the applicant.",
+    "Whether the application was brought without unreasonable delay.",
+    "Whether adequate security had been offered.",
+    "Whether execution should be stayed pending appeal.",
+    "What conditions should accompany the stay order."
+],
+      sourcePdf: "legal-documents/2024/Bank of Africa Tanzania Limited vs Patrick Mashele Another (Civil Application No 527 of 2023) 2024 TZCA 1303 (24 December 2024).pdf",
+      reportData: {
+    "reportTitle":  "Stay of Execution Report — Bank of Africa v Mashele and Another",
+    "reportConclusion":  "The application satisfied the requirements for stay of execution. Stay was granted subject to a bank guarantee of TZS 686,374,785 within forty-five days. Costs were to abide the appeal."
+},
       title: 'Bank of Africa Tanzania Limited v Patrick Mashele and Another',
       citation: '[2024] TZCA 1303',
       caseNumber: 'Civil Application No. 527/18 of 2023',
@@ -15519,6 +17190,57 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-056',
+      // === 2024 PREPARED CASE KNOWLEDGE (12 SEARCHABLE FIELDS & REPORT DATA) ===
+      searchMetadata: {
+    "officialTitle":  "Catherine Edwin Mbele v Godfrey Abednego Mushi",
+    "alternativeTitle":  "Catherine Edwin Mbele vs Godfrey Abednego Mushi (Civil Appeal No 282422024) 2024 TZHC 11406",
+    "citation":  "[2024] TZHC 11152",
+    "alternativeCitation":  "[2024] TZHC 11406",
+    "caseNumber":  "Civil Appeal No. 28242 of 2024",
+    "lowerAppeal":  "PC Matrimonial Appeal No. 10532 of 2024",
+    "originatingCase":  "Matrimonial Cause No. 1855 of 2023",
+    "court":  "High Court of Tanzania",
+    "registry":  "Temeke Sub-Registry, One Stop Judicial Centre",
+    "proceeding":  "Matrimonial procedural appeal",
+    "judge":  "Mwaipopo, J.",
+    "decisionDate":  "31 December 2024",
+    "decisionYear":  "2024",
+    "category":  "Matrimonial procedural appeal",
+    "legalSubject":  "Competency and registration of matrimonial appeal",
+    "outcome":  "Defective appeal removed; twenty-one days allowed for refiling",
+    "source":  "Uploaded 2024 PDF (Files 3 and 4 merged)",
+    "duplicateNote":  "Files 3 and 4 represent the same judgment. Merged into single canonical record with dual citations [2024] TZHC 11152 and [2024] TZHC 11406.",
+    "searchAliases":  [
+                          "Catherine Mbele",
+                          "Godfrey Mushi",
+                          "Civil Appeal 28242",
+                          "Matrimonial Cause 1855",
+                          "TZHC 11152",
+                          "TZHC 11406"
+                      ]
+},
+      caseSummary: "A preliminary objection was raised against the competency of the appeal. The matter had been registered as an ordinary civil appeal in eCMS, although it originated from a Primary Court matrimonial proceeding. A petition of appeal had also been used instead of the required memorandum of appeal.\n\nHolding: Registration under the wrong case category was a fundamental procedural defect.\n\nFinal result: The defective proceeding was removed, but the appellant was allowed twenty-one days to file a proper appeal in the correct category.",
+      caseFacts: [
+    "The dispute originated in a Primary Court matrimonial cause.",
+    "It proceeded to the District Court as a matrimonial appeal.",
+    "It was subsequently taken to the High Court.",
+    "The High Court proceeding was registered as an ordinary Civil Appeal.",
+    "A petition of appeal was filed instead of a memorandum of appeal.",
+    "The respondent raised a preliminary objection.",
+    "The objection challenged the competency of the entire appeal."
+],
+      legalIssues: [
+    "Whether the appeal was registered in the correct eCMS category.",
+    "Whether a petition of appeal could substitute a memorandum of appeal.",
+    "Whether the procedural errors rendered the appeal incompetent.",
+    "Whether the defects could be corrected within the existing case.",
+    "Whether the appellant should receive time to institute a proper appeal."
+],
+      sourcePdf: "legal-documents/2024/Catherine Edwin Mbele vs Godfrey Abednego Mushi 2024 TZHC 11152 (31 December 2024).pdf",
+      reportData: {
+    "reportTitle":  "Matrimonial Appeal Competency Report — Mbele v Mushi",
+    "reportConclusion":  "The appeal was registered using an incorrect procedure and was therefore incompetent. The appellant was permitted to file a proper appeal within twenty-one days. No costs were ordered."
+},
       canonicalCaseId: 'TZHC-2024-CIVIL-28242',
       title: 'Catherine Edwin Mbele v Godfrey Abednego Mushi',
       citation: '[2024] TZHC 11152 / [2024] TZHC 11406',
@@ -15703,6 +17425,55 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-057',
+      // === 2024 PREPARED CASE KNOWLEDGE (12 SEARCHABLE FIELDS & REPORT DATA) ===
+      searchMetadata: {
+    "officialTitle":  "Charles Mbwana v Mariam John Mhina and G4317 CPL Charles",
+    "alternativeTitle":  "Charles Mbwana vs Mariam John Mhina and Another",
+    "citation":  "[2024] TZHC 11144",
+    "caseNumber":  "Misc. Civil Application No. 000018813 of 2024",
+    "originatingCase":  "Matrimonial Cause No. 66 of 2009",
+    "court":  "High Court of Tanzania",
+    "registry":  "Temeke Sub-Registry, One Stop Judicial Centre",
+    "proceeding":  "Application for extension of time",
+    "judge":  "Mwaipopo, J.",
+    "decisionDate":  "31 December 2024",
+    "decisionYear":  "2024",
+    "category":  "Application for extension of time",
+    "legalSubject":  "Delayed matrimonial appeal and eCMS reference number",
+    "outcome":  "Application dismissed; parties to share costs",
+    "source":  "Uploaded 2024 PDF",
+    "searchAliases":  [
+                          "Charles Mbwana",
+                          "Mariam Mhina",
+                          "G4317 CPL Charles",
+                          "Application 18813",
+                          "Matrimonial Cause 66",
+                          "TZHC 11144"
+                      ]
+},
+      caseSummary: "The applicant requested additional time to appeal against a matrimonial decision. He claimed that he could not file the appeal because the required eCMS reference number was unavailable.\n\nThe Court found no evidence showing continuous follow-up during approximately 210 days. The allegation that the lower court failed to evaluate evidence was not an apparent illegality capable of excusing the delay.\n\nHolding: The applicant failed to demonstrate sufficient cause for extending time.\n\nFinal result: The application was dismissed, with costs shared between the parties.",
+      caseFacts: [
+    "The intended judgment was delivered on 26 October 2023.",
+    "The applicant approached an advocate on 7 November 2023.",
+    "The advocate wrote to the registry on 8 November 2023.",
+    "The applicant claimed that eCMS required a reference number.",
+    "The reference number was allegedly obtained on 1 August 2024.",
+    "Approximately 210 days were not adequately explained.",
+    "No documentary evidence proved the alleged continuous follow-ups.",
+    "The applicant also alleged improper evaluation of evidence."
+],
+      legalIssues: [
+    "Whether an unavailable eCMS reference number constituted sufficient cause.",
+    "Whether the applicant accounted for every day of delay.",
+    "Whether the applicant acted diligently.",
+    "Whether the alleged evidential error amounted to apparent illegality.",
+    "Whether an extension of time should be granted."
+],
+      sourcePdf: "legal-documents/2024/Charles Mbwana vs Mariam John Mhina Another (Misc. Civil Application No. 000018813 of 2024) 2024 TZHC 11144 (31 December 2024).pdf",
+      reportData: {
+    "reportTitle":  "Extension of Time Report — Charles Mbwana v Mariam Mhina and Another",
+    "reportConclusion":  "The applicant did not account for the entire delay and did not establish apparent illegality. The application was dismissed."
+},
       title: 'Charles Mbwana v Mariam John Mhina and Another',
       citation: '[2024] TZHC 11144',
       caseNumber: 'Misc. Civil Application No. 000018813 of 2024',
@@ -15871,6 +17642,57 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-058',
+      // === 2024 PREPARED CASE KNOWLEDGE (12 SEARCHABLE FIELDS & REPORT DATA) ===
+      searchMetadata: {
+    "officialTitle":  "Diana Ferdinand Makiluli v Diana Ferdinand Makiluli as Administratrix of the Estate of Enock Mnkande Rabieth",
+    "alternativeTitle":  "Diana Ferdinand Makiluli v Estate of Enock Mnkande Rabieth",
+    "citation":  "[2024] TZHC 11172",
+    "caseNumber":  "Matrimonial Appeal No. 24129 of 2024",
+    "originatingCase":  "Matrimonial Cause No. 288 of 2023",
+    "court":  "High Court of Tanzania",
+    "registry":  "Temeke Sub-Registry, One Stop Judicial Centre",
+    "proceeding":  "Matrimonial appeal",
+    "judge":  "Mwaipopo, J.",
+    "decisionDate":  "31 December 2024",
+    "decisionYear":  "2024",
+    "category":  "Matrimonial appeal",
+    "legalSubject":  "Death after hearing; abatement and divorce settlement",
+    "outcome":  "Appeal dismissed; no order as to costs",
+    "source":  "Uploaded 2024 PDF",
+    "searchAliases":  [
+                          "Diana Makiluli",
+                          "Enock Rabieth",
+                          "Estate of Enock Rabieth",
+                          "Matrimonial Appeal 24129",
+                          "Matrimonial Cause 288",
+                          "TZHC 11172"
+                      ]
+},
+      caseSummary: "The parties had petitioned for divorce and signed a settlement dealing with their children, maintenance and matrimonial property. The husband died after the hearing had concluded but before judgment was delivered.\n\nThe High Court held that the Civil Procedure Code could fill the procedural gap in the Law of Marriage Act. Under Order XXII rule 6, death occurring after conclusion of the hearing did not automatically cause the proceeding to abate.\n\nHolding: The trial court could pronounce judgment despite the husband’s death after the hearing.\n\nFinal result: The appeal was dismissed without an order for costs.",
+      caseFacts: [
+    "The parties married on 5 September 2010.",
+    "The marriage ceremony occurred at the University of Arusha SDA Church.",
+    "They had three children: Alvin, Rovin and Shavin.",
+    "Their marital relationship deteriorated in 2023.",
+    "The wife petitioned for divorce.",
+    "She requested custody, maintenance and division of matrimonial property.",
+    "The parties signed a deed of settlement on 15 January 2024.",
+    "The settlement covered custody, access, school fees, maintenance, medical costs and property.",
+    "The husband died after the hearing but before judgment.",
+    "The District Court subsequently delivered judgment and adopted the settlement."
+],
+      legalIssues: [
+    "Whether the proceeding abated when the husband died.",
+    "Whether death prevented delivery of judgment after completion of the hearing.",
+    "Whether the Civil Procedure Code could apply to matrimonial proceedings.",
+    "Whether Order XXII rule 6 filled a gap in the Law of Marriage Act.",
+    "Whether the District Court lawfully pronounced judgment."
+],
+      sourcePdf: "legal-documents/2024/Diana Ferdinandi Makiluli vs Diana Ferdanand Makiluli(As an administratrix of the estate of the late   Enock Mnkande Rabieth ) 2024 TZHC 11172 (31 December 2024).pdf",
+      reportData: {
+    "reportTitle":  "Matrimonial Abatement Report — Makiluli v Estate of Rabieth",
+    "reportConclusion":  "Death after completion of the hearing did not automatically terminate the proceeding. The District Court was entitled to pronounce judgment. The appeal was dismissed."
+},
       title: 'Diana Ferdinand Makiluli v Diana Ferdinand Makiluli, as Administratrix of the Estate of the Late Enock Mnkande Rabieth',
       citation: '[2024] TZHC 11172',
       caseNumber: 'Matrimonial Appeal No. 24129 of 2024',
@@ -16044,6 +17866,56 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-059',
+      // === 2024 PREPARED CASE KNOWLEDGE (12 SEARCHABLE FIELDS & REPORT DATA) ===
+      searchMetadata: {
+    "officialTitle":  "Majanja Lukamba v Charles Zacharia and Two Others",
+    "alternativeTitle":  "Majanja Lukamba vs Charles Zacharia, Nyangili Kasinye and Agnes Nyangajo",
+    "citation":  "[2024] TZHC 11081",
+    "caseNumber":  "Misc. Land Case Application No. 11299 of 2024",
+    "originatingAppeal":  "Land Appeal No. 43 of 2023",
+    "originatingCase":  "Land Application No. 33 of 2021",
+    "court":  "High Court of Tanzania",
+    "registry":  "Bukoba Sub-Registry",
+    "proceeding":  "Land application for extension of time",
+    "judge":  "Malata, J.",
+    "decisionDate":  "27 December 2024",
+    "decisionYear":  "2024",
+    "category":  "Land application for extension of time",
+    "legalSubject":  "Sickness, illegality and unexplained delay",
+    "outcome":  "Application dismissed with costs",
+    "source":  "Uploaded 2024 PDF",
+    "searchAliases":  [
+                          "Majanja Lukamba",
+                          "Charles Zacharia",
+                          "Nyangili Kasinye",
+                          "Agnes Nyangajo",
+                          "Land Application 11299",
+                          "TZHC 11081"
+                      ]
+},
+      caseSummary: "The applicant sought an extension of time to lodge a notice and appeal against a land judgment. He relied on sickness and alleged illegality.\n\nAlthough medical documents were presented, they only covered isolated dates. More than 170 days of delay remained unexplained.\n\nHolding: Sickness and illegality did not excuse the substantially unexplained delay.\n\nFinal result: The application was dismissed with costs.",
+      caseFacts: [
+    "The challenged judgment was delivered on 13 October 2023.",
+    "The application was filed on 9 May 2024.",
+    "The delay was approximately six months.",
+    "The applicant relied on sickness.",
+    "He also alleged illegality in the intended appeal.",
+    "Several medical check-up sheets were submitted.",
+    "The medical evidence related only to particular dates.",
+    "More than 170 days remained unaccounted for."
+],
+      legalIssues: [
+    "Whether the applicant accounted for every day of delay.",
+    "Whether the medical documents demonstrated continuous incapacity.",
+    "Whether alleged illegality justified an extension.",
+    "Whether the applicant acted diligently.",
+    "Whether finality of litigation outweighed the request for extension."
+],
+      sourcePdf: "legal-documents/2024/Majanja Lukamba vs Charles Zacharia and 2 Others 2024 TZHC 11081 (27 December 2024).pdf",
+      reportData: {
+    "reportTitle":  "Land Appeal Extension Report — Majanja Lukamba v Zacharia and Others",
+    "reportConclusion":  "The applicant failed to demonstrate sufficient cause for the six-month delay. The application was dismissed with costs."
+},
       title: 'Majanja Lukamba v. Charles Zacharia, Nyangili Kasinye and Agnes Nyangajo',
       citation: '[2024] TZHC 11081',
       caseNumber: 'Misc. Land Case Application No. 11299 of 2024',
@@ -16236,6 +18108,56 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-060',
+      // === 2024 PREPARED CASE KNOWLEDGE (12 SEARCHABLE FIELDS & REPORT DATA) ===
+      searchMetadata: {
+    "officialTitle":  "Neema Gabriel Majaliwa v Saraweki Israel Salema and Three Others",
+    "alternativeTitle":  "Neema Gabriel Majaliwa vs Saraweki Israel Salema, Mang’ana Rashid Mang’ana, Nurdin Rashid Mang’ana and Shabani Rashid Mang’ana",
+    "citation":  "[2024] TZCA 1308",
+    "caseNumber":  "Civil Appeal No. 442 of 2022",
+    "originatingCase":  "Civil Revision No. 24 of 2019",
+    "court":  "Court of Appeal of Tanzania",
+    "registry":  "Dodoma",
+    "coram":  "Lila, J.A.; Muruke, J.A.; Mdemu, J.A.",
+    "judge":  "Lila, J.A.; Muruke, J.A.; Mdemu, J.A.",
+    "decisionDate":  "27 December 2024",
+    "decisionYear":  "2024",
+    "category":  "Probate and administration appeal",
+    "legalSubject":  "Letters of administration, consent and beneficiary status",
+    "outcome":  "Appeal dismissed; appointment remained invalid",
+    "source":  "Uploaded 2024 PDF",
+    "searchAliases":  [
+                          "Neema Majaliwa",
+                          "Saraweki Salema",
+                          "Rashidi Mangana Marwa estate",
+                          "Civil Appeal 442",
+                          "TZCA 1308",
+                          "letters of administration"
+                      ]
+},
+      caseSummary: "The dispute concerned administration of the intestate estate of Rashidi Mangana Marwa. The appellant obtained letters of administration without obtaining the required consent of all heirs.\n\nThe High Court nullified her appointment and also declared another alleged widow a beneficiary. The Court of Appeal agreed that the appointment was invalid but held that deciding beneficiary status after treating the petition as incompetent was premature.\n\nHolding: Letters of administration obtained through an incompetent petition were invalid.\n\nFinal result: The appeal was dismissed, although the declaration concerning beneficiary status was found premature.",
+      caseFacts: [
+    "Rashidi Mangana Marwa died intestate on 14 November 2017.",
+    "The appellant and first respondent claimed recognition as widows.",
+    "The other respondents were identified as sons of the deceased.",
+    "Earlier administrators had been appointed through Primary Court proceedings.",
+    "Those appointments were later annulled because of jurisdictional and citation defects.",
+    "The appellant petitioned for letters of administration.",
+    "She did not obtain consent from all heirs.",
+    "The court dispensed with consent and citation and appointed her.",
+    "The High Court later nullified the appointment through revision."
+],
+      legalIssues: [
+    "Whether the probate petition was competent without all heirs’ consent.",
+    "Whether citation could lawfully be dispensed with.",
+    "Whether the appellant was validly appointed administratrix.",
+    "Whether beneficiary status could be determined after invalidating the petition.",
+    "What proper procedure should be followed for administration of the estate."
+],
+      sourcePdf: "legal-documents/2024/Neema Gabriel Majaliwa vs Saraweki Israel Salema and 3 Others (Civil Appeal No 442 of 2022) 2024 TZCA 1308 (27 December 2024).pdf",
+      reportData: {
+    "reportTitle":  "Probate Administration Report — Majaliwa v Salema and Others",
+    "reportConclusion":  "The appellant’s appointment was invalid. However, beneficiary status should not have been finally determined through an incompetent proceeding. The appeal was dismissed with costs."
+},
       title: 'Neema Gabriel Majaliwa v. Saraweki Israel Salema, Mang’ana Rashid Mang’ana, Nurdin Rashid Mang’ana and Shabani Rashid Mang’ana',
       citation: '[2024] TZCA 1308',
       caseNumber: 'Civil Appeal No. 442 of 2022',
@@ -16395,6 +18317,56 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-061',
+      // === 2024 PREPARED CASE KNOWLEDGE (12 SEARCHABLE FIELDS & REPORT DATA) ===
+      searchMetadata: {
+    "officialTitle":  "Penzia Nicodemus Haule v Vertex Group Experts Limited",
+    "alternativeTitle":  "Penzia Nicodemus Haule vs Vertex Group Experts Limited",
+    "citation":  "[2024] TZHC 11169",
+    "caseNumber":  "Misc. Land Application No. 25044 of 2024",
+    "originatingCase":  "Land Case No. 23735 of 2024",
+    "court":  "High Court of Tanzania",
+    "registry":  "Iringa Sub-Registry",
+    "proceeding":  "Application for temporary injunction",
+    "judge":  "Ndunguru, J.",
+    "decisionDate":  "27 December 2024",
+    "decisionYear":  "2024",
+    "category":  "Application for temporary injunction",
+    "legalSubject":  "Matrimonial property, mortgage sale and alleged trespass",
+    "property":  "Plot No. 77, Block N, Makambako",
+    "outcome":  "Application dismissed with costs",
+    "source":  "Uploaded 2024 PDF",
+    "searchAliases":  [
+                          "Penzia Haule",
+                          "Vertex Group Experts",
+                          "Plot 77 Block N",
+                          "Makambako",
+                          "Land Application 25044",
+                          "TZHC 11169"
+                      ]
+},
+      caseSummary: "The applicant sought a temporary injunction preventing Vertex Group Experts Limited from dealing with Plot No. 77, Block N, Makambako. She claimed that the property was matrimonial property jointly acquired with her late husband.\n\nVertex argued that the property belonged to a company, was mortgaged and was lawfully sold after loan default.\n\nHolding: The applicant failed to satisfy the three requirements for a temporary injunction.\n\nFinal result: The application was dismissed with costs.",
+      caseFacts: [
+    "The disputed property was Plot No. 77, Block N, Makambako.",
+    "The applicant was the wife of the late Thobias Mbilinyi.",
+    "She claimed that they jointly acquired the property.",
+    "She alleged that Vertex entered the property on 25 August 2024.",
+    "Vertex claimed that Nazareti Company Limited owned the property.",
+    "The property had reportedly been mortgaged to Grofin SGB Limited.",
+    "It was allegedly sold following loan default.",
+    "Vertex claimed to be a bona fide purchaser."
+],
+      legalIssues: [
+    "Whether the applicant established a prima facie case.",
+    "Whether refusal of an injunction would cause irreparable harm.",
+    "Where the balance of convenience rested.",
+    "Whether the property was matrimonial property or company property.",
+    "Whether Vertex appeared to be a bona fide purchaser."
+],
+      sourcePdf: "legal-documents/2024/Penzia Nicodemus Haule vs Vertex Group Experts Limited 2024 TZHC 11169 (27 December 2024).pdf",
+      reportData: {
+    "reportTitle":  "Temporary Injunction Report — Haule v Vertex Group Experts",
+    "reportConclusion":  "The applicant did not establish a prima facie case, irreparable injury or a favourable balance of convenience. The application was dismissed with costs."
+},
       title: 'Penzia Nicodemus Haule v. Vertex Group Experts Limited',
       citation: '[2024] TZHC 11169',
       caseNumber: 'Miscellaneous Land Application No. 25044 of 2024',
@@ -16535,6 +18507,134 @@ const SLCMS_STATE = {
       ]
     },
     {
+      id: 'tz-j-2024-11131',
+      aliasId: 'tz-j-061b',
+      title: 'Shukuru Elias Nyalinga and Another v Mpanda Municipal Council and Others',
+      citation: '[2024] TZHC 11131',
+      caseNumber: 'Land Case No. 4 of 2021',
+      court: 'High Court of Tanzania',
+      registry: 'Sumbawanga District Registry',
+      courtTier: 'High Court',
+      location: 'Sumbawanga',
+      proceedingType: 'Land Case (Customary Land Acquisition, Municipal Interference & Damages)',
+      judge: 'Hon. Mwenempazi, J.',
+      decisionDate: '2024-12-27',
+      year: '2024',
+      category: 'Land law',
+      legalCategory: 'LAND_LAW',
+      status: 'Ready for AI',
+      isMetadataOnly: false,
+      sourceName: 'TanzLII',
+      tanzliiUrl: 'https://tanzlii.org/tz/judgment/high-court-tanzania/2024/11131',
+      pdfUrl: 'https://tanzlii.org/tz/judgment/high-court-tanzania/2024/11131/download/pdf',
+      hasFullText: true,
+      hasDownload: true,
+      fileName: 'Shukuru Elias Nyalinga and Another vs Mpanda Municipal Council and 3 Others 2024 TZHC 11131 (27 December 2024).pdf',
+      sourcePdf: 'legal-documents/2024/Shukuru Elias Nyalinga and Another vs Mpanda Municipal Council and 3 Others 2024 TZHC 11131 (27 December 2024).pdf',
+      disputedProperty: 'Approximately 19 acres at Misunkumilo, Mpanda',
+      subject: 'Customary acquisition and municipal interference',
+      outcome: 'Ownership relief, alternative land and damages granted',
+      // === 2024 PREPARED CASE KNOWLEDGE (12 SEARCHABLE FIELDS & REPORT DATA) ===
+      searchMetadata: {
+    "officialTitle":  "Shukuru Elias Nyalinga and Another v Mpanda Municipal Council and Others",
+    "alternativeTitle":  "Shukuru Elias Nyalinga and Makala Nangali vs Mpanda Municipal Council and 3 Others",
+    "citation":  "[2024] TZHC 11131",
+    "caseNumber":  "Land Case No. 4 of 2021",
+    "court":  "High Court of Tanzania",
+    "registry":  "Sumbawanga District Registry",
+    "proceeding":  "Land ownership claim",
+    "judge":  "Mwenempazi, J.",
+    "decisionDate":  "27 December 2024",
+    "decisionYear":  "2024",
+    "category":  "Land ownership claim",
+    "legalSubject":  "Customary acquisition and municipal interference",
+    "property":  "Approximately 19 acres at Misunkumilo, Mpanda",
+    "outcome":  "Ownership relief, alternative land and damages granted",
+    "source":  "Uploaded 2024 PDF",
+    "searchAliases":  [
+                          "Shukuru Nyalinga",
+                          "Makala Nangali",
+                          "Mpanda Municipal Council",
+                          "Misunkumilo land",
+                          "Land Case 4 of 2021",
+                          "TZHC 11131"
+                      ]
+},
+      caseSummary: "The plaintiffs claimed ownership of approximately nineteen acres at Misunkumilo near Mpanda Girls Secondary School. They relied on acquisition from customary owners and their occupation of the land.\n\nThe High Court accepted their claim and ordered the Municipal Council either to vacate the property or provide equivalent alternative land.\n\nHolding: The plaintiffs proved their rights to the disputed land.\n\nFinal result: Ownership-related relief was granted together with TZS 30 million in general damages, interest and costs.",
+      caseFacts: [
+    "The disputed land measured approximately nineteen acres.",
+    "It was located at Misunkumilo in Mpanda, Katavi.",
+    "It was near Mpanda Girls Secondary School.",
+    "The plaintiffs claimed acquisition from customary owners.",
+    "Their acquisitions began around 2012.",
+    "A dispute arose from municipal action and competing interests.",
+    "The plaintiffs sought recognition of ownership.",
+    "They also requested possession, registration, damages and costs."
+],
+      legalIssues: [
+    "Whether the case disclosed a cause of action against the Council and Attorney General.",
+    "Whether the plaintiffs proved lawful ownership.",
+    "Whether the third and fourth defendants had valid rights capable of transfer.",
+    "Whether the Council should vacate or provide equivalent alternative land.",
+    "Whether the plaintiffs were entitled to general damages.",
+    "Whether exemplary damages should be awarded."
+],
+      reportData: {
+    "reportTitle":  "Land Ownership Report — Nyalinga and Another v Mpanda Municipal Council and Others",
+    "reportConclusion":  "The plaintiffs proved their rights over the disputed land. The Council was ordered to vacate or provide equivalent alternative land. The plaintiffs received TZS 30 million in general damages, shared equally, together with 9% interest and costs. Exemplary damages were refused."
+},
+      parties: {
+        firstPlaintiff: 'Shukuru Elias Nyalinga',
+        secondPlaintiff: 'Makala Nangali',
+        firstDefendant: 'Mpanda Municipal Council',
+        secondDefendant: 'Attorney General',
+        thirdDefendant: 'Peter Aloyce Mwakibinga',
+        fourthDefendant: 'Revocatus Gregory Ngomeni'
+      },
+      originatingProceeding: {
+        caseNumber: 'Land Case No. 4 of 2021',
+        court: 'High Court of Tanzania (Sumbawanga District Registry)'
+      },
+      courtReasoning: [
+        'CAUSE OF ACTION: The plaint disclosed a lawful cause of action against Mpanda Municipal Council and the Attorney General.',
+        'PROOF OF CUSTOMARY TITLE: The plaintiffs produced credible, consistent testimony and witnesses proving customary acquisition commencing around 2012, continuous occupation, cultivation, and improvement of the 19 acres.',
+        'INVALID DEFENDANT CLAIMS: The third and fourth defendants failed to demonstrate valid customary title or lawful allocation capable of overriding plaintiffs customary ownership.',
+        'REMEDY OF VACATION OR ALTERNATIVE LAND: Because parts of the land had been affected by municipal planning and school proximity, the Municipal Council was ordered either to vacate the land or provide equivalent alternative land to the plaintiffs.',
+        'GENERAL DAMAGES: The plaintiffs suffered trespass and interference, justifying general damages of TZS 30,000,000 shared equally, with 9% interest from date of judgment.',
+        'EXEMPLARY DAMAGES: Refused as the exceptional statutory threshold for punitive damages was not met.'
+      ],
+      decisionAndOrders: [
+        'Plaintiffs declared lawful customary owners of the disputed approximately 19 acres at Misunkumilo, Mpanda.',
+        'Mpanda Municipal Council ordered to either vacate the land or allocate equivalent alternative land to the plaintiffs.',
+        'Plaintiffs awarded TZS 30,000,000 in general damages to be shared equally between Shukuru Elias Nyalinga and Makala Nangali.',
+        'Interest on general damages awarded at 9% per annum from date of judgment (27 December 2024) until full satisfaction.',
+        'Defendants ordered to pay costs of the suit to the plaintiffs.',
+        'Claim for exemplary damages dismissed.'
+      ],
+      searchTerms: [
+        'Shukuru Elias Nyalinga',
+        'Shukuru Nyalinga',
+        'Makala Nangali',
+        'Mpanda Municipal Council',
+        'Misunkumilo land',
+        'Misunkumilo Mpanda',
+        'Land Case No. 4 of 2021',
+        'Land Case 4 of 2021',
+        '[2024] TZHC 11131',
+        '2024 TZHC 11131',
+        '11131',
+        'Peter Aloyce Mwakibinga',
+        'Revocatus Gregory Ngomeni',
+        'Customary land acquisition Mpanda',
+        'Mwenempazi J'
+      ],
+      questionsAnswerable: [
+        'What relief was granted to the customary land owners in Shukuru Elias Nyalinga v Mpanda Municipal Council [2024] TZHC 11131?',
+        'When may a Tanzanian court order a municipal council to vacate land or provide equivalent alternative land?',
+        'Summarize the High Court land judgment in Shukuru Elias Nyalinga and Another v Mpanda Municipal Council and Others [2024] TZHC 11131.'
+      ]
+    },
+    {
       id: 'tz-j-062',
       title: 'Ally Sharif Aidan v. Godfrey Massama Makey and Jabir Hamis Jabir',
       citation: '[2025] TZHC 8923',
@@ -16558,7 +18658,41 @@ const SLCMS_STATE = {
       hasFullText: true,
       hasDownload: true,
       fileName: 'Ally Sharif Aidan vs Godfrey Massama Makey and Another 2025 TZHC 8923 (31 December 2025).pdf',
+sourcePdf: 'legal-documents/2025/Ally Sharif Aidan vs Godfrey Massama Makey and Another 2025 TZHC 8923 (31 December 2025).pdf',
+searchMetadata: {
+        caseTitle: 'Ally Sharif Aidan v Godfrey Massama Makey and Another',
+        officialTitle: 'Ally Sharif Aidan v Godfrey Massama Makey and Another',
+        citation: '[2025] TZHC 8923',
+        caseNumber: 'Land Appeal No. 22219 of 2024',
+        originalCase: 'Land Application No. 91 of 2018',
+        originatingCase: 'Land Application No. 91 of 2018',
+        court: 'High Court of Tanzania',
+        registry: 'Dodoma Sub-Registry',
+        judge: 'Musokwa, J.',
+        decisionDate: '31 December 2025',
+        decisionYear: '2025',
+        caseType: 'Land appeal',
+        category: 'Land appeal',
+        subject: 'Ownership, estate property and non-joinder',
+        legalSubject: 'Ownership, estate property and non-joinder',
+        outcome: 'Appeal allowed; retrial ordered',
+        property: 'Plot No. 19, Block 24, Majengo Area, Dodoma City.',
+        source: 'Uploaded 2025 PDF',
+        searchAliases: [
+          'Ally Aidan',
+          'Godfrey Makey',
+          'Jabir Hamis',
+          'Land Appeal 22219',
+          'Plot 19 Block 24',
+          'TZHC 8923',
+          'Majengo Dodoma',
+          'Ally Sharif Aidan',
+          'Godfrey Massama Makey'
+        ]
+      },
+      caseInformation: null, // assigned below
       summary: 'Godfrey Massama Makey claimed that he purchased Plot No. 19, Block 24, Majengo, Dodoma City, on 3 March 2008 from Jabir Hamis Jabir, who purportedly acted as administrator of the estate of the late Hamis Jabir (the original registered owner). Ally Sharif Aidan and his late father’s family occupied the house and resisted eviction claiming ownership interest derived from Sharif Aidan Mohamed. In Land Application No. 91 of 2018, the District Land and Housing Tribunal for Dodoma declared Godfrey the lawful owner and ordered Ally to vacate. On appeal, the High Court (I.D. Musokwa, J.) allowed the appeal without deciding the substantive ownership dispute, holding that failure to join the administrator of the estate of the late Hamis Jabir in his proper representative capacity constituted a fatal procedural irregularity that rendered the DLHT proceedings a nullity. The DLHT judgment was quashed and a retrial ordered following proper joinder of all necessary parties.',
+caseSummary: "The first respondent claimed that he purchased Plot No. 19, Block 24 from an administrator of the estate of the late Hamis Jabir. The District Land and Housing Tribunal declared him the owner and ordered the appellant to vacate.\n\nThe High Court found that the estate administrator from whom the first respondent allegedly purchased the property was a necessary party but had not been joined in the proceeding.\n\nHolding: Determining ownership without joining a necessary estate representative was a fatal procedural irregularity.\n\nDecision: Appeal allowed. The tribunalâ€™s judgment and orders were quashed, and the case was returned for rehearing after joining the necessary party.",
       parties: {
         appellant: 'Ally Sharif Aidan',
         firstRespondent: 'Godfrey Massama Makey',
@@ -16572,6 +18706,16 @@ const SLCMS_STATE = {
         court: 'District Land and Housing Tribunal for Dodoma',
         property: 'Plot No. 19, Block 24, Majengo, Dodoma City'
       },
+      caseFacts: [
+        'The dispute concerned a house on Plot No. 19, Block 24, Majengo.',
+        'Godfrey Makey claimed to have purchased it from Jabir Hamis Jabir.',
+        'Jabir was allegedly administrator of the estate of the late Hamis Jabir.',
+        'The appellant occupied the disputed premises.',
+        'The tribunal proceeded ex parte against the second respondent.',
+        'The tribunal declared the first respondent lawful owner.',
+        'It ordered the appellant to vacate.',
+        'The estate representative central to the alleged sale was not properly joined.'
+      ],
       facts: [
         'The disputed property is Plot No. 19, Block 24, Majengo, Dodoma City.',
         'Godfrey Massama Makey (first respondent) claimed to have purchased the property on 3 March 2008 from Jabir Hamis Jabir (second respondent).',
@@ -16582,10 +18726,16 @@ const SLCMS_STATE = {
         'The DLHT declared Godfrey the lawful owner and ordered Ally to vacate.',
         'Ally appealed to the High Court challenging the judgment on multiple grounds, primarily non-joinder of necessary parties and invalidity of the administrator’s sale.'
       ],
+      reportData: {
+        reportTitle: 'Land Ownership and Non-Joinder Report â€” Ally Aidan v Makey',
+        reportConclusion: 'The failure to join a necessary estate representative invalidated the proceedings. The case was remitted for rehearing with no order as to costs.'
+      },
       legalIssues: [
-        'Whether failure to join the administrator of the estate of the late Hamis Jabir in his proper representative capacity rendered the DLHT proceedings and resulting judgment a nullity.',
-        'Whether a purchaser claiming title through a deceased person’s estate can maintain a land claim without joining the legal representative of that estate.',
-        'Whether the substantive grounds concerning validity of the sale, dual price considerations (TZS 17M vs 4M), retrospectivity of land law, and deceased’s citizenship could be determined in the absence of necessary parties.'
+        'Whether the estate administrator was a necessary party.',
+        'Whether ownership could be determined without joining that administrator.',
+        'Whether the non-joinder rendered the proceedings a nullity.',
+        'Whether the tribunalâ€™s judgment should be set aside.',
+        'Whether the matter should be reheard.'
       ],
       partiesArguments: {
         appellantArguments: 'Mr. Elias Machibya argued that: (1) The DLHT erred in declaring the first respondent owner because the legal representative of Hamis Jabir’s estate was never properly joined in that representative capacity; (2) No letters of administration were tendered to prove the vendor’s authority; (3) Two sale agreements had conflicting prices (TZS 17,000,000 vs TZS 4,000,000), suggesting tax evasion; (4) A subsequent ruling nullifying Jabir’s appointment as administrator invalidated the sale retrospectively; (5) The citizenship of the appellant’s deceased father was determined without framing an issue or hearing his estate’s representative, violating Article 13(6)(a) of the Constitution; (6) Proceedings and decree must be set aside.',
@@ -16597,6 +18747,7 @@ const SLCMS_STATE = {
         'PROCEEDING NULLIFIED: Determination of land ownership without joining the indispensable estate representatives constitutes a fatal procedural irregularity that renders the DLHT proceedings and judgment a complete nullity (citing Mexons Investment Ltd, Zakaria Barie Bura, and Selemani Selemani Mkwavila).',
         'RETRIAL ORDERED: The High Court declined to determine the remaining substantive issues on merits (sale validity, dual prices, citizenship, retrospectivity) and remitted the matter for a trial de novo before the DLHT after proper joinder.'
       ],
+      finalDecision: 'Appeal allowed. The tribunalâ€™s judgment and orders were quashed, and the case was returned for rehearing after joining the necessary party.',
       decisionAndOrders: [
         'The appeal is allowed in its entirety.',
         'The proceedings, judgment, and orders of the District Land and Housing Tribunal for Dodoma in Land Application No. 91 of 2018 are quashed and set aside.',
@@ -16740,6 +18891,7 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-063',
+dataQualityWarning: 'The judgment is dated 31 December 2025, although the signature footer appears to contain 31/12/2024. Store 2025 as the decision year and flag the footer as an apparent clerical error.',
       title: 'Anatoli Moses Kashonda v. Philbert Muhigi Kashonda and Julius Rweyemamu Kalokora',
       citation: '[2025] TZHC 8752',
       caseNumber: 'Miscellaneous Civil Application No. 27392 of 2025',
@@ -16761,7 +18913,42 @@ const SLCMS_STATE = {
       hasFullText: true,
       hasDownload: true,
       fileName: 'Anatoli Moses Kashonda vs Philbert Muhigi Kashonda and Another (Misc Civil Application No 27392 of 2025) 2025 TZHC 8752 (31 December 2025).pdf',
+sourcePdf: 'legal-documents/2025/Anatoli Moses Kashonda vs Philbert Muhigi Kashonda and Another (Misc Civil Application No 27392 of 2025) 2025 TZHC 8752 (31 December 2025).pdf',
+searchMetadata: {
+        caseTitle: 'Anatoli Moses Kashonda v Philbert Muhigi Kashonda and Another',
+        officialTitle: 'Anatoli Moses Kashonda v Philbert Muhigi Kashonda and Another',
+        citation: '[2025] TZHC 8752',
+        caseNumber: 'Misc. Civil Application No. 27392 of 2025',
+        originalCase: 'Probate Cause No. 8913 of 2025',
+        originatingCase: 'Probate Cause No. 8913 of 2025',
+        court: 'High Court of Tanzania',
+        registry: 'Temeke Sub-Registry, One Stop Judicial Centre',
+        judge: 'Mwaipopo, J.',
+        decisionDate: '31 December 2025',
+        decisionYear: '2025',
+        caseType: 'Probate application',
+        category: 'Probate application',
+        subject: 'Revocation of letters of administration',
+        legalSubject: 'Revocation of letters of administration',
+        estate: 'Estate of the late Method Anatoli Kashonda',
+        outcome: 'Application dismissed; administrators retained',
+        source: 'Uploaded 2025 PDF',
+        searchAliases: [
+          'Anatoli Kashonda',
+          'Anatoli case',
+          'Method Kashonda estate',
+          'Philbert Muhigi',
+          'Julius Kalokora',
+          'Probate Cause 8913',
+          'TZHC 8752',
+          'Anatoli Moses Kashonda'
+        ],
+        inconsistencyWarning: 'The uploaded judgment contains inconsistent metadata. Verification against the official court record is recommended.',
+        dataQualityWarning: 'The judgment is dated 31 December 2025, although the signature footer appears to contain 31/12/2024. Store 2025 as the decision year and flag the footer as an apparent clerical error.'
+      },
+      caseInformation: null, // assigned below
       summary: 'Anatoli Moses Kashonda applied under Section 49 of the Probate and Administration of Estates Act [Cap. 352 R.E. 2019] and Rule 29(1) of the Probate Rules for revocation of letters of administration granted to Philbert Muhigi Kashonda and Julius Rweyemamu Kalokora over the TZS 1.5 billion estate of the late Method Anatoli Kashonda (including Plot No. 293, Mbezi Beach). The applicant alleged that the administrators fraudulently listed Catherine Kashonda as a daughter and beneficiary despite knowing she was not a biological child. The respondents showed that Catherine was raised by the deceased, used the family name, and was openly disclosed at the family meeting and in Form No. 56, which the applicant signed without objection or caveat. The High Court (S.D. Mwaipopo, J.) dismissed the revocation application, holding that fraud or concealment requires cogent proof that the administrators knowingly lied or suppressed facts. Because Catherine was openly disclosed and the applicant consented, estoppel and clean-hands principles applied. The Court emphasized that appointment of administrators is distinct from final heirship determination, retaining the administrators while ordering them to file an amended inventory, with each party bearing their own costs.',
+caseSummary: "The applicant sought revocation of letters of administration granted to the respondents. He alleged that the appointment was obtained through fraud, concealment and misrepresentation.\n\nThe High Court found that the respondents had been nominated by the family and appointed by the court. The allegations of fraud and concealment were not strictly proved.\n\nHolding: Disagreement over possible beneficiaries was not sufficient, at that stage, to revoke the administratorsâ€™ appointment.\n\nDecision: The application was dismissed. The administrators were ordered to continue administering the estate and file an amended inventory.",
       parties: {
         applicant: 'Anatoli Moses Kashonda',
         firstRespondent: 'Philbert Muhigi Kashonda (also rendered as Philbert Muhigi Rweyemamu)',
@@ -16777,6 +18964,18 @@ const SLCMS_STATE = {
         court: 'High Court of Tanzania (Temeke Sub-Registry, One Stop Judicial Center)',
         estateValue: 'Estimated gross estate value of TZS 1,500,000,000 (including Plot No. 293, Mbezi Beach)'
       },
+      caseFacts: [
+        'Method Anatoli Kashonda died intestate on 9 November 2024.',
+        'He died at Muhimbili National Hospital.',
+        'His son, Moses Mushumbusi Kashonda, had predeceased him.',
+        'The deceased left two grandsons, including the applicant.',
+        'The estate included Plot No. 293, Mbezi Beach, Kinondoni.',
+        'The gross estate was estimated at TZS 1.5 billion.',
+        'A family meeting was held on 15 November 2024.',
+        'The respondents were nominated as administrators.',
+        'The applicant alleged fraud and misrepresentation.',
+        'The respondents denied concealing material information.'
+      ],
       facts: [
         'Method Anatoli Kashonda died intestate on 9 November 2024 at Muhimbili National Hospital in Dar es Salaam.',
         'The gross estate was estimated at TZS 1,500,000,000 (1.5 billion), including real property at Plot No. 293, Mbezi Beach, Kinondoni Municipality.',
@@ -16788,12 +18987,17 @@ const SLCMS_STATE = {
         'On 27 June 2025, the High Court granted letters of administration to the respondents, requiring an inventory by 30 July 2025.',
         'The inventory was filed; subsequently, the applicant filed Miscellaneous Civil Application No. 27392 of 2025 seeking revocation on grounds of fraud and false representation regarding Catherine Kashonda.'
       ],
+      reportData: {
+        reportTitle: 'Probate Revocation Report â€” Estate of Method Anatoli Kashonda',
+        reportConclusion: 'Fraud, concealment and misrepresentation were not proved. The administrators retained their appointment and were directed to file an amended inventory. Each party was ordered to bear its own costs.'
+      },
       legalIssues: [
-        'Whether the respondents obtained the letters of administration fraudulently through concealment or misrepresentation of material facts, justifying revocation under Section 49(1)(b) and (c) of the Probate and Administration of Estates Act.',
-        'Whether the applicant strictly discharged the heightened burden of proving fraud in probate proceedings.',
-        'Whether open disclosure of Catherine Kashonda at the family meeting and in Form No. 56, coupled with the applicant’s consent without caveat, estopped the applicant from alleging fraudulent concealment.',
-        'Whether the court is required to finally determine substantive heirship and inheritance entitlement at the stage of administrator appointment or revocation.',
-        'Whether the administrators remained suitable to administer the estate under continuous judicial supervision pursuant to Sections 66 and 107 of Cap. 352.'
+        'Whether the letters were obtained fraudulently.',
+        'Whether material facts were concealed or misrepresented.',
+        'Whether the applicant strictly proved fraud.',
+        'Whether disagreement over heirs justified revocation.',
+        'Whether the respondents remained suitable administrators.',
+        'Whether an amended estate inventory was required.'
       ],
       partiesArguments: {
         applicantArguments: 'Mr. Nictagon Itege argued that: (1) Catherine Kashonda was neither the biological nor legally adopted daughter of the deceased; (2) The respondents knew this but falsely listed her as a daughter and beneficiary, misleading the court; (3) Family recognition alone does not legally create inheritance rights; (4) Exhibit PJK-3 was unsigned, unstamped, of unknown authorship, and unverified; (5) Misrepresentation of heir identity constitutes sufficient ground to revoke the grant under Section 49; (6) Fresh letters of administration should be granted to the applicant.',
@@ -16806,6 +19010,7 @@ const SLCMS_STATE = {
         'APPOINTMENT VERSUS FINAL INHERITANCE: The court distinguished the appointment of suitable administrators from the final determination of lawful heirs. At the appointment stage, the inquiry is whether administrators are fit and proper. Whether Catherine is ultimately entitled to share in estate distribution may be raised and adjudicated during subsequent administration, inventory confirmation, or estate distribution proceedings.',
         'CONTINUING STATUTORY SUPERVISION: The administrators remain bound by oath under Section 66 to administer faithfully and must file an amended inventory and accounts under Section 107 subject to court supervision.'
       ],
+      finalDecision: 'The application was dismissed. The administrators were ordered to continue administering the estate and file an amended inventory.',
       decisionAndOrders: [
         'The application for revocation of letters of administration is dismissed in its entirety.',
         'Philbert Muhigi Kashonda and Julius Rweyemamu Kalokora remain the lawful administrators of the estate of the late Method Anatoli Kashonda.',
@@ -16975,7 +19180,40 @@ const SLCMS_STATE = {
       hasFullText: true,
       hasDownload: true,
       fileName: 'Bashiru Rashidi Anthon vs Republic 2025 TZHC 8739 (31 December 2025).pdf',
+sourcePdf: 'legal-documents/2025/Bashiru Rashidi Anthon vs Republic 2025 TZHC 8739 (31 December 2025).pdf',
+searchMetadata: {
+        caseTitle: 'Bashiru Rashidi Anthon v Republic',
+        officialTitle: 'Bashiru Rashidi Anthon v Republic',
+        citation: '[2025] TZHC 8739',
+        caseNumber: 'Criminal Appeal No. 18065 of 2025',
+        originalCase: 'Criminal Case No. 21747 of 2024',
+        originatingCase: 'Criminal Case No. 21747 of 2024',
+        court: 'High Court of Tanzania',
+        registry: 'Mtwara Sub-Registry',
+        judge: 'Dingâ€™ohi, J.',
+        decisionDate: '31 December 2025',
+        decisionYear: '2025',
+        caseType: 'Criminal appeal',
+        category: 'Criminal appeal',
+        subject: 'Armed robbery and grievous harm',
+        offences: 'Armed robbery and grievous harm',
+        legalSubject: 'Armed robbery and grievous harm',
+        property: 'HAOJUE motorcycle valued at TZS 2.4 million',
+        outcome: 'Appeal dismissed; convictions maintained',
+        source: 'Uploaded 2025 PDF',
+        searchAliases: [
+          'Bashiru',
+          'Bashiru Anthon',
+          'Bashiru Rashidi',
+          'Criminal Appeal 18065',
+          'armed robbery motorcycle',
+          'TZHC 8739',
+          'Bashiru Rashidi Anthon'
+        ]
+      },
+      caseInformation: null, // assigned below
       summary: 'Bashiru Rashidi Anthon was convicted by the District Court of Lindi in Criminal Case No. 21747 of 2024 of armed robbery (Section 287A Penal Code) and grievous harm (Section 225 Penal Code) and sentenced to 30 years and 2 years’ imprisonment, running concurrently. The prosecution established that on 17 July 2024 at Ng’apa village, Lindi, the appellant hired motorcycle driver Musa Selemani Salum to transport him to a farm, stabbed him in the neck with a screwdriver, and stole a Haojue motorcycle (MC 835 EKJ, valued at TZS 2,400,000). Pursuing villagers saw the appellant riding the motorcycle, which he abandoned in mud before fleeing on foot. On appeal, the appellant challenged exhibit admissibility (PF3 and seizure certificate), chain of custody, witness contradictions, and rejection of his alibi/denial defence. The High Court (S.R. Ding’ohi, J.) dismissed the appeal, holding that: (1) The first appellate court must independently re-evaluate trial evidence (Ahazi Kilowoko v Republic); (2) PF3 and seizure certificate were lawfully tendered by competent witnesses who laid proper foundations; (3) A seizure certificate is not invalid merely because it was prepared at the police station where civilians recovered the property and handed it over; (4) The chain of custody through PF16 exhibit registers was unbroken; and (5) The ingredients of armed robbery (Jamal Seif v Republic) and grievous harm were proved beyond reasonable doubt. Convictions and concurrent sentences affirmed.',
+caseSummary: "The appellant was convicted of armed robbery and grievous harm. The prosecution alleged that he stabbed Musa Selemani in the neck with a screwdriver and stole a motorcycle.\n\nThe High Court found that the victimâ€™s evidence was corroborated by the recovery of the motorcycle, the screwdriver, medical evidence and other witnesses.\n\nHolding: Armed robbery and grievous harm were proved beyond reasonable doubt.\n\nDecision: The appeal was dismissed. The thirty-year and two-year concurrent sentences remained in force.",
       parties: {
         appellant: 'Bashiru Rashidi Anthon (also rendered as Bashiru Rashidi Anthony)',
         respondent: 'Republic',
@@ -16989,6 +19227,19 @@ const SLCMS_STATE = {
         court: 'District Court of Lindi at Lindi',
         sentences: 'Count 1 (Armed Robbery): 30 years’ imprisonment; Count 2 (Grievous Harm): 2 years’ imprisonment, running concurrently'
       },
+      caseFacts: [
+        'The incident occurred on 17 July 2024.',
+        'It occurred at Ngâ€™apa Village in Lindi.',
+        'The stolen property was a HAOJUE motorcycle.',
+        'Its stated value was TZS 2,400,000.',
+        'The motorcycle was owned by Rahama Mustapha.',
+        'It had been entrusted to others for commercial use.',
+        'Musa Selemani was stabbed in the neck with a screwdriver.',
+        'The appellant was reportedly seen riding the motorcycle.',
+        'He allegedly abandoned it and ran away when pursued.',
+        'The motorcycle and screwdriver were taken to the police.',
+        'Medical evidence confirmed a fresh neck injury.'
+      ],
       facts: [
         'On 17 July 2024 at Ng’apa village in Lindi, motorcycle driver Musa Selemani Salum was operating a Haojue motorcycle, registration number MC 835 EKJ, valued at TZS 2,400,000.',
         'The motorcycle had been entrusted to Hamisi Athumani Kazembe, passed to Athumani Selemani, and used by Musa to deliver water.',
@@ -17000,13 +19251,17 @@ const SLCMS_STATE = {
         'Civilians recovered the motorcycle and screwdriver and delivered them to Lindi Police Station, where a seizure certificate was prepared on 18 July 2024.',
         'The appellant was arrested on 20 July 2024 in Mpirua village, Nachingwea District.'
       ],
+      reportData: {
+        reportTitle: 'Armed Robbery Appeal Report â€” Bashiru Anthon v Republic',
+        reportConclusion: 'The prosecution proved armed robbery and grievous harm beyond reasonable doubt. The appeal was dismissed, and the concurrent sentences remained effective.'
+      },
       legalIssues: [
-        'Whether the medical examination form (PF3) and seizure certificate were properly tendered, identified, and admitted in evidence.',
-        'Whether a seizure certificate prepared at a police station following civilian recovery of stolen property is legally valid.',
-        'Whether the prosecution established an unbroken chain of custody for the motorcycle, key, and screwdriver under the Exhibit Management Guidelines, 2020.',
-        'Whether alleged discrepancies in witness testimony or timing created reasonable doubt.',
-        'Whether the trial court properly evaluated and rejected the appellant’s alibi/denial defence.',
-        'Whether all ingredients of armed robbery under Section 287A and grievous harm under Section 225 of the Penal Code were proved beyond reasonable doubt.'
+        'Whether the motorcycle was unlawfully taken.',
+        'Whether violence involving a dangerous weapon was proved.',
+        'Whether the appellant was properly identified.',
+        'Whether recovery evidence was reliable.',
+        'Whether contradictions in prosecution evidence were material.',
+        'Whether grievous harm was proved beyond reasonable doubt.'
       ],
       partiesArguments: {
         appellantArguments: 'The appellant argued that: (1) The PF3 and seizure certificate were admitted contrary to procedure; (2) The seizure certificate was invalid because it was not prepared at the crime scene; (3) The chain of custody was broken as the motorcycle was recovered from mud at an uncertain location; (4) Prosecution witnesses gave contradictory evidence regarding the time of the incident; (5) Some prosecution evidence was hearsay; (6) Nothing incriminating was recovered from his person upon arrest; (7) The trial court failed to consider his defence of working in a vegetable garden; (8) The prosecution failed to prove either charge beyond reasonable doubt; (9) The appeal should be allowed and convictions quashed.',
@@ -17021,6 +19276,7 @@ const SLCMS_STATE = {
         'ARMED ROBBERY PROVED: Applying Jamal Seif v. Republic [2025] TZCA 231, all three elements were proved: property stolen (Haojue motorcycle), offender armed with an offensive weapon (screwdriver), and violence used to facilitate theft (stabbing the rider’s neck).',
         'GRIEVOUS HARM PROVED: Direct evidence, corroborating witness observations, and medical testimony under PF3 established unlawful infliction of a deep penetrating neck wound near the trachea under Section 225 Penal Code.'
       ],
+      finalDecision: 'The appeal was dismissed. The thirty-year and two-year concurrent sentences remained in force.',
       decisionAndOrders: [
         'The appeal is dismissed in its entirety for lack of merit.',
         'The trial court’s convictions on Count 1 (Armed Robbery) and Count 2 (Grievous Harm) are affirmed.',
@@ -17139,7 +19395,41 @@ const SLCMS_STATE = {
       hasFullText: true,
       hasDownload: true,
       fileName: 'Benedicto Nicodemus vs Melesiana Chubwa Nyamihilo and 2 Others 2025 TZHC 8661 (31 December 2025).pdf',
+sourcePdf: 'legal-documents/2025/Benedicto Nicodemus vs Melesiana Chubwa Nyamihilo and 2 Others 2025 TZHC 8661 (31 December 2025).pdf',
+searchMetadata: {
+        caseTitle: 'Benedicto Nicodemus v Melesiana Chubwa Nyamihilo and Two Others',
+        officialTitle: 'Benedicto Nicodemus v Melesiana Chubwa Nyamihilo and Two Others',
+        citation: '[2025] TZHC 8661',
+        caseNumber: 'PC Civil Appeal No. 26177 of 2025',
+        lowerProceeding: 'Misc. Civil Application No. 23594 of 2024',
+        originalCase: 'Civil Case No. 15 of 2021 and Civil Case No. 1 of 2023',
+        originatingCase: 'Civil Case No. 15 of 2021 and Civil Case No. 1 of 2023',
+        court: 'High Court of Tanzania',
+        registry: 'Geita Sub-Registry',
+        judge: 'Mwakapeje, J.',
+        decisionDate: '31 December 2025',
+        decisionYear: '2025',
+        caseType: 'Civil appeal concerning execution',
+        category: 'Civil appeal concerning execution',
+        subject: 'Deceased litigant, substitution and matrimonial home',
+        legalSubject: 'Deceased litigant, substitution and matrimonial home',
+        outcome: 'Appeal struck out as incompetent',
+        source: 'Uploaded 2025 PDF',
+        searchAliases: [
+          'Benedicto Nicodemus',
+          'Melesiana Nyamihilo',
+          'Emmanuel Bwire',
+          'PC Civil Appeal 26177',
+          'matrimonial home attachment',
+          'deceased appellant',
+          'deceased litigant',
+          'case about deceased appellant',
+          'TZHC 8661'
+        ]
+      },
+      caseInformation: null, // assigned below
       summary: 'Benedicto Nicodemus had obtained a decree in Bwanga Primary Court (Civil Case No. 15 of 2021) for TZS 1,645,000 against Emmanuel Bwire. During execution, a residential house was attached. Melesiana Chubwa Nyamihilo filed objection proceedings claiming the house was an exempt matrimonial home (Rule 63(1) GN No. 55 of 1963). The Primary Court dismissed her objection, but the District Court of Chato on revision (Misc. Civil Application No. 23594 of 2024) quashed the execution proceedings. An appeal was lodged in the High Court in the name of Benedicto Nicodemus, who had already died prior to institution of the appeal, without substituting his appointed administratrix (Consolatha Medard Kambuga). Counsel M.S. Mwanaupanga admitted he had no instructions from the deceased. The High Court (G.V. Mwakapeje, J.), raising the issue suo motu, struck out the appeal as incurably incompetent, holding that a deceased person lacks legal personality and cannot sue, be sued, or instruct counsel (Babubhai Dhanji v Zainab Mrekwe, Juma A. Zomboko v Avic Coastal). No order as to costs was made.',
+caseSummary: "Benedicto had obtained a Primary Court monetary judgment against Emmanuel Bwire. During execution, a house was attached. Melesiana objected that the property was a matrimonial home.\n\nThe District Court revised and quashed the execution proceedings. An appeal was subsequently filed in Benedictoâ€™s name even though he had already died and no legal representative had been properly substituted.\n\nHolding: A deceased person could not institute and prosecute an appeal without a duly appointed representative.\n\nDecision: The appeal was struck out as incompetent, with no order as to costs.",
       parties: {
         appellant: 'Benedicto Nicodemus (Deceased; purported appellant)',
         firstRespondent: 'Melesiana Chubwa Nyamihilo',
@@ -17155,6 +19445,17 @@ const SLCMS_STATE = {
         court: 'Bwanga Primary Court / District Court of Chato at Chato',
         subjectMatter: 'Attachment of residential house in execution of TZS 1,645,000 money decree'
       },
+      caseFacts: [
+        'Benedicto claimed TZS 1,645,000 from Emmanuel Bwire.',
+        'The Primary Court decided the claim in Benedictoâ€™s favour.',
+        'Execution proceedings resulted in attachment of a house.',
+        'Melesiana claimed that the house was a matrimonial home.',
+        'Her objection proceeding before the Primary Court failed.',
+        'She applied for revision before the District Court.',
+        'The District Court quashed the attachment and sale proceedings.',
+        'Benedicto had died before the High Court appeal was instituted.',
+        'No legal personal representative was properly substituted.'
+      ],
       facts: [
         'Benedicto Nicodemus obtained a money judgment for TZS 1,645,000 against Emmanuel Bwire in Civil Case No. 15 of 2021 before Bwanga Primary Court.',
         'During execution, a residential house was attached by Shashinhale Auction Mart and Court Broker.',
@@ -17166,11 +19467,16 @@ const SLCMS_STATE = {
         'Consolatha Medard Kambuga had purportedly been appointed administratrix of his estate, but she was never formally joined or substituted as the appellant on record.',
         'Advocate M.S. Mwanaupanga conceded in open court that he could not have received instructions from a deceased person to file the appeal.'
       ],
+      reportData: {
+        reportTitle: 'Deceased Litigant and Execution Report â€” Benedicto Nicodemus Case',
+        reportConclusion: 'Because the appeal was instituted in the name of a deceased person without a properly substituted representative, it was incompetent and struck out. No costs were awarded.'
+      },
       legalIssues: [
-        'Whether an appeal instituted and prosecuted in the sole name of a person who was already deceased at the date of filing is legally competent.',
-        'Whether the appearance of an advocate can cure an appeal filed in the name of a deceased person where counsel received no legal instructions.',
-        'Whether a deceased person possesses legal personality to maintain an appellate proceeding without formal substitution of a duly appointed legal representative.',
-        'Whether the High Court could determine substantive questions regarding revisional jurisdiction (Section 22 Magistrates’ Courts Act) or matrimonial home attachment exemption (Rule 63(1) GN No. 55 of 1963) in an incurably incompetent appeal.'
+        'Whether an appeal could be filed in the name of a deceased person.',
+        'Whether a legal personal representative was required.',
+        'Whether retaining the deceased personâ€™s name made the appeal incompetent.',
+        'Whether the District Court correctly exercised revisionary jurisdiction.',
+        'Whether the High Court could consider the merits of an incompetent appeal.'
       ],
       partiesArguments: {
         appellantArguments: 'Advocate M.S. Mwanaupanga initially argued that the District Court acted without jurisdiction by proceeding after Benedicto’s death and that revision was unavailable when a fresh suit should have been filed. However, upon the Court questioning the competence of the appeal, counsel conceded that Benedicto was already deceased when the appeal was lodged, that counsel had no instructions from the deceased, and that the appeal was incurably defective and should be struck out.',
@@ -17183,6 +19489,7 @@ const SLCMS_STATE = {
         'STRIKING OUT FOR INCOMPETENCE: Because the appeal was a nullity ab initio, the High Court had no jurisdiction to determine the substantive grounds regarding revisional remedies or matrimonial property attachment exemption.',
         'SUO MOTU INQUIRY & NO COSTS: The court raised the competence issue on its own motion, warranting an order striking out the appeal with each party bearing their own costs.'
       ],
+      finalDecision: 'The appeal was struck out as incompetent, with no order as to costs.',
       decisionAndOrders: [
         'PC Civil Appeal No. 26177 of 2025 is struck out in its entirety for being incurably incompetent.',
         'No order as to costs is made, the matter having been disposed of on the Court’s own motion.',
@@ -17304,7 +19611,42 @@ const SLCMS_STATE = {
       hasFullText: true,
       hasDownload: true,
       fileName: 'CL vs WON (Civil Appeal No 26822 of 2025) 2025 TZHC 8755 (31 December 2025).pdf',
+sourcePdf: 'legal-documents/2025/C.L. vs W.O.N. 2025 TZHC 8755 (31 December 2025).pdf',
+searchMetadata: {
+        caseTitle: 'C.L. v W.O.N.',
+        officialTitle: 'C.L. v W.O.N.',
+        citation: '[2025] TZHC 8755',
+        caseNumber: 'Civil Appeal No. 26822 of 2025',
+        originalCase: 'Juvenile Civil Application No. 20916 of 2025',
+        originatingCase: 'Juvenile Civil Application No. 20916 of 2025',
+        court: 'High Court of Tanzania',
+        registry: 'Temeke Sub-Registry, One Stop Judicial Centre',
+        judge: 'Mwaipopo, J.',
+        decisionDate: '31 December 2025',
+        decisionYear: '2025',
+        caseType: 'Child-custody appeal',
+        category: 'Child-custody appeal',
+        subject: 'Custody, best interests and social inquiry report',
+        legalSubject: 'Custody, best interests and social inquiry report',
+        child: 'Five-year-old female child identified as â€œPQâ€',
+        outcome: 'Appeal allowed; custody granted to mother',
+        source: 'Uploaded 2025 PDF',
+        searchAliases: [
+          'CL v WON',
+          'C.L. v W.O.N.',
+          'Civil Appeal 26822',
+          'Juvenile Application 20916',
+          'custody of PQ',
+          'child custody 2025',
+          'child custody cases',
+          'child custody',
+          'custody of child',
+          'TZHC 8755'
+        ]
+      },
+      caseInformation: null, // assigned below
       summary: 'In a confidential custody dispute concerning a five-year-old girl ("PQ," born 28 September 2020), mother C.L. appealed against a Juvenile Court order granting custody to father W.O.N. based substantially on a social inquiry report. The father alleged denial of access, inadequate supervision, and hostel placement, which the mother refuted by demonstrating regular weekend access and active employment. The High Court (S.D. Mwaipopo, J.) allowed the appeal and restored custody to the mother, holding that: (1) Under Sections 26(2) and 39 of the Law of the Child Act [Cap. 13 R.E. 2023], there is a statutory rebuttable presumption that custody of a child of tender years below seven belongs to the mother; (2) The presumption cannot be displaced merely because the father is also capable, but requires clear proof of maternal unfitness, neglect, or harm; (3) The social inquiry report was biased, included unauthenticated recordings/photos without cross-examination, and was adopted without sufficient independent judicial evaluation; and (4) The father’s living arrangements (child sleeping in living room while father and wife used bedroom) did not favour transferring custody. The mother was granted primary custody, while the father’s visitation/access rights were preserved, with shared long holidays conditional upon the child turning seven and the father improving accommodation.',
+caseSummary: "The Juvenile Court granted custody of a five-year-old girl to her father. The mother appealed, arguing that she had not been proved unfit and that the Social Inquiry Report was biased and contained untested materials.\n\nThe High Court held that the trial court had not properly applied the childâ€™s best interests, the importance of a young child remaining with the mother, or the evidential burden required to change custody.\n\nHolding: A Social Inquiry Report assists the court but does not replace independent judicial evaluation.\n\nDecision: The appeal was allowed and custody was granted to the mother, subject to access and shared parental responsibilities.",
       parties: {
         appellant: 'C.L. (Mother)',
         respondent: 'W.O.N. (Father)',
@@ -17318,6 +19660,20 @@ const SLCMS_STATE = {
         court: 'Juvenile Court of Dar es Salaam (One Stop Judicial Centre)',
         decisionDate: '2025-10-06'
       },
+      caseFacts: [
+        'The parties met in 2019 while university students.',
+        'The child was born on 28 September 2020.',
+        'The partiesâ€™ relationship later ended.',
+        'The father alleged denial of access and inadequate parental supervision.',
+        'The mother denied obstructing access.',
+        'The child was five years old at the time of the appeal.',
+        'The Juvenile Court awarded custody to the father.',
+        'A Social Inquiry Report supported the custody determination.',
+        'The report contained photographs, recordings and third-party material.',
+        'Some materials were not authenticated or tested.',
+        'The fatherâ€™s living arrangement reportedly provided limited privacy for the child.',
+        'The mother had not been proved unfit.'
+      ],
       facts: [
         'C.L. and W.O.N. met in 2019 as university students and entered a romantic relationship.',
         'Their daughter "PQ" was born on 28 September 2020.',
@@ -17328,12 +19684,18 @@ const SLCMS_STATE = {
         'On 6 October 2025, the Juvenile Court adopted a social inquiry report and awarded custody to the father.',
         'The mother appealed to the High Court in Civil Appeal No. 26822 of 2025.'
       ],
+      reportData: {
+        reportTitle: 'Protected Child-Custody Report â€” C.L. v W.O.N.',
+        reportConclusion: 'Appeal allowed. Mother granted custody of â€œPQ.â€ Father granted reasonable access. Long school holidays to be shared subject to stated conditions. Both parents must cooperate on education, health, religion and welfare. Mother has final authority over ordinary day-to-day matters. Custody remains effective until circumstances materially change or the court orders otherwise. No order as to costs.'
+      },
       legalIssues: [
-        'Whether the trial court properly applied the best-interests-of-the-child principle under Section 4(2) of the Law of the Child Act and Article 3(1) UNCRC.',
-        'Whether the statutory presumption favouring maternal custody for a child of tender years under seven (Sections 26(2) and 39 Law of the Child Act) was rebutted by clear proof of maternal unfitness.',
-        'Whether the father proved material allegations of denial of access, hostel placement, or parental neglect.',
-        'Whether the living arrangements of the parties justified transferring custody of a 5-year-old girl to the father.',
-        'Whether the trial court properly evaluated the social inquiry report under Rule 72 of the Juvenile Court Procedure Rules or erred by adopting unauthenticated electronic evidence and third-party statements without independent analysis.'
+        'What arrangement served the childâ€™s best interests.',
+        'Whether a child under seven should ordinarily remain with the mother.',
+        'Whether the mother had been proved unfit.',
+        'Whether the Social Inquiry Report was balanced and reliable.',
+        'Whether untested electronic materials could influence custody.',
+        'Whether the trial court independently evaluated the report.',
+        'Whether the father should retain access rights.'
       ],
       partiesArguments: {
         appellantArguments: 'Ms. Regina Kiumba argued that: (1) The child is a 5-year-old girl of tender years with a strong statutory presumption favouring maternal custody under Section 26(2) and Section 39; (2) No credible evidence proved the mother was unfit or neglected the child; (3) The father enjoyed regular weekend access, disproving denial of access; (4) The mother is gainfully employed and provides bedroom accommodation, whereas the child slept in the father’s living room; (5) The social inquiry report was biased, included unauthenticated recordings/photos and third-party hearsay, and was accepted without independent judicial evaluation; (6) Custody should be restored to the mother.',
@@ -17347,6 +19709,7 @@ const SLCMS_STATE = {
         'JUDICIAL SCRUTINY OF SOCIAL INQUIRY REPORTS: A social inquiry report under Rule 72 assists the court but is not binding. The trial court erred by uncritically adopting a report that disproportionately focused on the father’s claims, included unauthenticated recordings and photos, and lacked balanced independent analysis.',
         'ACCESS AND CO-PARENTING: Custody was granted to the mother while safeguarding the father’s visitation rights and co-parenting consultation on health, education, and religion.'
       ],
+      finalDecision: 'The appeal was allowed and custody was granted to the mother, subject to access and shared parental responsibilities.',
       decisionAndOrders: [
         'The appeal is allowed in its entirety.',
         'C.L. (the mother) is granted primary legal and physical custody of the child PQ.',
@@ -17481,6 +19844,7 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-067',
+dataQualityWarning: 'The header identifies the original matter as Criminal Case No. 22410 of 2024, while one paragraph refers to 22410 of 2025. Store the header number as primary and mark the other as a source inconsistency requiring verification.',
       title: 'Daudi Jeremia Hussein v. Republic',
       citation: '[2025] TZHC 8662',
       caseNumber: 'Criminal Appeal No. 28368 of 2025',
@@ -17503,7 +19867,42 @@ const SLCMS_STATE = {
       hasFullText: true,
       hasDownload: true,
       fileName: 'Daudi Jeremia Hussein vs Republic 2025 TZHC 8662 (31 December 2025).pdf',
+sourcePdf: 'legal-documents/2025/Daudi Jeremia Hussein vs Republic 2025 TZHC 8662 (31 December 2025).pdf',
+searchMetadata: {
+        caseTitle: 'Daudi Jeremia Hussein v Republic',
+        officialTitle: 'Daudi Jeremia Hussein v Republic',
+        citation: '[2025] TZHC 8662',
+        caseNumber: 'Criminal Appeal No. 28368 of 2025',
+        originalCase: 'Criminal Case No. 22410 of 2024',
+        originatingCase: 'Criminal Case No. 22410 of 2024',
+        court: 'High Court of Tanzania',
+        registry: 'Geita Sub-Registry',
+        judge: 'Mwakapeje, J.',
+        decisionDate: '31 December 2025',
+        decisionYear: '2025',
+        caseType: 'Criminal appeal',
+        category: 'Criminal appeal',
+        offences: 'Rape and abduction',
+        subject: 'Rape and abduction',
+        legalSubject: 'Rape and abduction',
+        originalSentence: 'Thirty-six yearsâ€™ imprisonment',
+        outcome: 'Appeal allowed; conviction and sentence quashed',
+        source: 'Uploaded 2025 PDF',
+        searchAliases: [
+          'Daudi Hussein',
+          'Daudi Jeremia',
+          'Criminal Appeal 28368',
+          'rape and abduction',
+          'Nyangâ€™hwale',
+          'TZHC 8662',
+          'Daudi Jeremia Hussein'
+        ],
+        inconsistencyWarning: 'The uploaded judgment contains inconsistent metadata. Verification against the official court record is recommended.',
+        dataQualityWarning: 'The header identifies the original matter as Criminal Case No. 22410 of 2024, while one paragraph refers to 22410 of 2025. Store the header number as primary and mark the other as a source inconsistency requiring verification.'
+      },
+      caseInformation: null, // assigned below
       summary: 'Daudi Jeremia Hussein was convicted by the District Court of Nyang’hwale in Criminal Case No. 22410 of 2024 (rendered as 2025 in opening) of rape (under Section 130(1), (2)(e) and 131(1)) and abduction (under Section 134 of the Penal Code [Cap. 16 R.E. 2023]) involving teenage girls aged 14 to 17, and sentenced to 36 years’ imprisonment. On appeal, the High Court (G.V. Mwakapeje, J.) allowed the appeal, quashed all convictions and sentences, and ordered the appellant’s immediate release. The Court held that: (1) While penetration in sexual offences can be proved by credible victim testimony without medical corroboration, the testimony of complainant ABC (aged 17) contained material gaps regarding resistance, struggle, alarm, and immediate report, and the absence of fresh genital trauma or semen left reasonable doubt; (2) The Kabeta Guest House register (Exhibit P5) listed two adult men (Daud Jelemia and Yusuph Katoto) without naming ABC or establishing exclusive occupancy, failing to corroborate her presence; (3) The prosecution failed without explanation to call crucial eyewitness DEF (alleged wife of appellant), warranting an adverse inference under Section 127(7) / common law principles; and (4) The abduction charges concerning GHK and XYZ failed because their movements were open, fluid, and voluntary among relatives and villagers rather than an unlawful taking against parental will without consent.',
+caseSummary: "The appellant was convicted of rape and abduction involving several girls and sentenced to thirty-six yearsâ€™ imprisonment.\n\nThe High Court found material gaps and contradictions concerning penetration, identification and whether the minors were unlawfully taken against their guardiansâ€™ wishes. A central witness was not called.\n\nHolding: Mere presence of minors with the appellant was insufficient to prove unlawful taking or rape beyond reasonable doubt.\n\nDecision: Appeal allowed. All convictions and the sentence were quashed, and the appellant was ordered released unless otherwise lawfully held.",
       parties: {
         appellant: 'Daudi Jeremia Hussein (also recorded as Daud Jelemia)',
         respondent: 'Republic',
@@ -17517,6 +19916,19 @@ const SLCMS_STATE = {
         court: 'District Court of Nyang’hwale',
         sentence: '36 years’ imprisonment'
       },
+      caseFacts: [
+        'The alleged events occurred between 21 and 23 August 2025.',
+        'The events occurred around Kharumwa Village, Nyangâ€™hwale.',
+        'The protected complainants were identified using initials.',
+        'Their stated ages included fourteen, fifteen and seventeen years.',
+        'The appellant allegedly presented himself as a teacher.',
+        'He allegedly promised love, marriage or educational assistance.',
+        'The group moved openly between different homes.',
+        'Some girls appeared to have joined voluntarily.',
+        'The medical evidence did not establish every disputed element.',
+        'A material witness identified as DEF was not called.',
+        'Evidence concerning parental consent and unlawful removal was contradictory.'
+      ],
       facts: [
         'The alleged incidents occurred between 21 and 23 August 2025 in Kharumwa village, Kabeta Guest House, Bukungu village, and surrounding residences in Geita.',
         'The minors involved included ABC (aged 17 years, 7 months), DEF (reported 17 years), GHK (aged 14), and XYZ (aged 15).',
@@ -17527,12 +19939,17 @@ const SLCMS_STATE = {
         'Medical examinations on 24 August 2025 revealed the girls were not virgins, but found no fresh tears, bruises, or spermatozoa connecting the appellant to penetration.',
         'The appellant denied all charges, maintaining that DEF was his lawful wife, ABC was his sister-in-law, and all movements were open and voluntary among relatives.'
       ],
+      reportData: {
+        reportTitle: 'Rape and Abduction Appeal Report â€” Daudi Hussein v Republic',
+        reportConclusion: 'The prosecution failed to prove essential elements of rape and abduction beyond reasonable doubt. The conviction and sentence were quashed.'
+      },
       legalIssues: [
-        'Whether the prosecution proved the essential ingredients of rape under Section 130(1), 130(2)(e), and 131(1) of the Penal Code beyond reasonable doubt.',
-        'Whether the uncorroborated testimony of ABC established penetration by the appellant in light of medical findings showing no fresh injuries or semen.',
-        'Whether the Kabeta Guest House register (Exhibit P5) naming two adult men corroborated ABC’s presence or exclusive occupancy by the appellant.',
-        'What legal inference arises from the prosecution’s unexplained failure to call material witness DEF.',
-        'Whether the appellant unlawfully took or abducted GHK (14) and XYZ (15) out of lawful parental custody against their parents’ or guardians’ will under Section 134 of the Penal Code.'
+        'Whether penetration was proved beyond reasonable doubt.',
+        'Whether the appellant was reliably identified as the perpetrator.',
+        'Whether the minors were unlawfully taken from lawful custody.',
+        'Whether the taking occurred against the guardiansâ€™ wishes.',
+        'Whether contradictions created reasonable doubt.',
+        'What inference followed from failure to call a material witness.'
       ],
       partiesArguments: {
         appellantArguments: 'The appellant argued that: (1) The medical evidence did not prove recent penetration or connect him to any sexual act, and loss of virginity did not prove rape; (2) ABC’s testimony was unreliable and fabricated; (3) The guest-house register did not show ABC was present in the room; (4) DEF was his wife and the girls moved voluntarily with them among relatives; (5) He did not abduct GHK or XYZ; (6) Key arresting and hosting relatives were not called to testify; (7) His convictions should be quashed and he should be released.',
@@ -17545,6 +19962,7 @@ const SLCMS_STATE = {
         'ADVERSE INFERENCE FOR FAILING TO CALL DEF: DEF was a central witness who was named in the allegations and claimed by appellant to be his wife. The prosecution’s unexplained failure to call her justified an adverse inference that her testimony would not support the prosecution (Buruhani Selemani Mbombo v Republic, Omary Said @ Habibu v Republic).',
         'ABDUCTION UNDER SECTION 134 NOT PROVED: To constitute abduction under Section 134 of the Penal Code, there must be an unlawful taking from lawful custody against the will of the guardian (Elias Nduli @ Matulanya v Republic, Ally Mohamed Mkupa v Republic). GHK left with her father’s permission to visit her grandmother, XYZ accompanied the group voluntarily, and their open movements among village relatives negated an unlawful or clandestine taking.'
       ],
+      finalDecision: 'Appeal allowed. All convictions and the sentence were quashed, and the appellant was ordered released unless otherwise lawfully held.',
       decisionAndOrders: [
         'The appeal is allowed in its entirety.',
         'The conviction of Daudi Jeremia Hussein for rape under Section 130(1), 130(2)(e), and 131(1) of the Penal Code is quashed and set aside.',
@@ -17691,7 +20109,39 @@ const SLCMS_STATE = {
       hasFullText: true,
       hasDownload: true,
       fileName: 'Deogratius Peter Shayo vs Republic 2025 TZHC 8706 (31 December 2025).pdf',
+sourcePdf: 'legal-documents/2025/Deogratius Peter Shayo vs Republic 2025 TZHC 8706 (31 December 2025).pdf',
+searchMetadata: {
+        caseTitle: 'Deogratius Peter Shayo v Republic',
+        officialTitle: 'Deogratius Peter Shayo v Republic',
+        citation: '[2025] TZHC 8706',
+        caseNumber: 'Criminal Appeal No. 30 of 2021',
+        originalCase: 'Criminal Case No. 104 of 2019',
+        originatingCase: 'Criminal Case No. 104 of 2019',
+        relatedAppeal: 'Criminal Appeal No. 509 of 2021, [2024] TZCA 1156',
+        court: 'High Court of Tanzania',
+        registry: 'Moshi Sub-Registry',
+        judge: 'Kilimi, J.',
+        decisionDate: '31 December 2025',
+        decisionYear: '2025',
+        caseType: 'Criminal appeal after remittal',
+        category: 'Criminal appeal after remittal',
+        offence: 'Rape',
+        subject: 'Rape',
+        legalSubject: 'Rape',
+        outcome: 'Appeal dismissed; conviction and sentence maintained',
+        source: 'Uploaded 2025 PDF',
+        searchAliases: [
+          'Deogratius Shayo',
+          'Criminal Appeal 30 of 2021',
+          'Criminal Case 104',
+          'guilty plea rape',
+          'TZHC 8706',
+          'Deogratius Peter Shayo'
+        ]
+      },
+      caseInformation: null, // assigned below
       summary: 'Deogratius Peter Shayo was convicted by the District Court of Siha in Criminal Case No. 104 of 2019 on his own unequivocal plea of guilty of rape (under Section 130(1), (2)(b) and 131(1) of the Penal Code) and sentenced to 30 years’ imprisonment. After an initial High Court appeal dismissal was quashed and remitted by the Court of Appeal in Criminal Appeal No. 509 of 2021 ([2024] TZCA 1156) for rehearing, the High Court (A.P. Kilimi, J.) reheard the appeal and dismissed it in its entirety, maintaining the conviction and 30-year sentence. The Court held that: (1) Under Section 245(1) and (2) of the Criminal Procedure Act [Cap. 20 R.E. 2023], the appellant’s plea was clear, unambiguous, and unequivocal because he stated "It is true" upon the charge being read and gave a detailed admission of forcefully undressing, penetrating without consent, and ejaculating upon the facts being narrated; (2) An unrepresented accused’s plea is valid where the record establishes full understanding of the accusation and facts without qualification or defence; (3) The omission to read the PF3 and caution statement aloud after they were admitted to form part of the proceedings caused no prejudice because the conviction rested upon the appellant’s complete factual admissions (Paskali Kamara v Republic, Mathias Barua v Republic); (4) Allegations of an unrecorded police promise of a conditional discharge did not invalidate the plea; and (5) Under Section 360(1) of the CPA, an appeal against conviction is legally barred following an unequivocal guilty plea, and the statutory 30-year sentence was lawful.',
+caseSummary: "The appellant pleaded guilty to rape and was sentenced to thirty yearsâ€™ imprisonment. Following an earlier appeal and remittal from the Court of Appeal, the High Court reconsidered whether the plea was unequivocal.\n\nThe record showed that the charge and facts were explained and that the appellant expressly admitted using force and having intercourse without consent.\n\nHolding: The guilty plea was clear, informed and unequivocal.\n\nDecision: The appeal was dismissed, and the conviction and thirty-year sentence remained in force.",
       parties: {
         appellant: 'Deogratius Peter Shayo',
         respondent: 'Republic',
@@ -17705,6 +20155,18 @@ const SLCMS_STATE = {
         court: 'District Court of Siha at Siha',
         sentence: '30 years’ imprisonment'
       },
+      caseFacts: [
+        'The alleged rape occurred on 7 November 2019.',
+        'The appellant and victim worked in the same house.',
+        'They were described as a houseboy and housegirl.',
+        'The charge was read and explained to the appellant.',
+        'He responded that the charge was true.',
+        'The prosecution facts were then read.',
+        'The appellant expressly admitted forceful intercourse without consent.',
+        'He was convicted on his plea of guilty.',
+        'He received thirty yearsâ€™ imprisonment.',
+        'The Court of Appeal later remitted the case because an earlier hearing infringed his right to be heard.'
+      ],
       facts: [
         'On 7 November 2019 at approximately 11:00 am in Lawate area, Siha District, the appellant (aged approximately 19) forcefully undressed the complainant and had sexual intercourse with her without consent.',
         'The appellant and complainant were co-workers employed as houseboy and housegirl in the same residential compound.',
@@ -17715,13 +20177,17 @@ const SLCMS_STATE = {
         'The trial magistrate convicted the appellant on his own plea and sentenced him to the statutory minimum of 30 years’ imprisonment.',
         'Following a remittal by the Court of Appeal in Criminal Appeal No. 509 of 2021 ([2024] TZCA 1156), the appeal was reheard by the High Court in Moshi.'
       ],
+      reportData: {
+        reportTitle: 'Guilty Plea Appeal Report â€” Deogratius Shayo v Republic',
+        reportConclusion: 'The appellant understood and expressly admitted the charge and material facts. The plea was unequivocal, and the appeal was dismissed.'
+      },
       legalIssues: [
-        'Whether the appellant’s plea of guilty before the District Court of Siha complied with Section 245(1) and (2) of the Criminal Procedure Act and was clear and unequivocal.',
-        'Whether the narrated facts disclosed every essential ingredient of rape under Section 130(1), 130(2)(b), and 131(1) of the Penal Code and were understood and admitted by the appellant.',
-        'Whether the trial court’s omission to read aloud the PF3 and caution statement after admitting them to form part of the proceedings occasioned a failure of justice or prejudice.',
-        'Whether the fact that the appellant was unrepresented or allegedly promised a conditional discharge by police officers invalidated his guilty plea.',
-        'Whether an appeal against conviction was competent under Section 360(1) of the Criminal Procedure Act following an unequivocal plea of guilty.',
-        'Whether the 30-year sentence of imprisonment was lawful and justified.'
+        'Whether the guilty plea was unequivocal.',
+        'Whether the appellant understood the charge.',
+        'Whether the admitted facts constituted rape.',
+        'Whether failure to read admitted documents aloud caused prejudice.',
+        'Whether being unrepresented affected the validity of the plea.',
+        'Whether the sentence was lawful.'
       ],
       partiesArguments: {
         appellantArguments: 'The appellant argued that: (1) His plea of guilty was equivocal and ambiguous; (2) He did not fully understand the charge and consequences of pleading guilty; (3) The PF3 and caution statement were not read and explained to him, which prejudiced his defence; (4) The trial court failed in its duty to protect an unrepresented accused; (5) Police officers induced his plea by promising a conditional discharge; (6) His conviction should be quashed and sentence set aside.',
@@ -17734,6 +20200,7 @@ const SLCMS_STATE = {
         'UNREPRESENTED STATUS AND ALLEGED POLICE PROMISE: Lay status does not invalidate a plea where the court properly explains the charge and facts. The appellant’s uncorroborated allegation of a police promise of conditional discharge cannot displace a recorded, voluntary admission made in open court.',
         'STATUTORY RESTRICTION ON APPEALS UNDER SECTION 360(1) CPA: Because the plea of guilty was unequivocal and lawful, Section 360(1) of the Criminal Procedure Act restricts appellate review to the legality or severity of sentence. The 30-year sentence is the mandatory statutory sentence under Section 131(1) of the Penal Code.'
       ],
+      finalDecision: 'The appeal was dismissed, and the conviction and thirty-year sentence remained in force.',
       decisionAndOrders: [
         'The appellant’s plea of guilty was valid, clear, and unequivocal.',
         'The conviction of Deogratius Peter Shayo for rape under Section 130(1), 130(2)(b), and 131(1) of the Penal Code was lawful and is affirmed.',
@@ -17844,7 +20311,39 @@ const SLCMS_STATE = {
       hasFullText: true,
       hasDownload: true,
       fileName: 'Neema Benson Shabani vs Ramadhani Juma Mpanda and Another 2025 TZHC 8842 (29 December 2025).pdf',
+sourcePdf: 'legal-documents/2025/Neema Benson Shabani vs Ramadhani Juma Mpanda and Another 2025 TZHC 8842 (29 December 2025).pdf',
+searchMetadata: {
+        caseTitle: 'Neema Benson Shabani v Ramadhani Juma Mpanda and Another',
+        officialTitle: 'Neema Benson Shabani v Ramadhani Juma Mpanda and Another',
+        citation: '[2025] TZHC 8842',
+        caseNumber: 'Land Revision No. 31364 of 2024',
+        originalCase: 'Land Application No. 38 of 2020',
+        originatingCase: 'Land Application No. 38 of 2020',
+        court: 'High Court of Tanzania',
+        registry: 'Dodoma Sub-Registry',
+        judge: 'Musokwa, J.',
+        decisionDate: '29 December 2025',
+        decisionYear: '2025',
+        caseType: 'Land revision',
+        category: 'Land revision',
+        subject: 'Limitation period for revision',
+        legalSubject: 'Limitation period for revision',
+        delay: 'Approximately 705 days',
+        outcome: 'Application struck out with costs',
+        source: 'Uploaded 2025 PDF',
+        searchAliases: [
+          'Neema Shabani',
+          'Ramadhani Mpanda',
+          'Neema Mdinku',
+          'Land Revision 31364',
+          '705-day delay',
+          'TZHC 8842',
+          'Neema Benson Shabani'
+        ]
+      },
+      caseInformation: null, // assigned below
       summary: 'Neema Benson Shabani applied for revision of the proceedings and decision in Land Application No. 38 of 2020 delivered on 17 January 2023 by the District Land and Housing Tribunal for Iramba at Kiomboi. She was not a party to the original DLHT case but asserted that the decision affected her proprietary interest in the disputed land. The applicant alleged she only became aware of the decision on 15 October 2024 (following execution proceedings commenced by the first respondent on 24 March 2024) and filed her revision on 8 December 2024 without seeking an extension of time. First respondent Ramadhani Juma Mpanda raised preliminary objections that the application was time-barred (instituted approximately 705 days post-decision) and cited an incorrect enabling provision (Section 41(1) instead of Section 44 of the Land Disputes Courts Act). The High Court (I.D. Musokwa, J.) upheld the limitation objection and struck out the application with costs. The Court held that: (1) A person who was not a party to the original proceedings may challenge a prejudicial decision through revision because they lack a right of appeal (Victor Rweyemamu Binamungu v Geofrey Kabaka, Mgeni Seif v Mohamed Yahaya Khalani); (2) However, non-party status does not exempt a litigant from statutory limitation periods (Spring Realtors Ltd v Msindika Stores Ltd); (3) Where the Land Disputes Courts Act prescribes no specific revision limitation period, item 21 of Part III of the Schedule to the Law of Limitation Act [Cap. 89 R.E. 2023] applies a 60-day limitation period running objectively from the date of the impugned decision, not from subjective personal discovery (Denis T. Mkasa v Farida Hamza); (4) Once the 60-day period expires, filing a revision directly without first obtaining an extension of time renders the application incurably incompetent (Standard Chartered Bank v VIP Engineering). The substantive land dispute and statutory-citation objection were left undecided.',
+caseSummary: "The applicant sought revision of a decision delivered on 17 January 2023. The revision application was filed on 8 December 2024, approximately 705 days later.\n\nBecause the relevant land law did not provide a specific limitation period, the Court applied the sixty-day period under the Law of Limitation Act.\n\nHolding: The application was filed outside the statutory period without an extension of time.\n\nDecision: The revision was struck out as time-barred and incompetent, with costs awarded to the first respondent.",
       parties: {
         applicant: 'Neema Benson Shabani (also rendered as Neema Benson Shaban / Neema Benson Shaban @ Neema Benson Shabani)',
         firstRespondent: 'Ramadhani Juma Mpanda',
@@ -17858,6 +20357,16 @@ const SLCMS_STATE = {
         court: 'District Land and Housing Tribunal for Iramba at Kiomboi',
         decisionDate: '2023-01-17'
       },
+      caseFacts: [
+        'The challenged decision was delivered on 17 January 2023.',
+        'The revision application was filed on 8 December 2024.',
+        'The delay was approximately 705 days.',
+        'No prior extension of time was obtained.',
+        'The first respondent raised a limitation objection.',
+        'The governing land provision did not specify a limitation period.',
+        'The Court applied the general sixty-day period.',
+        'The application was therefore substantially out of time.'
+      ],
       facts: [
         'Ramadhani Juma Mpanda (first respondent) and Neema Mdinku (second respondent) were the sole parties to Land Application No. 38 of 2020 before the District Land and Housing Tribunal for Iramba at Kiomboi.',
         'On 17 January 2023, the DLHT delivered its final decision in the land dispute.',
@@ -17867,13 +20376,16 @@ const SLCMS_STATE = {
         'On 8 December 2024, the applicant filed Land Revision No. 31364 of 2024 in the High Court at Dodoma without first applying for or obtaining an extension of time.',
         'The first respondent filed a notice of preliminary objections asserting the revision was time-barred (filed ~705 days after the decision) and founded on incorrect statutory provisions (Section 41(1) Land Disputes Courts Act and CPC provisions).'
       ],
+      reportData: {
+        reportTitle: 'Time-Barred Land Revision Report â€” Neema Shabani v Mpanda',
+        reportConclusion: 'The application was filed approximately 705 days after the decision without an extension. It was struck out as incompetent, with costs to the first respondent.'
+      },
       legalIssues: [
-        'Whether a stranger or non-party to an original land dispute proceeding has legal standing to apply for revision before the High Court under Section 44 of the Land Disputes Courts Act.',
-        'Whether statutory limitation periods apply equally to non-parties seeking revision of a decision affecting their rights.',
-        'What is the applicable limitation period for instituting a land revision where Section 44 of the Land Disputes Courts Act prescribes no specific timeframe.',
-        'Whether the limitation period runs objectively from the date of the impugned decision or subjectively from the date the applicant discovered the decision.',
-        'Whether filing a revision application after expiration of the 60-day statutory limitation period without first obtaining an extension of time renders the application incurably incompetent.',
-        'Whether reliance on Section 41(1) of the Land Disputes Courts Act and Order XLIII Rule 2 / Section 79(1)(c) CPC rendered the application fundamentally defective.'
+        'What limitation period applied to the land revision.',
+        'Whether the Law of Limitation Act supplied the applicable period.',
+        'Whether the application was filed within sixty days.',
+        'Whether the High Court had jurisdiction over a time-barred application.',
+        'Whether it was necessary to determine the second preliminary objection.'
       ],
       partiesArguments: {
         applicantArguments: 'Advocate David Rutayuga Deogratius argued that: (1) The applicant was a complete stranger to the DLHT proceedings and could not challenge a decision she was unaware of; (2) Time for a non-party should run from 15 October 2024, when she discovered the decision, relying on Jacqueline Ntuyabaliwe Mengi v Abdiel Reginald Mengi [2022] TZHC 11694; (3) The application filed on 8 December 2024 was within 60 days of discovery; (4) Revision was her sole remedy as she had no right of appeal; (5) Wrong citation or omission of an enabling provision does not invalidate an application under Charles Zephania Mwenesano v Daniel Samwel Chuma; (6) Both preliminary objections should be dismissed with costs.',
@@ -17887,6 +20399,7 @@ const SLCMS_STATE = {
         'MANDATORY EXTENSION OF TIME PREREQUISITE: Under Standard Chartered Bank v. VIP Engineering [2013] TZCA 2454, a revision filed outside the 60-day window without first securing leave for extension of time is incurably incompetent and must be struck out under Section 3(1) of the Law of Limitation Act.',
         'SECOND PRELIMINARY OBJECTION UNNECESSARY: Having found the application time-barred, the Court declined to determine the statutory-citation objection.'
       ],
+      finalDecision: 'The revision was struck out as time-barred and incompetent, with costs awarded to the first respondent.',
       decisionAndOrders: [
         'The first preliminary objection raised by the first respondent is upheld.',
         'Land Revision No. 31364 of 2024 is declared time-barred and incurably incompetent.',
@@ -18015,6 +20528,7 @@ const SLCMS_STATE = {
     },
     {
       id: 'tz-j-070',
+dataQualityWarning: 'The PDF contains inconsistent originating case numbers. The administrator should verify the official TanzLII page or court record before publishing the metadata.',
       title: 'Peter Thomas Bocco v. Republic',
       citation: '[2025] TZHC 8732',
       caseNumber: 'DC Criminal Revision No. 000006375 of 2025 (also DC Criminal Revision No. 6375 of 2025)',
@@ -18038,7 +20552,41 @@ const SLCMS_STATE = {
       hasFullText: true,
       hasDownload: true,
       fileName: 'Peter Thomas Bocco vs Republic 2025 TZHC 8732 (29 December 2025).pdf',
+searchMetadata: {
+        caseTitle: 'Peter Thomas Bocco v Republic',
+        officialTitle: 'Peter Thomas Bocco v Republic',
+        citation: '[2025] TZHC 8732',
+        caseNumber: 'DC Criminal Revision No. 000006375 of 2025',
+        headerOriginatingCase: 'Criminal Case No. 1 of 2023',
+        originatingCase: 'Criminal Case No. 1 of 2023',
+        bodyReference: 'Criminal Case No. 6375 of 2025',
+        court: 'High Court of Tanzania',
+        registry: 'Tanga Sub-Registry',
+        judge: 'Chaba, J.',
+        decisionDate: '29 December 2025',
+        decisionYear: '2025',
+        caseType: 'Criminal revision',
+        category: 'Criminal revision',
+        subject: 'Cross-examination and accuracy of court proceedings',
+        legalSubject: 'Cross-examination and accuracy of court proceedings',
+        outcome: 'Revision allowed; affected proceedings nullified',
+        source: 'Uploaded 2025 PDF',
+        searchAliases: [
+          'Peter Bocco',
+          'Peter Thomas Bocco',
+          'Criminal Revision 6375',
+          'Korogwe cross-examination',
+          'cross-examination',
+          'cross examination',
+          'case concerning cross-examination',
+          'TZHC 8732'
+        ],
+        inconsistencyWarning: 'The uploaded judgment contains inconsistent metadata. Verification against the official court record is recommended.',
+        dataQualityWarning: 'The PDF contains inconsistent originating case numbers. The administrator should verify the official TanzLII page or court record before publishing the metadata.'
+      },
+      caseInformation: null, // assigned below
       summary: 'Peter Thomas Bocco was undergoing criminal trial before the District Court of Korogwe on four counts involving stealing by agent and forgery. During the cross-examination of handwriting and document examiner SSP Maria Tryphon Njenga (PW7) on 6 March 2025, the trial magistrate (Hon. J. Matinde, PRM) recorded a series of isolated, monosyllabic answers ("It is correct", "I don’t know", "Yes", "No") without recording the corresponding questions or context, and subsequently closed cross-examination after refusing an unopposed adjournment requested by defence counsel due to fatigue and illness. The applicant filed DC Criminal Revision No. 000006375 of 2025. The Republic argued that revision was incompetent against an interlocutory trial proceeding under Section 394(1) CPA. The High Court (M.J. Chaba, J.) allowed the revision in part, holding that: (1) Under Section 372(1) of the Criminal Procedure Act [Cap. 20 R.E. 2023], the High Court possesses revisional jurisdiction to examine the correctness, legality, propriety, and regularity of ongoing subordinate-court proceedings even prior to final judgment; (2) Although allegations of active restriction and judicial bias were not proved by cogent evidence (Athumani Msumi v Mohamed Athumani Msumi, Mwesigwa Zaidi Siraji v Mara Textile Ltd), the trial court fundamentally erred by recording disconnected answers without questions, rendering the cross-examination unintelligible and incapable of proper evaluation or appellate review (Mangalu Maduhu v Republic); (3) The proceedings of 6 March 2025 were nullified and expunged, and PW7’s cross-examination was ordered to restart afresh; and (4) The High Court declined to order recusal of the magistrate, holding that any recusal application must first be formally moved before the trial court. The criminal charges were not dismissed.',
+caseSummary: "The applicant faced four charges involving stealing by agent and forgery. During cross-examination of the seventh prosecution witness, the trial magistrate restricted certain questions and allegedly failed to record material parts of the evidence accurately.\n\nThe High Court found that it could supervise the regularity of ongoing criminal proceedings even before a final judgment. It determined that the recording of the cross-examination was fundamentally defective.\n\nHolding: Inaccurate recording of material cross-examination violated proper criminal procedure and invalidated that portion of the trial.\n\nDecision: Proceedings conducted on 6 March 2025 were nullified and expunged. The cross-examination was ordered to be conducted afresh.",
       parties: {
         applicant: 'Peter Thomas Bocco',
         respondent: 'Republic',
@@ -18052,6 +20600,19 @@ const SLCMS_STATE = {
         court: 'District Court of Korogwe at Korogwe',
         charges: 'Four counts involving Stealing by Agent and Forgery'
       },
+      caseFacts: [
+        'The applicant faced four counts.',
+        'The charges included stealing by agent and forgery.',
+        'He pleaded not guilty.',
+        'The prosecution called at least seven witnesses.',
+        'The dispute arose during cross-examination of PW7.',
+        'The magistrate prevented PW7 from answering certain questions.',
+        'Defence counsel requested an adjournment because of fatigue and illness.',
+        'The adjournment request was refused.',
+        'Cross-examination was closed.',
+        'The applicant alleged that material testimony was not properly recorded.',
+        'The High Court found the record of 6 March 2025 defective.'
+      ],
       facts: [
         'Peter Thomas Bocco was charged before the District Court of Korogwe on four counts involving stealing by agent and forgery, and pleaded not guilty.',
         'The prosecution called at least seven witnesses, with SSP Maria Tryphon Njenga testifying as PW7 regarding forensic document and handwriting examination.',
@@ -18061,12 +20622,17 @@ const SLCMS_STATE = {
         'The prosecution re-examined PW7 and she was discharged.',
         'The applicant instituted DC Criminal Revision No. 000006375 of 2025 before the High Court at Tanga challenging the regularity of the proceedings while the trial was ongoing.'
       ],
+      reportData: {
+        reportTitle: 'Criminal Cross-Examination Revision Report â€” Bocco v Republic',
+        reportConclusion: 'The defective recording of PW7â€™s cross-examination was a fundamental irregularity. Proceedings of 6 March 2025 were nullified and ordered to begin afresh.'
+      },
       legalIssues: [
-        'Whether the High Court has jurisdiction under Section 372(1) of the Criminal Procedure Act to entertain a criminal revision challenging the procedural regularity of an ongoing, uncompleted subordinate-court trial.',
-        'Whether the trial magistrate unlawfully restricted the cross-examination of handwriting expert PW7 or exhibited judicial bias.',
-        'Whether recording disconnected witness answers without transcribing corresponding questions or adopting an intelligible narrative format violates procedural standards and vitiates the cross-examination record.',
-        'What is the legal effect of an unintelligible cross-examination record under Mangalu Maduhu v. Republic.',
-        'Whether the High Court should order the trial magistrate to recuse herself from continuing with the trial.'
+        'Whether revision could be used before completion of the criminal trial.',
+        'Whether the magistrate improperly restricted cross-examination.',
+        'Whether material testimony was inaccurately recorded.',
+        'Whether the recording defect invalidated the proceedings.',
+        'Whether the cross-examination should be conducted afresh.',
+        'Whether recusal should first be requested before the trial magistrate.'
       ],
       partiesArguments: {
         applicantArguments: 'Advocate Yona Lucas argued that: (1) The magistrate improperly restricted PW7 from answering material questions on forgery; (2) The magistrate exhibited hostility, anger, and bias; (3) The magistrate failed to record material questions and transcribed fragmented, disconnected answers; (4) The unopposed adjournment request due to counsel’s illness was improperly rejected, denying a fair hearing; (5) The High Court should revise and nullify the defective proceedings and order recusal.',
@@ -18079,6 +20645,7 @@ const SLCMS_STATE = {
         'CROSS-EXAMINATION EXPUNGED AND ORDERED AFRESH: Because cross-examination is vital to discovering the truth and testing expert handwriting testimony, the defective proceedings of 6 March 2025 were nullified and ordered to be retaken in full compliance with procedural rules.',
         'RECUSAL PROCEDURE: Recusal cannot be ordered suo motu on revision without a formal application first made to and determined by the trial magistrate.'
       ],
+      finalDecision: 'Proceedings conducted on 6 March 2025 were nullified and expunged. The cross-examination was ordered to be conducted afresh.',
       decisionAndOrders: [
         'The criminal revision application is allowed in part.',
         'The District Court proceedings conducted on 6 March 2025 concerning the cross-examination of PW7 (SSP Maria Tryphon Njenga) are declared null and void and are expunged from the record.',
@@ -18193,7 +20760,41 @@ const SLCMS_STATE = {
       hasFullText: true,
       hasDownload: true,
       fileName: 'Rogath K Katende vs CRDB Bank PLC and Others 2025 TZHC 8843 (29 December 2025).pdf',
+sourcePdf: 'legal-documents/2025/Rogath K. Katende vs CRDB Bank PLC and 2 Others 2025 TZHC 8843 (29 December 2025).pdf',
+searchMetadata: {
+        caseTitle: 'Rogath K. Katende v CRDB Bank PLC and Others',
+        officialTitle: 'Rogath K. Katende v CRDB Bank PLC and Others',
+        citation: '[2025] TZHC 8843',
+        caseNumber: 'Misc. Civil Application No. 7327 of 2025',
+        originatingAppeal: 'Land Appeal No. 89 of 2022',
+        originatingCase: 'Land Application No. 107 of 2020',
+        originalCase: 'Land Application No. 107 of 2020',
+        court: 'High Court of Tanzania',
+        registry: 'Dodoma Sub-Registry',
+        judge: 'Musokwa, J.',
+        decisionDate: '29 December 2025',
+        decisionYear: '2025',
+        caseType: 'Extension of time to file notice of appeal',
+        category: 'Extension of time to file notice of appeal',
+        subject: 'Technical delay and diligence',
+        legalSubject: 'Technical delay and diligence',
+        outcome: 'Application granted; twenty-one days allowed',
+        source: 'Uploaded 2025 PDF',
+        searchAliases: [
+          'Rogath Katende',
+          'CRDB Bank',
+          'CRDB',
+          'City Land Company',
+          'Abdallah Saggaf',
+          'Application 7327',
+          'Land Appeal 89',
+          'TZHC 8843',
+          'Rogath K. Katende'
+        ]
+      },
+      caseInformation: null, // assigned below
       summary: 'Rogath K. Katende applied for an extension of time under Section 11(1) of the Appellate Jurisdiction Act [Cap. 141 R.E. 2019], Section 14(1) of the Law of Limitation Act [Cap. 89 R.E. 2019], and Section 93 of the Civil Procedure Code to file a notice of appeal against the High Court decision in Land Appeal No. 89 of 2022 (originating from Dodoma DLHT Land Application No. 107 of 2020), delivered on 17 November 2023. The applicant had initially instituted an appeal before the Court of Appeal, but it was struck out on 18 March 2025 due to technical anomalies in the record of appeal. The applicant filed this application on 2 April 2025, 15 days later. Respondents CRDB Bank PLC, City Land Company Ltd, and Abdallah Abubakar Saggaf opposed the application, arguing that the applicant failed to account for every single day of delay and that the prayer did not explicitly request an extension for serving the letter requesting copies of proceedings/judgment under Rule 84(1) Court of Appeal Rules. The High Court (Hon. I.D. Musokwa, J.) granted the extension with no order as to costs, holding that: (1) Time spent actively pursuing an appeal that is subsequently struck out for procedural technicalities constitutes technical delay and sufficient cause (Fortunatus Masha v William Shija, Mobrama Gold Corp v Minister for Energy); (2) The 15-day period between the Court of Appeal ruling and the fresh application was less than a month, not inordinate, and demonstrated diligence (Hamisi Mohamed v Mtumwa Moshi); (3) The principle of accounting for every day of delay is a prudential standard assessing substantial overall explanation rather than a rigid requirement for mathematical daily accounting; and (4) The extension encompasses both filing/serving the notice of appeal and serving the letter requesting proceedings under Rule 84(1). The applicant was granted 21 days from 29 December 2025 to complete the steps.',
+caseSummary: "The applicant requested additional time to file a notice of appeal against the High Courtâ€™s decision in Land Appeal No. 89 of 2022. He explained that the delay resulted from pursuing an earlier court process and other technical circumstances.\n\nThe Court found that the applicant had remained diligent and had provided a reasonable explanation covering the relevant period.\n\nHolding: Accounting for delay requires a satisfactory explanation for the entire period, not necessarily a mathematical account of every individual day.\n\nDecision: Extension was granted. The notice of appeal had to be filed within twenty-one days.",
       parties: {
         applicant: 'Rogath K. Katende',
         firstRespondent: 'CRDB Bank PLC',
@@ -18209,6 +20810,16 @@ const SLCMS_STATE = {
         court: 'High Court of Tanzania / DLHT at Dodoma',
         decisionDate: '2023-11-17'
       },
+      caseFacts: [
+        'The intended appeal concerned Land Appeal No. 89 of 2022.',
+        'The challenged decision was delivered on 17 November 2023.',
+        'The applicant had pursued an earlier related process.',
+        'The Court of Appeal delivered a ruling on 18 March 2025.',
+        'The present application was filed shortly afterwards.',
+        'The applicant relied on technical delay.',
+        'The respondents challenged whether the delay was sufficiently explained.',
+        'The High Court found that the applicant had acted diligently.'
+      ],
       facts: [
         'The dispute originated as Land Application No. 107 of 2020 before the District Land and Housing Tribunal at Dodoma and proceeded to the High Court as Land Appeal No. 89 of 2022.',
         'On 17 November 2023, the High Court delivered its judgment in Land Appeal No. 89 of 2022.',
@@ -18218,13 +20829,16 @@ const SLCMS_STATE = {
         'The applicant explained that the delay was technical, unintentional, beyond his control, and incurred while diligently pursuing his appellate rights.',
         'CRDB Bank PLC and City Land Company Ltd (first and second respondents) jointly opposed the application, and Abdallah Abubakar Saggaf (third respondent) filed a separate objection, arguing delay was unexplained and prayers were defective.'
       ],
+      reportData: {
+        reportTitle: 'Technical Delay Extension Report â€” Katende v CRDB Bank and Others',
+        reportConclusion: 'The applicant satisfactorily explained the delay and demonstrated diligence. He was granted twenty-one days to file the notice of appeal and the associated request for proceedings. No costs were ordered.'
+      },
       legalIssues: [
-        'Whether the applicant established good and sufficient cause for an extension of time under Section 11(1) of the Appellate Jurisdiction Act and Section 14(1) of the Law of Limitation Act.',
-        'Whether time spent pursuing an appeal that was eventually struck out for procedural anomalies constitutes technical delay.',
-        'Whether the applicant demonstrated continuous diligence in pursuing his appellate remedies.',
-        'Whether the 15-day interval between the Court of Appeal ruling (18 March 2025) and the filing of the application (2 April 2025) was inordinate.',
-        'Whether the rule requiring an applicant to account for every day of delay requires a literal, mathematical daily accounting or a substantial, reasonable overall explanation.',
-        'Whether the extension of time to file a notice of appeal also covers service of the notice and service of the letter requesting copies of proceedings under Rule 84(1) of the Court of Appeal Rules.'
+        'Whether technical delay constituted sufficient cause.',
+        'Whether the applicant acted diligently.',
+        'Whether the full delay was reasonably explained.',
+        'Whether every individual day had to be separately accounted for.',
+        'Whether time should be extended to file and serve a notice of appeal.'
       ],
       partiesArguments: {
         applicantArguments: 'Advocate Sosthenes Mselingwa argued that: (1) The applicant diligently pursued an appeal before the Court of Appeal which was struck out on 18 March 2025 for technical record defects; (2) Time spent prosecuting the earlier appeal is recognized as technical delay and good cause (Fortunatus Masha v William Shija); (3) The fresh application was filed promptly within 15 days on 2 April 2025; (4) Denying an extension would unfairly deprive him of his constitutional right to be heard (Article 13(6)(a) Constitution, Mobrama Gold Corp v Minister for Energy); (5) The application should be granted in the interests of justice.',
@@ -18238,6 +20852,7 @@ const SLCMS_STATE = {
         'PRUDENTIAL EVERY-DAY STANDARD: The principle of accounting for every day is a prudential guide assessing whether the substantial period of delay is reasonably explained, not a rigid mathematical accounting of each calendar day.',
         'SCOPE OF EXTENSION: To give practical effect to the appellate framework, the extension granted properly encompasses both the filing and service of the notice of appeal (Rule 83) and the service of the letter requesting copies of the judgment and proceedings (Rule 84(1)).'
       ],
+      finalDecision: 'Extension was granted. The notice of appeal had to be filed within twenty-one days.',
       decisionAndOrders: [
         'The application for extension of time is granted.',
         'The applicant is granted leave to file a notice of appeal against the decision in Land Appeal No. 89 of 2022.',
@@ -21979,7 +24594,57 @@ Theobat Lameck Mlyuka was convicted of two counts of rape of his 11-year-old gra
     {
       id: 'doc-lib-045',
       title: 'Alfa Ramadhani Athuman v Republic [2024] TZHC 11161 (Full Judgment Source)',
-      judgmentId: 'tz-j-054',
+      judgmentid: 'tz-j-054',
+      // === 2024 PREPARED CASE KNOWLEDGE (12 SEARCHABLE FIELDS & REPORT DATA) ===
+      searchMetadata: {
+    "officialTitle":  "Alfa Ramadhani Athuman v Republic",
+    "alternativeTitle":  "Alfa Ramadhani Athuman vs Republic",
+    "citation":  "[2024] TZHC 11161",
+    "caseNumber":  "DC Criminal Appeal No. 22104 of 2024",
+    "originatingCase":  "Criminal Case No. 51 of 2023",
+    "court":  "High Court of Tanzania",
+    "registry":  "Dodoma Sub-Registry",
+    "proceeding":  "Criminal appeal",
+    "judge":  "Musokwa, J.",
+    "decisionDate":  "31 December 2024",
+    "decisionYear":  "2024",
+    "category":  "Criminal appeal",
+    "legalSubject":  "Rape; credibility and sufficiency of evidence",
+    "outcome":  "Appeal allowed; conviction and sentence quashed",
+    "source":  "Uploaded 2024 PDF",
+    "searchAliases":  [
+                          "Alfa Athuman",
+                          "Alfa Ramadhani",
+                          "Criminal Appeal 22104",
+                          "Criminal Case 51 of 2023",
+                          "rape case 2024",
+                          "TZHC 11161"
+                      ]
+},
+      caseSummary: "Alfa Ramadhani Athuman appealed against his conviction for rape and the sentence of thirty years’ imprisonment. The High Court identified material contradictions in the prosecution evidence and noted that an important witness was not called.\n\nThe prosecution therefore failed to establish guilt beyond reasonable doubt.\n\nHolding: The evidence was insufficient to sustain the conviction.\n\nFinal result: The appeal was allowed, the conviction and sentence were quashed, and the appellant was ordered released unless held for another lawful reason.",
+      caseFacts: [
+    "The alleged offence occurred on 18 September 2023.",
+    "The alleged location was Chungu Village, Ihanja Ward, Ikungi.",
+    "The complainant was reported to be eighteen years old.",
+    "The prosecution alleged that intercourse occurred without consent.",
+    "The appellant denied committing the offence.",
+    "The trial court convicted him of rape.",
+    "He received a thirty-year prison sentence.",
+    "The evidence contained material contradictions.",
+    "A potentially important landlord was not called as a prosecution witness."
+],
+      legalIssues: [
+    "Whether rape was proved beyond reasonable doubt.",
+    "Whether the complainant’s evidence was credible and sufficient.",
+    "Whether contradictions in the prosecution evidence created reasonable doubt.",
+    "What inference should be drawn from failure to call an important witness.",
+    "Whether the conviction and sentence were legally sustainable."
+],
+      sourcePdf: "legal-documents/2024/Alfa Ramadhani Athuman v Republic 2024 TZHC 11161 (31 December 2024).pdf",
+      reportData: {
+    "reportTitle":  "Criminal Appeal Report — Alfa Ramadhani Athuman v Republic",
+    "reportConclusion":  "The prosecution failed to prove the charge beyond reasonable doubt. The conviction and thirty-year sentence were quashed."
+},
       docType: 'Judgment',
       court: 'High Court of Tanzania (Dodoma Sub-Registry)',
       citation: '[2024] TZHC 11161',
@@ -22014,7 +24679,58 @@ Theobat Lameck Mlyuka was convicted of two counts of rape of his 11-year-old gra
     {
       id: 'doc-lib-046',
       title: 'Bank of Africa Tanzania Limited v Patrick Mashele and Another [2024] TZCA 1303 (Full Ruling Source)',
-      judgmentId: 'tz-j-055',
+      judgmentid: 'tz-j-055',
+      // === 2024 PREPARED CASE KNOWLEDGE (12 SEARCHABLE FIELDS & REPORT DATA) ===
+      searchMetadata: {
+    "officialTitle":  "Bank of Africa Tanzania Limited v Patrick Mashele and Another",
+    "alternativeTitle":  "Bank of Africa Tanzania Limited vs Patrick Mashele and Felix Jia",
+    "citation":  "[2024] TZCA 1303",
+    "caseNumber":  "Civil Application No. 527/18 of 2023",
+    "originatingCase":  "Labour Revision No. 53 of 2022",
+    "court":  "Court of Appeal of Tanzania",
+    "registry":  "Dar es Salaam",
+    "proceeding":  "Civil application for stay of execution",
+    "judge":  "Wambali, J.A.",
+    "decisionDate":  "24 December 2024",
+    "decisionYear":  "2024",
+    "category":  "Civil application for stay of execution",
+    "legalSubject":  "Employment compensation and stay pending appeal",
+    "outcome":  "Stay granted subject to provision of security",
+    "source":  "Uploaded 2024 PDF",
+    "searchAliases":  [
+                          "Bank of Africa",
+                          "Patrick Mashele",
+                          "Felix Jia",
+                          "Civil Application 527/18",
+                          "Labour Revision 53",
+                          "TZCA 1303",
+                          "stay of execution"
+                      ]
+},
+      caseSummary: "Bank of Africa applied to stay execution of a labour decision while pursuing an appeal. Execution had been commenced for approximately TZS 686,374,785.\n\nThe Court of Appeal found that execution could cause substantial loss and that the bank was prepared to provide security.\n\nHolding: The conditions for stay of execution had been satisfied.\n\nFinal result: Stay was granted on condition that the applicant provide a bank guarantee for TZS 686,374,785 within forty-five days.",
+      caseFacts: [
+    "The respondents commenced an employment dispute.",
+    "They alleged unfair termination.",
+    "They sought reinstatement or twelve months’ compensation and terminal benefits.",
+    "The High Court upheld the relevant labour determination.",
+    "Execution was commenced for TZS 686,374,785.",
+    "The execution process involved attachment and possible sale.",
+    "Bank of Africa intended to challenge the decision.",
+    "The bank applied for stay of execution.",
+    "It offered security for satisfaction of the eventual decree."
+],
+      legalIssues: [
+    "Whether execution would cause substantial loss to the applicant.",
+    "Whether the application was brought without unreasonable delay.",
+    "Whether adequate security had been offered.",
+    "Whether execution should be stayed pending appeal.",
+    "What conditions should accompany the stay order."
+],
+      sourcePdf: "legal-documents/2024/Bank of Africa Tanzania Limited vs Patrick Mashele Another (Civil Application No 527 of 2023) 2024 TZCA 1303 (24 December 2024).pdf",
+      reportData: {
+    "reportTitle":  "Stay of Execution Report — Bank of Africa v Mashele and Another",
+    "reportConclusion":  "The application satisfied the requirements for stay of execution. Stay was granted subject to a bank guarantee of TZS 686,374,785 within forty-five days. Costs were to abide the appeal."
+},
       docType: 'Ruling',
       court: 'Court of Appeal of Tanzania at Dar es Salaam',
       citation: '[2024] TZCA 1303',
@@ -22049,7 +24765,58 @@ Theobat Lameck Mlyuka was convicted of two counts of rape of his 11-year-old gra
     {
       id: 'doc-lib-047',
       title: 'Catherine Edwin Mbele v Godfrey Abednego Mushi [2024] TZHC 11152 / [2024] TZHC 11406 (Full Ruling Source - Duplicate Scans Merged)',
-      judgmentId: 'tz-j-056',
+      judgmentid: 'tz-j-056',
+      // === 2024 PREPARED CASE KNOWLEDGE (12 SEARCHABLE FIELDS & REPORT DATA) ===
+      searchMetadata: {
+    "officialTitle":  "Catherine Edwin Mbele v Godfrey Abednego Mushi",
+    "alternativeTitle":  "Catherine Edwin Mbele vs Godfrey Abednego Mushi (Civil Appeal No 282422024) 2024 TZHC 11406",
+    "citation":  "[2024] TZHC 11152",
+    "alternativeCitation":  "[2024] TZHC 11406",
+    "caseNumber":  "Civil Appeal No. 28242 of 2024",
+    "lowerAppeal":  "PC Matrimonial Appeal No. 10532 of 2024",
+    "originatingCase":  "Matrimonial Cause No. 1855 of 2023",
+    "court":  "High Court of Tanzania",
+    "registry":  "Temeke Sub-Registry, One Stop Judicial Centre",
+    "proceeding":  "Matrimonial procedural appeal",
+    "judge":  "Mwaipopo, J.",
+    "decisionDate":  "31 December 2024",
+    "decisionYear":  "2024",
+    "category":  "Matrimonial procedural appeal",
+    "legalSubject":  "Competency and registration of matrimonial appeal",
+    "outcome":  "Defective appeal removed; twenty-one days allowed for refiling",
+    "source":  "Uploaded 2024 PDF (Files 3 and 4 merged)",
+    "duplicateNote":  "Files 3 and 4 represent the same judgment. Merged into single canonical record with dual citations [2024] TZHC 11152 and [2024] TZHC 11406.",
+    "searchAliases":  [
+                          "Catherine Mbele",
+                          "Godfrey Mushi",
+                          "Civil Appeal 28242",
+                          "Matrimonial Cause 1855",
+                          "TZHC 11152",
+                          "TZHC 11406"
+                      ]
+},
+      caseSummary: "A preliminary objection was raised against the competency of the appeal. The matter had been registered as an ordinary civil appeal in eCMS, although it originated from a Primary Court matrimonial proceeding. A petition of appeal had also been used instead of the required memorandum of appeal.\n\nHolding: Registration under the wrong case category was a fundamental procedural defect.\n\nFinal result: The defective proceeding was removed, but the appellant was allowed twenty-one days to file a proper appeal in the correct category.",
+      caseFacts: [
+    "The dispute originated in a Primary Court matrimonial cause.",
+    "It proceeded to the District Court as a matrimonial appeal.",
+    "It was subsequently taken to the High Court.",
+    "The High Court proceeding was registered as an ordinary Civil Appeal.",
+    "A petition of appeal was filed instead of a memorandum of appeal.",
+    "The respondent raised a preliminary objection.",
+    "The objection challenged the competency of the entire appeal."
+],
+      legalIssues: [
+    "Whether the appeal was registered in the correct eCMS category.",
+    "Whether a petition of appeal could substitute a memorandum of appeal.",
+    "Whether the procedural errors rendered the appeal incompetent.",
+    "Whether the defects could be corrected within the existing case.",
+    "Whether the appellant should receive time to institute a proper appeal."
+],
+      sourcePdf: "legal-documents/2024/Catherine Edwin Mbele vs Godfrey Abednego Mushi 2024 TZHC 11152 (31 December 2024).pdf",
+      reportData: {
+    "reportTitle":  "Matrimonial Appeal Competency Report — Mbele v Mushi",
+    "reportConclusion":  "The appeal was registered using an incorrect procedure and was therefore incompetent. The appellant was permitted to file a proper appeal within twenty-one days. No costs were ordered."
+},
       canonicalCaseId: 'TZHC-2024-CIVIL-28242',
       docType: 'Ruling',
       court: 'High Court of Tanzania (Temeke Sub-Registry, One Stop Judicial Centre)',
@@ -22088,7 +24855,56 @@ Theobat Lameck Mlyuka was convicted of two counts of rape of his 11-year-old gra
     {
       id: 'doc-lib-048',
       title: 'Charles Mbwana v Mariam John Mhina and Another [2024] TZHC 11144 (Full Ruling Source)',
-      judgmentId: 'tz-j-057',
+      judgmentid: 'tz-j-057',
+      // === 2024 PREPARED CASE KNOWLEDGE (12 SEARCHABLE FIELDS & REPORT DATA) ===
+      searchMetadata: {
+    "officialTitle":  "Charles Mbwana v Mariam John Mhina and G4317 CPL Charles",
+    "alternativeTitle":  "Charles Mbwana vs Mariam John Mhina and Another",
+    "citation":  "[2024] TZHC 11144",
+    "caseNumber":  "Misc. Civil Application No. 000018813 of 2024",
+    "originatingCase":  "Matrimonial Cause No. 66 of 2009",
+    "court":  "High Court of Tanzania",
+    "registry":  "Temeke Sub-Registry, One Stop Judicial Centre",
+    "proceeding":  "Application for extension of time",
+    "judge":  "Mwaipopo, J.",
+    "decisionDate":  "31 December 2024",
+    "decisionYear":  "2024",
+    "category":  "Application for extension of time",
+    "legalSubject":  "Delayed matrimonial appeal and eCMS reference number",
+    "outcome":  "Application dismissed; parties to share costs",
+    "source":  "Uploaded 2024 PDF",
+    "searchAliases":  [
+                          "Charles Mbwana",
+                          "Mariam Mhina",
+                          "G4317 CPL Charles",
+                          "Application 18813",
+                          "Matrimonial Cause 66",
+                          "TZHC 11144"
+                      ]
+},
+      caseSummary: "The applicant requested additional time to appeal against a matrimonial decision. He claimed that he could not file the appeal because the required eCMS reference number was unavailable.\n\nThe Court found no evidence showing continuous follow-up during approximately 210 days. The allegation that the lower court failed to evaluate evidence was not an apparent illegality capable of excusing the delay.\n\nHolding: The applicant failed to demonstrate sufficient cause for extending time.\n\nFinal result: The application was dismissed, with costs shared between the parties.",
+      caseFacts: [
+    "The intended judgment was delivered on 26 October 2023.",
+    "The applicant approached an advocate on 7 November 2023.",
+    "The advocate wrote to the registry on 8 November 2023.",
+    "The applicant claimed that eCMS required a reference number.",
+    "The reference number was allegedly obtained on 1 August 2024.",
+    "Approximately 210 days were not adequately explained.",
+    "No documentary evidence proved the alleged continuous follow-ups.",
+    "The applicant also alleged improper evaluation of evidence."
+],
+      legalIssues: [
+    "Whether an unavailable eCMS reference number constituted sufficient cause.",
+    "Whether the applicant accounted for every day of delay.",
+    "Whether the applicant acted diligently.",
+    "Whether the alleged evidential error amounted to apparent illegality.",
+    "Whether an extension of time should be granted."
+],
+      sourcePdf: "legal-documents/2024/Charles Mbwana vs Mariam John Mhina Another (Misc. Civil Application No. 000018813 of 2024) 2024 TZHC 11144 (31 December 2024).pdf",
+      reportData: {
+    "reportTitle":  "Extension of Time Report — Charles Mbwana v Mariam Mhina and Another",
+    "reportConclusion":  "The applicant did not account for the entire delay and did not establish apparent illegality. The application was dismissed."
+},
       docType: 'Ruling',
       court: 'High Court of Tanzania (Temeke Sub-Registry, One Stop Judicial Centre)',
       citation: '[2024] TZHC 11144',
@@ -22123,7 +24939,58 @@ Theobat Lameck Mlyuka was convicted of two counts of rape of his 11-year-old gra
     {
       id: 'doc-lib-049',
       title: 'Diana Ferdinand Makiluli v Diana Ferdinand Makiluli, as Administratrix of the Estate of Late Enock Mnkande Rabieth [2024] TZHC 11172 (Full Judgment Source)',
-      judgmentId: 'tz-j-058',
+      judgmentid: 'tz-j-058',
+      // === 2024 PREPARED CASE KNOWLEDGE (12 SEARCHABLE FIELDS & REPORT DATA) ===
+      searchMetadata: {
+    "officialTitle":  "Diana Ferdinand Makiluli v Diana Ferdinand Makiluli as Administratrix of the Estate of Enock Mnkande Rabieth",
+    "alternativeTitle":  "Diana Ferdinand Makiluli v Estate of Enock Mnkande Rabieth",
+    "citation":  "[2024] TZHC 11172",
+    "caseNumber":  "Matrimonial Appeal No. 24129 of 2024",
+    "originatingCase":  "Matrimonial Cause No. 288 of 2023",
+    "court":  "High Court of Tanzania",
+    "registry":  "Temeke Sub-Registry, One Stop Judicial Centre",
+    "proceeding":  "Matrimonial appeal",
+    "judge":  "Mwaipopo, J.",
+    "decisionDate":  "31 December 2024",
+    "decisionYear":  "2024",
+    "category":  "Matrimonial appeal",
+    "legalSubject":  "Death after hearing; abatement and divorce settlement",
+    "outcome":  "Appeal dismissed; no order as to costs",
+    "source":  "Uploaded 2024 PDF",
+    "searchAliases":  [
+                          "Diana Makiluli",
+                          "Enock Rabieth",
+                          "Estate of Enock Rabieth",
+                          "Matrimonial Appeal 24129",
+                          "Matrimonial Cause 288",
+                          "TZHC 11172"
+                      ]
+},
+      caseSummary: "The parties had petitioned for divorce and signed a settlement dealing with their children, maintenance and matrimonial property. The husband died after the hearing had concluded but before judgment was delivered.\n\nThe High Court held that the Civil Procedure Code could fill the procedural gap in the Law of Marriage Act. Under Order XXII rule 6, death occurring after conclusion of the hearing did not automatically cause the proceeding to abate.\n\nHolding: The trial court could pronounce judgment despite the husband’s death after the hearing.\n\nFinal result: The appeal was dismissed without an order for costs.",
+      caseFacts: [
+    "The parties married on 5 September 2010.",
+    "The marriage ceremony occurred at the University of Arusha SDA Church.",
+    "They had three children: Alvin, Rovin and Shavin.",
+    "Their marital relationship deteriorated in 2023.",
+    "The wife petitioned for divorce.",
+    "She requested custody, maintenance and division of matrimonial property.",
+    "The parties signed a deed of settlement on 15 January 2024.",
+    "The settlement covered custody, access, school fees, maintenance, medical costs and property.",
+    "The husband died after the hearing but before judgment.",
+    "The District Court subsequently delivered judgment and adopted the settlement."
+],
+      legalIssues: [
+    "Whether the proceeding abated when the husband died.",
+    "Whether death prevented delivery of judgment after completion of the hearing.",
+    "Whether the Civil Procedure Code could apply to matrimonial proceedings.",
+    "Whether Order XXII rule 6 filled a gap in the Law of Marriage Act.",
+    "Whether the District Court lawfully pronounced judgment."
+],
+      sourcePdf: "legal-documents/2024/Diana Ferdinandi Makiluli vs Diana Ferdanand Makiluli(As an administratrix of the estate of the late   Enock Mnkande Rabieth ) 2024 TZHC 11172 (31 December 2024).pdf",
+      reportData: {
+    "reportTitle":  "Matrimonial Abatement Report — Makiluli v Estate of Rabieth",
+    "reportConclusion":  "Death after completion of the hearing did not automatically terminate the proceeding. The District Court was entitled to pronounce judgment. The appeal was dismissed."
+},
       docType: 'Judgment',
       court: 'High Court of Tanzania (Temeke Sub-Registry, One Stop Judicial Centre)',
       citation: '[2024] TZHC 11172',
@@ -22158,7 +25025,57 @@ Theobat Lameck Mlyuka was convicted of two counts of rape of his 11-year-old gra
     {
       id: 'doc-lib-050',
       title: 'Majanja Lukamba v Charles Zacharia and 2 Others [2024] TZHC 11081 (Full Ruling Source)',
-      judgmentId: 'tz-j-059',
+      judgmentid: 'tz-j-059',
+      // === 2024 PREPARED CASE KNOWLEDGE (12 SEARCHABLE FIELDS & REPORT DATA) ===
+      searchMetadata: {
+    "officialTitle":  "Majanja Lukamba v Charles Zacharia and Two Others",
+    "alternativeTitle":  "Majanja Lukamba vs Charles Zacharia, Nyangili Kasinye and Agnes Nyangajo",
+    "citation":  "[2024] TZHC 11081",
+    "caseNumber":  "Misc. Land Case Application No. 11299 of 2024",
+    "originatingAppeal":  "Land Appeal No. 43 of 2023",
+    "originatingCase":  "Land Application No. 33 of 2021",
+    "court":  "High Court of Tanzania",
+    "registry":  "Bukoba Sub-Registry",
+    "proceeding":  "Land application for extension of time",
+    "judge":  "Malata, J.",
+    "decisionDate":  "27 December 2024",
+    "decisionYear":  "2024",
+    "category":  "Land application for extension of time",
+    "legalSubject":  "Sickness, illegality and unexplained delay",
+    "outcome":  "Application dismissed with costs",
+    "source":  "Uploaded 2024 PDF",
+    "searchAliases":  [
+                          "Majanja Lukamba",
+                          "Charles Zacharia",
+                          "Nyangili Kasinye",
+                          "Agnes Nyangajo",
+                          "Land Application 11299",
+                          "TZHC 11081"
+                      ]
+},
+      caseSummary: "The applicant sought an extension of time to lodge a notice and appeal against a land judgment. He relied on sickness and alleged illegality.\n\nAlthough medical documents were presented, they only covered isolated dates. More than 170 days of delay remained unexplained.\n\nHolding: Sickness and illegality did not excuse the substantially unexplained delay.\n\nFinal result: The application was dismissed with costs.",
+      caseFacts: [
+    "The challenged judgment was delivered on 13 October 2023.",
+    "The application was filed on 9 May 2024.",
+    "The delay was approximately six months.",
+    "The applicant relied on sickness.",
+    "He also alleged illegality in the intended appeal.",
+    "Several medical check-up sheets were submitted.",
+    "The medical evidence related only to particular dates.",
+    "More than 170 days remained unaccounted for."
+],
+      legalIssues: [
+    "Whether the applicant accounted for every day of delay.",
+    "Whether the medical documents demonstrated continuous incapacity.",
+    "Whether alleged illegality justified an extension.",
+    "Whether the applicant acted diligently.",
+    "Whether finality of litigation outweighed the request for extension."
+],
+      sourcePdf: "legal-documents/2024/Majanja Lukamba vs Charles Zacharia and 2 Others 2024 TZHC 11081 (27 December 2024).pdf",
+      reportData: {
+    "reportTitle":  "Land Appeal Extension Report — Majanja Lukamba v Zacharia and Others",
+    "reportConclusion":  "The applicant failed to demonstrate sufficient cause for the six-month delay. The application was dismissed with costs."
+},
       docType: 'Ruling',
       court: 'High Court of Tanzania (Bukoba Sub-Registry)',
       citation: '[2024] TZHC 11081',
@@ -22193,7 +25110,57 @@ Theobat Lameck Mlyuka was convicted of two counts of rape of his 11-year-old gra
     {
       id: 'doc-lib-051',
       title: 'Neema Gabriel Majaliwa v Saraweki Israel Salema and 3 Others [2024] TZCA 1308 (Full Judgment Source)',
-      judgmentId: 'tz-j-060',
+      judgmentid: 'tz-j-060',
+      // === 2024 PREPARED CASE KNOWLEDGE (12 SEARCHABLE FIELDS & REPORT DATA) ===
+      searchMetadata: {
+    "officialTitle":  "Neema Gabriel Majaliwa v Saraweki Israel Salema and Three Others",
+    "alternativeTitle":  "Neema Gabriel Majaliwa vs Saraweki Israel Salema, Mang’ana Rashid Mang’ana, Nurdin Rashid Mang’ana and Shabani Rashid Mang’ana",
+    "citation":  "[2024] TZCA 1308",
+    "caseNumber":  "Civil Appeal No. 442 of 2022",
+    "originatingCase":  "Civil Revision No. 24 of 2019",
+    "court":  "Court of Appeal of Tanzania",
+    "registry":  "Dodoma",
+    "coram":  "Lila, J.A.; Muruke, J.A.; Mdemu, J.A.",
+    "judge":  "Lila, J.A.; Muruke, J.A.; Mdemu, J.A.",
+    "decisionDate":  "27 December 2024",
+    "decisionYear":  "2024",
+    "category":  "Probate and administration appeal",
+    "legalSubject":  "Letters of administration, consent and beneficiary status",
+    "outcome":  "Appeal dismissed; appointment remained invalid",
+    "source":  "Uploaded 2024 PDF",
+    "searchAliases":  [
+                          "Neema Majaliwa",
+                          "Saraweki Salema",
+                          "Rashidi Mangana Marwa estate",
+                          "Civil Appeal 442",
+                          "TZCA 1308",
+                          "letters of administration"
+                      ]
+},
+      caseSummary: "The dispute concerned administration of the intestate estate of Rashidi Mangana Marwa. The appellant obtained letters of administration without obtaining the required consent of all heirs.\n\nThe High Court nullified her appointment and also declared another alleged widow a beneficiary. The Court of Appeal agreed that the appointment was invalid but held that deciding beneficiary status after treating the petition as incompetent was premature.\n\nHolding: Letters of administration obtained through an incompetent petition were invalid.\n\nFinal result: The appeal was dismissed, although the declaration concerning beneficiary status was found premature.",
+      caseFacts: [
+    "Rashidi Mangana Marwa died intestate on 14 November 2017.",
+    "The appellant and first respondent claimed recognition as widows.",
+    "The other respondents were identified as sons of the deceased.",
+    "Earlier administrators had been appointed through Primary Court proceedings.",
+    "Those appointments were later annulled because of jurisdictional and citation defects.",
+    "The appellant petitioned for letters of administration.",
+    "She did not obtain consent from all heirs.",
+    "The court dispensed with consent and citation and appointed her.",
+    "The High Court later nullified the appointment through revision."
+],
+      legalIssues: [
+    "Whether the probate petition was competent without all heirs’ consent.",
+    "Whether citation could lawfully be dispensed with.",
+    "Whether the appellant was validly appointed administratrix.",
+    "Whether beneficiary status could be determined after invalidating the petition.",
+    "What proper procedure should be followed for administration of the estate."
+],
+      sourcePdf: "legal-documents/2024/Neema Gabriel Majaliwa vs Saraweki Israel Salema and 3 Others (Civil Appeal No 442 of 2022) 2024 TZCA 1308 (27 December 2024).pdf",
+      reportData: {
+    "reportTitle":  "Probate Administration Report — Majaliwa v Salema and Others",
+    "reportConclusion":  "The appellant’s appointment was invalid. However, beneficiary status should not have been finally determined through an incompetent proceeding. The appeal was dismissed with costs."
+},
       docType: 'Judgment',
       court: 'Court of Appeal of Tanzania at Dodoma',
       citation: '[2024] TZCA 1308',
@@ -22228,7 +25195,57 @@ Theobat Lameck Mlyuka was convicted of two counts of rape of his 11-year-old gra
     {
       id: 'doc-lib-052',
       title: 'Penzia Nicodemus Haule v Vertex Group Experts Limited [2024] TZHC 11169 (Full Ruling Source)',
-      judgmentId: 'tz-j-061',
+      judgmentid: 'tz-j-061',
+      // === 2024 PREPARED CASE KNOWLEDGE (12 SEARCHABLE FIELDS & REPORT DATA) ===
+      searchMetadata: {
+    "officialTitle":  "Penzia Nicodemus Haule v Vertex Group Experts Limited",
+    "alternativeTitle":  "Penzia Nicodemus Haule vs Vertex Group Experts Limited",
+    "citation":  "[2024] TZHC 11169",
+    "caseNumber":  "Misc. Land Application No. 25044 of 2024",
+    "originatingCase":  "Land Case No. 23735 of 2024",
+    "court":  "High Court of Tanzania",
+    "registry":  "Iringa Sub-Registry",
+    "proceeding":  "Application for temporary injunction",
+    "judge":  "Ndunguru, J.",
+    "decisionDate":  "27 December 2024",
+    "decisionYear":  "2024",
+    "category":  "Application for temporary injunction",
+    "legalSubject":  "Matrimonial property, mortgage sale and alleged trespass",
+    "property":  "Plot No. 77, Block N, Makambako",
+    "outcome":  "Application dismissed with costs",
+    "source":  "Uploaded 2024 PDF",
+    "searchAliases":  [
+                          "Penzia Haule",
+                          "Vertex Group Experts",
+                          "Plot 77 Block N",
+                          "Makambako",
+                          "Land Application 25044",
+                          "TZHC 11169"
+                      ]
+},
+      caseSummary: "The applicant sought a temporary injunction preventing Vertex Group Experts Limited from dealing with Plot No. 77, Block N, Makambako. She claimed that the property was matrimonial property jointly acquired with her late husband.\n\nVertex argued that the property belonged to a company, was mortgaged and was lawfully sold after loan default.\n\nHolding: The applicant failed to satisfy the three requirements for a temporary injunction.\n\nFinal result: The application was dismissed with costs.",
+      caseFacts: [
+    "The disputed property was Plot No. 77, Block N, Makambako.",
+    "The applicant was the wife of the late Thobias Mbilinyi.",
+    "She claimed that they jointly acquired the property.",
+    "She alleged that Vertex entered the property on 25 August 2024.",
+    "Vertex claimed that Nazareti Company Limited owned the property.",
+    "The property had reportedly been mortgaged to Grofin SGB Limited.",
+    "It was allegedly sold following loan default.",
+    "Vertex claimed to be a bona fide purchaser."
+],
+      legalIssues: [
+    "Whether the applicant established a prima facie case.",
+    "Whether refusal of an injunction would cause irreparable harm.",
+    "Where the balance of convenience rested.",
+    "Whether the property was matrimonial property or company property.",
+    "Whether Vertex appeared to be a bona fide purchaser."
+],
+      sourcePdf: "legal-documents/2024/Penzia Nicodemus Haule vs Vertex Group Experts Limited 2024 TZHC 11169 (27 December 2024).pdf",
+      reportData: {
+    "reportTitle":  "Temporary Injunction Report — Haule v Vertex Group Experts",
+    "reportConclusion":  "The applicant did not establish a prima facie case, irreparable injury or a favourable balance of convenience. The application was dismissed with costs."
+},
       docType: 'Ruling',
       court: 'High Court of Tanzania (Iringa Sub-Registry)',
       citation: '[2024] TZHC 11169',
@@ -22257,6 +25274,65 @@ Theobat Lameck Mlyuka was convicted of two counts of rape of his 11-year-old gra
           text: 'FINAL OPERATIVE ORDER: Application for temporary injunction dismissed with costs. Substantive ownership and title of Plot No. 77, Block N, Makambako remain for trial in Land Case No. 23735 of 2024.',
           wordCount: 30,
           pageNumber: 8
+        }
+      ]
+    },
+    {
+      id: 'doc-lib-047b',
+      aliasId: 'doc-lib-047-dup',
+      title: 'Catherine Edwin Mbele v Godfrey Abednego Mushi [2024] TZHC 11406 (Duplicate Source Record)',
+      judgmentId: 'tz-j-056',
+      canonicalDocumentId: 'doc-lib-047',
+      docType: 'Ruling',
+      court: 'High Court of Tanzania (Temeke Sub-Registry, One Stop Judicial Centre)',
+      citation: '[2024] TZHC 11406',
+      canonicalCitation: '[2024] TZHC 11152',
+      date: '2024-12-31',
+      year: '2024',
+      pdfFileName: 'Catherine Edwin Mbele vs Godfrey Abednego Mushi (Civil Appeal No 282422024) 2024 TZHC 11406 (31 December 2024).pdf',
+      downloadUrl: 'https://tanzlii.org/tz/judgment/high-court-tanzania/2024/11406/download/pdf',
+      isDuplicate: true,
+      duplicateOf: 'doc-lib-047',
+      recordStatus: 'Probable duplicate',
+      databaseAction: 'Merge into Case 3',
+      summary: 'This PDF appears to reproduce the same judgment as Case 3. It contains the same parties, case number, court, judge, procedural dispute and final result. It should not be presented as a separate judgment.',
+      extractedText: 'IN THE HIGH COURT OF TANZANIA AT TEMEKE SUB-REGISTRY ONE STOP JUDICIAL CENTRE AT TEMEKE. CIVIL APPEAL NO. 28242 OF 2024 (Arising from PC Matrimonial Appeal No. 10532 of 2024 of the District Court of Temeke at Temeke, which originated in Matrimonial Cause No. 1855 of 2023 of the Primary Court of Temeke). CATHERINE EDWIN MBELE VERSUS GODFREY ABEDNEGO MUSHI. RULING. S.D. MWAIPOPO, J. [Duplicate source record corresponding to citation [2024] TZHC 11406, identical to canonical ruling [2024] TZHC 11152].',
+      passages: [
+        {
+          id: 'pass-047b-1',
+          passageIndex: 1,
+          text: 'DUPLICATE SOURCE RECORD: Civil Appeal No. 28242 of 2024, Catherine Edwin Mbele v Godfrey Abednego Mushi [2024] TZHC 11406. Preserved as secondary PDF scan merged into canonical record [2024] TZHC 11152.',
+          wordCount: 30,
+          pageNumber: 1
+        }
+      ]
+    },
+    {
+      id: 'doc-lib-052b',
+      title: 'Shukuru Elias Nyalinga and Another v Mpanda Municipal Council and Others [2024] TZHC 11131 (Full Judgment Source)',
+      judgmentId: 'tz-j-2024-11131',
+      docType: 'Judgment',
+      court: 'High Court of Tanzania (Sumbawanga District Registry)',
+      citation: '[2024] TZHC 11131',
+      date: '2024-12-27',
+      year: '2024',
+      pdfFileName: 'Shukuru Elias Nyalinga and Another vs Mpanda Municipal Council and 3 Others 2024 TZHC 11131 (27 December 2024).pdf',
+      downloadUrl: 'https://tanzlii.org/tz/judgment/high-court-tanzania/2024/11131/download/pdf',
+      extractedText: 'IN THE HIGH COURT OF TANZANIA IN THE DISTRICT REGISTRY OF SUMBAWANGA AT SUMBAWANGA. LAND CASE NO. 4 OF 2021. SHUKURU ELIAS NYALINGA AND MAKALA NANGALI VERSUS MPANDA MUNICIPAL COUNCIL, ATTORNEY GENERAL, PETER ALOYCE MWAKIBINGA AND REVOCATUS GREGORY NGOMENI. JUDGMENT. MWENEMPAZI, J.: The plaintiffs claimed ownership of approximately nineteen acres at Misunkumilo near Mpanda Girls Secondary School, relying on acquisition from customary owners commencing around 2012 and their occupation of the land. A dispute arose from municipal action and competing interests. The High Court accepted their claim and ordered the Municipal Council either to vacate the property or provide equivalent alternative land. Holding: The plaintiffs proved their rights to the disputed land. Final result: Ownership-related relief was granted together with TZS 30 million in general damages, interest and costs. Exemplary damages were refused.',
+      passages: [
+        {
+          id: 'pass-052b-1',
+          passageIndex: 1,
+          text: 'LAND OWNERSHIP CLAIM: Land Case No. 4 of 2021 instituted by Shukuru Elias Nyalinga and Makala Nangali against Mpanda Municipal Council, Attorney General, Peter Aloyce Mwakibinga and Revocatus Gregory Ngomeni concerning approximately 19 acres at Misunkumilo, Mpanda.',
+          wordCount: 37,
+          pageNumber: 1
+        },
+        {
+          id: 'pass-052b-2',
+          passageIndex: 2,
+          text: 'HELD BY MWENEMPAZI, J.: The plaintiffs established lawful customary acquisition and continuous occupation. The Municipal Council was ordered either to vacate or provide equivalent alternative land, plus TZS 30,000,000 in general damages and costs.',
+          wordCount: 35,
+          pageNumber: 12
         }
       ]
     },
@@ -22918,6 +25994,17 @@ Theobat Lameck Mlyuka was convicted of two counts of rape of his 11-year-old gra
   },
 
   // Cases Requiring Attention (Requirement: exactly 3 cases from database)
+  // 2024 Case Knowledge Folder Statistics
+  get2024FolderStats() {
+    return {
+      uploadedDocuments: 10,
+      uniqueJudgments: 9,
+      probableDuplicateDocuments: 1,
+      duplicateDetails: 'Catherine Edwin Mbele v Godfrey Abednego Mushi (Civil Appeal No. 28242 of 2024) reported under dual citations [2024] TZHC 11152 and [2024] TZHC 11406, merged into Case 3.',
+      displaySummary: '10 uploaded documents | 9 unique judgments | 1 probable duplicate document'
+    };
+  },
+
   getCasesRequiringAttention() {
     return (this.cases || []).filter(c => c.requiresAdminAttention === true);
   },
@@ -22945,3 +26032,12 @@ Theobat Lameck Mlyuka was convicted of two counts of rape of his 11-year-old gra
 SLCMS_STATE.restoreSessionUser();
 
 
+
+// Link caseInformation to searchMetadata for all prepared judgments
+if (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.tanzaniaJudgments)) {
+  SLCMS_STATE.tanzaniaJudgments.forEach(j => {
+    if (j.searchMetadata && !j.caseInformation) {
+      j.caseInformation = j.searchMetadata;
+    }
+  });
+}

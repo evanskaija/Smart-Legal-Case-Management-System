@@ -33,7 +33,15 @@ public class UserAccount {
     private String avatarImg;
     private boolean mustChangePassword;
     private int failedAttempts;
+    private int failedLoginAttempts;
+    private boolean firstLoginRequired;
+    private LocalDateTime temporaryPasswordExpiresAt;
+    private LocalDateTime lockedAt;
     private Long lockedUntil;
+    private String lockedBy;
+    private String lockedReason;
+    private LocalDateTime lastLoginAt;
+    private LocalDateTime passwordChangedAt;
     private String lastLogin;
     private List<String> assignedCaseIds = new ArrayList<>();
 
@@ -143,10 +151,40 @@ public class UserAccount {
     public void setMustChangePassword(boolean mustChangePassword) { this.mustChangePassword = mustChangePassword; }
 
     public int getFailedAttempts() { return failedAttempts; }
-    public void setFailedAttempts(int failedAttempts) { this.failedAttempts = failedAttempts; }
+    public void setFailedAttempts(int failedAttempts) { 
+        this.failedAttempts = failedAttempts; 
+        this.failedLoginAttempts = failedAttempts;
+    }
+
+    public int getFailedLoginAttempts() { return failedLoginAttempts > 0 ? failedLoginAttempts : failedAttempts; }
+    public void setFailedLoginAttempts(int failedLoginAttempts) { 
+        this.failedLoginAttempts = failedLoginAttempts; 
+        this.failedAttempts = failedLoginAttempts;
+    }
+
+    public boolean isFirstLoginRequired() { return firstLoginRequired; }
+    public void setFirstLoginRequired(boolean firstLoginRequired) { this.firstLoginRequired = firstLoginRequired; }
+
+    public LocalDateTime getTemporaryPasswordExpiresAt() { return temporaryPasswordExpiresAt; }
+    public void setTemporaryPasswordExpiresAt(LocalDateTime temporaryPasswordExpiresAt) { this.temporaryPasswordExpiresAt = temporaryPasswordExpiresAt; }
+
+    public LocalDateTime getLockedAt() { return lockedAt; }
+    public void setLockedAt(LocalDateTime lockedAt) { this.lockedAt = lockedAt; }
 
     public Long getLockedUntil() { return lockedUntil; }
     public void setLockedUntil(Long lockedUntil) { this.lockedUntil = lockedUntil; }
+
+    public String getLockedBy() { return lockedBy; }
+    public void setLockedBy(String lockedBy) { this.lockedBy = lockedBy; }
+
+    public String getLockedReason() { return lockedReason; }
+    public void setLockedReason(String lockedReason) { this.lockedReason = lockedReason; }
+
+    public LocalDateTime getLastLoginAt() { return lastLoginAt; }
+    public void setLastLoginAt(LocalDateTime lastLoginAt) { this.lastLoginAt = lastLoginAt; }
+
+    public LocalDateTime getPasswordChangedAt() { return passwordChangedAt; }
+    public void setPasswordChangedAt(LocalDateTime passwordChangedAt) { this.passwordChangedAt = passwordChangedAt; }
 
     public String getLastLogin() { return lastLogin; }
     public void setLastLogin(String lastLogin) { this.lastLogin = lastLogin; }

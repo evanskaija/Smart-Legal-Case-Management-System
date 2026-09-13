@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    SLCMS - Cases Management, 7-Step Wizard & 8-Tab Details View
    ========================================================================== */
 
@@ -212,6 +212,23 @@ const CasesView = {
 
   renderCasesTable(casesList) {
     if (casesList.length === 0) {
+      if (SLCMS_STATE.cases.length === 0 || (!this.searchQuery && this.selectedFilterStatus === 'All' && this.selectedFilterType === 'All' && this.selectedFilterPriority === 'All')) {
+        return `
+          <div class="card empty-state" style="padding: 3.5rem 1.5rem; text-align: center; margin: 1rem 0;">
+            <div class="empty-icon" style="font-size: 2.8rem; margin-bottom: 0.85rem;">⚖️</div>
+            <h3 class="empty-title" style="font-size: 1.25rem; color: var(--color-primary); font-weight: 700;">No cases yet</h3>
+            <p class="empty-desc" style="color: var(--color-text-secondary); max-width: 480px; margin: 0.5rem auto 1.5rem auto; line-height: 1.5;">
+              There are currently no legal matters registered. Begin by registering a client and adding a new case matter.
+            </p>
+            <button class="btn btn-gold" onclick="CasesView.openNewCaseModal()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              <span>+ Add New Case</span>
+            </button>
+          </div>
+        `;
+      }
       return `
         <div class="card empty-state">
           <div class="empty-icon">
@@ -351,6 +368,33 @@ const CasesView = {
   },
 
   renderCasesCards(casesList) {
+    if (casesList.length === 0) {
+      if (SLCMS_STATE.cases.length === 0 || (!this.searchQuery && this.selectedFilterStatus === 'All' && this.selectedFilterType === 'All' && this.selectedFilterPriority === 'All')) {
+        return `
+          <div class="card empty-state" style="padding: 3.5rem 1.5rem; text-align: center; margin: 1rem 0;">
+            <div class="empty-icon" style="font-size: 2.8rem; margin-bottom: 0.85rem;">⚖️</div>
+            <h3 class="empty-title" style="font-size: 1.25rem; color: var(--color-primary); font-weight: 700;">No cases yet</h3>
+            <p class="empty-desc" style="color: var(--color-text-secondary); max-width: 480px; margin: 0.5rem auto 1.5rem auto; line-height: 1.5;">
+              There are currently no legal matters registered. Begin by registering a client and adding a new case matter.
+            </p>
+            <button class="btn btn-gold" onclick="CasesView.openNewCaseModal()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              <span>+ Add New Case</span>
+            </button>
+          </div>
+        `;
+      }
+      return `
+        <div class="card empty-state" style="padding: 3rem 1.5rem; text-align: center;">
+          <h3 class="empty-title">No matching cases found</h3>
+          <p class="empty-desc">Adjust your search parameters or practice area filters.</p>
+          <button class="btn btn-secondary" onclick="CasesView.clearFilters()">Clear Filters</button>
+        </div>
+      `;
+    }
+
     return `
       <div class="cases-card-grid">
         ${casesList.map(c => `
@@ -477,17 +521,17 @@ const CasesView = {
       title: '',
       caseNumber: '',
       caseType: 'Civil', // Civil, Criminal, Land, Matrimonial, Probate, Commercial, Miscellaneous Application, Other
-      year: '2020',
+      year: new Date().getFullYear().toString(),
       citation: '', // optional
 
       // Box 2: Parties and Court
-      firstParty: { name: '', role: 'Appellant' },
-      secondParty: { name: '', role: 'Respondent' },
+      firstParty: { name: '', role: 'Plaintiff' },
+      secondParty: { name: '', role: 'Defendant' },
       additionalParties: [],
       court: 'High Court of Tanzania',
       registry: 'Dar es Salaam District Registry',
       judge: '',
-      decisionDate: '2020-12-31',
+      decisionDate: new Date().toISOString().substring(0, 10),
 
       // Box 3: Origin and Outcome
       originCourt: '', // optional
@@ -496,18 +540,18 @@ const CasesView = {
       outcome: 'Pending',
       finalOrder: '',
 
-      // Box 4: Assignment and Access
+      // Box 4: Assignment and Access (Initial status strictly saved as Unassigned)
       client: clientName,
       clientId: clientId,
-      seniorLawyer: 'Eleanor Vance, Esq.',
-      seniorLawyerId: 'usr-003',
-      lawyer: 'Julian Mercer, Esq.',
-      lawyerId: 'usr-004',
-      clerk: 'Marcus Bell',
-      clerkId: 'usr-008',
-      priority: 'High',
-      status: 'Active',
-      accessLevel: 'Assigned Team Only',
+      seniorLawyer: '',
+      seniorLawyerId: '',
+      lawyer: 'Unassigned',
+      lawyerId: '',
+      clerk: '',
+      clerkId: '',
+      priority: 'Medium',
+      status: 'Unassigned',
+      accessLevel: 'Standard',
 
       // Box 5: Upload Original PDF
       pdfFile: null,
@@ -748,12 +792,24 @@ const CasesView = {
   },
 
   quickRegisterClient() {
-    const name = prompt('Enter Client Full Name / Corporate Entity:');
-    if (name && name.trim()) {
-      this.newCaseData.client = name.trim();
-      const clientInput = document.getElementById('new-case-client');
-      if (clientInput) clientInput.value = name.trim();
-      App.showToast(`Client "${name.trim()}" selected for this matter.`, 'success');
+    this.openRegisterClientFromCase();
+  },
+
+  openRegisterClientFromCase() {
+    this.syncNewCaseFormData();
+    ClientsView.openNewClientModal((newClient) => {
+      this.newCaseData.client = newClient.name;
+      this.newCaseData.clientId = newClient.id;
+      this.renderNewCaseModal();
+      App.showToast(`Client "${newClient.name}" registered and selected for this matter.`, 'success');
+    });
+  },
+
+  handleClientSelected(val) {
+    this.newCaseData.client = val;
+    const found = (SLCMS_STATE.clients || []).find(c => c.name === val);
+    if (found) {
+      this.newCaseData.clientId = found.id;
     }
   },
 
@@ -774,10 +830,9 @@ const CasesView = {
     if (!d.judge || !d.judge.trim()) errors.push({ field: 'new-case-judge', errId: 'err-judge', step: 2, msg: 'Judge or coram is required' });
     if (!d.decisionDate || !d.decisionDate.trim()) errors.push({ field: 'new-case-decision-date', errId: 'err-decision-date', step: 2, msg: 'Decision date is required' });
 
-    if (!d.status || !d.status.trim()) errors.push({ field: 'new-case-status', errId: 'err-status', step: 2, msg: 'Case status is required' });
-    if (!d.lawyer || !d.lawyer.trim()) errors.push({ field: 'new-case-lawyer', errId: 'err-lawyer', step: 2, msg: 'Assigned lawyer is required' });
-
-    if (!d.pdfFile) errors.push({ field: 'case-pdf-dropzone', errId: 'err-pdf', step: 3, msg: 'Original PDF document must be attached' });
+    if (!d.client || !d.client.trim()) {
+      errors.push({ field: 'new-case-client', errId: 'err-client', step: 2, msg: 'Please select or register a related client' });
+    }
 
     return errors;
   },
@@ -902,37 +957,43 @@ const CasesView = {
       subject: d.subject,
       outcome: d.outcome,
       finalOrder: d.finalOrder,
-      seniorLawyer: d.seniorLawyer,
-      seniorLawyerId: d.seniorLawyerId,
-      lawyer: d.lawyer,
-      lawyerId: d.lawyerId,
-      lawyerAvatar: d.lawyer.includes('Eleanor') ? 'EV' : (d.lawyer.includes('Sarah') ? 'SM' : 'JM'),
-      supportingStaff: d.clerk === 'None' ? '' : d.clerk,
-      priority: d.priority,
-      status: d.status,
-      accessLevel: d.accessLevel,
+      seniorLawyer: '',
+      seniorLawyerId: '',
+      lawyer: 'Unassigned',
+      lawyerId: '',
+      lawyerAvatar: 'UN',
+      supportingStaff: '',
+      priority: d.priority || 'Medium',
+      status: 'Unassigned',
+      statusLabel: 'Unassigned',
+      accessLevel: 'Standard',
       openingDate: d.decisionDate || new Date().toISOString().substring(0, 10),
       expectedCompletion: '2027-12-31',
-      progressPct: 15,
+      progressPct: 0,
       totalBilled: 0,
       totalPaid: 0,
-      notes: d.finalOrder ? `Operative Order: ${d.finalOrder}` : 'Matter registered via Add New Case form.',
+      notes: d.finalOrder ? `Operative Order: ${d.finalOrder}` : 'Matter registered via Add New Case form. Initial status: Unassigned.',
       description: d.subject || (d.finalOrder ? `Operative Order: ${d.finalOrder}` : `${d.title} (${d.court})`),
       // PDF & Ingestion Pipeline
       pdfDocument: d.pdfFile,
       pdfFilename: d.pdfFile ? d.pdfFile.name : '',
-      isScanned: d.pdfFile ? d.pdfFile.isScanned : true,
+      isScanned: d.pdfFile ? d.pdfFile.isScanned : false,
       processScannedForAI: d.processScannedForAI,
-      ocrStatus: 'Uploaded',
-      aiStatus: 'OCR Processing',
+      ocrStatus: d.pdfFile ? 'Uploaded' : 'None',
+      aiStatus: d.pdfFile ? 'OCR Processing' : 'None',
       requiresAdminAttention: false
     };
 
     // Save and permanently persist
     SLCMS_STATE.addCase(newCase);
     App.closeModal();
-    App.showToast(`Legal Case ${newCase.caseNumber} registered successfully! Ingestion status: Uploaded`, 'success');
+    App.showToast(`Legal Case ${newCase.caseNumber} registered with status "Unassigned". Opening Staff Assignment...`, 'info');
     App.refreshCurrentView();
+
+    // Trigger Step 3 of Assignment Flow: Open the assignment panel
+    setTimeout(() => {
+      CasesView.openAssignCaseModal(newCase.id);
+    }, 400);
 
     // Async simulated progression for scanned PDFs:
     // Uploaded -> OCR Processing -> Review Required -> Ready for AI
@@ -1449,127 +1510,62 @@ const CasesView = {
 
   getBox4HTML(d) {
     const clients = SLCMS_STATE.clients || [];
-    const seniorLawyers = (SLCMS_STATE.users || []).filter(u => u.role === 'Senior Lawyer' || u.role === 'Administrator');
-    const allLawyers = (SLCMS_STATE.users || []).filter(u => u.role === 'Lawyer' || u.role === 'Senior Lawyer');
-    const allClerks = (SLCMS_STATE.users || []).filter(u => u.role === 'Legal Clerk');
 
     return `
       <div class="add-case-card">
         <div class="add-case-card-header">
           <h3 class="add-case-card-title">
-            <span>Box 4: Assignment and Access</span>
+            <span>Box 4: Client &amp; Workflow Governance</span>
           </h3>
-          <span class="badge badge-confidential" style="font-size: 0.7rem;">Team &amp; Ethical Wall</span>
+          <span class="badge badge-pending" style="font-size: 0.72rem;">Initial Status: Unassigned</span>
         </div>
-        <p class="add-case-card-desc">This connects the case to the correct users.</p>
+        <p class="add-case-card-desc">Select the registered client and priority. Cases are initially saved as Unassigned to guarantee proper assignment protocol.</p>
 
-        <!-- Row 1: Related Client, Senior Lawyer, Assigned Lawyer -->
-        <div class="add-case-grid-3">
+        <!-- Client & Priority Selection -->
+        <div class="add-case-grid-2">
           <div class="add-case-field">
             <div class="flex items-center justify-between" style="margin-bottom: 0.35rem;">
-              <label class="add-case-label" for="new-case-client" style="margin-bottom: 0;">Related client</label>
-              <button type="button" class="btn btn-ghost btn-xs text-gold" style="font-size: 0.7rem; padding: 0 4px;" onclick="CasesView.quickRegisterClient()">+ Register Client</button>
+              <label class="add-case-label" for="new-case-client" style="margin-bottom: 0;">
+                Related Client <span class="add-case-req">*</span>
+              </label>
+              <button type="button" class="btn btn-ghost btn-xs text-gold" style="font-size: 0.72rem; padding: 2px 6px;" onclick="CasesView.openRegisterClientFromCase()">
+                + Register New Client
+              </button>
             </div>
-            <input type="text" id="new-case-client" class="add-case-input" list="client-options-list" 
-                   placeholder="Search existing client or enter name" 
-                   value="${this.escapeHtml(d.client)}" 
-                   oninput="CasesView.newCaseData.client = this.value;">
-            <datalist id="client-options-list">
-              ${clients.map(c => `<option value="${c.name}">`).join('')}
-              <option value="Abdallah Salum Muwinge">
-              <option value="Halima Ismail">
-              <option value="General Public / Precedent Record">
-            </datalist>
-          </div>
-
-          <div class="add-case-field">
-            <label class="add-case-label" for="new-case-senior-lawyer">
-              <span>Senior Lawyer</span>
-              <span class="add-case-opt">Supervising</span>
-            </label>
-            <select id="new-case-senior-lawyer" class="add-case-select" 
-                    onchange="CasesView.newCaseData.seniorLawyer = this.value;">
-              ${seniorLawyers.map(u => `<option value="${u.name}" ${d.seniorLawyer === u.name ? 'selected' : ''}>${u.name} (${u.role})</option>`).join('')}
-              <option value="Eleanor Vance, Esq." ${d.seniorLawyer === 'Eleanor Vance, Esq.' ? 'selected' : ''}>Eleanor Vance, Esq.</option>
-              <option value="Adv. J. K. Rweyemamu" ${d.seniorLawyer === 'Adv. J. K. Rweyemamu' ? 'selected' : ''}>Adv. J. K. Rweyemamu</option>
+            <select id="new-case-client" class="add-case-select" onchange="CasesView.handleClientSelected(this.value)">
+              <option value="">-- Select Registered Client (Required) --</option>
+              ${clients.map(c => `<option value="${c.name}" ${d.client === c.name ? 'selected' : ''}>${c.name} (${c.type || 'Client'}${c.phone ? ' - ' + c.phone : ''})</option>`).join('')}
             </select>
-          </div>
-
-          <div class="add-case-field">
-            <label class="add-case-label" for="new-case-lawyer">
-              <span>Assigned Lawyer <span class="add-case-req">*</span></span>
-              <span class="add-case-opt">Case Lead</span>
-            </label>
-            <select id="new-case-lawyer" class="add-case-select" 
-                    onchange="CasesView.newCaseData.lawyer = this.value; CasesView.updateLiveReviewCard();">
-              ${allLawyers.map(u => `<option value="${u.name}" ${d.lawyer === u.name ? 'selected' : ''}>${u.name} (${u.role})</option>`).join('')}
-              <option value="Julian Mercer, Esq." ${d.lawyer === 'Julian Mercer, Esq.' ? 'selected' : ''}>Julian Mercer, Esq.</option>
-              <option value="Adv. Sarah Mwangi" ${d.lawyer === 'Adv. Sarah Mwangi' ? 'selected' : ''}>Adv. Sarah Mwangi</option>
-            </select>
-            <div class="add-case-err-msg" id="err-lawyer">Assigned lawyer is required</div>
-          </div>
-        </div>
-
-        <!-- Row 2: Legal Clerk, Priority, Status, Access Level -->
-        <div class="add-case-grid-4" style="margin-top: 0.85rem;">
-          <div class="add-case-field">
-            <label class="add-case-label" for="new-case-clerk">
-              <span>Legal Clerk <span class="add-case-opt">&mdash; optional</span></span>
-            </label>
-            <select id="new-case-clerk" class="add-case-select" 
-                    onchange="CasesView.newCaseData.clerk = this.value;">
-              <option value="None">-- None --</option>
-              ${allClerks.map(u => `<option value="${u.name}" ${d.clerk === u.name ? 'selected' : ''}>${u.name}</option>`).join('')}
-              <option value="Marcus Bell" ${d.clerk === 'Marcus Bell' ? 'selected' : ''}>Marcus Bell</option>
-              <option value="Sophia Chen" ${d.clerk === 'Sophia Chen' ? 'selected' : ''}>Sophia Chen</option>
-            </select>
+            <div class="add-case-err-msg" id="err-client">Please select or register a related client</div>
           </div>
 
           <div class="add-case-field">
             <label class="add-case-label" for="new-case-priority">
-              <span>Priority</span>
+              <span>Priority Level <span class="add-case-req">*</span></span>
             </label>
             <select id="new-case-priority" class="add-case-select" 
                     onchange="CasesView.newCaseData.priority = this.value;">
-              <option value="Low" ${d.priority === 'Low' ? 'selected' : ''}>Low</option>
-              <option value="Medium" ${d.priority === 'Medium' ? 'selected' : ''}>Medium</option>
-              <option value="High" ${d.priority === 'High' ? 'selected' : ''}>High</option>
-              <option value="Urgent" ${d.priority === 'Urgent' ? 'selected' : ''}>Urgent</option>
-            </select>
-          </div>
-
-          <div class="add-case-field">
-            <label class="add-case-label" for="new-case-status">
-              <span>Status <span class="add-case-req">*</span></span>
-            </label>
-            <select id="new-case-status" class="add-case-select" 
-                    onchange="CasesView.newCaseData.status = this.value; CasesView.updateLiveReviewCard();">
-              <option value="Pending" ${d.status === 'Pending' ? 'selected' : ''}>Pending</option>
-              <option value="Active" ${d.status === 'Active' ? 'selected' : ''}>Active</option>
-              <option value="Closed" ${d.status === 'Closed' ? 'selected' : ''}>Closed</option>
-              <option value="Archived" ${d.status === 'Archived' ? 'selected' : ''}>Archived</option>
-            </select>
-            <div class="add-case-err-msg" id="err-status">Case status is required</div>
-          </div>
-
-          <div class="add-case-field">
-            <label class="add-case-label" for="new-case-access-level">
-              <span>Access level</span>
-            </label>
-            <select id="new-case-access-level" class="add-case-select" 
-                    onchange="CasesView.newCaseData.accessLevel = this.value;">
-              <option value="Assigned Team Only" ${d.accessLevel === 'Assigned Team Only' ? 'selected' : ''}>Assigned Team Only</option>
-              <option value="All Lawyers" ${d.accessLevel === 'All Lawyers' ? 'selected' : ''}>All Lawyers</option>
-              <option value="Restricted" ${d.accessLevel === 'Restricted' ? 'selected' : ''}>Restricted</option>
+              <option value="Low" ${d.priority === 'Low' ? 'selected' : ''}>Low (Standard Review)</option>
+              <option value="Medium" ${d.priority === 'Medium' ? 'selected' : ''}>Medium (Active Proceedings)</option>
+              <option value="High" ${d.priority === 'High' ? 'selected' : ''}>High (Urgent Litigation)</option>
+              <option value="Urgent" ${d.priority === 'Urgent' ? 'selected' : ''}>Urgent (Statutory Injunction / Custody)</option>
             </select>
           </div>
         </div>
 
-        <div style="font-size: 0.76rem; color: #64748B; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 0.5rem 0.85rem; margin-top: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-          <span><strong>Security Protocol:</strong> The system must allow only assigned users to open restricted cases.</span>
+        <!-- Strict Governance Notice Banner -->
+        <div style="background: rgba(200, 155, 60, 0.08); border: 1px solid rgba(200, 155, 60, 0.25); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+          <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+            <span style="font-size: 1.35rem; line-height: 1;">⚖️</span>
+            <div>
+              <div style="font-weight: 700; color: var(--color-primary); font-size: 0.88rem; margin-bottom: 0.25rem;">
+                Firm Rule: Mandatory Assignment Protocol
+              </div>
+              <p style="font-size: 0.82rem; color: var(--color-text-secondary); margin: 0; line-height: 1.45;">
+                Upon submission, this case's initial status will be strictly recorded as <strong style="color: var(--color-primary);">Unassigned</strong>. This ensures no matter enters the active court workflow without verified personnel designation. You will be automatically guided to assign Lead Counsel, Supporting Staff, and Role Permissions in the next step.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -2087,10 +2083,6 @@ const CasesView = {
                 <button class="btn btn-secondary btn-sm" onclick="App.closeModal(); App.navigate('case-library');">
                   📁 Case Library (2020–2026)
                 </button>
-                <button class="btn btn-gold btn-sm" onclick="App.closeModal(); App.navigate('ai-assistant');">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  <span>Ask SLCMS AI</span>
-                </button>
               </div>
             </div>
 
@@ -2456,65 +2448,413 @@ const CasesView = {
     App.refreshCurrentView();
   },
 
-  openAssignStaffModal() {
+  openAssignStaffModal(preselectedCaseId = null) {
     const cases = SLCMS_STATE.cases || [];
-    const lawyers = (SLCMS_STATE.users || []).filter(u => u.role === 'Senior Lawyer' || u.role === 'Lawyer' || u.role === 'Legal Clerk');
+    if (cases.length === 0) {
+      App.showToast('No cases available to assign. Please register a case first.', 'info');
+      return;
+    }
 
+    if (preselectedCaseId) {
+      this.openAssignCaseModal(preselectedCaseId);
+      return;
+    }
+
+    // If only one case exists, open it directly
+    if (cases.length === 1) {
+      this.openAssignCaseModal(cases[0].id);
+      return;
+    }
+
+    // Otherwise show a quick matter selector that forwards to openAssignCaseModal
     App.openModal(`
       <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
-        <h3 class="modal-title" style="color: #FFFFFF; font-size: 1.15rem;">👤 Assign / Remove Case Personnel</h3>
+        <div>
+          <div style="font-size: 0.75rem; color: var(--color-gold); font-weight: 700; text-transform: uppercase;">Staff Allocation Suite</div>
+          <h3 class="modal-title" style="color: #FFFFFF; font-size: 1.15rem; margin-top: 0.2rem;">👤 Select Legal Matter to Assign</h3>
+        </div>
         <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
       </div>
       <div class="modal-body" style="padding: 1.5rem;">
         <div class="form-group mb-3">
-          <label class="form-label required">Select Matter</label>
-          <select id="adm-assign-case-id" class="form-control" onchange="CasesView.updateAssignStaffPreview(this.value)">
-            ${cases.map(c => `<option value="${c.id}">${c.caseNumber} — ${c.title} (${c.lawyer || 'Unassigned'})</option>`).join('')}
+          <label class="form-label required" style="font-weight: 600;">Choose Legal Matter</label>
+          <select id="sel-matter-to-assign" class="form-control">
+            ${cases.map(c => `<option value="${c.id}">${c.caseNumber} — ${c.title} (${c.status || 'Unassigned'})</option>`).join('')}
           </select>
         </div>
-        <div class="form-group mb-3">
-          <label class="form-label required">Lead Counsel / Responsible Advocate</label>
-          <select id="adm-assign-staff-id" class="form-control">
-            ${lawyers.map(l => `<option value="${l.name}">${l.name} (${l.role}) — ${l.staffId || l.employeeId}</option>`).join('')}
-          </select>
-        </div>
-        <div class="form-group mb-3">
-          <label class="form-label">Supporting Staff / Legal Clerk</label>
-          <select id="adm-assign-support-id" class="form-control">
-            <option value="None">None</option>
-            ${lawyers.map(l => `<option value="${l.name}">${l.name} (${l.role})</option>`).join('')}
-          </select>
-        </div>
-        <div class="alert alert-info" style="font-size: 0.8rem;">
-          ⚖️ Reallocating personnel updates the matter record and creates an entry in the firm's security activity audit log.
+        <div class="alert alert-info" style="font-size: 0.82rem; line-height: 1.45;">
+          ⚖️ Selecting a matter will open the dedicated Case Assignment Protocol with active staff roster and role permissions confirmation.
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
-        <button class="btn btn-gold" onclick="CasesView.saveStaffAssignment()">Confirm Assignment</button>
+        <button class="btn btn-gold" onclick="const cid = document.getElementById('sel-matter-to-assign')?.value; App.closeModal(); if (cid) CasesView.openAssignCaseModal(cid);">
+          Open Assignment Panel &rarr;
+        </button>
       </div>
     `, 'modal-md');
   },
 
-  updateAssignStaffPreview(caseId) {
-    // preview helper if needed
+  // -------------------------------------------------------------
+  // STEP 3: OPEN ASSIGNMENT PANEL
+  // -------------------------------------------------------------
+  openAssignCaseModal(caseId) {
+    const targetCase = (SLCMS_STATE.cases || []).find(c => c.id === caseId);
+    if (!targetCase) {
+      App.showToast('Target case matter not found.', 'error');
+      return;
+    }
+
+    // Important rule: Only staff accounts with active status can be selected.
+    // Locked, suspended, or deactivated accounts must never appear.
+    const activeLawyers = SLCMS_STATE.getActiveStaffUsers(['Senior Lawyer', 'Lawyer']);
+    const activeClerks = SLCMS_STATE.getActiveStaffUsers('Legal Clerk');
+
+    App.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+        <div>
+          <div style="font-size: 0.75rem; color: var(--color-gold); font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">
+            Step 3 of Assignment Flow
+          </div>
+          <h3 class="modal-title" style="color: #FFFFFF; font-size: 1.15rem; margin-top: 0.2rem;">
+            👤 Assign Staff to Case
+          </h3>
+          <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.7); margin-top: 0.15rem;">
+            ${targetCase.caseNumber} &middot; ${targetCase.title}
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem;">
+        <div class="alert alert-info" style="margin-bottom: 1.25rem; font-size: 0.82rem; line-height: 1.45;">
+          ℹ️ <strong>Assignment Protocol:</strong> Only staff accounts with <strong>Active</strong> status can be selected. Locked, suspended, or deactivated accounts are automatically excluded from assignment.
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label required" style="font-weight: 600;">
+            Lead Lawyer <span style="color: var(--color-danger);">*</span>
+          </label>
+          <select id="wf-assign-lead-lawyer" class="form-control" required>
+            <option value="">-- Select Active Lead Counsel (Mandatory) --</option>
+            ${activeLawyers.map(l => `
+              <option value="${l.id}" ${targetCase.lawyer === l.name ? 'selected' : ''}>
+                ${l.name} (${l.role}) — ${l.staffId || l.employeeId}
+              </option>
+            `).join('')}
+          </select>
+          <div class="form-help-text" style="font-size: 0.74rem; color: var(--color-text-secondary); margin-top: 0.25rem;">
+            Responsible for primary litigation strategy, court appearances, and client representation.
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-weight: 600;">
+            Supporting Lawyer <span style="font-size: 0.75rem; color: var(--color-text-muted);">(Optional)</span>
+          </label>
+          <select id="wf-assign-support-lawyer" class="form-control">
+            <option value="">-- None (No Supporting Counsel) --</option>
+            ${activeLawyers.map(l => `
+              <option value="${l.id}" ${targetCase.seniorLawyer === l.name ? 'selected' : ''}>
+                ${l.name} (${l.role}) — ${l.staffId || l.employeeId}
+              </option>
+            `).join('')}
+          </select>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-weight: 600;">
+            Legal Clerk <span style="font-size: 0.75rem; color: var(--color-text-muted);">(Optional)</span>
+          </label>
+          <select id="wf-assign-clerk" class="form-control">
+            <option value="">-- None (No Clerk Assigned) --</option>
+            ${activeClerks.map(c => `
+              <option value="${c.id}" ${targetCase.supportingStaff === c.name ? 'selected' : ''}>
+                ${c.name} (${c.role}) — ${c.staffId || c.employeeId}
+              </option>
+            `).join('')}
+          </select>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label required" style="font-weight: 600;">Access Level</label>
+          <div class="grid grid-cols-3 gap-3" style="margin-top: 0.35rem;">
+            <label style="border: 1px solid var(--color-border); padding: 0.65rem 0.75rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; background: var(--color-surface);">
+              <input type="radio" name="wf-access-level" value="Standard" ${targetCase.accessLevel === 'Standard' || !targetCase.accessLevel ? 'checked' : ''} style="accent-color: var(--color-gold);">
+              <div>
+                <strong style="display: block; font-size: 0.84rem;">Standard</strong>
+                <span style="font-size: 0.72rem; color: var(--color-text-muted);">Assigned team &amp; general practice</span>
+              </div>
+            </label>
+
+            <label style="border: 1px solid var(--color-border); padding: 0.65rem 0.75rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; background: var(--color-surface);">
+              <input type="radio" name="wf-access-level" value="Confidential" ${targetCase.accessLevel === 'Confidential' ? 'checked' : ''} style="accent-color: var(--color-gold);">
+              <div>
+                <strong style="display: block; font-size: 0.84rem;">Confidential</strong>
+                <span style="font-size: 0.72rem; color: var(--color-text-muted);">Strict assigned counsel only</span>
+              </div>
+            </label>
+
+            <label style="border: 1px solid var(--color-border); padding: 0.65rem 0.75rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; background: var(--color-surface);">
+              <input type="radio" name="wf-access-level" value="Restricted" ${targetCase.accessLevel === 'Restricted' ? 'checked' : ''} style="accent-color: var(--color-gold);">
+              <div>
+                <strong style="display: block; font-size: 0.84rem;">Restricted</strong>
+                <span style="font-size: 0.72rem; color: var(--color-text-muted);">High-security sealed file</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group mb-2">
+          <label class="form-label" style="font-weight: 600;">
+            Assignment Note <span style="font-size: 0.75rem; color: var(--color-text-muted);">(Optional instructions or context)</span>
+          </label>
+          <textarea id="wf-assign-note" class="form-control" rows="2" placeholder="e.g. Please prioritize client consultation and file petition within statutory time limit.">${targetCase.assignmentNote || ''}</textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+        <button class="btn btn-gold" onclick="CasesView.proceedToConfirmPermissions('${targetCase.id}')">
+          Continue to Confirmation &rarr;
+        </button>
+      </div>
+    `, 'modal-lg');
   },
 
-  saveStaffAssignment() {
-    const caseId = document.getElementById('adm-assign-case-id')?.value;
-    const lawyer = document.getElementById('adm-assign-staff-id')?.value;
-    const support = document.getElementById('adm-assign-support-id')?.value;
-    const targetCase = (SLCMS_STATE.cases || []).find(c => c.id === caseId);
-
-    if (targetCase) {
-      targetCase.lawyer = lawyer;
-      if (support !== 'None') targetCase.supportingStaff = support;
-      targetCase.requiresAdminAttention = false;
-      SLCMS_STATE.addAuditLog('Case Assignment Changed', 'Case Management', `Staff assigned to ${targetCase.caseNumber}: Lead Counsel ${lawyer} by Administrator`);
-      App.closeModal();
-      App.showToast(`Personnel assigned to matter ${targetCase.caseNumber}.`, 'success');
-      App.refreshCurrentView();
+  proceedToConfirmPermissions(caseId) {
+    const leadLawyerId = document.getElementById('wf-assign-lead-lawyer')?.value;
+    if (!leadLawyerId) {
+      App.showToast('Please select a Lead Lawyer (mandatory).', 'error');
+      return;
     }
+
+    const supportLawyerId = document.getElementById('wf-assign-support-lawyer')?.value;
+    const clerkId = document.getElementById('wf-assign-clerk')?.value;
+    const accessLevel = document.querySelector('input[name="wf-access-level"]:checked')?.value || 'Standard';
+    const assignmentNote = document.getElementById('wf-assign-note')?.value?.trim() || '';
+
+    const leadLawyer = (SLCMS_STATE.users || []).find(u => u.id === leadLawyerId);
+    const supportingLawyer = supportLawyerId ? (SLCMS_STATE.users || []).find(u => u.id === supportLawyerId) : null;
+    const clerk = clerkId ? (SLCMS_STATE.users || []).find(u => u.id === clerkId) : null;
+
+    const assignmentData = {
+      leadLawyer,
+      supportingLawyer,
+      clerk,
+      accessLevel,
+      assignmentNote
+    };
+
+    CasesView.openConfirmPermissionsModal(caseId, assignmentData);
+  },
+
+  // -------------------------------------------------------------
+  // STEP 4: CONFIRM PERMISSIONS & UPDATE STATUS
+  // -------------------------------------------------------------
+  openConfirmPermissionsModal(caseId, assignmentData) {
+    const targetCase = (SLCMS_STATE.cases || []).find(c => c.id === caseId);
+    if (!targetCase) return;
+
+    const { leadLawyer, supportingLawyer, clerk, accessLevel, assignmentNote } = assignmentData;
+    window._slcms_pending_assignment = { caseId, assignmentData };
+
+    App.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+        <div>
+          <div style="font-size: 0.75rem; color: var(--color-gold); font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">
+            Step 4 of Assignment Flow
+          </div>
+          <h3 class="modal-title" style="color: #FFFFFF; font-size: 1.15rem; margin-top: 0.2rem;">
+            ⚖️ Confirm Role Permissions &amp; Update Status
+          </h3>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem;">
+        <!-- Mandatory User Statement -->
+        <div style="background: rgba(200, 155, 60, 0.1); border-left: 4px solid var(--color-gold); padding: 1rem 1.25rem; border-radius: 6px; margin-bottom: 1.25rem;">
+          <p style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--color-primary); line-height: 1.45;">
+            “You are assigning this case to the selected staff members. They will only access the case information and actions permitted by their roles.”
+          </p>
+        </div>
+
+        <!-- Assignment Summary Card -->
+        <div style="background: var(--color-surface-subtle); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
+          <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: var(--color-gold); margin-bottom: 0.6rem;">
+            Matter Assignment Summary
+          </div>
+          <div class="grid grid-cols-2 gap-3" style="font-size: 0.85rem;">
+            <div>
+              <span style="color: var(--color-text-muted);">Legal Matter:</span><br>
+              <strong>${targetCase.caseNumber} — ${targetCase.title}</strong>
+            </div>
+            <div>
+              <span style="color: var(--color-text-muted);">Lead Counsel:</span><br>
+              <strong style="color: var(--color-primary);">${leadLawyer.name} (${leadLawyer.role})</strong>
+            </div>
+            <div>
+              <span style="color: var(--color-text-muted);">Supporting Counsel:</span><br>
+              <strong>${supportingLawyer ? supportingLawyer.name : 'None'}</strong>
+            </div>
+            <div>
+              <span style="color: var(--color-text-muted);">Legal Clerk:</span><br>
+              <strong>${clerk ? clerk.name : 'None'}</strong>
+            </div>
+            <div>
+              <span style="color: var(--color-text-muted);">Access Level:</span><br>
+              <span class="badge badge-confidential" style="font-size: 0.72rem;">${accessLevel}</span>
+            </div>
+            <div>
+              <span style="color: var(--color-text-muted);">New Status:</span><br>
+              <span class="badge badge-active" style="font-size: 0.72rem;">Active (Assigned / Active)</span>
+            </div>
+          </div>
+          ${assignmentNote ? `
+            <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--color-border); font-size: 0.8rem;">
+              <span style="color: var(--color-text-muted);">Assignment Instructions:</span>
+              <p style="margin: 0.2rem 0 0 0; color: var(--color-text-main); font-style: italic;">“${assignmentNote}”</p>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Mandatory Role Definitions -->
+        <div>
+          <h4 style="font-size: 0.88rem; color: var(--color-primary); margin-bottom: 0.65rem; font-weight: 700;">
+            Role Definitions &amp; System Capabilities
+          </h4>
+          <div style="display: flex; flex-direction: column; gap: 0.55rem;">
+            <div style="display: flex; align-items: flex-start; gap: 0.65rem; font-size: 0.82rem; line-height: 1.45;">
+              <span style="background: #102A43; color: #FFFFFF; font-weight: 700; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; white-space: nowrap;">Administrator</span>
+              <span><strong>Full administrative control and audit logs.</strong> Manages access provisioning, metadata integrity, and system-wide security.</span>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 0.65rem; font-size: 0.82rem; line-height: 1.45;">
+              <span style="background: #C89B3C; color: #0B1F33; font-weight: 700; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; white-space: nowrap;">Senior Lawyer</span>
+              <span><strong>Full legal management and approval authority.</strong> Directs trial strategy, signs off on major pleadings, and manages counsel.</span>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 0.65rem; font-size: 0.82rem; line-height: 1.45;">
+              <span style="background: #1E3A8A; color: #FFFFFF; font-weight: 700; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; white-space: nowrap;">Lawyer</span>
+              <span><strong>Daily handling, filing, and case updates.</strong> Prepares briefs, conducts depositions, drafts submissions, and tracks hearings.</span>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 0.65rem; font-size: 0.82rem; line-height: 1.45;">
+              <span style="background: #334155; color: #FFFFFF; font-weight: 700; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; white-space: nowrap;">Clerk</span>
+              <span><strong>Scheduling, document preparation, and record maintenance.</strong> Handles registry filings, calendar coordination, and case indexing.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="CasesView.openAssignCaseModal('${targetCase.id}')">
+          &larr; Back
+        </button>
+        <button class="btn btn-gold" onclick="CasesView.executeConfirmAssignment('${targetCase.id}')">
+          ✓ Confirm &amp; Grant Access
+        </button>
+      </div>
+    `, 'modal-lg');
+  },
+
+  executeConfirmAssignment(caseId) {
+    const pending = window._slcms_pending_assignment;
+    const assignmentData = (pending && pending.caseId === caseId) ? pending.assignmentData : null;
+    if (!assignmentData) {
+      App.showToast('Assignment parameters missing.', 'error');
+      return;
+    }
+
+    const success = SLCMS_STATE.assignCaseWithWorkflow(caseId, assignmentData);
+    if (!success) {
+      App.showToast('Assignment execution failed.', 'error');
+      return;
+    }
+
+    const c = (SLCMS_STATE.cases || []).find(item => item.id === caseId);
+    App.closeModal();
+    App.showToast(`Case ${c ? c.caseNumber : ''} status changed to Active!`, 'success');
+    App.refreshCurrentView();
+
+    // Trigger Step 5: Prompt to create related work
+    setTimeout(() => {
+      CasesView.openPromptForNextActionModal(caseId);
+    }, 400);
+  },
+
+  // -------------------------------------------------------------
+  // STEP 5: PROMPT TO CREATE RELATED WORK
+  // -------------------------------------------------------------
+  openPromptForNextActionModal(caseId) {
+    const c = (SLCMS_STATE.cases || []).find(item => item.id === caseId) || { id: caseId, caseNumber: 'Matter', title: 'Legal Case' };
+
+    App.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+        <div>
+          <div style="font-size: 0.75rem; color: var(--color-gold); font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">
+            Step 5 of Assignment Flow
+          </div>
+          <h3 class="modal-title" style="color: #FFFFFF; font-size: 1.15rem; margin-top: 0.2rem;">
+            📌 Next Action for ${c.caseNumber}
+          </h3>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal(); App.navigate('dashboard');" style="color: #FFFFFF;">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding: 2rem 1.5rem; text-align: center;">
+        <div style="font-size: 2.6rem; margin-bottom: 0.75rem;">📋</div>
+        <!-- Exact User Quotation -->
+        <h3 style="font-size: 1.3rem; color: var(--color-primary); font-weight: 700; margin-bottom: 0.6rem;">
+          “Would you like to add the first task or deadline?”
+        </h3>
+        <p style="font-size: 0.88rem; color: var(--color-text-secondary); max-width: 520px; margin: 0 auto 1.75rem auto; line-height: 1.5;">
+          Matter <strong>${c.title}</strong> is now officially Active and assigned to counsel. You can establish initial litigation milestones immediately or return to the dashboard.
+        </p>
+
+        <div class="grid grid-cols-2 gap-4" style="text-align: left; margin-bottom: 1.5rem;">
+          <!-- Option 1: Create Task -->
+          <div class="card" style="padding: 1.25rem; border: 1px solid var(--color-border); border-top: 3px solid var(--color-primary); cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease; background: var(--color-surface);"
+               onclick="App.closeModal(); TasksView.openNewTaskModal('${c.id}');"
+               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.08)';"
+               onmouseout="this.style.transform='none'; this.style.boxShadow='none';">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+              <span style="font-size: 1.5rem;">📝</span>
+              <span class="badge badge-active" style="font-size: 0.7rem;">Action Item</span>
+            </div>
+            <h4 style="font-size: 1rem; color: var(--color-primary); margin-bottom: 0.35rem; font-weight: 700;">Create Task</h4>
+            <p style="font-size: 0.8rem; color: var(--color-text-secondary); margin: 0; line-height: 1.45;">
+              Initial client consultation, filing preparation, or discovery review for the assigned advocate.
+            </p>
+            <div style="margin-top: 0.85rem; font-weight: 600; font-size: 0.82rem; color: var(--color-primary);">
+              + Open Task Builder &rarr;
+            </div>
+          </div>
+
+          <!-- Option 2: Schedule Deadline -->
+          <div class="card" style="padding: 1.25rem; border: 1px solid var(--color-border); border-top: 3px solid var(--color-gold); cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease; background: var(--color-surface);"
+               onclick="App.closeModal(); TasksView.openScheduleAppearanceModal('${c.id}');"
+               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.08)';"
+               onmouseout="this.style.transform='none'; this.style.boxShadow='none';">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+              <span style="font-size: 1.5rem;">📅</span>
+              <span class="badge badge-gold" style="font-size: 0.7rem;">Court Calendar</span>
+            </div>
+            <h4 style="font-size: 1rem; color: var(--color-primary); margin-bottom: 0.35rem; font-weight: 700;">Schedule Deadline</h4>
+            <p style="font-size: 0.8rem; color: var(--color-text-secondary); margin: 0; line-height: 1.45;">
+              Court filing cutoff, motion hearing, or scheduled appearance date before the presiding judge.
+            </p>
+            <div style="margin-top: 0.85rem; font-weight: 600; font-size: 0.82rem; color: var(--color-gold);">
+              + Open Court Docket &rarr;
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="justify-content: center;">
+        <button class="btn btn-secondary" onclick="App.closeModal(); App.navigate('dashboard');">
+          Skip for now (Go to Dashboard)
+        </button>
+      </div>
+    `, 'modal-lg');
   },
 
   openMetadataCorrectionModal() {

@@ -88,94 +88,114 @@ const ClientsView = {
           </div>
         </div>
 
-        <!-- Clients Cards Grid -->
-        <div class="grid grid-cols-3 gap-6">
-          ${filteredClients.map(c => {
-            const clientCases = SLCMS_STATE.cases.filter(cs => cs.clientId === c.id || cs.client === c.name);
-            const lawyer = c.assignedLawyer || (clientCases[0] ? clientCases[0].lawyer : 'Eleanor Vance, Esq.');
-            const maskedId = isAdmin 
-              ? (c.idNumber ? `TIN-***-${c.idNumber.slice(-4)}` : 'N/A')
-              : (c.idNumber || 'N/A');
+        <!-- Clients Content -->
+        ${filteredClients.length === 0 ? `
+          <div class="card empty-state" style="padding: 3.5rem 1.5rem; text-align: center; margin-top: 1rem;">
+            <div class="empty-icon" style="font-size: 2.8rem; margin-bottom: 0.85rem;">👥</div>
+            <h3 class="empty-title" style="font-size: 1.25rem; color: var(--color-primary); font-weight: 700;">No clients registered</h3>
+            <p class="empty-desc" style="color: var(--color-text-secondary); max-width: 480px; margin: 0.5rem auto 1.5rem auto; line-height: 1.5;">
+              There are currently no clients registered in the firm repository. Register a new individual or corporate client to begin matter onboarding.
+            </p>
+            <button class="btn btn-gold" onclick="ClientsView.openNewClientModal()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <line x1="19" y1="8" x2="19" y2="14"/>
+                <line x1="22" y1="11" x2="16" y2="11"/>
+              </svg>
+              <span>+ Add Client</span>
+            </button>
+          </div>
+        ` : `
+          <!-- Clients Cards Grid -->
+          <div class="grid grid-cols-3 gap-6">
+            ${filteredClients.map(c => {
+              const clientCases = SLCMS_STATE.cases.filter(cs => cs.clientId === c.id || cs.client === c.name);
+              const lawyer = c.assignedLawyer || (clientCases[0] ? clientCases[0].lawyer : 'Adv. Asha Mrema');
+              const maskedId = isAdmin 
+                ? (c.idNumber ? `TIN-***-${c.idNumber.slice(-4)}` : 'N/A')
+                : (c.idNumber || 'N/A');
 
-            return `
-              <div class="card card-hover flex flex-col justify-between" style="position: relative;">
-                <div>
-                  <div class="flex items-start justify-between" style="margin-bottom: 0.75rem;">
-                    <div class="flex items-center gap-3">
-                      <div class="avatar avatar-md ${c.type === 'Organization' ? 'avatar-navy' : 'avatar-gold'}">
-                        ${c.name.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <h3 style="font-size: 1.05rem; color: var(--color-primary); line-height: 1.2; margin: 0;">${c.name}</h3>
-                        <div class="flex items-center gap-1.5" style="margin-top: 0.25rem;">
-                          <span class="badge" style="background: var(--color-surface-subtle); font-size: 0.7rem;">${c.type}</span>
-                          <span class="badge ${c.status === 'Deactivated' ? 'badge-lost' : 'badge-active'}" style="font-size: 0.68rem;">${c.status || 'Active'}</span>
+              return `
+                <div class="card card-hover flex flex-col justify-between" style="position: relative;">
+                  <div>
+                    <div class="flex items-start justify-between" style="margin-bottom: 0.75rem;">
+                      <div class="flex items-center gap-3">
+                        <div class="avatar avatar-md ${c.type === 'Corporate' || c.type === 'Organization' ? 'avatar-navy' : 'avatar-gold'}">
+                          ${c.name.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <h3 style="font-size: 1.05rem; color: var(--color-primary); line-height: 1.2; margin: 0;">${c.name}</h3>
+                          <div class="flex items-center gap-1.5" style="margin-top: 0.25rem;">
+                            <span class="badge" style="background: var(--color-surface-subtle); font-size: 0.7rem;">${c.type}</span>
+                            <span class="badge ${c.status === 'Deactivated' ? 'badge-lost' : 'badge-active'}" style="font-size: 0.68rem;">${c.status || 'Active'}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
+
+                    <!-- Client Info Details -->
+                    <div class="flex flex-col gap-2" style="font-size: 0.8rem; color: var(--color-text-secondary); margin: 0.85rem 0;">
+                      <div class="flex items-center gap-2">
+                        <span style="color: var(--color-text-muted); width: 80px; flex-shrink: 0;">ID / Reg No:</span>
+                        <strong style="font-family: var(--font-mono); color: var(--color-primary);">${maskedId}</strong>
+                        ${isAdmin ? `<span class="badge" style="font-size: 0.62rem; padding: 1px 4px; background: #FEF3C7; color: #92400E;">Masked</span>` : ''}
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <span style="color: var(--color-text-muted); width: 80px; flex-shrink: 0;">Assigned:</span>
+                        <span style="color: var(--color-primary); font-weight: 600;">${lawyer}</span>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <span style="color: var(--color-text-muted); width: 80px; flex-shrink: 0;">Email:</span>
+                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.email || 'Not provided'}</span>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <span style="color: var(--color-text-muted); width: 80px; flex-shrink: 0;">Phone:</span>
+                        <span>${c.phone}</span>
+                      </div>
+                      <div class="flex items-start gap-2">
+                        <span style="color: var(--color-text-muted); width: 80px; flex-shrink: 0;">Address:</span>
+                        <span style="font-size: 0.76rem; line-height: 1.35;">${c.address || 'Not provided'}</span>
+                      </div>
+                    </div>
                   </div>
 
-                  <!-- Client Info Details -->
-                  <div class="flex flex-col gap-2" style="font-size: 0.8rem; color: var(--color-text-secondary); margin: 0.85rem 0;">
-                    <div class="flex items-center gap-2">
-                      <span style="color: var(--color-text-muted); width: 80px; flex-shrink: 0;">ID / Reg No:</span>
-                      <strong style="font-family: var(--font-mono); color: var(--color-primary);">${maskedId}</strong>
-                      ${isAdmin ? `<span class="badge" style="font-size: 0.62rem; padding: 1px 4px; background: #FEF3C7; color: #92400E;">Masked</span>` : ''}
+                  <!-- Footer with related cases & actions -->
+                  <div class="pt-3" style="border-top: 1px solid var(--color-border-subtle); font-size: 0.78rem;">
+                    <div class="flex items-center justify-between mb-2">
+                      <div>
+                        <span style="color: var(--color-text-muted);">Related Cases:</span>
+                        <strong style="color: var(--color-gold); font-size: 0.88rem;">${clientCases.length}</strong>
+                      </div>
+                      <button class="btn btn-ghost btn-sm" style="font-size: 0.72rem; padding: 0.15rem 0.45rem;" onclick="ClientsView.viewRelatedCases('${c.name}')">
+                        View Cases →
+                      </button>
                     </div>
-                    <div class="flex items-center gap-2">
-                      <span style="color: var(--color-text-muted); width: 80px; flex-shrink: 0;">Assigned:</span>
-                      <span style="color: var(--color-primary); font-weight: 600;">${lawyer}</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <span style="color: var(--color-text-muted); width: 80px; flex-shrink: 0;">Email:</span>
-                      <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.email}</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <span style="color: var(--color-text-muted); width: 80px; flex-shrink: 0;">Phone:</span>
-                      <span>${c.phone}</span>
-                    </div>
-                    <div class="flex items-start gap-2">
-                      <span style="color: var(--color-text-muted); width: 80px; flex-shrink: 0;">Address:</span>
-                      <span style="font-size: 0.76rem; line-height: 1.35;">${c.address || 'Not provided'}</span>
+                    <div class="client-card-actions">
+                      <div class="client-card-main-btns">
+                        <button class="btn btn-secondary btn-sm client-card-btn-profile" onclick="ClientsView.openClientProfile('${c.id}')">View Profile</button>
+                        <button class="btn btn-gold btn-sm client-card-btn-addcase" onclick="ClientsView.createCaseForClient('${c.name}')" title="Create Case">+ Case</button>
+                      </div>
+                      ${isAdmin ? `
+                        <div class="client-card-sub-btns">
+                          <button class="btn btn-ghost btn-sm" onclick="ClientsView.openWhoCanAccessClientModal('${c.id}')" title="Review Who Can Access Client">👥 Access</button>
+                          <button class="btn btn-ghost btn-sm ${c.status === 'Deactivated' ? 'text-success' : 'text-danger'}" onclick="ClientsView.toggleClientStatus('${c.id}')" title="${c.status === 'Deactivated' ? 'Activate Client' : 'Deactivate Client'}">
+                            ${c.status === 'Deactivated' ? '🟢 Activate' : '🚫 Deactivate'}
+                          </button>
+                          <button class="btn btn-ghost btn-sm" onclick="ClientsView.openEditClientModal('${c.id}')" title="Edit Client Information">✏️</button>
+                        </div>
+                      ` : `
+                        <div class="client-card-sub-btns">
+                          <button class="btn btn-ghost btn-sm" onclick="ClientsView.openEditClientModal('${c.id}')" title="Edit Client Information">✏️ Edit</button>
+                        </div>
+                      `}
                     </div>
                   </div>
                 </div>
-
-                <!-- Footer with related cases & actions -->
-                <div class="pt-3" style="border-top: 1px solid var(--color-border-subtle); font-size: 0.78rem;">
-                  <div class="flex items-center justify-between mb-2">
-                    <div>
-                      <span style="color: var(--color-text-muted);">Related Cases:</span>
-                      <strong style="color: var(--color-gold); font-size: 0.88rem;">${clientCases.length}</strong>
-                    </div>
-                    <button class="btn btn-ghost btn-sm" style="font-size: 0.72rem; padding: 0.15rem 0.45rem;" onclick="ClientsView.viewRelatedCases('${c.name}')">
-                      View Cases →
-                    </button>
-                  </div>
-                  <div class="client-card-actions">
-                    <div class="client-card-main-btns">
-                      <button class="btn btn-secondary btn-sm client-card-btn-profile" onclick="ClientsView.openClientProfile('${c.id}')">View Profile</button>
-                      <button class="btn btn-gold btn-sm client-card-btn-addcase" onclick="ClientsView.createCaseForClient('${c.name}')" title="Create Case">+ Case</button>
-                    </div>
-                    ${isAdmin ? `
-                      <div class="client-card-sub-btns">
-                        <button class="btn btn-ghost btn-sm" onclick="ClientsView.openWhoCanAccessClientModal('${c.id}')" title="Review Who Can Access Client">👥 Access</button>
-                        <button class="btn btn-ghost btn-sm ${c.status === 'Deactivated' ? 'text-success' : 'text-danger'}" onclick="ClientsView.toggleClientStatus('${c.id}')" title="${c.status === 'Deactivated' ? 'Activate Client' : 'Deactivate Client'}">
-                          ${c.status === 'Deactivated' ? '🟢 Activate' : '🚫 Deactivate'}
-                        </button>
-                        <button class="btn btn-ghost btn-sm" onclick="ClientsView.openEditClientModal('${c.id}')" title="Edit Client Information">✏️</button>
-                      </div>
-                    ` : `
-                      <div class="client-card-sub-btns">
-                        <button class="btn btn-ghost btn-sm" onclick="ClientsView.openEditClientModal('${c.id}')" title="Edit Client Information">✏️ Edit</button>
-                      </div>
-                    `}
-                  </div>
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
+              `;
+            }).join('')}
+          </div>
+        `}
       </div>
     `;
   },
@@ -308,90 +328,95 @@ const ClientsView = {
     `, 'modal-lg');
   },
 
-  openNewClientModal() {
-    const lawyers = [
-      'Eleanor Vance, Esq.',
-      'Julian Mercer, Esq.',
-      'David Croft, Esq.',
-      'Sophia Chen'
-    ];
+  _clientCreationCallback: null,
+
+  openNewClientModal(callback = null) {
+    this._clientCreationCallback = callback;
+    const lawyers = SLCMS_STATE.getActiveStaffUsers(['Senior Lawyer', 'Lawyer']);
 
     App.openModal(`
       <div class="modal-header">
-        <h3 class="modal-title">Register New Law-Firm Client</h3>
+        <h3 class="modal-title">Register Client</h3>
         <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
       </div>
       <div class="modal-body">
         <div class="grid grid-cols-2 gap-4">
           <div class="form-group">
-            <label class="form-label required">Client / Entity Full Name</label>
-            <input type="text" id="nc-name" class="form-control" placeholder="e.g. Tanzania Petroleum Dev Corp" required>
+            <label class="form-label required">Client Name (Individual or Organization)</label>
+            <input type="text" id="nc-name" class="form-control" placeholder="e.g. Tanzania Petroleum Dev Corp / John Doe" required>
           </div>
           <div class="form-group">
-            <label class="form-label required">Client Entity Type</label>
+            <label class="form-label required">Client Type</label>
             <select id="nc-type" class="form-control">
-              <option value="Organization">Organization / Corporate</option>
               <option value="Individual">Individual Person</option>
+              <option value="Corporate">Corporate / Organization</option>
+              <option value="NGO">Non-Governmental Organization (NGO)</option>
+              <option value="Government">Government Entity / Parastatal</option>
             </select>
           </div>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div class="form-group">
-            <label class="form-label required">Primary Contact Person</label>
-            <input type="text" id="nc-contact" class="form-control" placeholder="Full name & title">
+            <label class="form-label required">Contact Phone Number</label>
+            <input type="tel" id="nc-phone" class="form-control" placeholder="+255 700 000 000" required>
           </div>
           <div class="form-group">
-            <label class="form-label required">Official Email Address</label>
+            <label class="form-label">Email Address <span style="font-weight: 400; color: var(--color-text-muted);">(Optional)</span></label>
             <input type="email" id="nc-email" class="form-control" placeholder="client@domain.co.tz">
           </div>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div class="form-group">
-            <label class="form-label required">Phone Number</label>
-            <input type="tel" id="nc-phone" class="form-control" placeholder="+255 22 211 0000">
-          </div>
-          <div class="form-group">
-            <label class="form-label required">National ID / TIN / Reg Number</label>
-            <input type="text" id="nc-idnum" class="form-control" placeholder="TIN-100-245-890 / NIDA...">
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="form-group">
-            <label class="form-label required">Registered Office Address</label>
+            <label class="form-label">Physical / Registered Office Address <span style="font-weight: 400; color: var(--color-text-muted);">(Optional)</span></label>
             <input type="text" id="nc-address" class="form-control" placeholder="Plot 42, Samora Avenue, Dar es Salaam">
           </div>
           <div class="form-group">
-            <label class="form-label required">Assigned Legal Counsel</label>
+            <label class="form-label">Assigned Legal Counsel</label>
             <select id="nc-lawyer" class="form-control">
-              ${lawyers.map(l => `<option value="${l}">${l}</option>`).join('')}
+              ${lawyers.length === 0 ? `<option value="Unassigned">Unassigned</option>` : lawyers.map(l => `<option value="${l.name}">${l.name} (${l.role})</option>`).join('')}
             </select>
           </div>
+        </div>
+        <div class="form-group mb-0">
+          <label class="form-label">Identification / TIN Reference <span style="font-weight: 400; color: var(--color-text-muted);">(Optional)</span></label>
+          <input type="text" id="nc-idnum" class="form-control" placeholder="TIN-100-245-890 / NIDA...">
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
-        <button class="btn btn-gold" onclick="ClientsView.saveNewClient()">Save Client Record</button>
+        <button class="btn btn-gold" onclick="ClientsView.saveNewClient()">Register Client</button>
       </div>
     `);
   },
 
   saveNewClient() {
-    const name = document.getElementById('nc-name')?.value;
+    const name = document.getElementById('nc-name')?.value?.trim();
     if (!name) {
       App.showToast('Please provide a Client Name', 'error');
       return;
     }
+    const phone = document.getElementById('nc-phone')?.value?.trim();
+    if (!phone) {
+      App.showToast('Please provide a Contact Phone Number', 'error');
+      return;
+    }
+
+    const type = document.getElementById('nc-type')?.value || 'Individual';
+    const email = document.getElementById('nc-email')?.value?.trim() || '';
+    const address = document.getElementById('nc-address')?.value?.trim() || '';
+    const idNumber = document.getElementById('nc-idnum')?.value?.trim() || '';
+    const lawyer = document.getElementById('nc-lawyer')?.value || '';
 
     const newClient = {
       id: 'cli-' + Date.now(),
       name: name,
-      type: document.getElementById('nc-type')?.value || 'Organization',
-      contactPerson: document.getElementById('nc-contact')?.value || name,
-      email: document.getElementById('nc-email')?.value || 'client@slcms.local',
-      phone: document.getElementById('nc-phone')?.value || '+255 22 000 0000',
-      address: document.getElementById('nc-address')?.value || 'Dar es Salaam, Tanzania',
-      idNumber: document.getElementById('nc-idnum')?.value || 'TIN-PENDING',
-      assignedLawyer: document.getElementById('nc-lawyer')?.value || 'Eleanor Vance, Esq.',
+      type: type,
+      contactPerson: name,
+      email: email,
+      phone: phone,
+      address: address,
+      idNumber: idNumber,
+      assignedLawyer: lawyer,
       activeCases: 0,
       totalCases: 0,
       status: 'Active',
@@ -399,23 +424,24 @@ const ClientsView = {
       notes: 'Client newly registered in SLCMS.'
     };
 
-    SLCMS_STATE.clients.unshift(newClient);
-    SLCMS_STATE.addAuditLog('New Client Registered', 'Clients', newClient.name);
+    SLCMS_STATE.addClient(newClient);
     App.closeModal();
-    App.showToast(`Client ${newClient.name} registered successfully!`, 'success');
-    App.refreshCurrentView();
+    App.showToast(`Client "${newClient.name}" registered successfully!`, 'success');
+
+    if (typeof this._clientCreationCallback === 'function') {
+      const cb = this._clientCreationCallback;
+      this._clientCreationCallback = null;
+      cb(newClient);
+    } else {
+      App.refreshCurrentView();
+    }
   },
 
   openEditClientModal(clientId) {
     const c = SLCMS_STATE.clients.find(item => item.id === clientId);
     if (!c) return;
 
-    const lawyers = [
-      'Eleanor Vance, Esq.',
-      'Julian Mercer, Esq.',
-      'David Croft, Esq.',
-      'Sophia Chen'
-    ];
+    const lawyers = SLCMS_STATE.getActiveStaffUsers(['Senior Lawyer', 'Lawyer']);
 
     App.openModal(`
       <div class="modal-header">

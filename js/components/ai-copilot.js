@@ -42,13 +42,16 @@ const AICopilot = {
 
         <!-- Header -->
         <div class="ai-copilot-header">
-          <div class="flex items-center gap-2">
-            <h3 class="ai-header-title" style="font-size: 1.15rem; font-weight: 700; color: #FFFFFF;">
-              Ask SLCMS AI
-            </h3>
+          <div class="ai-copilot-header-brand">
+            <span class="ai-copilot-header-dot"></span>
+            <span class="ai-copilot-header-title">SLCMS AI</span>
+            <span class="ai-copilot-header-tag">TanzLII Grounded</span>
           </div>
           <div class="flex items-center gap-2">
-            <button class="ai-copilot-close-btn" onclick="AICopilot.closeDrawer()" aria-label="Close Copilot">✕</button>
+            ${this.chatMessages && this.chatMessages.length > 0 ? `
+              <button class="ai-copilot-clear-btn" onclick="AICopilot.clearChat()" title="Start fresh session">✨ New</button>
+            ` : ''}
+            <button class="ai-copilot-close-btn" onclick="AICopilot.closeDrawer()" aria-label="Close Copilot" title="Close Copilot">✕</button>
           </div>
         </div>
 
@@ -176,25 +179,37 @@ const AICopilot = {
       if (this.chatMessages.length === 0) {
         return `
           <div class="ai-gemini-welcome-canvas animate-fade">
-            <div class="ai-gemini-sparkle-icon">✦</div>
-            <h2 class="ai-gemini-greeting">Hello, Counsel! Ready to research Tanzanian judicial precedents or analyze legal matters? I’m here to help.</h2>
-            <p class="ai-gemini-subheading">Not sure what to ask? Choose a legal research query below:</p>
+            <div class="ai-gemini-sparkle-icon">
+              <svg width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="copilotDiamondGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#93C5FD" />
+                    <stop offset="45%" stop-color="#6366F1" />
+                    <stop offset="100%" stop-color="#4F46E5" />
+                  </linearGradient>
+                </defs>
+                <path d="M24 2C24 14.15 14.15 24 2 24C14.15 24 24 33.85 24 46C24 33.85 33.85 24 46 24C33.85 24 24 14.15 24 2Z" fill="url(#copilotDiamondGrad)"/>
+              </svg>
+            </div>
+            <h2 class="ai-gemini-greeting">Hello, SLCMS!</h2>
+            <p class="ai-gemini-subheading">Ask anything about Tanzanian judicial precedents, statutory laws, or legal analysis.</p>
             
-            <div class="ai-gemini-prompts-stack">
-              <button type="button" class="ai-gemini-prompt-pill" onclick="AICopilot.sendPresetPrompt('Find High Court & Appellate judgments (2020 - 2026)')">
-                Find High Court &amp; Appellate judgments (2020 - 2026)
+            <div class="ai-welcome-cards-stack">
+              <button type="button" class="ai-welcome-card" onclick="AICopilot.sendPresetPrompt('about cases like criminal')">
+                <span class="ai-welcome-card-icon">⚖️</span>
+                <span class="ai-welcome-card-text">about cases like criminal</span>
               </button>
-              <button type="button" class="ai-gemini-prompt-pill" onclick="AICopilot.sendPresetPrompt('Summarize Attilio v Mbowe [1969] HCD 284')">
-                Summarize Attilio v Mbowe [1969] HCD 284
+              <button type="button" class="ai-welcome-card" onclick="AICopilot.sendPresetPrompt('Find High Court & Appellate judgments (2020 - 2026)')">
+                <span class="ai-welcome-card-icon">🔍</span>
+                <span class="ai-welcome-card-text">Find High Court &amp; Appellate judgments (2020 - 2026)</span>
               </button>
-              <button type="button" class="ai-gemini-prompt-pill" onclick="AICopilot.sendPresetPrompt('Show facts of Abdallah Salum Muwinge vs Halima Ismail')">
-                Show facts of Abdallah Salum Muwinge vs Halima Ismail
+              <button type="button" class="ai-welcome-card" onclick="AICopilot.sendPresetPrompt('Summarize Attilio v Mbowe [1969] HCD 284')">
+                <span class="ai-welcome-card-icon">📄</span>
+                <span class="ai-welcome-card-text">Summarize Attilio v Mbowe [1969] HCD 284</span>
               </button>
-              <button type="button" class="ai-gemini-prompt-pill" onclick="AICopilot.sendPresetPrompt('Court reasoning on temporary injunctions & balance of convenience')">
-                Court reasoning on temporary injunctions &amp; balance of convenience
-              </button>
-              <button type="button" class="ai-gemini-prompt-pill" onclick="AICopilot.sendPresetPrompt('Laws cited under Law of Contract Act [Cap. 345 R.E. 2019]')">
-                Laws cited under Law of Contract Act [Cap. 345 R.E. 2019]
+              <button type="button" class="ai-welcome-card" onclick="AICopilot.sendPresetPrompt('Show facts of Abdallah Salum Muwinge vs Halima Ismail')">
+                <span class="ai-welcome-card-icon">ℹ️</span>
+                <span class="ai-welcome-card-text">Show facts of Abdallah Salum Muwinge vs Halima Ismail</span>
               </button>
             </div>
           </div>
@@ -217,54 +232,89 @@ const AICopilot = {
                   ${m.text && typeof m.text === 'string' && m.text.trim().startsWith('<')
                     ? m.text
                     : (typeof AIAssistantView !== 'undefined' && AIAssistantView.formatAnsweringMarkdown ? AIAssistantView.formatAnsweringMarkdown(m.text) : m.text)}
+                  ${m.isStreaming ? '<span class="ai-streaming-cursor"></span>' : ''}
                 </div>
-                ${m.citation ? `<div style="font-size: 0.72rem; color: var(--color-gold); margin-top: 0.35rem;">📜 ${m.citation}</div>` : ''}
+                ${!m.isStreaming && m.guidedOptions && m.guidedOptions.length ? `
+                  <div class="ai-guided-actions-container animate-fade">
+                    <div class="ai-guided-actions-header">
+                      <span class="ai-guided-sparkle">✨</span> Suggested Research
+                    </div>
+                    <div class="ai-guided-actions-grid">
+                      ${m.guidedOptions.map(opt => `
+                        <button type="button" class="ai-guided-action-card" onclick="${opt.action ? (opt.action.startsWith('AICopilot') ? opt.action : `AIAssistantView.${opt.action}()`) : `AICopilot.sendPresetPrompt('${(opt.prompt || '').replace(/'/g, "\\'")}')`}">
+                          <div class="ai-guided-card-icon-badge">${opt.icon || '⚖️'}</div>
+                          <div class="ai-guided-card-text">
+                            <div class="ai-guided-card-title">${AICopilot.escapeHtml(opt.label)}</div>
+                            ${opt.desc ? `<div class="ai-guided-card-desc">${AICopilot.escapeHtml(opt.desc)}</div>` : ''}
+                          </div>
+                          <div class="ai-guided-card-arrow">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                              <line x1="5" y1="12" x2="19" y2="12"></line>
+                              <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                          </div>
+                        </button>
+                      `).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+                ${m.citation ? `<div style="font-size: 0.72rem; color: var(--color-gold); margin-top: 0.5rem;">📜 ${m.citation}</div>` : ''}
                 <div class="ai-disclaimer-text" style="margin-top: 0.75rem;">
                   AI can make mistakes, so check its responses.
                 </div>
-                <div class="ai-action-buttons-row">
-                  <button type="button" class="ai-action-icon-btn" onclick="navigator.clipboard.writeText('${m.text.replace(/<[^>]*>?/gm, '').replace(/'/g, "\\'")}').then(() => App.showToast('Copied answer to clipboard.', 'success'))" title="Copy response">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    </svg>
-                  </button>
-                  <button type="button" class="ai-action-icon-btn" onclick="App.showToast('Share link copied.', 'info')" title="Share">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <circle cx="18" cy="5" r="3"></circle>
-                      <circle cx="6" cy="12" r="3"></circle>
-                      <circle cx="18" cy="19" r="3"></circle>
-                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                    </svg>
-                  </button>
-                  <button type="button" class="ai-action-icon-btn" onclick="App.showToast('Marked as helpful.', 'success')" title="Helpful">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
-                    </svg>
-                  </button>
-                  <button type="button" class="ai-action-icon-btn" onclick="App.showToast('Feedback noted.', 'info')" title="Unhelpful">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path>
-                    </svg>
-                  </button>
-                  ${m.tanzliiUrl ? `
-                    <a href="${m.tanzliiUrl}" target="_blank" rel="noopener" class="ai-action-icon-btn" style="text-decoration: none; color: var(--color-gold);" title="Open official TanzLII precedent">
-                      🌐
-                    </a>
-                  ` : ''}
-                </div>
+                ${!m.isStreaming ? `
+                  <div class="ai-action-buttons-row">
+                    <button type="button" class="ai-action-icon-btn" onclick="navigator.clipboard.writeText('${(m.text || '').replace(/<[^>]*>?/gm, '').replace(/'/g, "\\'")}').then(() => App.showToast('Copied answer to clipboard.', 'success'))" title="Copy response">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                    </button>
+                    <button type="button" class="ai-action-icon-btn" onclick="App.showToast('Share link copied.', 'info')" title="Share">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="18" cy="5" r="3"></circle>
+                        <circle cx="6" cy="12" r="3"></circle>
+                        <circle cx="18" cy="19" r="3"></circle>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                      </svg>
+                    </button>
+                    <button type="button" class="ai-action-icon-btn" onclick="App.showToast('Marked as helpful.', 'success')" title="Helpful">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                      </svg>
+                    </button>
+                    <button type="button" class="ai-action-icon-btn" onclick="App.showToast('Feedback noted.', 'info')" title="Unhelpful">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path>
+                      </svg>
+                    </button>
+                    ${m.tanzliiUrl ? `
+                      <a href="${m.tanzliiUrl}" target="_blank" rel="noopener" class="ai-action-icon-btn" style="text-decoration: none; color: var(--color-gold);" title="Open official TanzLII precedent">
+                        🌐
+                      </a>
+                    ` : ''}
+                  </div>
+                ` : ''}
               </div>
             </div>
           `).join('')}
 
-          <!-- LIVE AI THREE HANGING DOTS BUBBLE -->
+          <!-- LIVE AI REASONING / RUNNING LINES -->
           ${this.isThinking ? `
-            <div class="tz-thinking-bubble-row animate-fade" style="margin: 0.5rem 0 0.85rem 0.25rem;">
-              <div class="tz-thinking-bubble" title="AI Copilot is thinking...">
-                <span class="tz-dot"></span>
-                <span class="tz-dot"></span>
-                <span class="tz-dot"></span>
+            <div class="ai-running-lines-box animate-fade" style="margin: 0.5rem 0 0.85rem 0.25rem;" role="status" aria-label="SLCMS AI is reasoning">
+              <div class="ai-running-lines-header">
+                <span class="ai-dancing-dots-wrapper" aria-hidden="true">
+                  <span class="ai-dancing-dot"></span>
+                  <span class="ai-dancing-dot"></span>
+                  <span class="ai-dancing-dot"></span>
+                </span>
+                <span class="ai-running-lines-label">Reasoning through Tanzanian legal authorities…</span>
+              </div>
+              <div class="ai-running-lines" aria-hidden="true">
+                <div class="ai-running-line ai-line-1"></div>
+                <div class="ai-running-line ai-line-2"></div>
+                <div class="ai-running-line ai-line-3"></div>
               </div>
             </div>
           ` : ''}
@@ -366,35 +416,38 @@ const AICopilot = {
 
   renderActiveTabFooter() {
     if (this.activeTab === 'chat') {
+      const showCatBar = this.chatMessages && this.chatMessages.length > 0;
       return `
-        <div style="padding: 0.4rem 0.75rem 0.85rem 0.75rem;">
-          <!-- 8 Primary Category Action Buttons Bar (Sits Above Input Dock) -->
-          <div class="ai-copilot-cat-btn-bar">
-            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Find Abdallah Salum Muwinge')">
-              🔍 Find Judgment
-            </button>
-            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Summarize Abdallah Salum Muwinge v Halima Ismail')">
-              📄 Summarize Case
-            </button>
-            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show facts of Abdallah Salum Muwinge v Halima Ismail')">
-              ℹ️ Show Facts
-            </button>
-            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show legal issues in Abdallah Salum Muwinge v Halima Ismail')">
-              ❓ Show Legal Issues
-            </button>
-            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show court reasoning in Abdallah Salum Muwinge v Halima Ismail')">
-              🧠 Court Reasoning
-            </button>
-            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show final decision in Abdallah Salum Muwinge v Halima Ismail')">
-              ✅ Final Decision
-            </button>
-            <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show laws and cases cited in Abdallah Salum Muwinge v Halima Ismail')">
-              📚 Laws Cited
-            </button>
-            <button type="button" class="ai-copilot-cat-btn" onclick="AIAssistantView.viewPdfModal('assets/cases/case1_scanned_judgment.pdf', 'Abdallah Salum Muwinge v Halima Ismail [2020] TZHC 10045')">
-              🌐 Open Original
-            </button>
-          </div>
+        <div style="padding: 0.4rem 0.85rem 0.85rem 0.85rem;">
+          ${showCatBar ? `
+            <!-- 8 Primary Category Action Buttons Bar (Sits Above Input Dock during active conversation) -->
+            <div class="ai-copilot-cat-btn-bar">
+              <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Find Abdallah Salum Muwinge')">
+                🔍 Find Judgment
+              </button>
+              <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Summarize Abdallah Salum Muwinge v Halima Ismail')">
+                📄 Summarize Case
+              </button>
+              <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show facts of Abdallah Salum Muwinge v Halima Ismail')">
+                ℹ️ Show Facts
+              </button>
+              <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show legal issues in Abdallah Salum Muwinge v Halima Ismail')">
+                ❓ Show Legal Issues
+              </button>
+              <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show court reasoning in Abdallah Salum Muwinge v Halima Ismail')">
+                🧠 Court Reasoning
+              </button>
+              <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show final decision in Abdallah Salum Muwinge v Halima Ismail')">
+                ✅ Final Decision
+              </button>
+              <button type="button" class="ai-copilot-cat-btn" onclick="AICopilot.sendPresetPrompt('Show laws and cases cited in Abdallah Salum Muwinge v Halima Ismail')">
+                📚 Laws Cited
+              </button>
+              <button type="button" class="ai-copilot-cat-btn" onclick="AIAssistantView.viewPdfModal('assets/cases/case1_scanned_judgment.pdf', 'Abdallah Salum Muwinge v Halima Ismail [2020] TZHC 10045')">
+                🌐 Open Original
+              </button>
+            </div>
+          ` : ''}
 
           <div class="ai-chat-prompt-card">
             <textarea 
@@ -408,7 +461,7 @@ const AICopilot = {
             <div class="ai-chat-prompt-bottom-bar">
               <div class="ai-prompt-left-tools">
                 <button type="button" class="ai-prompt-circle-plus" onclick="App.showToast('Attach documents from case dossier.', 'info')" title="Add files">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="12" y1="5" x2="12" y2="19"></line>
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                   </svg>
@@ -424,7 +477,7 @@ const AICopilot = {
                   </svg>
                 </button>
                 <button type="button" class="ai-prompt-send-icon-btn" id="btn-copilot-send" onclick="AICopilot.sendChatMessage()" title="Send">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="12" y1="19" x2="12" y2="5"></line>
                     <polyline points="5 12 12 5 19 12"></polyline>
                   </svg>
@@ -453,7 +506,7 @@ const AICopilot = {
 
   sendChatMessage() {
     const input = document.getElementById('ai-copilot-input');
-    if (!input || !input.value.trim() || this.isThinking) return;
+    if (!input || !input.value.trim() || this.isThinking || this.isStreaming) return;
 
     const userText = input.value.trim();
     const userMsgId = 'msg-user-' + Date.now();
@@ -464,71 +517,131 @@ const AICopilot = {
     const userProfile = (typeof TanzaniaIntentRouter !== 'undefined' && TanzaniaIntentRouter.getUserProfile) 
       ? TanzaniaIntentRouter.getUserProfile() 
       : { isLoggedIn: !!(typeof App !== 'undefined' && App.isLoggedIn) };
-    if (!userProfile.isLoggedIn || !(typeof App !== 'undefined' && App.isLoggedIn)) {
+    const isUserLoggedIn = (typeof App !== 'undefined' && App.isLoggedIn) || 
+      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('slcms_auth') === 'true') ||
+      (userProfile && userProfile.isLoggedIn);
+
+    if (!isUserLoggedIn) {
       this.chatMessages.push({
         id: 'msg-bot-' + Date.now(),
         sender: 'bot',
         text: `🔒 **Authentication Required**\n\nYou must register or sign in to your authorized SLCMS account before using the Tanzania Legal Research Assistant.\n\nPlease sign in or register to continue.`,
         citation: 'Access Restricted • SLCMS Security Guardrail',
-        thoughtProcess: []
+        thoughtSteps: []
       });
       this.updateBody();
       return;
     }
 
-    // Trigger Thinking Engine (Three hanging dots animation ~1.1s)
+    // 1. Generate Contextual Legal Reasoning Steps
+    const routeRes = TanzaniaIntentRouter.routeMessage(userText);
+    const thoughtSteps = (typeof TanzaniaIntentRouter !== 'undefined' && TanzaniaIntentRouter.generateReasoningSteps)
+      ? TanzaniaIntentRouter.generateReasoningSteps(userText, routeRes)
+      : [
+          'Analyzing user query and identifying applicable Tanzanian jurisprudence...',
+          'Cross-referencing verified TanzLII primary precedents and Cap. statutes...',
+          'Synthesizing structured legal findings line by line...'
+        ];
+
+    // 2. Trigger Thinking / Reasoning Engine (~1.8s - 2.2s progressive reveal)
     this.isThinking = true;
+    this.currentThinkingSteps = [thoughtSteps[0] || 'Analyzing legal query...'];
+    this.thinkingStartTime = Date.now();
     this.updateBody();
 
-    setTimeout(() => {
-      this.isThinking = false;
+    let stepIdx = 1;
+    if (this.thoughtInterval) clearInterval(this.thoughtInterval);
+    this.thoughtInterval = setInterval(() => {
+      if (stepIdx < thoughtSteps.length) {
+        this.currentThinkingSteps.push(thoughtSteps[stepIdx]);
+        stepIdx++;
+        this.updateBody();
+      } else {
+        clearInterval(this.thoughtInterval);
+        this.thoughtInterval = null;
+      }
+    }, 420);
 
-      const routeRes = TanzaniaIntentRouter.routeMessage(userText);
-      let botResponse = '';
+    const totalReasoningTime = Math.max(1800, (thoughtSteps.length - 1) * 420 + 250);
+    setTimeout(() => {
+      if (this.thoughtInterval) {
+        clearInterval(this.thoughtInterval);
+        this.thoughtInterval = null;
+      }
+      this.isThinking = false;
+      const thoughtDuration = ((Date.now() - this.thinkingStartTime) / 1000).toFixed(1);
+
+      let botResponseText = '';
       let citation = '';
       let tanzliiUrl = '';
+      let guidedOptions = null;
 
       if (routeRes.isSmallTalk) {
-        let guidedHtml = '';
-        if (routeRes.guidedOptions) {
-          guidedHtml = `<div class="ai-copilot-guided-chips" style="margin-top: 0.75rem;">` + 
-            routeRes.guidedOptions.map(opt => `<button type="button" class="ai-copilot-guided-chip" onclick="${opt.action ? (opt.action.startsWith('AICopilot') ? opt.action : `AIAssistantView.${opt.action}()`) : `AICopilot.sendPresetPrompt('${opt.prompt}')`}">${opt.label}</button>`).join('') + 
-            `</div>`;
-        }
-        botResponse = routeRes.response + guidedHtml;
-        citation = `Prepared Response • ${routeRes.category || 'Tanzania Legal System'}`;
+        botResponseText = routeRes.response || '';
+        citation = '';
+        guidedOptions = (routeRes.guidedOptions && routeRes.guidedOptions.length > 0) ? routeRes.guidedOptions : null;
       } else {
-        // Construct standardized message object for rich rendering
-        const msgObj = {
-          id: 'msg-' + Date.now(),
-          role: 'assistant',
-          rawQuery: userText,
-          timestamp: 'Just now',
-          ...routeRes
-        };
-
-        if (typeof AIAssistantView !== 'undefined' && AIAssistantView.renderAssistantMessageContent) {
-          botResponse = AIAssistantView.renderAssistantMessageContent(msgObj);
-        } else {
-          botResponse = routeRes.response || 'Verified Tanzanian legal authority retrieved.';
-        }
-
+        botResponseText = routeRes.response || 'Verified Tanzanian legal authority retrieved.';
         citation = routeRes.matchedCase ? `${routeRes.matchedCase.title} (${routeRes.matchedCase.citation || routeRes.matchedCase.court})` : 'TanzLII Verified Precedent Index';
         tanzliiUrl = routeRes.matchedCase?.tanzliiUrl || '';
+        guidedOptions = (routeRes.guidedOptions && routeRes.guidedOptions.length > 0) ? routeRes.guidedOptions : null;
       }
 
+      const lines = botResponseText.split('\n');
       const botMsgId = 'msg-bot-' + Date.now();
-      this.chatMessages.push({
+      const botMsg = {
         id: botMsgId,
         sender: 'bot',
-        text: botResponse,
+        text: lines[0] || '',
         citation: citation,
-        tanzliiUrl: tanzliiUrl
-      });
+        tanzliiUrl: tanzliiUrl,
+        thoughtSteps: thoughtSteps,
+        thoughtDuration: thoughtDuration,
+        isStreaming: true,
+        streamedLines: [lines[0] || ''],
+        guidedOptions: guidedOptions
+      };
 
+      this.chatMessages.push(botMsg);
+      this.isStreaming = true;
       this.updateBody();
-      SLCMS_STATE.addAuditLog('AI Copilot Query Executed', 'SLCMS AI', userText.substring(0, 40));
-    }, 1100);
+
+      if (lines.length <= 1) {
+        botMsg.isStreaming = false;
+        this.isStreaming = false;
+        this.updateBody();
+        SLCMS_STATE.addAuditLog('AI Copilot Query Executed', 'SLCMS AI', userText.substring(0, 40));
+        return;
+      }
+
+      let lineIdx = 1;
+      if (this.streamInterval) clearInterval(this.streamInterval);
+      this.streamInterval = setInterval(() => {
+        if (lineIdx < lines.length) {
+          botMsg.streamedLines.push(lines[lineIdx]);
+          botMsg.text = botMsg.streamedLines.join('\n');
+          lineIdx++;
+          this.updateBody();
+        } else {
+          clearInterval(this.streamInterval);
+          this.streamInterval = null;
+          botMsg.isStreaming = false;
+          this.isStreaming = false;
+          this.updateBody();
+          SLCMS_STATE.addAuditLog('AI Copilot Query Executed', 'SLCMS AI', userText.substring(0, 40));
+        }
+      }, 190);
+    }, totalReasoningTime);
+  },
+
+  escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   },
 
   calculateRiskScore() {

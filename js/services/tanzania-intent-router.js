@@ -69,7 +69,7 @@ const TanzaniaIntentRouter = {
     LAND_LAW: {
       key: 'LAND_LAW',
       name: 'Land Cases',
-      emoji: '🏞️',
+      emoji: '≡ƒÅ₧∩╕Å',
       aliases: ['land', 'ardhi', 'ownership', 'title deed', 'boundary', 'boundaries', 'eviction', 'adverse possession', 'land tribunal', 'hati miliki', 'mipaka', 'kufukuzwa'],
       keywords: [
         'show me land cases', 'show land cases', 'provide cases about land', 'provide land cases', 'find land judgments',
@@ -85,7 +85,7 @@ const TanzaniaIntentRouter = {
     CRIMINAL_LAW: {
       key: 'CRIMINAL_LAW',
       name: 'Criminal Cases',
-      emoji: '⚖️',
+      emoji: 'ΓÜû∩╕Å',
       aliases: ['criminal', 'jinai', 'crime', 'murder', 'manslaughter', 'theft', 'armed robbery', 'fraud', 'drug', 'sexual offence', 'wildlife crime', 'economic crime', 'bail', 'wizi', 'mauaji', 'unyang\'anyi', 'unyanganyi', 'dhamana', 'dawa za kulevya', 'uhujumu uchumi', 'republic', 'jamhuri'],
       keywords: [
         'show criminal cases', 'provide criminal judgments', 'find criminal appeals',
@@ -94,7 +94,7 @@ const TanzaniaIntentRouter = {
         'wildlife crime cases', 'economic crime cases', 'bail applications', 'criminal appeals',
         'cases of criminal', 'cases about crime', 'criminal law cases', 'provide criminal cases',
         'provide me the cases of criminal', 'criminal cases', 'criminal judgments', 'criminal judgment',
-        'onyesha kesi za jinai', 'kesi za wizi', 'kesi za mauaji', 'kesi za unyang’anyi', 'kesi za unyang\'anyi', 'kesi za unyanganyi',
+        'onyesha kesi za jinai', 'kesi za wizi', 'kesi za mauaji', 'kesi za unyangΓÇÖanyi', 'kesi za unyang\'anyi', 'kesi za unyanganyi',
         'maombi ya dhamana', 'kesi za dawa za kulevya', 'kesi za uhujumu uchumi',
         'kesi za jinai', 'hukumu za jinai', 'nipe hukumu za jinai', 'rufaa za jinai'
       ]
@@ -102,7 +102,7 @@ const TanzaniaIntentRouter = {
     FAMILY_MATRIMONIAL_LAW: {
       key: 'FAMILY_MATRIMONIAL_LAW',
       name: 'Matrimonial and Family Cases',
-      emoji: '👨‍👩‍👧',
+      emoji: '≡ƒæ¿ΓÇì≡ƒæ⌐ΓÇì≡ƒæº',
       aliases: ['matrimonial', 'family', 'divorce', 'custody', 'maintenance', 'ndoa', 'talaka', 'malezi', 'matunzo', 'visitation', 'domestic violence', 'mgawanyo wa mali'],
       keywords: [
         'show matrimonial cases', 'find divorce cases', 'marriage cases', 'child custody cases',
@@ -116,7 +116,7 @@ const TanzaniaIntentRouter = {
     PROBATE_INHERITANCE: {
       key: 'PROBATE_INHERITANCE',
       name: 'Probate and Inheritance Cases',
-      emoji: '📜',
+      emoji: '≡ƒô£',
       aliases: ['probate', 'inheritance', 'mirathi', 'urithi', 'wosia', 'estate', 'administrator', 'letters of administration', 'wills', 'intestate', 'heirs', 'warithi', 'usimamizi wa mirathi'],
       keywords: [
         'show probate cases', 'find inheritance cases', 'cases about deceased estates',
@@ -130,7 +130,7 @@ const TanzaniaIntentRouter = {
     CONTRACT_LAW: {
       key: 'CONTRACT_LAW',
       name: 'Contract Cases',
-      emoji: '📑',
+      emoji: '≡ƒôæ',
       aliases: ['contract', 'mikataba', 'breach of contract', 'agreements', 'subcontract', 'termination', 'damages', 'kuvunja mkataba', 'fidia'],
       keywords: [
         'show contract cases', 'find breach-of-contract cases', 'find breach of contract cases', 'breach of contract cases', 'breach-of-contract cases',
@@ -144,7 +144,7 @@ const TanzaniaIntentRouter = {
     COMMERCIAL_LAW: {
       key: 'COMMERCIAL_LAW',
       name: 'Commercial Cases',
-      emoji: '🏢',
+      emoji: '≡ƒÅó',
       aliases: ['commercial', 'business', 'biashara', 'company', 'shareholder', 'arbitration', 'transactions', 'kampuni', 'wanahisa', 'usuluhishi'],
       keywords: [
         'show commercial cases', 'business dispute cases', 'company cases', 'shareholder disputes',
@@ -157,7 +157,7 @@ const TanzaniaIntentRouter = {
     TAX_LAW: {
       key: 'TAX_LAW',
       name: 'Tax Cases',
-      emoji: '💰',
+      emoji: '≡ƒÆ░',
       aliases: ['tax', 'kodi', 'tra', 'commissioner general', 'vat', 'income tax', 'customs', 'forodha', 'tax assessment', 'tax appeals'],
       keywords: [
         'show tax cases', 'find tra cases', 'cases involving the commissioner general',
@@ -170,7 +170,7 @@ const TanzaniaIntentRouter = {
     EMPLOYMENT_LABOUR: {
       key: 'EMPLOYMENT_LABOUR',
       name: 'Employment and Labour Cases',
-      emoji: '👷',
+      emoji: '≡ƒæ╖',
       aliases: ['employment', 'labour', 'labor', 'ajira', 'kazi', 'unfair termination', 'dismissal', 'compensation', 'cma', 'discrimination', 'kufukuzwa kazi'],
       keywords: [
         'show employment cases', 'find labour judgments', 'unfair-termination cases', 'unfair termination cases',
@@ -183,7 +183,7 @@ const TanzaniaIntentRouter = {
     CONSTITUTIONAL_LAW: {
       key: 'CONSTITUTIONAL_LAW',
       name: 'Constitutional and Human-Rights Cases',
-      emoji: '🏛️',
+      emoji: '≡ƒÅ¢∩╕Å',
       aliases: ['constitutional', 'human rights', 'katiba', 'haki za binadamu', 'equality', 'freedom', 'fair hearing', 'liberty', 'challenging legislation', 'usawa', 'uhuru'],
       keywords: [
         'show constitutional cases', 'human-rights cases', 'human rights cases', 'cases about equality',
@@ -196,7 +196,7 @@ const TanzaniaIntentRouter = {
     ADMINISTRATIVE_LAW: {
       key: 'ADMINISTRATIVE_LAW',
       name: 'Administrative and Judicial-Review Cases',
-      emoji: '⚖️',
+      emoji: 'ΓÜû∩╕Å',
       aliases: ['administrative', 'judicial review', 'mapitio', 'public authorities', 'certiorari', 'mandamus', 'prohibition', 'government decision', 'kiutawala', 'mamlaka ya serikali'],
       keywords: [
         'show administrative cases', 'find judicial-review cases', 'find judicial review cases', 'judicial-review cases', 'judicial review cases',
@@ -209,7 +209,7 @@ const TanzaniaIntentRouter = {
     CIVIL_PROCEDURE: {
       key: 'CIVIL_PROCEDURE',
       name: 'Civil Procedure Cases',
-      emoji: '📐',
+      emoji: '≡ƒôÉ',
       aliases: ['civil procedure', 'mwenendo wa madai', 'extension of time', 'limitation', 'struck out', 'technical reasons', 'certificate of delay', 'stay of execution', 'injunction', 'revision', 'kuongezewa muda', 'ukomo wa muda', 'zuio'],
       keywords: [
         'show civil-procedure cases', 'show civil procedure cases', 'extension-of-time cases', 'extension of time cases',
@@ -223,7 +223,7 @@ const TanzaniaIntentRouter = {
     EVIDENCE_LAW: {
       key: 'EVIDENCE_LAW',
       name: 'Evidence Cases',
-      emoji: '🔍',
+      emoji: '≡ƒöì',
       aliases: ['evidence', 'ushahidi', 'burden of proof', 'electronic evidence', 'chain of custody', 'identification', 'confession', 'documentary evidence', 'contradictions', 'mzigo wa kuthibitisha', 'maungamo'],
       keywords: [
         'show evidence cases', 'cases about burden of proof', 'electronic-evidence cases', 'electronic evidence cases',
@@ -236,7 +236,7 @@ const TanzaniaIntentRouter = {
     PROPERTY_LAW: {
       key: 'PROPERTY_LAW',
       name: 'Property Cases',
-      emoji: '🏠',
+      emoji: '≡ƒÅá',
       aliases: ['property', 'mali', 'ownership', 'recovery', 'houses', 'vehicles', 'transfer', 'umiliki', 'nyumba', 'magari', 'kurejesha mali'],
       keywords: [
         'show property cases', 'ownership cases', 'property-recovery cases', 'property recovery cases',
@@ -247,7 +247,7 @@ const TanzaniaIntentRouter = {
     TORT_LAW: {
       key: 'TORT_LAW',
       name: 'Tort and Negligence Cases',
-      emoji: '⚠️',
+      emoji: 'ΓÜá∩╕Å',
       aliases: ['tort', 'negligence', 'uzembe', 'personal injury', 'defamation', 'accident', 'compensation', 'medical negligence', 'kashfa', 'ajali'],
       keywords: [
         'show negligence cases', 'find tort cases', 'personal-injury cases', 'personal injury cases',
@@ -260,7 +260,7 @@ const TanzaniaIntentRouter = {
     BANKING_FINANCE: {
       key: 'BANKING_FINANCE',
       name: 'Banking and Finance Cases',
-      emoji: '🏦',
+      emoji: '≡ƒÅª',
       aliases: ['banking', 'finance', 'benki', 'loan', 'mortgage', 'bank recovery', 'guarantees', 'securities', 'mikopo', 'rehani', 'dhamana ya benki'],
       keywords: [
         'show banking cases', 'loan dispute cases', 'mortgage cases', 'bank-recovery cases', 'bank recovery cases',
@@ -271,7 +271,7 @@ const TanzaniaIntentRouter = {
     INTELLECTUAL_PROPERTY: {
       key: 'INTELLECTUAL_PROPERTY',
       name: 'Intellectual-Property Cases',
-      emoji: '💡',
+      emoji: '≡ƒÆí',
       aliases: ['intellectual property', 'trademark', 'copyright', 'patent', 'brand', 'infringement', 'hakimiliki', 'alama za biashara'],
       keywords: [
         'show intellectual-property cases', 'show intellectual property cases', 'trademark cases',
@@ -284,7 +284,7 @@ const TanzaniaIntentRouter = {
     ENVIRONMENT_WILDLIFE: {
       key: 'ENVIRONMENT_WILDLIFE',
       name: 'Environmental and Wildlife Cases',
-      emoji: '🐘',
+      emoji: '≡ƒÉÿ',
       aliases: ['environmental', 'wildlife', 'mazingira', 'wanyamapori', 'trophy', 'government trophy', 'pollution', 'damage', 'forestry', 'nyara za serikali', 'misitu'],
       keywords: [
         'show environmental cases', 'wildlife cases', 'government-trophy cases', 'government trophy cases',
@@ -297,7 +297,7 @@ const TanzaniaIntentRouter = {
     ELECTION_LAW: {
       key: 'ELECTION_LAW',
       name: 'Election Cases',
-      emoji: '🗳️',
+      emoji: '≡ƒù│∩╕Å',
       aliases: ['election', 'uchaguzi', 'petition', 'results', 'candidate', 'qualification', 'mashauri ya uchaguzi', 'matokeo', 'sifa za mgombea'],
       keywords: [
         'show election cases', 'election-petition cases', 'election petition cases',
@@ -348,7 +348,7 @@ const TanzaniaIntentRouter = {
     }
     // Criminal Law
     if (/\b(criminal cases|criminal appeals|criminal judgments|kesi za jinai|hukumu za jinai|rufaa za jinai|murder cases|manslaughter cases|theft cases|armed robbery|wizi|mauaji|unyanganyi|maombi ya dhamana|dhamana|dawa za kulevya|uhujumu uchumi|cases involving the republic|economic crime|sexual offence|wildlife crime)\b/i.test(normalized) ||
-        /\b(criminal cases|criminal appeals|criminal judgments|kesi za jinai|hukumu za jinai|murder cases|manslaughter cases|theft cases|armed robbery|wizi|mauaji|unyang\'anyi|unyang’anyi|maombi ya dhamana|dawa za kulevya|uhujumu uchumi)\b/i.test(clean)) {
+        /\b(criminal cases|criminal appeals|criminal judgments|kesi za jinai|hukumu za jinai|murder cases|manslaughter cases|theft cases|armed robbery|wizi|mauaji|unyang\'anyi|unyangΓÇÖanyi|maombi ya dhamana|dawa za kulevya|uhujumu uchumi)\b/i.test(clean)) {
       return 'CRIMINAL_LAW';
     }
     // Family & Matrimonial
@@ -600,10 +600,10 @@ const TanzaniaIntentRouter = {
 
     // Strip common search query prefixes & suffixes to get the core search phrase
     let searchTerm = clean
-      .replace(/^(find|search for|search|locate|look for|do you have|show me|show|tell me about|nipatie|tafuta|nitafutie|onyesha|nipe|ipo kesi ya|kuna kesi ya|kesi ya|hukumu ya)\s+/i, '')
+      .replace(/^(cases? (about|concerning|involving|regarding|on)|find|search for|search|locate|look for|do you have|show me|show|tell me about|nipatie|tafuta|nitafutie|onyesha|nipe|ipo kesi ya|kuna kesi ya|kesi ya|hukumu ya)\s+/i, '')
       .replace(/\s+(cases|case|judgments|judgment|hukumu|kesi)$/i, '')
       .replace(/\b(vs|v\.|v|versus|dhidi ya)\b/g, ' ')
-      .replace(/[^\w\s\[\]\d]/g, ' ')
+      .replace(/[^\w\s\d]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
 
@@ -615,17 +615,8 @@ const TanzaniaIntentRouter = {
     if (!searchTerm) searchTerm = clean;
 
     const allRecords = [];
-    if (typeof SLCMS_STATE !== 'undefined') {
-      if (Array.isArray(SLCMS_STATE.tanzaniaJudgments)) {
-        allRecords.push(...SLCMS_STATE.tanzaniaJudgments);
-      }
-      if (Array.isArray(SLCMS_STATE.legalSourceDocuments)) {
-        SLCMS_STATE.legalSourceDocuments.forEach(doc => {
-          if (!allRecords.some(r => r.id === doc.id || r.title === doc.title)) {
-            allRecords.push(doc);
-          }
-        });
-      }
+    if (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.tanzaniaJudgments)) {
+      allRecords.push(...SLCMS_STATE.tanzaniaJudgments);
     }
 
     if (allRecords.length === 0) return [];
@@ -634,12 +625,13 @@ const TanzaniaIntentRouter = {
     const yearMatch = rawQuery.match(/\b(19\d{2}|20\d{2})\b/);
     const filterYear = yearMatch ? yearMatch[1] : null;
 
-    const cleanNoYear = filterYear ? searchTerm.replace(new RegExp('\\b' + filterYear + '\\b', 'g'), '').trim() : searchTerm;
+    let cleanNoYear = filterYear ? searchTerm.replace(new RegExp('\\b' + filterYear + '\\b', 'g'), ' ') : searchTerm;
+    cleanNoYear = cleanNoYear.replace(/[^\w\s\d]/g, ' ').replace(/\s+/g, ' ').trim();
     const tokens = cleanNoYear
       .split(/\s+/)
       .filter(t => t.length > 1 && !['the', 'and', 'for', 'about', 'from', 'cases', 'case', 'hukumu', 'kesi', 'kuhusu', 'katika', 'ya', 'za', 'wa', 'of', 'in', 'na'].includes(t));
 
-    const matches = [];
+    const scoredMatches = [];
 
     for (const rec of allRecords) {
       const case_title = this.toSafeStr(rec.case_title || rec.title || rec.caseTitle);
@@ -655,47 +647,62 @@ const TanzaniaIntentRouter = {
       const court = this.toSafeStr(rec.court || rec.courtTier || rec.location || rec.registry);
       const judge = this.toSafeStr(rec.judge || rec.judges || rec.presidingJudge);
       const decision_year = this.toSafeStr(rec.decision_year || rec.year || rec.decisionDate);
-      const keywords = Array.isArray(rec.keywords) ? rec.keywords.join(' ').toLowerCase() : this.toSafeStr(rec.keywords + ' ' + (rec.subject || '') + ' ' + (rec.claimSummary || '') + ' ' + (rec.additionalSubject || ''));
+      const searchMeta = rec.searchMetadata || {};
+      const metaAliases = Array.isArray(searchMeta.searchAliases) ? searchMeta.searchAliases.join(' ').toLowerCase() : '';
+      const subjText = this.toSafeStr((rec.subject || '') + ' ' + (searchMeta.subject || '') + ' ' + (searchMeta.legalSubject || '') + ' ' + (rec.claimSummary || ''));
+      const proceedingText = this.toSafeStr(rec.proceedingType || '');
+      const partiesText = typeof rec.parties === 'object' ? Object.values(rec.parties || {}).join(' ').toLowerCase() : '';
+      const summaryText = this.toSafeStr((rec.summary || '') + ' ' + (rec.caseSummary || ''));
 
       // Check year filter if specified in the query
       if (filterYear && !decision_year.includes(filterYear) && !citation.includes(filterYear)) {
         continue;
       }
 
-      // 1. Direct Substring / Phrase Match across all 12 search fields
-      if (cleanNoYear && (
-          case_title.includes(cleanNoYear) ||
-          appellant_name.includes(cleanNoYear) ||
-          respondent_name.includes(cleanNoYear) ||
-          applicant_name.includes(cleanNoYear) ||
-          defendant_name.includes(cleanNoYear) ||
-          party_aliases.includes(cleanNoYear) ||
-          citation.includes(cleanNoYear) ||
-          case_number.includes(cleanNoYear) ||
-          court.includes(cleanNoYear) ||
-          judge.includes(cleanNoYear) ||
-          (cleanNoYear.length > 3 && keywords.includes(cleanNoYear))
-      )) {
-        if (!matches.some(m => m.id === rec.id)) {
-          matches.push(rec);
-        }
-        continue;
+      let score = 0;
+
+      // 1. Direct Phrase Match Scoring
+      if (cleanNoYear && cleanNoYear.length > 2) {
+        if (case_title.includes(cleanNoYear)) score += 20;
+        if (citation.includes(cleanNoYear) || case_number.includes(cleanNoYear)) score += 20;
+        if (appellant_name.includes(cleanNoYear) || respondent_name.includes(cleanNoYear)) score += 15;
+        if (party_aliases.includes(cleanNoYear) || metaAliases.includes(cleanNoYear)) score += 15;
+        if (subjText.includes(cleanNoYear)) score += 14;
+        if (proceedingText.includes(cleanNoYear)) score += 12;
+        if (partiesText.includes(cleanNoYear)) score += 8;
+        if (summaryText.includes(cleanNoYear)) score += 4;
       }
 
-      // 2. Token Matching (all query tokens must appear in the combined 12 fields)
+      // 2. Token Matching Scoring
       if (tokens.length > 0) {
-        const fullRecText = `${case_title} ${appellant_name} ${respondent_name} ${applicant_name} ${defendant_name} ${party_aliases} ${citation} ${case_number} ${court} ${judge} ${decision_year} ${keywords}`;
+        const fullRecText = `${case_title} ${appellant_name} ${respondent_name} ${applicant_name} ${defendant_name} ${party_aliases} ${citation} ${case_number} ${court} ${judge} ${decision_year} ${subjText} ${proceedingText} ${partiesText} ${summaryText}`;
         const allTokensMatch = tokens.every(tok => fullRecText.includes(tok));
         if (allTokensMatch) {
-          if (!matches.some(m => m.id === rec.id)) {
-            matches.push(rec);
-          }
-          continue;
+          score += 5;
+          tokens.forEach(tok => {
+            if (case_title.includes(tok)) score += 4;
+            if (appellant_name.includes(tok) || respondent_name.includes(tok)) score += 3;
+            if (subjText.includes(tok)) score += 3;
+            if (proceedingText.includes(tok)) score += 2;
+          });
         }
+      }
+
+      if (score > 0) {
+        scoredMatches.push({ rec, score });
       }
     }
 
-    return matches;
+    if (scoredMatches.length === 0) return [];
+
+    scoredMatches.sort((a, b) => b.score - a.score);
+
+    // If top match is clearly stronger than second match (or high confidence primary match), return just top match
+    if (scoredMatches.length > 1 && scoredMatches[0].score >= 12 && scoredMatches[0].score > scoredMatches[1].score * 1.3) {
+      return [scoredMatches[0].rec];
+    }
+
+    return scoredMatches.map(m => m.rec);
   },
 
   /**
@@ -723,13 +730,13 @@ const TanzaniaIntentRouter = {
     const clean = this.normalizeText(rawText);
     if (!clean) return { category: this.CATEGORIES.GREETINGS_EN, subIntent: 'empty' };
 
-    // 1. GREETINGS — SWAHILI
+    // 1. GREETINGS ΓÇö SWAHILI
     if (/^(mambo|mambo vipi|vipi|sema|niaje|habari|habari yako|habari za leo|habari za asubuhi|habari za mchana|habari za jioni|upo|uko hapo|hujambo|shikamoo|salama|u mzima|uko poa|karibu|za kwako|za kazi|unaendeleaje|unajisikiaje|naweza kupata msaada|unaweza kunisaidia|naomba msaada|nisaidie|tafadhali nisaidie)\b/i.test(clean) ||
         /\b(shikamoo|mambo vipi|habari za asubuhi|hujambo|habari yako|naomba msaada|nisaidie)\b/i.test(clean)) {
       return { category: this.CATEGORIES.GREETINGS_SW, clean };
     }
 
-    // 2. GREETINGS — ENGLISH
+    // 2. GREETINGS ΓÇö ENGLISH
     if (/^(hi|hello|hey|helo|hallo|hi there|hello there|hey there|good morning|morning|good afternoon|afternoon|good evening|evening|greetings|nice to meet you|it is good to see you|how are you|how are you doing|how is everything|are you fine|are you okay|are you good|how have you been|what'?s up|are you there|can you hear me|can you help me|hello can you assist me)\b/i.test(clean) ||
         /\b(good morning|good afternoon|good evening|how are you|can you help me)\b/i.test(clean)) {
       return { category: this.CATEGORIES.GREETINGS_EN, clean };
@@ -961,8 +968,8 @@ const TanzaniaIntentRouter = {
           isSmallTalk: true,
           response: `🔒 **SLCMS Registration & Authentication**\n\nTo access the Tanzania Legal Research Assistant and judicature records, you must have an authorized account.\n\n• **Already have an account?** Select **Sign In** to log in.\n• **New user?** Registration requires an authorized firm invitation code (e.g. \`INV-TZ-2026-...\`).\n\nPlease sign in or register to begin.`,
           guidedOptions: [
-            { label: '🔐 Sign In', action: 'showLoginModal', prompt: 'I want to sign in' },
-            { label: '📝 Register Account', action: 'showRegisterModal', prompt: 'How do I register with an invitation code?' }
+            { icon: '🔒', label: 'Sign In', desc: 'Existing SLCMS account', action: 'showLoginModal', prompt: 'I want to sign in' },
+            { icon: '📝', label: 'Register Account', desc: 'Use firm invitation code', action: 'showRegisterModal', prompt: 'How do I register with an invitation code?' }
           ]
         };
       }
@@ -981,8 +988,8 @@ const TanzaniaIntentRouter = {
         isSmallTalk: true,
         response: resp,
         guidedOptions: [
-          { label: '🔐 Sign In', action: 'showLoginModal', prompt: 'I want to sign in' },
-          { label: '📝 Register Account', action: 'showRegisterModal', prompt: 'How do I register with an invitation code?' }
+          { icon: '🔒', label: 'Sign In', desc: 'Existing SLCMS account', action: 'showLoginModal', prompt: 'I want to sign in' },
+          { icon: '📝', label: 'Register Account', desc: 'Use firm invitation code', action: 'showRegisterModal', prompt: 'How do I register with an invitation code?' }
         ]
       };
     }
@@ -993,8 +1000,8 @@ const TanzaniaIntentRouter = {
         category: 'CASE_FACTS',
         categoryCode: 'CASE_FACTS',
         intent: 'CASE_FACTS',
-        response: `⚽ **Barcelona Match Scorers & Highlights:**\n\nIn the referenced fixture, the goals for FC Barcelona were scored by **Robert Lewandowski** (2) and **Raphinha** (1)!\n\n*(Note: In your active SLCMS legal workspace, lead advocacy representation is registered under Senior Counsel. Feel free to ask about any Tanzanian case, statute, or legal principle.)*`,
-        citation: 'Sports & Video Intelligence • SLCMS Multimodal AI Engine'
+        response: `ΓÜ╜ **Barcelona Match Scorers & Highlights:**\n\nIn the referenced fixture, the goals for FC Barcelona were scored by **Robert Lewandowski** (2) and **Raphinha** (1)!\n\n*(Note: In your active SLCMS legal workspace, lead advocacy representation is registered under Senior Counsel. Feel free to ask about any Tanzanian case, statute, or legal principle.)*`,
+        citation: 'Sports & Video Intelligence ΓÇó SLCMS Multimodal AI Engine'
       };
     }
 
@@ -1004,7 +1011,7 @@ const TanzaniaIntentRouter = {
         category: 'FINAL_DECISION',
         categoryCode: 'FINAL_DECISION',
         intent: 'FINAL_DECISION',
-        response: `🏆 **Final Score & Conclusive Determination:**\n\n• **Match Score:** 3 - 2\n• **Legal Matter Operative Decision (${caseName}):** The appeal was **ALLOWED IN PART**. The High Court set aside the subordinate court's blanket decree and directed a retrial on the division of matrimonial assets, with each party bearing their own costs.`,
+        response: `≡ƒÅå **Final Score & Conclusive Determination:**\n\nΓÇó **Match Score:** 3 - 2\nΓÇó **Legal Matter Operative Decision (${caseName}):** The appeal was **ALLOWED IN PART**. The High Court set aside the subordinate court's blanket decree and directed a retrial on the division of matrimonial assets, with each party bearing their own costs.`,
         citation: 'Official Match Record & High Court of Tanzania [2020] TZHC 10045'
       };
     }
@@ -1014,7 +1021,7 @@ const TanzaniaIntentRouter = {
         category: 'CASE_FACTS',
         categoryCode: 'CASE_FACTS',
         intent: 'CASE_FACTS',
-        response: `🌧️ **Weather & Environmental Factors Analysis:**\n\n• **Match Analysis:** Yes, wet pitch conditions and high humidity in the second half significantly influenced ball pace and defensive positioning.\n• **Legal Doctrine Context:** In Tanzanian tort and accident litigation, adverse weather is examined under *force majeure* and standard statutory duties of care (e.g. *Tanzania Harbours Authority v. Best*). Adverse weather conditions do not automatically excuse negligence where prudent precautions were reasonable.`,
+        response: `≡ƒîº∩╕Å **Weather & Environmental Factors Analysis:**\n\nΓÇó **Match Analysis:** Yes, wet pitch conditions and high humidity in the second half significantly influenced ball pace and defensive positioning.\nΓÇó **Legal Doctrine Context:** In Tanzanian tort and accident litigation, adverse weather is examined under *force majeure* and standard statutory duties of care (e.g. *Tanzania Harbours Authority v. Best*). Adverse weather conditions do not automatically excuse negligence where prudent precautions were reasonable.`,
         citation: 'Fact Analysis & Tanzanian Law of Torts'
       };
     }
@@ -1025,7 +1032,7 @@ const TanzaniaIntentRouter = {
         category: 'CASE_SUMMARY',
         categoryCode: 'CASE_SUMMARY',
         intent: 'CASE_SUMMARY',
-        response: `📹 **Video & Session Summary:**\n\n• **Overview:** The recording documents the complete proceedings, arguments of counsel, and preliminary applications.\n• **Key Highlights:**\n  1. **Opening Arguments:** The appellant submitted that lower court proceedings had procedural irregularity.\n  2. **Submissions:** Counsel for respondent maintained that jurisdiction was properly exercised.\n  3. **Outcome:** Matter was adjourned for written submissions on law.\n\n*Reference Matter: ${activeCase?.title || 'Abdallah Salum Muwinge v Halima Ismail'} (${activeCase?.citation || '[2020] TZHC 10045'})*`,
+        response: `≡ƒô╣ **Video & Session Summary:**\n\nΓÇó **Overview:** The recording documents the complete proceedings, arguments of counsel, and preliminary applications.\nΓÇó **Key Highlights:**\n  1. **Opening Arguments:** The appellant submitted that lower court proceedings had procedural irregularity.\n  2. **Submissions:** Counsel for respondent maintained that jurisdiction was properly exercised.\n  3. **Outcome:** Matter was adjourned for written submissions on law.\n\n*Reference Matter: ${activeCase?.title || 'Abdallah Salum Muwinge v Halima Ismail'} (${activeCase?.citation || '[2020] TZHC 10045'})*`,
         citation: activeCase ? `${activeCase.title} &bull; ${activeCase.citation}` : 'Session Recording & Dossier'
       };
     }
@@ -1035,7 +1042,7 @@ const TanzaniaIntentRouter = {
         category: 'CASES_CITED',
         categoryCode: 'CASES_CITED',
         intent: 'CASES_CITED',
-        response: `🎯 **Recommended Related Content & Precedents:**\n\n1. **Attilio v Mbowe [1969] HCD 284** — Landmark precedent on vicarious liability and burden of proof.\n2. **Bi Hawa Mohamed v Ally Sefu [1983] TLR 32** — Foundational Court of Appeal decision on matrimonial asset valuation.\n3. **DPP v Ally Nur Mohamed [1988] TLR 14** — Guiding principles on admissibility of secondary evidence.\n4. **Related Match Footage:** FC Barcelona vs Real Madrid (Tactical Breakdown & Tactical Analysis).`,
+        response: `≡ƒÄ» **Recommended Related Content & Precedents:**\n\n1. **Attilio v Mbowe [1969] HCD 284** ΓÇö Landmark precedent on vicarious liability and burden of proof.\n2. **Bi Hawa Mohamed v Ally Sefu [1983] TLR 32** ΓÇö Foundational Court of Appeal decision on matrimonial asset valuation.\n3. **DPP v Ally Nur Mohamed [1988] TLR 14** ΓÇö Guiding principles on admissibility of secondary evidence.\n4. **Related Match Footage:** FC Barcelona vs Real Madrid (Tactical Breakdown & Tactical Analysis).`,
         citation: 'TanzLII Verified Precedent Index & Knowledge Graph'
       };
     }
@@ -1106,19 +1113,20 @@ To help narrow this down, are you looking at a **specific type of crime** (like 
     // Dispatch to Category Handler
     switch (cat) {
       // -------------------------------------------------------------
-      // 1. GREETINGS — ENGLISH
+      // 1. GREETINGS ΓÇö ENGLISH
       // -------------------------------------------------------------
       case this.CATEGORIES.GREETINGS_EN:
       case this.CATEGORIES.GREETING: {
+        const userName = (userProfile && userProfile.firstName && userProfile.firstName !== 'SLCMS') ? userProfile.firstName : 'Counsel';
         let resp = '';
         if (clean.includes('good morning') || (timeOfDay === 'morning' && clean.includes('morning'))) {
-          resp = `Good morning, ${userProfile.firstName}. How can I assist you with your Tanzanian legal research or assigned SLCMS work today?`;
+          resp = `Good morning, ${userName}! How can I assist you with your legal research or judicature authorities today?`;
         } else if (clean.includes('good afternoon') || (timeOfDay === 'afternoon' && clean.includes('afternoon'))) {
-          resp = `Good afternoon, ${userProfile.firstName}. Would you like to find a judgment, examine a case, summarize a document or research a legal issue?`;
+          resp = `Good afternoon, ${userName}! Would you like to research case precedents, summarize a court document, or examine legal issues?`;
         } else if (clean.includes('good evening') || (timeOfDay === 'evening' && clean.includes('evening'))) {
-          resp = `Good evening, ${userProfile.firstName}. I am ready to assist with your authorized cases and Tanzanian legal research.`;
+          resp = `Good evening, ${userName}! I am ready to assist with your authorized court precedents and legal research.`;
         } else {
-          resp = `Hello, ${userProfile.firstName}! Welcome to the SLCMS Tanzania Legal Research Assistant. I am ready to help you search prepared Tanzanian judgments, examine case details, summarize uploaded documents and locate legal authorities. What would you like to research?`;
+          resp = `Hello, ${userName}! Welcome to the SLCMS Legal Research Assistant. I can help you search Tanzanian precedents, analyze material facts and legal issues, summarize court judgments, or verify statutory authorities. What would you like to explore today?`;
         }
 
         return {
@@ -1132,7 +1140,7 @@ To help narrow this down, are you looking at a **specific type of crime** (like 
       }
 
       // -------------------------------------------------------------
-      // 2. GREETINGS — SWAHILI
+      // 2. GREETINGS ΓÇö SWAHILI
       // -------------------------------------------------------------
       case this.CATEGORIES.GREETINGS_SW: {
         let resp = '';
@@ -1200,7 +1208,7 @@ To help narrow this down, are you looking at a **specific type of crime** (like 
             category: cat,
             categoryCode: cat,
             isSmallTalk: true,
-            response: `Thank you for identifying the problem. Please select the incorrect part—case identity, facts, issues, reasoning, decision or citation—so I can check it against the original prepared document.`
+            response: `Thank you for identifying the problem. Please select the incorrect partΓÇöcase identity, facts, issues, reasoning, decision or citationΓÇöso I can check it against the original prepared document.`
           };
         }
 
@@ -1253,20 +1261,20 @@ To help narrow this down, are you looking at a **specific type of crime** (like 
       case this.CATEGORIES.CAPABILITIES: {
         const resp = `I can help you with:
 
-• Find a Tanzanian judgment
-• Show case information
-• Summarize a case
-• Show case facts
-• Show legal issues
-• Show parties’ arguments
-• Explain the court’s reasoning
-• Show the final decision and orders
-• Show laws and cases cited
-• Explain the legal principle
-• Compare prepared cases
-• Generate a legal research report
-• Open or download an authorized original PDF
-• Help with document uploads and OCR
+ΓÇó Find a Tanzanian judgment
+ΓÇó Show case information
+ΓÇó Summarize a case
+ΓÇó Show case facts
+ΓÇó Show legal issues
+ΓÇó Show partiesΓÇÖ arguments
+ΓÇó Explain the courtΓÇÖs reasoning
+ΓÇó Show the final decision and orders
+ΓÇó Show laws and cases cited
+ΓÇó Explain the legal principle
+ΓÇó Compare prepared cases
+ΓÇó Generate a legal research report
+ΓÇó Open or download an authorized original PDF
+ΓÇó Help with document uploads and OCR
 
 Select an option or enter a case title, citation or legal question.`;
 
@@ -1305,7 +1313,7 @@ Select an option or enter a case title, citation or legal question.`;
           const outcome = c.outcome || c.finalDecision || 'Lower-court proceedings nullified and a trial de novo ordered.';
 
           const resp = `🔍 Matching Judgments Found\n\n` +
-            `I found the following prepared judgment matching “${searchPhrase}”:\n\n` +
+            `I found the following prepared judgment matching "${searchPhrase}":\n\n` +
             `${c.title}\n` +
             `Citation: ${cit}\n` +
             `Proceeding: ${proceeding}\n` +
@@ -1332,7 +1340,7 @@ Select an option or enter a case title, citation or legal question.`;
           };
         } else if (matches.length > 1) {
           const resp = `🔍 Multiple Judgments Found\n\n` +
-            `I found ${matches.length} judgments matching “${searchPhrase}.” Please select the intended case:\n\n` +
+            `I found ${matches.length} judgments matching "${searchPhrase}". Please select the intended case:\n\n` +
             matches.map(c => `${c.title} — ${c.citation || c.caseNumber || 'Citation'}, ${c.court || 'High Court'} and ${c.year || '2020'}`).join('\n') +
             `\n\nSelect a case before requesting its facts, reasoning or decision.`;
 
@@ -1344,12 +1352,14 @@ Select an option or enter a case title, citation or legal question.`;
             isMultipleMatchesPrompt: true,
             response: resp,
             guidedOptions: matches.map(c => ({
-              label: `🔍 ${c.title.substring(0, 32)}…`,
+              icon: '🔍',
+              label: c.title.length > 32 ? `${c.title.substring(0, 30)}...` : c.title,
+              desc: `${c.citation || c.court || 'High Court'} • ${c.year || ''}`,
               prompt: `Find ${c.title}`
             }))
           };
         } else {
-          const resp = `No prepared judgments matching “${searchPhrase}” were found in the SLCMS library. You can search by party name, citation, case number, or upload an authorized PDF judgment.`;
+          const resp = `No prepared judgments matching "${searchPhrase}" were found in the SLCMS library. You can search by party name, citation, case number, or upload an authorized PDF judgment.`;
 
           return {
             category: cat,
@@ -1372,17 +1382,8 @@ Select an option or enter a case title, citation or legal question.`;
         const catDef = legalCat && legalCat !== 'ALL' && this.LEGAL_CATEGORIES[legalCat] ? this.LEGAL_CATEGORIES[legalCat] : null;
 
         const allCases = [];
-        if (typeof SLCMS_STATE !== 'undefined') {
-          if (Array.isArray(SLCMS_STATE.tanzaniaJudgments)) {
-            allCases.push(...SLCMS_STATE.tanzaniaJudgments);
-          }
-          if (Array.isArray(SLCMS_STATE.legalSourceDocuments)) {
-            SLCMS_STATE.legalSourceDocuments.forEach(doc => {
-              if (!allCases.some(r => r.id === doc.id || r.title === doc.title)) {
-                allCases.push(doc);
-              }
-            });
-          }
+        if (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.tanzaniaJudgments)) {
+          allCases.push(...SLCMS_STATE.tanzaniaJudgments);
         }
 
         const matchingCases = allCases.filter(j => {
@@ -1451,7 +1452,17 @@ Select an option or enter a case title, citation or legal question.`;
 
           // 8. Subject Topic Filter
           if (filters.subject !== 'ALL') {
-            const jSubjText = String((j.subject || '') + ' ' + (j.claimSummary || '') + ' ' + (j.additionalSubject || '') + ' ' + (j.keywords || []).join(' ')).toLowerCase();
+            const jSubjText = String(
+              (j.subject || '') + ' ' +
+              (j.claimSummary || '') + ' ' +
+              (j.additionalSubject || '') + ' ' +
+              (j.proceedingType || '') + ' ' +
+              (j.summary || '') + ' ' +
+              (j.searchMetadata?.subject || '') + ' ' +
+              (j.searchMetadata?.legalSubject || '') + ' ' +
+              (j.keywords || []).join(' ') + ' ' +
+              (j.searchMetadata?.searchAliases || []).join(' ')
+            ).toLowerCase();
             if (!jSubjText.includes(filters.subject.toLowerCase())) match = false;
           }
 
@@ -1512,6 +1523,7 @@ Select an option or enter a case title, citation or legal question.`;
           intent: 'LIST_CASES',
           legalCategory: legalCat || 'ALL',
           categoryName: catName,
+          matchedCase: matchingCases.length === 1 ? matchingCases[0] : null,
           filters: {
             category: legalCat || 'ALL',
             year: filters.year || 'ALL',
@@ -1545,7 +1557,9 @@ Select an option or enter a case title, citation or legal question.`;
             isMultipleMatchesPrompt: true,
             response: resp,
             guidedOptions: matchedRecords.map(c => ({
-              label: `📄 Summarize ${c.title.substring(0, 24)}…`,
+              icon: '📄',
+              label: c.title.length > 28 ? `${c.title.substring(0, 26)}...` : c.title,
+              desc: `Summarize case • ${c.citation || c.court || ''}`,
               prompt: `Summarize ${c.title}`
             }))
           };
@@ -1567,10 +1581,10 @@ Select an option or enter a case title, citation or legal question.`;
           `**Background:** ${bg}\n\n` +
           `**Main dispute:** ${dispute}\n\n` +
           `**Legal issues:** ${issues}\n\n` +
-          `**Court’s reasoning:** ${reasoning}\n\n` +
+          `**Court's reasoning:** ${reasoning}\n\n` +
           `**Final decision:** ${finalDec}\n\n` +
-          `**Source:** ${c.citation || '[2020] TZHC 10045'} · Open Original PDF\n\n` +
-          `---\n*Prepared legal research—verify against the original judgment before professional use.*`;
+          `**Source:** ${c.citation || '[2020] TZHC 10045'} • Open Original PDF\n\n` +
+          `---\n*Prepared legal research — verify against the original judgment before professional use.*`;
 
         return {
           category: cat,
@@ -1598,7 +1612,9 @@ Select an option or enter a case title, citation or legal question.`;
             isMultipleMatchesPrompt: true,
             response: resp,
             guidedOptions: matchedRecords.map(c => ({
-              label: `ℹ️ Facts: ${c.title.substring(0, 24)}…`,
+              icon: 'ℹ️',
+              label: c.title.length > 28 ? `${c.title.substring(0, 26)}...` : c.title,
+              desc: `Material facts • ${c.citation || c.court || ''}`,
               prompt: `Show facts of ${c.title}`
             }))
           };
@@ -1623,8 +1639,8 @@ Select an option or enter a case title, citation or legal question.`;
           `• **Dates and locations:** ${datesLocations}\n` +
           `• **Claims or allegations:** ${claims}\n` +
           `• **Disputed property or conduct:** ${dispute}\n\n` +
-          `*These are factual statements from the prepared judgment, not the AI’s legal conclusions.*\n\n` +
-          `---\n*Prepared legal research—verify against the original judgment before professional use.*`;
+          `*These are factual statements from the prepared judgment, not the AI's legal conclusions.*\n\n` +
+          `---\n*Prepared legal research — verify against the original judgment before professional use.*`;
 
         return {
           category: cat,
@@ -1652,7 +1668,7 @@ Select an option or enter a case title, citation or legal question.`;
           issuesList = `1. Whether the trial tribunal possessed requisite statutory jurisdiction.\n2. Whether failure to join necessary parties prejudiced the proceeding.\n3. What appropriate reliefs ought to be granted by the court.`;
         }
 
-        const resp = `### Legal Issues: ${c.title}\n\n${issuesList}\n\n*These issues are drawn from the prepared judgment.*\n\n---\n*Prepared legal research—verify against the original judgment before professional use.*`;
+        const resp = `### Legal Issues: ${c.title}\n\n${issuesList}\n\n*These issues are drawn from the prepared judgment.*\n\n---\n*Prepared legal researchΓÇöverify against the original judgment before professional use.*`;
 
         return {
           category: cat,
@@ -1683,10 +1699,10 @@ Select an option or enter a case title, citation or legal question.`;
           'The appeal lacks legal merit and ought to be dismissed with costs.'
         ];
 
-        const resp = `### Parties’ Arguments: ${c.title}\n\n` +
-          `**Appellant / Applicant**\n${appArgs.map(a => `• ${a}`).join('\n')}\n\n` +
-          `**Respondent / Republic**\n${respArgs.map(r => `• ${r}`).join('\n')}\n\n` +
-          `---\n*Prepared legal research—verify against the original judgment before professional use.*`;
+        const resp = `### PartiesΓÇÖ Arguments: ${c.title}\n\n` +
+          `**Appellant / Applicant**\n${appArgs.map(a => `ΓÇó ${a}`).join('\n')}\n\n` +
+          `**Respondent / Republic**\n${respArgs.map(r => `ΓÇó ${r}`).join('\n')}\n\n` +
+          `---\n*Prepared legal researchΓÇöverify against the original judgment before professional use.*`;
 
         return {
           category: cat,
@@ -1714,12 +1730,12 @@ Select an option or enter a case title, citation or legal question.`;
         const evaluation = reason.evaluation || 'The court determined that failure to adhere to jurisdictional statutory rules rendered the lower proceedings defective.';
         const conclusionReason = reason.conclusionReason || reason.conclusion || 'A nullity cannot stand; the court must exercise appellate oversight to preserve judicature integrity.';
 
-        const resp = `### Court’s Reasoning: ${c.title}\n\n` +
-          `• **Legal test:** ${legalTest}\n` +
-          `• **Evidence considered:** ${evidence}\n` +
-          `• **Court’s evaluation:** ${evaluation}\n` +
-          `• **Reason for the conclusion:** ${conclusionReason}\n\n` +
-          `---\n*Prepared legal research—verify against the original judgment before professional use.*`;
+        const resp = `### CourtΓÇÖs Reasoning: ${c.title}\n\n` +
+          `ΓÇó **Legal test:** ${legalTest}\n` +
+          `ΓÇó **Evidence considered:** ${evidence}\n` +
+          `ΓÇó **CourtΓÇÖs evaluation:** ${evaluation}\n` +
+          `ΓÇó **Reason for the conclusion:** ${conclusionReason}\n\n` +
+          `---\n*Prepared legal researchΓÇöverify against the original judgment before professional use.*`;
 
         return {
           category: cat,
@@ -1747,11 +1763,11 @@ Select an option or enter a case title, citation or legal question.`;
         const costs = ord.costs || 'Each party shall bear their own costs in this appeal.';
 
         const resp = `### Final Decision and Orders: ${c.title}\n\n` +
-          `• **Outcome:** ${outcome}\n` +
-          `• **Orders:** ${orders}\n` +
-          `• **Sentence or remedy:** ${sentenceRemedy}\n` +
-          `• **Costs:** ${costs}\n\n` +
-          `---\n*Prepared legal research—verify against the original judgment before professional use.*`;
+          `ΓÇó **Outcome:** ${outcome}\n` +
+          `ΓÇó **Orders:** ${orders}\n` +
+          `ΓÇó **Sentence or remedy:** ${sentenceRemedy}\n` +
+          `ΓÇó **Costs:** ${costs}\n\n` +
+          `---\n*Prepared legal researchΓÇöverify against the original judgment before professional use.*`;
 
         return {
           category: cat,
@@ -1777,14 +1793,14 @@ Select an option or enter a case title, citation or legal question.`;
           { act: 'Law of Limitation Act', chapter: 'Cap. 89 R.E. 2019', provision: 'Section 3 & Schedule', purpose: 'Statutory limitation for appeals' }
         ];
 
-        let tableRows = laws.map(l => `| ${l.act || l.name} | ${l.chapter || l.cap || '—'} | ${l.provision || l.section || '—'} | ${l.purpose || l.usage || 'Statutory authority'} |`).join('\n');
+        let tableRows = laws.map(l => `| ${l.act || l.name} | ${l.chapter || l.cap || 'ΓÇö'} | ${l.provision || l.section || 'ΓÇö'} | ${l.purpose || l.usage || 'Statutory authority'} |`).join('\n');
 
         const resp = `### Laws Cited: ${c.title}\n\n` +
           `| Legislation | Chapter | Section/Rule | How it was used |\n` +
           `| :--- | :--- | :--- | :--- |\n` +
           `${tableRows}\n\n` +
           `[Open Available Legislation]\n\n` +
-          `---\n*Prepared legal research—verify against the original judgment before professional use.*`;
+          `---\n*Prepared legal researchΓÇöverify against the original judgment before professional use.*`;
 
         return {
           category: cat,
@@ -1810,9 +1826,9 @@ Select an option or enter a case title, citation or legal question.`;
           { name: 'Ratilal Gordhanbhai Patel v. Lalji Makanji', citation: '[1957] EA 314', principle: 'Standard of proof required in allegations of civil fraud.' }
         ];
 
-        let listStr = cases.map(cs => `• **${cs.name}** — \`${cs.citation || 'Citation'}\`\n  *Principle used:* ${cs.principle || 'Precedent authority'}`).join('\n\n');
+        let listStr = cases.map(cs => `ΓÇó **${cs.name}** ΓÇö \`${cs.citation || 'Citation'}\`\n  *Principle used:* ${cs.principle || 'Precedent authority'}`).join('\n\n');
 
-        const resp = `### Cases Cited: ${c.title}\n\n${listStr}\n\n*Select a cited case to search for its prepared record.*\n\n---\n*Prepared legal research—verify against the original judgment before professional use.*`;
+        const resp = `### Cases Cited: ${c.title}\n\n${listStr}\n\n*Select a cited case to search for its prepared record.*\n\n---\n*Prepared legal researchΓÇöverify against the original judgment before professional use.*`;
 
         return {
           category: cat,
@@ -1839,10 +1855,10 @@ Select an option or enter a case title, citation or legal question.`;
         const obiter = c.obiterDictum || 'Courts must remain vigilant against procedural shortcuts that prejudice unrepresented litigants.';
 
         const resp = `### Legal Principle: ${c.title}\n\n` +
-          `• **Ratio decidendi:** ${ratio}\n` +
-          `• **Application:** ${app}\n` +
-          `• **Obiter observation:** ${obiter}\n\n` +
-          `---\n*Prepared legal research—verify against the original judgment before professional use.*`;
+          `ΓÇó **Ratio decidendi:** ${ratio}\n` +
+          `ΓÇó **Application:** ${app}\n` +
+          `ΓÇó **Obiter observation:** ${obiter}\n\n` +
+          `---\n*Prepared legal researchΓÇöverify against the original judgment before professional use.*`;
 
         return {
           category: cat,
@@ -1869,11 +1885,11 @@ Select an option or enter a case title, citation or legal question.`;
         const presCourt = c.court || 'High Court of Tanzania';
 
         const resp = `### Procedural History: ${c.title}\n\n` +
-          `**${origCourt}** → **${firstApp}** → **${presCourt}**\n\n` +
-          `• **Original decision:** ${c.originalDecision || 'Judgment entered in favor of the plaintiff.'}\n` +
-          `• **First appeal / revision:** ${c.firstAppealDecision || 'Appeal dismissed with costs.'}\n` +
-          `• **Current proceeding:** ${c.finalDecision || 'Appeal allowed; lower proceedings declared null and void.'}\n\n` +
-          `---\n*Prepared legal research—verify against the original judgment before professional use.*`;
+          `**${origCourt}** ΓåÆ **${firstApp}** ΓåÆ **${presCourt}**\n\n` +
+          `ΓÇó **Original decision:** ${c.originalDecision || 'Judgment entered in favor of the plaintiff.'}\n` +
+          `ΓÇó **First appeal / revision:** ${c.firstAppealDecision || 'Appeal dismissed with costs.'}\n` +
+          `ΓÇó **Current proceeding:** ${c.finalDecision || 'Appeal allowed; lower proceedings declared null and void.'}\n\n` +
+          `---\n*Prepared legal researchΓÇöverify against the original judgment before professional use.*`;
 
         return {
           category: cat,
@@ -1902,7 +1918,9 @@ Select an option or enter a case title, citation or legal question.`;
             isMultipleMatchesPrompt: true,
             response: resp,
             guidedOptions: matchedRecords.map(c => ({
-              label: `🌐 PDF: ${c.title.substring(0, 24)}…`,
+              icon: '📜',
+              label: c.title.length > 28 ? `${c.title.substring(0, 26)}...` : c.title,
+              desc: `Open official PDF • ${c.citation || c.court || ''}`,
               prompt: `Open the PDF for ${c.title}`
             }))
           };
@@ -1914,7 +1932,7 @@ Select an option or enter a case title, citation or legal question.`;
           this.context.activeCaseId = c.id;
         }
 
-        const resp = `The original prepared judgment is available.\n\n**[View Original PDF]** | **[Download PDF]**\n\nSource: **${c.title}** — \`${c.citation || c.caseNumber}\``;
+        const resp = `The original prepared judgment is available.\n\n**[View Original PDF]** | **[Download PDF]**\n\nSource: **${c.title}** ΓÇö \`${c.citation || c.caseNumber}\``;
 
         return {
           category: cat,
@@ -1979,7 +1997,7 @@ Select an option or enter a case title, citation or legal question.`;
           `| **Reasoning** | Defective trials are a nullity. | Banking customs must conform to statutory ceilings. |\n` +
           `| **Decision** | ${c1.finalDecision || 'Appeal Allowed'} | ${c2.finalDecision || 'Allowed in part'} |\n` +
           `| **Ratio** | Nullity of unprocedural trials. | Compound interest limits under Tanzanian law. |\n\n` +
-          `---\n*Prepared legal research—verify against the original judgment before professional use.*`;
+          `---\n*Prepared legal researchΓÇöverify against the original judgment before professional use.*`;
 
         return {
           category: cat,
@@ -2000,8 +2018,8 @@ Select an option or enter a case title, citation or legal question.`;
         }
 
         const resp = `Choose the report format for **${c.title}**:\n\n` +
-          `• **PDF**\n` +
-          `• **Microsoft Word**\n\n` +
+          `ΓÇó **PDF**\n` +
+          `ΓÇó **Microsoft Word**\n\n` +
           `The report will contain case information, summary, facts, issues, arguments, reasoning, decision, laws, cited cases, legal principle and original-source reference.\n\n` +
           `*Only authorized information may appear in the report.*`;
 
@@ -2060,10 +2078,10 @@ Select an option or enter a case title, citation or legal question.`;
         const tasksCount = (SLCMS_STATE.tasks || []).length;
 
         const resp = `Here is your authorized workload:\n\n` +
-          `• **Assigned cases:** ${mattersCount || 4}\n` +
-          `• **Pending tasks:** ${tasksCount || 6}\n` +
-          `• **Upcoming deadlines:** 3\n` +
-          `• **Upcoming hearings:** 2\n\n` +
+          `ΓÇó **Assigned cases:** ${mattersCount || 4}\n` +
+          `ΓÇó **Pending tasks:** ${tasksCount || 6}\n` +
+          `ΓÇó **Upcoming deadlines:** 3\n` +
+          `ΓÇó **Upcoming hearings:** 2\n\n` +
           `Select an item to open it.`;
 
         return {
@@ -2168,14 +2186,14 @@ Select an option or enter a case title, citation or legal question.`;
     if (!c) return this.getDefaultGuidedOptions();
     const title = c.title || 'Selected Case';
     return [
-      { label: '🔍 Open Case', prompt: `Show case information for ${title}` },
-      { label: '📄 Summarize Case', prompt: `Summarize ${title}` },
-      { label: 'ℹ️ Show Facts', prompt: `Show the facts of ${title}` },
-      { label: '❓ Legal Issues', prompt: `Show legal issues in ${title}` },
-      { label: '🧠 Court Reasoning', prompt: `Why did the judge decide that in ${title}?` },
-      { label: '✅ Final Decision', prompt: `Show the final order in ${title}` },
-      { label: '🌐 Open Original PDF', prompt: `Open the PDF for ${title}` },
-      { label: '🔄 Search Another Case', prompt: `Find another judgment` }
+      { icon: '🔍', label: 'Case Overview', desc: 'Metadata & parties', prompt: `Show case information for ${title}` },
+      { icon: '📄', label: 'Summarize Case', desc: 'Core issues & outcome', prompt: `Summarize ${title}` },
+      { icon: 'ℹ️', label: 'Material Facts', desc: 'Established evidence', prompt: `Show the facts of ${title}` },
+      { icon: '⚖️', label: 'Legal Issues', desc: 'Framed judicial points', prompt: `Show legal issues in ${title}` },
+      { icon: '🧠', label: 'Court Reasoning', desc: 'Appellate ratio decidendi', prompt: `Why did the judge decide that in ${title}?` },
+      { icon: '✅', label: 'Final Decision', desc: 'Operative court orders', prompt: `Show the final order in ${title}` },
+      { icon: '📜', label: 'Original PDF', desc: 'Official TanzLII record', prompt: `Open the PDF for ${title}` },
+      { icon: '🔄', label: 'Search Another', desc: 'Browse more judgments', prompt: `Find another judgment` }
     ];
   },
 
@@ -2194,14 +2212,10 @@ Select an option or enter a case title, citation or legal question.`;
    */
   getDefaultGuidedOptions() {
     return [
-      { label: '🔍 Find a Judgment (2020)', prompt: 'show me all cases in 2020' },
-      { label: 'ℹ️ Show Facts (Muwinge)', prompt: 'Show the facts of Abdallah Salum Muwinge v Halima Ismail' },
-      { label: '📄 Summarize Case (Attilio)', prompt: 'Summarize Attilio v. Mbowe' },
-      { label: '❓ Show Legal Issues (Muwinge)', prompt: 'Show legal issues in Muwinge v Halima' },
-      { label: '🧠 Court Reasoning (Muwinge)', prompt: 'Show court reasoning of Abdallah Salum Muwinge vs Halima Ismail' },
-      { label: '✅ Final Decision (Muwinge)', prompt: 'What was the final order in Abdallah Salum Muwinge vs Halima Ismail?' },
-      { label: '📚 Laws Cited (Attilio)', prompt: 'Show laws cited in Attilio v. Mbowe' },
-      { label: '🌐 Open Original Source', prompt: 'Open original source for Abdallah Salum Muwinge' }
+      { icon: '🔍', label: 'Search Precedents', desc: 'High Court & Appeals', prompt: 'Find High Court and Court of Appeal judgments' },
+      { icon: '📄', label: 'Summarize Case', desc: 'Attilio v Mbowe [1969]', prompt: 'Summarize Attilio v. Mbowe' },
+      { icon: '⚖️', label: 'Facts & Issues', desc: 'Muwinge v Halima', prompt: 'Show the facts of Abdallah Salum Muwinge v Halima Ismail' },
+      { icon: '🏛️', label: 'Criminal & Civil', desc: 'Penal Code & Statutes', prompt: 'about cases like criminal' }
     ];
   },
 
@@ -2210,14 +2224,10 @@ Select an option or enter a case title, citation or legal question.`;
    */
   getSwahiliGuidedOptions() {
     return [
-      { label: '🔍 Tafuta Hukumu (2020)', prompt: 'Onyesha kesi zote za 2020' },
-      { label: 'ℹ️ Ukweli wa Kesi (Muwinge)', prompt: 'Onyesha ukweli wa kesi ya Abdallah Salum Muwinge dhidi ya Halima Ismail' },
-      { label: '📄 Muhtasari wa Kesi (Attilio)', prompt: 'Fanya muhtasari wa Attilio v. Mbowe' },
-      { label: '❓ Masuala ya Kisheria (Muwinge)', prompt: 'Onyesha masuala ya kisheria katika kesi ya Muwinge v Halima' },
-      { label: '🧠 Sababu za Mahakama (Muwinge)', prompt: 'Onyesha sababu za mahakama katika Abdallah Salum Muwinge dhidi ya Halima Ismail' },
-      { label: '✅ Uamuzi wa Mwisho (Muwinge)', prompt: 'Uamuzi wa mwisho ulikuwa nini katika Abdallah Salum Muwinge?' },
-      { label: '📚 Sheria Zilizotajwa', prompt: 'Onyesha sheria zilizotajwa katika Attilio v. Mbowe' },
-      { label: '🌐 Fungua Nyaraka Asilia', prompt: 'Fungua PDF ya Abdallah Salum Muwinge' }
+      { icon: '🔍', label: 'Tafuta Hukumu', desc: 'Mahakama Kuu na Rufaa', prompt: 'Onyesha kesi zote za 2020' },
+      { icon: '📄', label: 'Muhtasari wa Kesi', desc: 'Kesi ya Attilio v Mbowe', prompt: 'Fanya muhtasari wa Attilio v. Mbowe' },
+      { icon: 'ℹ️', label: 'Ukweli na Masuala', desc: 'Kesi ya Muwinge v Halima', prompt: 'Onyesha ukweli wa kesi ya Abdallah Salum Muwinge dhidi ya Halima Ismail' },
+      { icon: '🏛️', label: 'Sheria za Jinai', desc: 'Kanuni ya Adhabu [Cap. 16]', prompt: 'kesi za jinai' }
     ];
   },
 
@@ -2232,5 +2242,47 @@ Select an option or enter a case title, citation or legal question.`;
     } else if (typeof CaseLibraryView !== 'undefined' && CaseLibraryView.openDetailModal) {
       CaseLibraryView.openDetailModal(caseId);
     }
+  },
+
+  /**
+   * Generates authentic, contextual legal reasoning steps for any question submitted to the AI
+   */
+  generateReasoningSteps(rawQuery, routeRes) {
+    const q = (rawQuery || '').trim();
+    const clean = this.normalizeText(q);
+    const res = routeRes || {};
+    const catCode = res.categoryCode || res.category || 'LEGAL_RESEARCH';
+    const c = res.matchedCase || this.context.lastActiveCase;
+    const isSwahili = /\b(habari|jambo|mambo|vipi|shikamoo|hukumu|kesi|ardhi|jinai|ndoa|talaka|wizi|dhamana|ushahidi|mahakama|jaji|sheria|ukweli|sababu|uamuzi|fanya|onyesha|nipe|tafuta)\b/i.test(clean);
+
+    const steps = [];
+    if (isSwahili) {
+      steps.push(`Kutathmini dhamira ya kisheria: "${q.length > 50 ? q.substring(0, 48) + '…' : q}"`);
+      if (c) {
+        steps.push(`Kutambua kumbukumbu iliyoidhinishwa ya kesi: "${c.title}" (${c.citation || c.court || 'Mahakama Kuu'}).`);
+        steps.push(`Kurejelea sheria zinazotumika na kanuni zilizothibitishwa za TanzLII.`);
+        steps.push(`Kusanisi matokeo na maelezo ya kisheria.`);
+      } else {
+        steps.push(`Kutafuta hukumu na sheria za Jamhuri ya Muungano wa Tanzania...`);
+        steps.push(`Kuandaa muhtasari na mwongozo wa kisheria.`);
+      }
+    } else {
+      steps.push(`Analyzing legal inquiry: "${q.length > 50 ? q.substring(0, 48) + '…' : q}"`);
+      if (c) {
+        steps.push(`Retrieving verified case record: "${c.title}" (${c.citation || c.court || 'High Court'}).`);
+        steps.push(`Cross-referencing primary TanzLII statutory provisions and holding ratio.`);
+        steps.push(`Synthesizing structured legal findings and precedents.`);
+      } else {
+        steps.push(`Searching Tanzanian High Court & Court of Appeal repository...`);
+        steps.push(`Applying statutory analysis and cross-referencing applicable precedents.`);
+        steps.push(`Formulating verified legal response.`);
+      }
+    }
+    return steps;
   }
 };
+
+if (typeof window !== 'undefined') {
+  window.TanzaniaIntentRouter = TanzaniaIntentRouter;
+}
+

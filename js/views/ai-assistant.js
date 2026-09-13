@@ -320,12 +320,20 @@ const AIAssistantView = {
         <div id="ai-conversation-scroll-area" class="ai-conversation-scroll-area">
           <div class="ai-conversation-centered-column">
             ${this.conversation.length === 0 ? this.renderModernWelcome() : this.renderConversationMessages()}
+            <div id="ai-conversation-bottom-anchor" class="ai-conversation-bottom-anchor" style="height: 1px; width: 100%; clear: both;"></div>
           </div>
         </div>
 
         <!-- Pinned Bottom Prompt Input Area Matching The User Image -->
         <div class="ai-bottom-prompt-dock">
           <div class="ai-bottom-prompt-inner">
+            ${this.isStreaming ? `
+              <div class="ai-streaming-controls animate-fade" style="margin-bottom: 0.5rem; display: flex; justify-content: center;">
+                <button type="button" class="ai-stop-btn" onclick="AIAssistantView.stopGenerating()" aria-label="Stop Generating">
+                  <span class="ai-stop-square">■</span> Stop Generating
+                </button>
+              </div>
+            ` : ''}
             <form id="tz-chat-form" onsubmit="event.preventDefault(); AIAssistantView.handleSendMessage();" class="ai-chat-prompt-card">
               <textarea 
                 id="tz-question-input" 
@@ -335,11 +343,11 @@ const AIAssistantView = {
                 autocomplete="off"
                 onkeydown="if(event.key === 'Enter' && !event.shiftKey){ event.preventDefault(); AIAssistantView.handleSendMessage(); }"
                 oninput="AIAssistantView.handleInputAutoGrow(this)"
-                ${this.isSubmitting ? 'disabled' : ''}
+                ${this.isSubmitting || this.isStreaming || this.isProcessing ? 'disabled' : ''}
               ></textarea>
               <div class="ai-chat-prompt-bottom-bar">
                 <div class="ai-prompt-left-tools">
-                  <button type="button" class="ai-prompt-circle-plus" onclick="AIAssistantView.openPlusMenu(event)" title="Add files or citations" aria-label="Add file">
+                  <button type="button" class="ai-prompt-circle-plus" onclick="AIAssistantView.openPlusMenu(event)" title="Add files or citations" aria-label="Add file" ${this.isStreaming || this.isProcessing ? 'disabled' : ''}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                       <line x1="12" y1="5" x2="12" y2="19"></line>
                       <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -355,7 +363,7 @@ const AIAssistantView = {
                       <line x1="8" y1="23" x2="16" y2="23"></line>
                     </svg>
                   </button>
-                  <button type="submit" id="ai-submit-btn" class="ai-prompt-send-icon-btn" title="Send message" aria-label="Send message" ${this.isSubmitting ? 'disabled' : ''}>
+                  <button type="submit" id="ai-submit-btn" class="ai-prompt-send-icon-btn" title="Send message" aria-label="Send message" ${this.isSubmitting || this.isStreaming || this.isProcessing ? 'disabled' : ''}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                       <line x1="12" y1="19" x2="12" y2="5"></line>
                       <polyline points="5 12 12 5 19 12"></polyline>
@@ -1876,6 +1884,14 @@ Lead Advocate for ${client}`;
           AI can make mistakes, so double-check it. <a href="javascript:void(0)" onclick="App.showToast('Grounded on authentic verified records and TanzLII judicial precedents.', 'info')">Learn more</a>
         </div>
 
+        ${this.isStreaming ? `
+          <div class="ai-streaming-controls animate-fade">
+            <button type="button" class="ai-stop-btn" onclick="AIAssistantView.stopGenerating()" aria-label="Stop Generating">
+              <span class="ai-stop-square">■</span> Stop Generating
+            </button>
+          </div>
+        ` : ''}
+
         <!-- 7. Pill Input Field with embedded Send Arrow Button -->
         <form onsubmit="event.preventDefault(); AIAssistantView.handleBoxInput();" class="ai-box-second-form" style="margin: 0;">
           <div class="ai-box-second-input-pill">
@@ -1885,9 +1901,10 @@ Lead Advocate for ${client}`;
               class="ai-box-second-input-field" 
               placeholder="Ask about Tanzanian law, search judgments, or cite a case..." 
               autocomplete="off"
+              ${this.isStreaming || this.isProcessing ? 'disabled' : ''}
               onkeydown="if(event.key === 'Enter' && !event.shiftKey){ event.preventDefault(); AIAssistantView.handleBoxInput(); }"
             >
-            <button type="submit" class="ai-box-second-send-btn" aria-label="Send question">
+            <button type="submit" class="ai-box-second-send-btn" aria-label="Send question" ${this.isStreaming || this.isProcessing ? 'disabled' : ''}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13"></line>
                 <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -1905,7 +1922,39 @@ Lead Advocate for ${client}`;
   toggleThoughtDetails(msgId) {
     if (!this.thoughtDetailsOpen) this.thoughtDetailsOpen = {};
     this.thoughtDetailsOpen[msgId] = !this.thoughtDetailsOpen[msgId];
-    App.renderAuthenticatedApp();
+    const msg = this.conversation.find(m => m.id === msgId);
+    if (msg) {
+      this.updateStreamingMessageDOM(msg);
+    } else {
+      App.renderAuthenticatedApp();
+    }
+  },
+
+  renderThoughtProcessBox(msg) {
+    if (!msg) return '';
+
+    if (msg.isReasoning) {
+      return `
+        <div class="ai-running-lines-box animate-fade">
+          <div class="ai-running-lines-header">
+            <span class="ai-dancing-dots-wrapper" aria-hidden="true">
+              <span class="ai-dancing-dot"></span>
+              <span class="ai-dancing-dot"></span>
+              <span class="ai-dancing-dot"></span>
+            </span>
+            <span class="ai-running-lines-label">Reasoning through Tanzanian legal authorities…</span>
+          </div>
+          <div class="ai-running-lines" aria-hidden="true">
+            <div class="ai-running-line ai-line-1"></div>
+            <div class="ai-running-line ai-line-2"></div>
+            <div class="ai-running-line ai-line-3"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Do NOT show the steps list when completed
+    return '';
   },
 
   renderConversationMessages() {
@@ -1924,7 +1973,7 @@ Lead Advocate for ${client}`;
       return `
         <div class="ai-msg-assistant-row animate-fade" id="msg-${msg.id}">
           <div class="ai-msg-assistant-body">
-            ${msg.isSearching ? this.renderInlineProgress(msg) : this.renderAssistantResponseBlock(msg)}
+            ${(msg.isSearching && !msg.isReasoning) ? this.renderInlineProgress(msg) : this.renderAssistantResponseBlock(msg)}
           </div>
         </div>
       `;
@@ -1932,16 +1981,30 @@ Lead Advocate for ${client}`;
   },
 
   renderAssistantResponseBlock(msg) {
+    const thoughtBox = this.renderThoughtProcessBox(msg);
     const content = this.renderAssistantMessageContent(msg);
+    const hasButtons = !msg.isStreaming && !msg.isReasoning && Array.isArray(msg.guidedOptions) && msg.guidedOptions.length > 0;
     return `
       <div class="ai-assistant-answer-canvas animate-fade">
-        <div class="ai-assistant-text-flow">
-          ${content}
-        </div>
-        <div class="ai-disclaimer-text">
-          AI can make mistakes, so check its responses.
-        </div>
-        ${this.renderActionButtons(msg.id)}
+        ${thoughtBox}
+        ${!msg.isReasoning ? `
+          <div class="ai-assistant-text-flow">
+            ${content}
+          </div>
+          ${hasButtons ? `
+            <div class="ai-suggested-actions animate-fade">
+              ${msg.guidedOptions.map(opt => `
+                <button type="button" class="ai-action-choice-btn" onclick="AIAssistantView.fillAndAsk('${this.escapeHtml(opt.prompt)}')">
+                  ${this.escapeHtml(opt.label)}
+                </button>
+              `).join('')}
+            </div>
+          ` : ''}
+          <div class="ai-disclaimer-text">
+            AI can make mistakes, so check its responses.
+          </div>
+          ${!msg.isStreaming ? this.renderActionButtons(msg.id) : ''}
+        ` : ''}
       </div>
     `;
   },
@@ -1977,8 +2040,8 @@ Lead Advocate for ${client}`;
           </svg>
         </button>
         <div class="ai-more-dropdown-wrap" style="position: relative; display: inline-block;">
-          <button type="button" class="ai-action-icon-btn" onclick="AIAssistantView.toggleMoreOptions('${msgId}', event)" title="More options" aria-label="More">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <button type="button" class="ai-action-icon-btn" onclick="AIAssistantView.toggleMoreMenu('${msgId}', event)" title="More options" aria-label="More options">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="1.5"></circle>
               <circle cx="12" cy="5" r="1.5"></circle>
               <circle cx="12" cy="19" r="1.5"></circle>
@@ -1999,7 +2062,7 @@ Lead Advocate for ${client}`;
     if (!text || typeof text !== 'string') return '';
     const trimmed = text.trim();
     // If text is already formatted HTML (e.g. prepared legal report or widget), return directly
-    if (trimmed.startsWith('<')) {
+    if (trimmed.startsWith('<') && !trimmed.startsWith('###') && !trimmed.startsWith('##')) {
       return text;
     }
     const lines = text.split('\n');
@@ -2014,7 +2077,27 @@ Lead Advocate for ${client}`;
           html += '</div>';
           inList = false;
         }
-        html += '<div class="ai-para-gap"></div>';
+        html += '<div class="ai-para-gap" style="height: 0.5rem;"></div>';
+        continue;
+      }
+
+      if (line.startsWith('---')) {
+        if (inList) { html += '</div>'; inList = false; }
+        html += '<hr style="margin: 0.75rem 0; border: none; border-top: 1px solid var(--color-border);" />';
+        continue;
+      }
+
+      if (line.startsWith('### ')) {
+        if (inList) { html += '</div>'; inList = false; }
+        const headingText = line.replace(/^###\s+/, '').replace(/\*\*(.*?)\*\*/g, '$1');
+        html += `<h4 class="ai-text-h4" style="margin: 0.85rem 0 0.35rem 0; font-size: 1.02rem; font-weight: 700; color: var(--color-primary);">${this.escapeHtml ? this.escapeHtml(headingText) : headingText}</h4>`;
+        continue;
+      }
+
+      if (line.startsWith('## ')) {
+        if (inList) { html += '</div>'; inList = false; }
+        const headingText = line.replace(/^##\s+/, '').replace(/\*\*(.*?)\*\*/g, '$1');
+        html += `<h3 class="ai-text-h3" style="margin: 1rem 0 0.4rem 0; font-size: 1.12rem; font-weight: 700; color: var(--color-primary);">${this.escapeHtml ? this.escapeHtml(headingText) : headingText}</h3>`;
         continue;
       }
 
@@ -2033,16 +2116,73 @@ Lead Advocate for ${client}`;
       // Italics *text* or _text_
       line = line.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
 
-      // Check if bullet point
-      if (line.startsWith('•') || line.startsWith('- ') || line.startsWith('* ')) {
+      // Check if markdown table row
+      if (line.startsWith('|') && line.endsWith('|')) {
+        if (inList) { html += '</div>'; inList = false; }
+        
+        // Collect all consecutive table lines
+        const tableLines = [];
+        while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) {
+          tableLines.push(lines[i].trim());
+          i++;
+        }
+        i--; // compensate for outer loop increment
+
+        if (tableLines.length > 0) {
+          html += '<div class="ai-table-wrapper"><table class="ai-markdown-table">';
+          let hasHead = false;
+          let inBody = false;
+
+          for (let t = 0; t < tableLines.length; t++) {
+            const rowStr = tableLines[t];
+            // Skip pure separator row (e.g. | :--- | :--- |)
+            if (/^\|(\s*:?-+:?\s*\|)+$/.test(rowStr)) {
+              continue;
+            }
+            const rawCells = rowStr.split('|');
+            const cells = rawCells.slice(1, -1).map(c => c.trim());
+
+            if (t === 0 && tableLines.length > 1 && /^\|(\s*:?-+:?\s*\|)+$/.test(tableLines[1])) {
+              // Header row
+              html += '<thead><tr>';
+              cells.forEach(cell => {
+                const cellHtml = cell.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*([^\*]+)\*/g, '<em>$1</em>');
+                html += `<th>${cellHtml}</th>`;
+              });
+              html += '</tr></thead>';
+              hasHead = true;
+            } else {
+              // Body row
+              if (!inBody) {
+                html += '<tbody>';
+                inBody = true;
+              }
+              html += '<tr>';
+              cells.forEach((cell, cIdx) => {
+                const cellHtml = cell.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*([^\*]+)\*/g, '<em>$1</em>');
+                const isFirstCol = cIdx === 0 && hasHead;
+                html += `<td${isFirstCol ? ' style="font-weight: 600; width: 32%; color: var(--color-primary);"' : ''}>${cellHtml}</td>`;
+              });
+              html += '</tr>';
+            }
+          }
+          if (inBody) html += '</tbody>';
+          html += '</table></div>';
+        }
+        continue;
+      }
+
+      // Check if bullet point or numbered item
+      if (line.startsWith('•') || line.startsWith('- ') || line.startsWith('* ') || /^\d+\.\s+/.test(line)) {
         if (!inList) {
           html += '<div class="ai-bullets-block">';
           inList = true;
         }
-        const bulletContent = line.replace(/^[•\-\*]\s*/, '');
+        const marker = /^\d+\.\s+/.test(line) ? line.match(/^\d+\./)[0] : '•';
+        const bulletContent = line.replace(/^[•\-\*]\s*/, '').replace(/^\d+\.\s*/, '');
         html += `
           <div class="ai-bullet-item">
-            <span class="ai-bullet-marker">•</span>
+            <span class="ai-bullet-marker">${marker}</span>
             <div class="ai-bullet-text">${bulletContent}</div>
           </div>
         `;
@@ -2063,7 +2203,11 @@ Lead Advocate for ${client}`;
   },
 
   renderAssistantMessageContent(msg) {
-    if (msg.isStructuredBreakdown || (msg.response && (msg.categoryCode === 'CRIMINAL_LAW' || msg.intent === 'CRIMINAL_LAW'))) {
+    if (msg.isStreaming) {
+      return `<div class="ai-clean-markdown-body">${this.formatAnsweringMarkdown(msg.response || '')}<span class="ai-streaming-cursor"></span></div>`;
+    }
+
+    if (msg.isStructuredBreakdown || (msg.response && (msg.categoryCode === 'CRIMINAL_LAW' || msg.intent === 'CRIMINAL_LAW' || msg.categoryCode === 'THEFT_FOLLOW_UP' || msg.categoryCode === 'THEFT_ELEMENTS' || msg.categoryCode === 'CASE_CHARGE' || msg.categoryCode === 'CASE_EVIDENCE' || msg.categoryCode === 'LAWS_AND_CASES_CITED'))) {
       return `<div class="ai-clean-markdown-body">${this.formatAnsweringMarkdown(msg.response)}</div>`;
     }
     if (msg.requiresAuth || msg.intent === 'AUTHENTICATION_REQUIRED') return this.renderAuthRequired(msg);
@@ -2207,12 +2351,25 @@ Lead Advocate for ${client}`;
   },
 
   renderInlineProgress(msg) {
+    const isDbSearch = msg && msg.isSearchingDatabase;
     return `
       <div class="tz-thinking-bubble-row animate-fade" style="margin: 0.25rem 0;">
-        <div class="tz-thinking-bubble" title="AI Assistant is thinking...">
-          <span class="tz-dot"></span>
-          <span class="tz-dot"></span>
-          <span class="tz-dot"></span>
+        <div class="ai-running-lines-box animate-fade" role="status" aria-label="SLCMS AI is reasoning">
+          <div class="ai-running-lines-header">
+            <span class="ai-dancing-dots-wrapper" aria-hidden="true">
+              <span class="ai-dancing-dot"></span>
+              <span class="ai-dancing-dot"></span>
+              <span class="ai-dancing-dot"></span>
+            </span>
+            <span class="ai-running-lines-label">
+              ${isDbSearch ? 'Searching TanzLII primary precedents…' : 'Reasoning through Tanzanian legal authorities…'}
+            </span>
+          </div>
+          <div class="ai-running-lines" aria-hidden="true">
+            <div class="ai-running-line ai-line-1"></div>
+            <div class="ai-running-line ai-line-2"></div>
+            <div class="ai-running-line ai-line-3"></div>
+          </div>
         </div>
       </div>
     `;
@@ -2412,134 +2569,53 @@ Lead Advocate for ${client}`;
     // 1. NO CASES FOUND MESSAGE
     if (!matchedCase && list.length === 0) {
       return `
-        <div class="tz-legal-report animate-fade" style="border-left: 4px solid #F59E0B;">
-          <div class="tz-legal-report-header">
-            <h3 class="tz-legal-report-title" style="color: #92400E;">🔍 No Judgment Found</h3>
-          </div>
-          <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 1.25rem; font-size: 0.92rem; color: #78350F; line-height: 1.6;">
-            No prepared judgment matching <strong>"${this.escapeHtml(cleanSearchPhrase)}"</strong> was found in the SLCMS library. You can search by party name, citation, case number, or upload an authorized PDF judgment.
-          </div>
-          <div style="margin-top: 1rem;">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="AIAssistantView.startNewResearch()">
-              🔄 Search Another Case
-            </button>
-          </div>
+        <div class="ai-clean-markdown-body">
+          <p>I could not find a prepared judgment matching “${this.escapeHtml(cleanSearchPhrase)}”.</p>
+          <p>Try the full case title, case number, citation, offence or judgment year.</p>
         </div>
       `;
     }
 
-    // 2. SINGLE MATCHED JUDGMENT FOUND (Prompt First - Wait for User Selection)
+    // 2. SINGLE MATCHED JUDGMENT FOUND
     if (msg.isSingleMatchPrompt || (list.length === 1 && !msg.isMultipleMatchesPrompt)) {
       const c = matchedCase || list[0];
       const cit = c.citation || 'Unassigned';
-      const proceeding = c.proceeding || c.caseNumber || c.case_number || c.proceedingType || 'PC Civil Appeal No. 69 of 2018';
-      const court = c.court || 'High Court of Tanzania, Dar es Salaam District Registry';
-      const judge = c.judge || 'S. M. Kulita, J.';
-      const decDate = c.decisionDate || c.year || '31 December 2020';
-      const category = c.category || 'Matrimonial and Family Law';
-      const subject = c.subject || c.claimSummary || c.additionalSubject || 'Matrimonial property, child maintenance and an incomplete trial record';
-      const outcome = c.outcome || c.finalDecision || 'Lower-court proceedings nullified and a trial de novo ordered.';
+      const proceeding = c.proceeding || c.caseNumber || c.case_number || c.proceedingType || '';
+      const court = c.court || 'High Court of Tanzania';
+      const year = c.year || c.decisionDate || '';
 
       return `
-        <div class="tz-legal-report animate-fade">
-          <div class="tz-legal-report-header flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <h3 class="tz-legal-report-title" style="display: flex; align-items: center; gap: 0.5rem;">
-                <span>🔍</span> <span>Matching Judgments Found</span>
-              </h3>
-              <div class="tz-legal-report-meta" style="font-size: 0.88rem; color: var(--color-text-secondary); margin-top: 0.25rem;">
-                I found the following prepared judgment matching <strong>“${this.escapeHtml(cleanSearchPhrase)}”</strong>:
-              </div>
-            </div>
-            <span class="tz-status-pill" style="margin-bottom: 0; background: #ECFDF5; color: #047857; border-color: #A7F3D0; font-weight: 700;">
-              ✓ 1 Matching Judgment
-            </span>
-          </div>
-
-          <!-- Prepared Case Detail Card -->
-          <div style="background: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 10px; padding: 1.25rem; margin: 1rem 0; font-size: 0.92rem; line-height: 1.85;">
-            <div style="font-size: 1.15rem; font-weight: 800; color: var(--color-primary); font-family: var(--font-heading); margin-bottom: 0.65rem;">
-              ${this.escapeHtml(c.title)}
-            </div>
-            <div><strong>Citation:</strong> <code>${this.escapeHtml(cit)}</code></div>
-            <div><strong>Proceeding:</strong> ${this.escapeHtml(proceeding)}</div>
-            <div><strong>Court:</strong> ${this.escapeHtml(court)}</div>
-            <div><strong>Judge:</strong> ${this.escapeHtml(judge)}</div>
-            <div><strong>Decision date:</strong> ${this.escapeHtml(decDate)}</div>
-            <div><strong>Category:</strong> <span class="badge badge-gold" style="font-size: 0.72rem;">${this.escapeHtml(category)}</span></div>
-            <div><strong>Subject:</strong> ${this.escapeHtml(subject)}</div>
-            <div><strong>Outcome:</strong> ${this.escapeHtml(outcome)}</div>
-          </div>
-
-          <!-- Prompt & Action Choices -->
-          <div style="margin: 1.25rem 0 0.5rem;">
-            <div style="font-weight: 700; color: var(--color-primary); margin-bottom: 0.75rem; font-size: 0.95rem;">
-              Is this the case you need?
-            </div>
-            
-            <div class="flex items-center gap-2 flex-wrap" style="margin-bottom: 1rem;">
-              <button type="button" class="btn btn-gold btn-sm" onclick="AIAssistantView.showCaseInfoRecord('${c.id}')" style="font-weight: 700;">
-                🔍 Open Case
-              </button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="AIAssistantView.summarizeCaseRecord('${c.id}')" style="font-weight: 600;">
-                📄 Summarize Case
-              </button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="AIAssistantView.showFactsForCaseRecord('${c.id}')" style="font-weight: 600;">
-                ℹ️ Show Facts
-              </button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="AIAssistantView.viewPdfModal('${c.id}')" style="color: #2563EB; font-weight: 600;">
-                🌐 Open Original PDF
-              </button>
-            </div>
-
-            <div style="border-top: 1px dashed var(--color-border); padding-top: 0.85rem; margin-top: 0.85rem;">
-              <div style="font-size: 0.82rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">
-                If it is not the intended case:
-              </div>
-              <button type="button" class="btn btn-ghost btn-sm" onclick="AIAssistantView.startNewResearch()" style="color: var(--color-text-secondary); font-size: 0.82rem; padding: 0.35rem 0.65rem; border: 1px solid var(--color-border);">
-                🔄 Search Another Case
-              </button>
-            </div>
-          </div>
+        <div class="ai-clean-markdown-body">
+          <p>I found <strong>${this.escapeHtml(c.title)}</strong>.</p>
+          <p style="font-size: 0.88rem; color: #64748B; margin-top: -0.25rem;">
+            <code>${this.escapeHtml(cit)}</code> • ${this.escapeHtml(court)} ${year ? `(${this.escapeHtml(year)})` : ''}
+          </p>
+          <p>What would you like to examine?</p>
         </div>
       `;
     }
 
     // 3. MULTIPLE MATCHED JUDGMENTS FOUND
+    const isCrim = list.some(m => (m.legalCategory === 'CRIMINAL_LAW' || (m.category && m.category.toLowerCase().includes('criminal'))));
+    const term = isCrim ? 'criminal judgments' : 'judgments';
     return `
-      <div class="tz-legal-report animate-fade">
-        <div class="tz-legal-report-header flex items-center justify-between flex-wrap gap-2">
-          <div>
-            <h3 class="tz-legal-report-title" style="display: flex; align-items: center; gap: 0.5rem;">
-              <span>🔍</span> <span>Multiple Judgments Found</span>
-            </h3>
-            <div class="tz-legal-report-meta" style="font-size: 0.88rem; color: var(--color-text-secondary); margin-top: 0.25rem;">
-              I found ${list.length} judgments matching <strong>“${this.escapeHtml(cleanSearchPhrase)}.”</strong> Please select the intended case:
-            </div>
-          </div>
-          <span class="tz-status-pill" style="margin-bottom: 0;">✓ ${list.length} Matching Judgments</span>
-        </div>
-
-        <!-- Choices List -->
-        <div class="flex flex-col gap-2.5" style="margin: 1rem 0;">
+      <div class="ai-clean-markdown-body">
+        <p>I found ${list.length} ${term} matching your request. Please select the intended case.</p>
+        <div class="flex flex-col gap-2" style="margin: 0.85rem 0;">
           ${list.map((c, i) => `
-            <div class="tz-compact-case-card" style="margin-bottom: 0; cursor: pointer; transition: all 0.2s ease;" onclick="AIAssistantView.fillAndAsk('Find ${this.escapeHtml(c.title)}')">
-              <div class="flex items-center justify-between gap-2">
-                <div style="font-weight: 700; color: var(--color-primary); font-size: 0.95rem;">
-                  ${i + 1}. ${this.escapeHtml(c.title)}
-                </div>
-                <span class="badge badge-gold" style="font-size: 0.68rem;">${this.escapeHtml(c.year || '2020')}</span>
+            <div class="tz-compact-case-card" style="margin-bottom: 0; cursor: pointer; padding: 0.75rem 1rem; border: 1px solid #E2E8F0; border-radius: 8px; background: #FFFFFF;" onclick="AIAssistantView.fillAndAsk('Find ${this.escapeHtml(c.title)}')">
+              <div style="font-weight: 700; color: var(--color-primary); font-size: 0.95rem;">
+                ${i + 1}. ${this.escapeHtml(c.title)}
               </div>
-              <div style="font-size: 0.82rem; color: var(--color-text-secondary); margin-top: 0.25rem;">
+              <div style="font-size: 0.82rem; color: #64748B; margin-top: 0.2rem;">
                 <code>${this.escapeHtml(c.citation || c.caseNumber || '')}</code> • ${this.escapeHtml(c.court || 'High Court of Tanzania')}
               </div>
             </div>
           `).join('')}
         </div>
-
-        <div style="font-size: 0.84rem; color: var(--color-text-secondary); margin-top: 0.5rem; font-style: italic;">
-          Select a case before requesting its facts, reasoning or decision.
-        </div>
+        <p style="font-size: 0.85rem; color: #64748B; font-style: italic;">
+          Select a case to view its facts, legal issues, court reasoning, or decision.
+        </p>
       </div>
     `;
   },
@@ -4185,80 +4261,309 @@ ${this.escapeHtml(dec)}
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     });
 
-    // 3. Execute Router Classification
+    // 3. Execute Router Classification & Contextual Reasoning Generation
     const routeRes = TanzaniaIntentRouter.routeMessage(trimmedQuery);
     const categoryCode = routeRes.categoryCode || routeRes.category || 'LEGAL_RESEARCH';
+    const thoughtSteps = (typeof TanzaniaIntentRouter !== 'undefined' && TanzaniaIntentRouter.generateReasoningSteps)
+      ? TanzaniaIntentRouter.generateReasoningSteps(trimmedQuery, routeRes)
+      : [
+          'Analyzing user query and identifying applicable Tanzanian jurisprudence...',
+          'Cross-referencing verified TanzLII primary precedents and Cap. statutes...',
+          'Synthesizing structured legal findings line by line...'
+        ];
 
-    // 4. Initial Thinking State (Three Hanging Dots)
+    // 4. Initial Reasoning State
     this.conversation.push({
       id: assistantMsgId,
       reqId: reqId,
       role: 'assistant',
-      isSearching: true,
+      isReasoning: true,
+      isStreaming: false,
+      thoughtSteps: thoughtSteps,
+      visibleThoughtSteps: [thoughtSteps[0] || 'Analyzing legal query and identifying applicable Tanzanian jurisprudence...'],
+      reasoningStartTime: Date.now(),
+      thoughtDuration: null,
       categoryCode: categoryCode,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     });
 
+    this.isProcessing = true;
+    this.isStreaming = false;
     App.renderAuthenticatedApp();
     this.scrollToBottom();
 
-    // 5. Three Hanging Dots Thinking Animation (~1.1s)
-    setTimeout(() => {
+    // 5. Progressive Reasoning & Slow Line-by-Line Streaming Engine
+    this.activeStreamAbort = false;
+
+    // Progressively reveal thought steps over ~1.8s - 2.2s
+    let stepIdx = 1;
+    this.thoughtIntervalId = setInterval(() => {
+      if (this.activeStreamAbort) {
+        clearInterval(this.thoughtIntervalId);
+        this.thoughtIntervalId = null;
+        return;
+      }
       const msgObj = this.conversation.find(m => m.id === assistantMsgId);
-      if (msgObj) {
-        msgObj.isSearching = false;
-        msgObj.categoryCode = categoryCode;
-        msgObj.category = routeRes.category;
-        msgObj.matchedCase = routeRes.matchedCase;
-        msgObj.caseRecords = routeRes.caseRecords || (routeRes.matchedCase ? [routeRes.matchedCase] : []);
-        msgObj.isSingleMatchPrompt = routeRes.isSingleMatchPrompt;
-        msgObj.isMultipleMatchesPrompt = routeRes.isMultipleMatchesPrompt;
-        msgObj.isMetadataOnlyBlocked = routeRes.isMetadataOnlyBlocked;
-        msgObj.isStructuredBreakdown = routeRes.isStructuredBreakdown;
-        msgObj.notice = routeRes.notice;
-        msgObj.response = routeRes.response;
-        msgObj.guidedOptions = routeRes.guidedOptions;
-        msgObj.intent = routeRes.intent;
-        msgObj.isGreeting = routeRes.isGreeting || routeRes.categoryCode === 'GREETING';
-        msgObj.isCaseComparison = routeRes.isCaseComparison;
-        msgObj.isLegalReport = routeRes.isLegalReport;
-        msgObj.isOpenSource = routeRes.isOpenSource;
-        msgObj.isCaseInformation = routeRes.isCaseInformation;
-        msgObj.isProceduralHistory = routeRes.isProceduralHistory;
-        msgObj.isCasesCited = routeRes.isCasesCited;
-        msgObj.isLegalPrinciple = routeRes.isLegalPrinciple;
-        msgObj.isUploadHelp = routeRes.isUploadHelp;
-        msgObj.isFindJudgment = routeRes.isFindJudgment;
-        msgObj.isLegal = routeRes.isLegal;
-        msgObj.rawQuery = routeRes.rawQuery || trimmedQuery;
+      if (!msgObj) return;
 
-        // Specific handling for pure Year Case List queries if no specific case was matched (e.g. "Cases from 2020", "2023 cases")
-        const yearMatch = trimmedQuery.match(/\b(19\d{2}|20\d{2})\b/);
-        if (categoryCode === 'FIND_JUDGMENT' && yearMatch && !routeRes.matchedCase && !routeRes.isSingleMatchPrompt && (!routeRes.caseRecords || routeRes.caseRecords.length === 0)) {
-          const year = yearMatch[1];
-          msgObj.caseRecords = (SLCMS_STATE.tanzaniaJudgments || []).filter(j => 
-            (j.year && String(j.year) === year) || 
-            (j.decisionDate && String(j.decisionDate).includes(year)) ||
-            (j.citation && String(j.citation).includes(year))
-          );
-          msgObj.caseListTitle = `Cases from ${year}`;
-          msgObj.caseListSubtitle = `Found ${msgObj.caseRecords.length} judgments from ${year} in the legal library.`;
-        }
+      if (stepIdx < thoughtSteps.length) {
+        msgObj.visibleThoughtSteps.push(thoughtSteps[stepIdx]);
+        stepIdx++;
+        this.updateStreamingMessageDOM(msgObj);
+        this.scrollToBottom(true);
+      } else {
+        clearInterval(this.thoughtIntervalId);
+        this.thoughtIntervalId = null;
+      }
+    }, 420);
 
-        // Update Right Column Active Sources
-        if (routeRes.matchedCase) {
-          this.activeSources = [routeRes.matchedCase, ...this.activeSources.filter(s => s.id !== routeRes.matchedCase.id)];
-        } else if (msgObj.caseRecords && msgObj.caseRecords.length > 0) {
-          this.activeSources = msgObj.caseRecords;
-        }
+    // Conclude reasoning phase and begin slow line-by-line streaming
+    const totalReasoningTime = Math.max(1800, (thoughtSteps.length - 1) * 420 + 250);
+    this.streamTimeoutId = setTimeout(() => {
+      if (this.thoughtIntervalId) {
+        clearInterval(this.thoughtIntervalId);
+        this.thoughtIntervalId = null;
+      }
+      if (this.activeStreamAbort) return;
+
+      const msgObj = this.conversation.find(m => m.id === assistantMsgId);
+      if (!msgObj) return;
+
+      // Finish reasoning phase
+      msgObj.isReasoning = false;
+      msgObj.thoughtDuration = ((Date.now() - msgObj.reasoningStartTime) / 1000).toFixed(1);
+
+      // Unpack routing results into message object
+      msgObj.categoryCode = categoryCode;
+      msgObj.category = routeRes.category;
+      msgObj.matchedCase = routeRes.matchedCase;
+      msgObj.caseRecords = routeRes.caseRecords || (routeRes.matchedCase ? [routeRes.matchedCase] : []);
+      msgObj.isSingleMatchPrompt = routeRes.isSingleMatchPrompt;
+      msgObj.isMultipleMatchesPrompt = routeRes.isMultipleMatchesPrompt;
+      msgObj.isMetadataOnlyBlocked = routeRes.isMetadataOnlyBlocked;
+      msgObj.isStructuredBreakdown = routeRes.isStructuredBreakdown;
+      msgObj.notice = routeRes.notice;
+      msgObj.guidedOptions = routeRes.guidedOptions;
+      msgObj.intent = routeRes.intent;
+      msgObj.isGreeting = routeRes.isGreeting || routeRes.categoryCode === 'GREETING';
+      msgObj.isCaseComparison = routeRes.isCaseComparison;
+      msgObj.isLegalReport = routeRes.isLegalReport;
+      msgObj.isOpenSource = routeRes.isOpenSource;
+      msgObj.isCaseInformation = routeRes.isCaseInformation;
+      msgObj.isProceduralHistory = routeRes.isProceduralHistory;
+      msgObj.isCasesCited = routeRes.isCasesCited;
+      msgObj.isLegalPrinciple = routeRes.isLegalPrinciple;
+      msgObj.isUploadHelp = routeRes.isUploadHelp;
+      msgObj.isFindJudgment = routeRes.isFindJudgment;
+      msgObj.isLegal = routeRes.isLegal;
+      msgObj.rawQuery = routeRes.rawQuery || trimmedQuery;
+
+      // Update Right Column Active Sources
+      if (routeRes.matchedCase) {
+        this.activeSources = [routeRes.matchedCase, ...this.activeSources.filter(s => s.id !== routeRes.matchedCase.id)];
+      } else if (msgObj.caseRecords && msgObj.caseRecords.length > 0) {
+        this.activeSources = msgObj.caseRecords;
       }
 
-      this.isSubmitting = false;
-      this.isProcessing = false;
-      App.renderAuthenticatedApp();
-      this.scrollToBottom();
-      SLCMS_STATE.addAuditLog('AI Legal Query Executed', 'SLCMS AI', trimmedQuery.substring(0, 40));
-    }, 1100);
+      // Prepare target text
+      const fullText = routeRes.response || '';
+      const lines = fullText.split('\n');
+
+      // First line begins streaming
+      msgObj.isStreaming = true;
+      this.isStreaming = true;
+      msgObj.streamedLines = [lines[0] || ''];
+      msgObj.response = msgObj.streamedLines.join('\n');
+      this.updateStreamingMessageDOM(msgObj);
+      this.updatePromptDockDOM();
+      this.scrollToBottom(true);
+
+      // If only 1 line, complete after short reading pause
+      if (lines.length <= 1) {
+        setTimeout(() => {
+          this.finishStreaming(msgObj);
+        }, 300);
+        return;
+      }
+
+      // Stream subsequent lines slowly and steadily (~190ms per line)
+      let lineIndex = 1;
+      this.streamIntervalId = setInterval(() => {
+        if (this.activeStreamAbort) {
+          clearInterval(this.streamIntervalId);
+          this.streamIntervalId = null;
+          msgObj.isStreaming = false;
+          this.isStreaming = false;
+          this.isSubmitting = false;
+          this.isProcessing = false;
+          this.updateStreamingMessageDOM(msgObj);
+          this.updatePromptDockDOM();
+          this.scrollToBottom(true);
+          return;
+        }
+
+        if (lineIndex < lines.length) {
+          msgObj.streamedLines.push(lines[lineIndex]);
+          msgObj.response = msgObj.streamedLines.join('\n');
+          lineIndex++;
+          this.updateStreamingMessageDOM(msgObj);
+          this.scrollToBottom(true);
+        } else {
+          // Stream completed successfully
+          this.finishStreaming(msgObj);
+        }
+      }, 190);
+    }, totalReasoningTime);
+  },
+
+  updateStreamingMessageDOM(msgObj) {
+    if (!msgObj) return;
+    const msgElem = document.getElementById(`msg-${msgObj.id}`);
+    if (msgElem) {
+      const body = msgElem.querySelector('.ai-msg-assistant-body');
+      if (body) {
+        body.innerHTML = this.renderAssistantResponseBlock(msgObj);
+      }
+    } else {
+      const col = document.querySelector('.ai-conversation-centered-column');
+      if (col) {
+        col.innerHTML = `
+          ${this.renderConversationMessages()}
+          <div id="ai-conversation-bottom-anchor" class="ai-conversation-bottom-anchor" style="height: 1px; width: 100%; clear: both;"></div>
+        `;
+      }
+    }
+  },
+
+  updatePromptDockDOM() {
+    const dock = document.querySelector('.ai-bottom-prompt-inner');
+    if (!dock) return;
+    dock.innerHTML = `
+      ${this.isStreaming ? `
+        <div class="ai-streaming-controls animate-fade" style="margin-bottom: 0.5rem; display: flex; justify-content: center;">
+          <button type="button" class="ai-stop-btn" onclick="AIAssistantView.stopGenerating()" aria-label="Stop Generating">
+            <span class="ai-stop-square">■</span> Stop Generating
+          </button>
+        </div>
+      ` : ''}
+      <form id="tz-chat-form" onsubmit="event.preventDefault(); AIAssistantView.handleSendMessage();" class="ai-chat-prompt-card">
+        <textarea 
+          id="tz-question-input" 
+          class="ai-chat-prompt-textarea" 
+          placeholder="Ask anything." 
+          rows="1"
+          autocomplete="off"
+          onkeydown="if(event.key === 'Enter' && !event.shiftKey){ event.preventDefault(); AIAssistantView.handleSendMessage(); }"
+          oninput="AIAssistantView.handleInputAutoGrow(this)"
+          ${this.isSubmitting || this.isStreaming || this.isProcessing ? 'disabled' : ''}
+        ></textarea>
+        <div class="ai-chat-prompt-bottom-bar">
+          <div class="ai-prompt-left-tools">
+            <button type="button" class="ai-prompt-circle-plus" onclick="AIAssistantView.openPlusMenu(event)" title="Add files or citations" aria-label="Add file" ${this.isStreaming || this.isProcessing ? 'disabled' : ''}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="ai-prompt-right-tools">
+            <button type="button" id="ai-mic-btn" class="ai-prompt-mic-icon-btn" onclick="AIAssistantView.toggleVoiceInput()" title="Voice input" aria-label="Voice input">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+            </button>
+            <button type="submit" id="tz-send-btn" class="ai-prompt-send-icon-btn" aria-label="Send prompt" ${this.isSubmitting || this.isStreaming || this.isProcessing ? 'disabled' : ''}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="19" x2="12" y2="5"></line>
+                <polyline points="5 12 12 5 19 12"></polyline>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </form>
+      <div class="ai-bottom-disclaimer" style="text-align: center; font-size: 0.76rem; color: #94A3B8; margin-top: 0.4rem;">
+        SLCMS provides legal-research assistance. Verify important information using the cited judgment and applicable law.
+      </div>
+    `;
+    const textarea = document.getElementById('tz-question-input');
+    if (textarea && !this.isStreaming && !this.isProcessing) {
+      textarea.focus();
+    }
+  },
+
+  finishStreaming(msgObj) {
+    if (this.thoughtIntervalId) {
+      clearInterval(this.thoughtIntervalId);
+      this.thoughtIntervalId = null;
+    }
+    if (this.streamIntervalId) {
+      clearInterval(this.streamIntervalId);
+      this.streamIntervalId = null;
+    }
+    if (this.streamTimeoutId) {
+      clearTimeout(this.streamTimeoutId);
+      this.streamTimeoutId = null;
+    }
+    msgObj.isReasoning = false;
+    msgObj.isStreaming = false;
+    this.isStreaming = false;
+    this.isSubmitting = false;
+    this.isProcessing = false;
+
+    this.updateStreamingMessageDOM(msgObj);
+    this.updatePromptDockDOM();
+    this.scrollToBottom(true);
+    if (msgObj.rawQuery) {
+      SLCMS_STATE.addAuditLog('AI Legal Query Executed', 'SLCMS AI', msgObj.rawQuery.substring(0, 40));
+    }
+  },
+
+  stopGenerating() {
+    this.activeStreamAbort = true;
+    if (this.thoughtIntervalId) {
+      clearInterval(this.thoughtIntervalId);
+      this.thoughtIntervalId = null;
+    }
+    if (this.streamTimeoutId) {
+      clearTimeout(this.streamTimeoutId);
+      this.streamTimeoutId = null;
+    }
+    if (this.streamIntervalId) {
+      clearInterval(this.streamIntervalId);
+      this.streamIntervalId = null;
+    }
+    this.isStreaming = false;
+    this.isSubmitting = false;
+    this.isProcessing = false;
+
+    // Ensure all assistant messages have isSearching = false, isReasoning = false and isStreaming = false
+    const currentMsg = this.conversation.find(m => m.isStreaming || m.isSearching || m.isReasoning);
+    this.conversation.forEach(m => {
+      if (m.role === 'assistant') {
+        m.isSearching = false;
+        m.isReasoning = false;
+        m.isStreaming = false;
+      }
+    });
+
+    if (currentMsg) {
+      this.updateStreamingMessageDOM(currentMsg);
+    } else {
+      const col = document.querySelector('.ai-conversation-centered-column');
+      if (col) {
+        col.innerHTML = `
+          ${this.renderConversationMessages()}
+          <div id="ai-conversation-bottom-anchor" class="ai-conversation-bottom-anchor" style="height: 1px; width: 100%; clear: both;"></div>
+        `;
+      }
+    }
+
+    this.updatePromptDockDOM();
+    this.scrollToBottom(true);
+    App.showToast('Generation stopped. Displayed content preserved.', 'info');
   },
 
   /* --------------------------------------------------------------------------
@@ -4322,6 +4627,30 @@ ${this.escapeHtml(dec)}
     const caseRec = (SLCMS_STATE.tanzaniaJudgments || []).find(j => j.id === caseId) || (SLCMS_STATE.legalSourceDocuments || []).find(d => d.id === caseId);
     if (!caseRec) return;
     this.fillAndAsk(`Show parties arguments in ${caseRec.title}`);
+  },
+
+  showChargeForCaseRecord(caseId) {
+    const caseRec = (SLCMS_STATE.tanzaniaJudgments || []).find(j => j.id === caseId) || (SLCMS_STATE.legalSourceDocuments || []).find(d => d.id === caseId);
+    if (!caseRec) return;
+    this.fillAndAsk(`Show charge in ${caseRec.title}`);
+  },
+
+  showEvidenceForCaseRecord(caseId) {
+    const caseRec = (SLCMS_STATE.tanzaniaJudgments || []).find(j => j.id === caseId) || (SLCMS_STATE.legalSourceDocuments || []).find(d => d.id === caseId);
+    if (!caseRec) return;
+    this.fillAndAsk(`Show evidence presented in ${caseRec.title}`);
+  },
+
+  showLawsCitedForCaseRecord(caseId) {
+    const caseRec = (SLCMS_STATE.tanzaniaJudgments || []).find(j => j.id === caseId) || (SLCMS_STATE.legalSourceDocuments || []).find(d => d.id === caseId);
+    if (!caseRec) return;
+    this.fillAndAsk(`Show laws and cases cited in ${caseRec.title}`);
+  },
+
+  generateReportForCaseRecord(caseId) {
+    const caseRec = (SLCMS_STATE.tanzaniaJudgments || []).find(j => j.id === caseId) || (SLCMS_STATE.legalSourceDocuments || []).find(d => d.id === caseId);
+    if (!caseRec) return;
+    this.fillAndAsk(`Generate report for ${caseRec.title}`);
   },
 
   /* --------------------------------------------------------------------------
@@ -5098,6 +5427,22 @@ ${this.escapeHtml(dec)}
   previewCaseReport(caseId) {
     App.closeModal();
     this.openCompleteCaseReport(caseId);
+  },
+
+  previewReportModal(caseId) {
+    this.openCompleteCaseReport(caseId);
+  },
+
+  downloadReportPdf(caseId) {
+    this.downloadCaseReportPDF(caseId);
+  },
+
+  downloadReportWord(caseId) {
+    this.downloadCaseReportDocx(caseId);
+  },
+
+  attachCaseToMatter(caseId) {
+    this.attachReportToMatterModal(caseId);
   },
 
   closeCompleteReport() {
@@ -6861,11 +7206,63 @@ ${this.escapeHtml(doc.rawExtractedText || doc.relevantPassage || doc.ratioDecide
     `, 'modal-lg');
   },
 
-  scrollToBottom() {
-    setTimeout(() => {
-      const stream = document.getElementById('tz-chat-stream');
-      if (stream) stream.scrollTop = stream.scrollHeight;
-    }, 50);
+  isUserNearBottom() {
+    const stream = document.getElementById('ai-conversation-scroll-area') || document.getElementById('tz-chat-stream') || document.getElementById('main-content-container');
+    if (!stream) return true;
+    const threshold = 240;
+    const distance = stream.scrollHeight - stream.scrollTop - stream.clientHeight;
+    return distance <= threshold;
+  },
+
+  scrollToBottom(force = true) {
+    const performScroll = () => {
+      const scrollArea = document.getElementById('ai-conversation-scroll-area');
+      if (scrollArea) {
+        try {
+          if (force || this.isUserNearBottom()) {
+            scrollArea.scrollTop = scrollArea.scrollHeight;
+          }
+        } catch (e) {}
+      }
+
+      const otherContainers = [
+        document.getElementById('tz-chat-stream'),
+        document.getElementById('main-content-container'),
+        document.documentElement,
+        document.body
+      ].filter(Boolean);
+
+      otherContainers.forEach(container => {
+        try {
+          if (force || this.isUserNearBottom()) {
+            container.scrollTop = container.scrollHeight;
+          }
+        } catch (e) {}
+      });
+
+      // Fallback scrollIntoView for environments where scrollTop assignment is unsupported
+      if (!scrollArea) {
+        try {
+          const bottomAnchor = document.getElementById('ai-conversation-bottom-anchor');
+          if (bottomAnchor) {
+            bottomAnchor.scrollIntoView({ behavior: 'auto', block: 'end' });
+          } else {
+            const lastRow = document.querySelector('.ai-msg-assistant-row:last-child') || document.querySelector('.ai-conversation-centered-column > div:last-child');
+            if (lastRow) {
+              lastRow.scrollIntoView({ behavior: 'auto', block: 'end' });
+            }
+          }
+        } catch (e) {}
+      }
+    };
+
+    // Immediate synchronous scroll
+    performScroll();
+    // Subsequent frame scroll to capture post-layout text metrics
+    requestAnimationFrame(performScroll);
+    setTimeout(performScroll, 30);
+    setTimeout(performScroll, 80);
+    setTimeout(performScroll, 160);
   },
 
   escapeHtml(text) {
