@@ -416,7 +416,7 @@ const AICopilot = {
     if (this.activeTab === 'chat') {
       const showCatBar = this.chatMessages && this.chatMessages.length > 0;
       return `
-        <div style="padding: 0.4rem 0.85rem 0.85rem 0.85rem;">
+        <div class="ai-chat-prompt-dock">
           ${showCatBar ? `
             <!-- 8 Primary Category Action Buttons Bar (Sits Above Input Dock during active conversation) -->
             <div class="ai-copilot-cat-btn-bar">

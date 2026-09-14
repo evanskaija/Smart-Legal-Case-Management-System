@@ -11395,21 +11395,21 @@
     border-bottom: none;
   }
 
-  /* -- AI Copilot Drawer: Floating rounded card on mobile (never touches top or bottom) -- */
+    /* -- AI Copilot Drawer: Floating rounded card on mobile (elevated above bottom edge) -- */
   .ai-copilot-drawer {
     left: 12px !important;
     right: 12px !important;
-    top: 14px !important;
-    bottom: 14px !important;
+    top: max(14px, env(safe-area-inset-top, 14px)) !important;
+    bottom: calc(26px + env(safe-area-inset-bottom, 12px)) !important;
     width: auto !important;
     max-width: none !important;
     height: auto !important;
-    max-height: calc(100vh - 28px) !important;
-    border-radius: 24px !important;
+    max-height: calc(100dvh - 44px - env(safe-area-inset-bottom, 12px) - env(safe-area-inset-top, 14px)) !important;
+    border-radius: 26px !important;
     background: #FFFFFF !important;
     color: #0F172A !important;
     border: 1px solid rgba(226, 232, 240, 0.9) !important;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35) !important;
+    box-shadow: 0 24px 60px -10px rgba(15, 23, 42, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.08) !important;
     z-index: 10050 !important;
     transform: translateY(calc(100% + 30px)) !important;
     opacity: 0 !important;
@@ -11418,6 +11418,8 @@
     transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, visibility 0.25s ease !important;
     box-sizing: border-box !important;
     margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
     overflow: hidden !important;
   }
 

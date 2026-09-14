@@ -47,6 +47,9 @@ const App = {
         this.pendingRedirectRoute = window.location.hash.replace('#', '');
         this.showToast('Please sign in to continue.', 'info');
       }
+      if (urlParams.get('openDrawer') === 'true' && typeof AICopilot !== 'undefined') {
+        setTimeout(() => AICopilot.openDrawer(), 300);
+      }
       return;
     }
 
@@ -371,9 +374,14 @@ const App = {
     this.resetInactivityTimer();
 
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('openSidebar') === 'true' || urlParams.get('openDrawer') === 'true') {
+    if (urlParams.get('openSidebar') === 'true') {
       setTimeout(() => {
         this.toggleSidebar();
+      }, 300);
+    }
+    if (urlParams.get('openDrawer') === 'true' && typeof AICopilot !== 'undefined') {
+      setTimeout(() => {
+        AICopilot.openDrawer();
       }, 300);
     }
     const openModalParam = urlParams.get('openModal');
