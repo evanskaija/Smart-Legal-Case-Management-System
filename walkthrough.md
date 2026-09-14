@@ -33,6 +33,23 @@ The reasoning and response presentation has been refined:
 
 ---
 
+## 1.2 Hanging AI Copilot Button ("Hanging AI")
+
+The floating circular AI Copilot button (`#ai-copilot-fab`) is now permanently active across all views:
+1. **Visual Styling**:
+   - Circular 56px floating action button (`border-radius: 50%`) with double-ring gold border (`border: 2px solid var(--color-gold, #C89B3C)`).
+   - Deep midnight background with glowing sparkle emoji (`✨`) and bold golden `"AI"` label centered underneath.
+   - High elevation (`z-index: 9999`) with smooth hover expansion and glowing gold box-shadow.
+2. **Universal Visibility**:
+   - Initialized unconditionally in `App.init()` so it is immediately present on the unauthenticated login/auth screen and persists after sign-in across all modules.
+   - Removed legacy `display: none !important` rules that previously suppressed it on the authentication page, mobile breakpoints, and the AI Assistant workspace.
+3. **Responsive Positioning**:
+   - **Desktop**: Suspended at `bottom: 28px; right: 28px;`.
+   - **Mobile (≤768px)**: Floats safely 14px above the 64px mobile navigation bar (`bottom: calc(64px + 14px); right: 16px;`), preventing any collision with mobile tabs.
+   - **Interaction**: 1-click access to the full Tanzania Legal Copilot drawer with quick legal prompts, Win % risk assessment, statutory deadlines calculator, and TanzLII precedent search.
+
+---
+
 ## 2. The 10-Step End-to-End Presentation Workflow
 
 ```mermaid
