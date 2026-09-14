@@ -32,6 +32,11 @@ const App = {
     this.bindGlobalEvents();
     this.bindInactivityTracker();
 
+    // Ensure the hanging AI Copilot FAB is initialized and visible across the entire platform
+    if (typeof AICopilot !== 'undefined') {
+      AICopilot.init();
+    }
+
     // Check if initial load is an unauthenticated attempt on a protected route
     if (!this.isLoggedIn) {
       document.getElementById('app-root').innerHTML = AuthView.render();
@@ -697,10 +702,12 @@ const App = {
     container.classList.toggle('ai-view-active', cleanRoute === 'ai-assistant');
     document.body.classList.toggle('ai-page-active', cleanRoute === 'ai-assistant');
     
-    // Hide floating AI Copilot FAB on AI Assistant view to prevent blocking prompt dock
+    // Ensure hanging AI Copilot FAB is visible and active
     const copilotFab = document.getElementById('ai-copilot-fab');
-    if (copilotFab) {
-      copilotFab.style.display = cleanRoute === 'ai-assistant' ? 'none' : '';
+    if (copilotFab && !document.body.classList.contains('copilot-open')) {
+      copilotFab.style.display = '';
+      copilotFab.style.opacity = '';
+      copilotFab.style.pointerEvents = '';
     }
 
     try {

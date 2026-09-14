@@ -769,8 +769,8 @@
     border-radius: 50% !important;
     padding: 0 !important;
     margin: 0 !important;
-    bottom: 74px !important;
-    right: 18px !important;
+    bottom: calc(64px + 14px) !important;
+    right: 16px !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
@@ -778,22 +778,25 @@
     gap: 1px !important;
     background: linear-gradient(135deg, #0B1F33 0%, #16324F 100%) !important;
     border: 2px solid var(--color-gold, #C89B3C) !important;
-    box-shadow: 0 8px 24px rgba(11, 31, 51, 0.45), 0 0 16px rgba(200, 155, 60, 0.35) !important;
+    box-shadow: 0 8px 24px rgba(11, 31, 51, 0.45), 0 0 16px rgba(200, 155, 60, 0.4) !important;
     z-index: 9999 !important;
     cursor: pointer !important;
   }
 
-  .ai-copilot-fab .ai-copilot-desktop-text {
+  .ai-copilot-fab .ai-copilot-desktop-text,
+  .ai-copilot-fab .ai-copilot-fab-desktop-text {
     display: none !important;
   }
 
-  .ai-copilot-fab .ai-copilot-mobile-text {
+  .ai-copilot-fab .ai-copilot-mobile-text,
+  .ai-copilot-fab .ai-copilot-fab-text {
     display: block !important;
-    font-size: 0.62rem !important;
-    font-weight: 800 !important;
+    font-size: 0.65rem !important;
+    font-weight: 900 !important;
     color: var(--color-gold, #C89B3C) !important;
     letter-spacing: 0.5px !important;
     line-height: 1 !important;
+    text-transform: uppercase !important;
   }
 
   .ai-copilot-fab .ai-copilot-fab-sparkle {

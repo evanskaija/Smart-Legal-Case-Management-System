@@ -24,12 +24,10 @@ const AICopilot = {
     const container = document.createElement('div');
     container.id = 'ai-copilot-drawer-container';
     container.innerHTML = `
-      <!-- Floating Action Button -->
+      <!-- Floating Action Button (Hanging AI) -->
       <div id="ai-copilot-fab" class="ai-copilot-fab" onclick="AICopilot.toggleDrawer()" title="Open AI Legal Copilot (Ctrl+J)" aria-label="AI Copilot">
         <span class="ai-copilot-fab-sparkle">✨</span>
-        <span class="ai-copilot-desktop-text">AI Copilot</span>
-        <span class="ai-copilot-mobile-text">AI</span>
-        <span class="ai-copilot-desktop-text" style="font-size: 0.65rem; background: rgba(200, 155, 60, 0.2); padding: 1px 6px; border-radius: 10px; border: 1px solid var(--color-gold); font-family: var(--font-mono);">Ctrl+J</span>
+        <span class="ai-copilot-fab-text ai-copilot-mobile-text">AI</span>
       </div>
 
       <!-- Backdrop Overlay -->

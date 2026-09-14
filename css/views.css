@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    SLCMS - Module & View-Specific Styles
    ========================================================================== */
 
@@ -2658,98 +2658,82 @@
   }
 }
 
-/* --- 14. GLOBAL AI COPILOT DRAWER & FAB --- */
+/* --- 14. GLOBAL AI COPILOT DRAWER & FAB (HANGING AI) --- */
 .ai-copilot-fab {
-  position: fixed;
-  bottom: 24px;
-  right: 28px;
-  z-index: 999;
-  background: linear-gradient(135deg, #102A43 0%, #0B1F33 100%);
-  color: var(--color-gold);
-  border: 1.5px solid var(--color-gold);
-  border-radius: 30px;
-  padding: 0.7rem 1.25rem;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-weight: 700;
-  font-size: 0.86rem;
-  box-shadow: 0 8px 24px rgba(16, 42, 67, 0.3), 0 0 12px rgba(200, 155, 60, 0.25);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  backdrop-filter: blur(8px);
+  position: fixed !important;
+  bottom: 28px !important;
+  right: 28px !important;
+  width: 56px !important;
+  height: 56px !important;
+  min-width: 56px !important;
+  min-height: 56px !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  z-index: 9999 !important;
+  background: linear-gradient(135deg, #0B1F33 0%, #16324F 100%) !important;
+  border: 2px solid var(--color-gold, #C89B3C) !important;
+  box-shadow: 0 8px 24px rgba(11, 31, 51, 0.45), 0 0 16px rgba(200, 155, 60, 0.4) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 1px !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease !important;
+  backdrop-filter: blur(8px) !important;
 }
 
 .ai-copilot-fab:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 12px 28px rgba(16, 42, 67, 0.4), 0 0 20px rgba(200, 155, 60, 0.4);
-  background: linear-gradient(135deg, #0B1F33 0%, #102A43 100%);
+  transform: translateY(-3px) scale(1.08) !important;
+  box-shadow: 0 12px 30px rgba(11, 31, 51, 0.6), 0 0 24px rgba(200, 155, 60, 0.6) !important;
+  border-color: #E2BC68 !important;
 }
 
-.ai-copilot-fab-desktop-text {
-  display: inline-block;
+.ai-copilot-fab:active {
+  transform: scale(0.94) !important;
 }
 
-.ai-copilot-fab-mobile-text {
-  display: none;
-}
-
+.ai-copilot-fab-desktop-text,
+.ai-copilot-desktop-text,
 .ai-copilot-fab-badge {
-  font-size: 0.65rem;
-  background: rgba(200, 155, 60, 0.2);
-  padding: 1px 6px;
-  border-radius: 10px;
-  border: 1px solid var(--color-gold);
-  font-family: var(--font-mono);
+  display: none !important;
 }
 
 .ai-copilot-fab-sparkle {
-  animation: copilot-pulse 2s infinite ease-in-out;
+  font-size: 1.15rem !important;
+  line-height: 1 !important;
+  display: block !important;
+  filter: drop-shadow(0 0 4px rgba(200, 155, 60, 0.6));
+  animation: copilot-pulse 2.5s infinite ease-in-out;
+}
+
+.ai-copilot-fab-text,
+.ai-copilot-mobile-text,
+.ai-copilot-fab-mobile-text {
+  display: block !important;
+  font-size: 0.65rem !important;
+  font-weight: 900 !important;
+  color: var(--color-gold, #C89B3C) !important;
+  letter-spacing: 0.5px !important;
+  line-height: 1 !important;
+  text-transform: uppercase !important;
 }
 
 @keyframes copilot-pulse {
   0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.2) rotate(10deg); opacity: 0.85; }
+  50% { transform: scale(1.18) rotate(10deg); opacity: 0.88; }
 }
 
 @media (max-width: 768px) {
   .ai-copilot-fab {
-    position: fixed !important;
-    width: 56px !important;
-    height: 56px !important;
-    min-width: 56px !important;
-    min-height: 56px !important;
-    border-radius: 50% !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    bottom: 74px !important;
-    right: 18px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 1px !important;
-    background: linear-gradient(135deg, #0B1F33 0%, #16324F 100%) !important;
-    border: 2px solid var(--color-gold, #C89B3C) !important;
-    box-shadow: 0 8px 24px rgba(11, 31, 51, 0.45), 0 0 16px rgba(200, 155, 60, 0.4) !important;
-    z-index: 9999 !important;
-    cursor: pointer !important;
-  }
-  .ai-copilot-fab .ai-copilot-desktop-text {
-    display: none !important;
-  }
-  .ai-copilot-fab .ai-copilot-mobile-text {
-    display: block !important;
-    font-size: 0.65rem !important;
-    font-weight: 900 !important;
-    color: var(--color-gold, #C89B3C) !important;
-    letter-spacing: 0.5px !important;
-    line-height: 1 !important;
-  }
-  .ai-copilot-fab .ai-copilot-fab-sparkle {
-    font-size: 1.2rem !important;
-    line-height: 1 !important;
-    display: block !important;
+    bottom: calc(64px + 14px) !important;
+    right: 16px !important;
+    width: 54px !important;
+    height: 54px !important;
+    min-width: 54px !important;
+    min-height: 54px !important;
   }
 }
 
@@ -19215,11 +19199,7 @@
     display: none !important;
   }
 
-  /* Hide floating FAB if user is inside the AI Assistant view to avoid overlapping input */
-  #view-ai-assistant .ai-copilot-fab,
-  body.view-ai-assistant-active #ai-copilot-fab {
-    display: none !important;
-  }
+  /* Floating FAB visible on AI Assistant */
 
   /* Copilot Drawer on mobile */
   .ai-copilot-content {
@@ -20151,15 +20131,7 @@
   gap: 0.75rem;
 }
 
-/* Hide Floating Copilot FAB when on AI Assistant view so it never covers the prompt dock or send button */
-body.ai-page-active #ai-copilot-fab,
-body.ai-page-active .ai-copilot-fab,
-.content-area.ai-view-active ~ #ai-copilot-fab,
-.content-area:has(.ai-modern-chat-workspace) ~ #ai-copilot-fab,
-[data-current-view="ai-assistant"] #ai-copilot-fab,
-[data-current-view="ai-assistant"] .ai-copilot-fab {
-  display: none !important;
-}
+/* Floating FAB visible on AI Assistant */
 
 /* Mobile Responsiveness Rules (<= 768px) */
 @media (max-width: 768px) {

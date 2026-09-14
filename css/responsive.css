@@ -1598,10 +1598,10 @@ textarea.form-control {
 
   /* Round AI Floating Action Button on Mobile */
   .ai-copilot-fab {
-    width: 52px !important;
-    height: 52px !important;
-    min-width: 52px !important;
-    min-height: 52px !important;
+    width: 54px !important;
+    height: 54px !important;
+    min-width: 54px !important;
+    min-height: 54px !important;
     border-radius: 50% !important;
     padding: 0 !important;
     display: flex !important;
@@ -1611,10 +1611,10 @@ textarea.form-control {
     gap: 1px !important;
     bottom: calc(64px + 14px) !important; /* Floats safely 14px above the mobile bottom nav */
     right: 16px !important;
-    border: 2px solid var(--color-gold) !important;
-    background: linear-gradient(135deg, #102A43 0%, #0B1F33 100%) !important;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 16px rgba(200, 155, 60, 0.35) !important;
-    z-index: 1010 !important;
+    border: 2px solid var(--color-gold, #C89B3C) !important;
+    background: linear-gradient(135deg, #0B1F33 0%, #16324F 100%) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 16px rgba(200, 155, 60, 0.4) !important;
+    z-index: 9999 !important;
     cursor: pointer !important;
   }
 
@@ -1623,21 +1623,25 @@ textarea.form-control {
   }
 
   .ai-copilot-fab-desktop-text,
+  .ai-copilot-desktop-text,
   .ai-copilot-fab-badge {
     display: none !important;
   }
 
+  .ai-copilot-fab-text,
+  .ai-copilot-mobile-text,
   .ai-copilot-fab-mobile-text {
     display: block !important;
-    font-size: 0.68rem !important;
-    font-weight: 800 !important;
+    font-size: 0.65rem !important;
+    font-weight: 900 !important;
     letter-spacing: 0.5px !important;
-    color: var(--color-gold) !important;
+    color: var(--color-gold, #C89B3C) !important;
     line-height: 1 !important;
+    text-transform: uppercase !important;
   }
 
   .ai-copilot-fab-sparkle {
-    font-size: 1.05rem !important;
+    font-size: 1.15rem !important;
     line-height: 1 !important;
     display: block !important;
   }
@@ -1953,14 +1957,7 @@ textarea.form-control {
     font-size: 0.72rem !important;
     gap: 0.35rem !important;
   }
-
-  /* Hide AI copilot fab from obscuring auth/login screen on mobile */
-  .auth-page-container ~ #ai-copilot-drawer-container #ai-copilot-fab,
-  body:has(.auth-page-container) #ai-copilot-fab,
-  body.auth-view-active #ai-copilot-fab,
-  .auth-view-active #ai-copilot-drawer-container {
-    display: none !important;
-  }
+  /* AI copilot fab visible on all screens */
 
   .auth-global-footer {
     height: auto !important;
