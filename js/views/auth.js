@@ -59,16 +59,15 @@ const AuthView = {
             <!-- Top Logo Header -->
             <div class="auth-brand-header">
               <div class="auth-brand-logo-icon" style="padding: 0; background: transparent; border: none;">
-                <img src="assets/SLCMS.png" alt="SLCMS Emblem" style="width: 46px; height: 46px; border-radius: 50%; display: block; object-fit: contain; box-shadow: 0 0 12px rgba(200, 155, 60, 0.4);">
+                <img data-setting-image="logoUrl" src="${typeof AppSettings !== 'undefined' ? AppSettings.get('logoUrl', 'assets/SLCMS.png') : 'assets/SLCMS.png'}" alt="Emblem" style="width: 46px; height: 46px; border-radius: 50%; display: block; object-fit: contain; box-shadow: 0 0 12px rgba(200, 155, 60, 0.4);">
               </div>
-              <div class="auth-brand-name">SLCMS</div>
+              <div class="auth-brand-name" data-setting="shortName">${typeof AppSettings !== 'undefined' ? AppSettings.get('shortName', 'SLCMS') : 'SLCMS'}</div>
             </div>
 
             <!-- Center Headline & Tagline -->
             <div class="auth-hero-center">
-              <h1 class="auth-main-headline">
-                Smart Legal Case
-                <span class="highlight-gold">Management</span>
+              <h1 class="auth-main-headline" data-setting="systemName">
+                ${typeof AppSettings !== 'undefined' ? AppSettings.get('systemName', 'Smart Legal Case Management System') : 'Smart Legal Case Management System'}
               </h1>
               <div class="auth-headline-bar"></div>
               <p class="auth-lead-tagline">

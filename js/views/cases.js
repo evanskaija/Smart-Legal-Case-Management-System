@@ -1756,7 +1756,7 @@ const CasesView = {
         <div class="flex items-center gap-2 flex-wrap">
           <button class="btn btn-secondary btn-sm" onclick="CasesView.openEditCaseModal('${c.id}')">✏️ Edit Case</button>
           <button class="btn btn-secondary btn-sm" onclick="CasesView.openAssignLawyerModal('${c.id}')">👤 Assign Lawyer</button>
-          <button class="btn btn-secondary btn-sm" onclick="App.closeModal(); AIAssistantView.openDraftMode('${c.id}')">✍️ Draft with SLCMS AI</button>
+          <button class="btn btn-secondary btn-sm" onclick="App.closeModal(); AIAssistantView.openForCase('${c.id}')">✦ Document Generator</button>
           ${c.status !== 'Closed' ? `
             <button class="btn btn-ghost btn-sm text-danger" onclick="CasesView.openCloseCaseModal('${c.id}')">🔒 Close Case</button>
           ` : `
@@ -1907,7 +1907,7 @@ const CasesView = {
                   <button class="btn btn-secondary btn-sm" onclick="CasesView.openAssignLawyerModal('${c.id}')">👤 Reassign Lawyer</button>
                   <button class="btn btn-secondary btn-sm" onclick="CasesView.quickAddDocument('${c.id}')">📄 Upload Document</button>
                   <button class="btn btn-secondary btn-sm" onclick="CasesView.quickAddTask('${c.id}')">⏱️ Add Task</button>
-                  <button class="btn btn-secondary btn-sm" onclick="App.closeModal(); AIAssistantView.openDraftMode('${c.id}')">✍️ Draft with SLCMS AI</button>
+                  <button class="btn btn-secondary btn-sm" onclick="App.closeModal(); AIAssistantView.openForCase('${c.id}')">✦ Document Generator</button>
                   <button class="btn btn-gold btn-sm" onclick="CasesView.switchCaseDetailTab('legal-research')">⚖️ Legal Research (${precedentsCount})</button>
                 </div>
               </div>

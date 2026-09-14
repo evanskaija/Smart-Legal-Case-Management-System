@@ -389,7 +389,7 @@ const SettingsView = {
     `;
   },
 
-  saveSettings() {
+  async saveSettings() {
     const firmName = document.getElementById('setting-firm-name')?.value || this.firmProfile.legalName;
     const jurisdiction = document.getElementById('setting-jurisdiction')?.value || this.firmProfile.jurisdiction;
     const efiling = document.getElementById('setting-efiling')?.value || this.firmProfile.efilingAccount;
@@ -399,6 +399,15 @@ const SettingsView = {
     this.firmProfile.jurisdiction = jurisdiction;
     this.firmProfile.efilingAccount = efiling;
     this.firmProfile.officeAddress = address;
+
+    if (typeof AppSettings !== 'undefined' && AppSettings.saveOrganization) {
+      try {
+        await AppSettings.saveOrganization({
+          organizationName: firmName,
+          officeAddress: address
+        });
+      } catch(e) {}
+    }
 
     if (typeof SLCMS_STATE !== 'undefined' && SLCMS_STATE.addAuditLog) {
       SLCMS_STATE.addAuditLog('Settings Updated', 'Administration', `Saved parameters for ${firmName}`);

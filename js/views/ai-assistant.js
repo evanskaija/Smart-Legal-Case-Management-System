@@ -1,269 +1,1504 @@
 /* ==========================================================================
-   SLCMS - SLCMS AI
-   Unified Tanzanian Legal Intelligence & AI Drafting Studio
-   Permanent 18-Category Precedents Engine & Automated Document Synthesis
+   SLCMS AI Report & Document Generator
+   Role-Based Case Document Generation System
+   Enforces RBAC Case Assignment Access Control
    ========================================================================== */
 
 const AIAssistantView = {
-  // Mode State: 'research' | 'drafting'
-  activeMode: 'research',
 
-  // Conversation History State (Research Mode)
-  conversation: [], 
+  // ── Generator Sub-Page Navigation ────────────────────────────────────────
+  subPage: 'dashboard',  // 'dashboard' | 'new-document' | 'preview' | 'my-documents' | 'templates'
+
+  // ── Wizard State ──────────────────────────────────────────────────────────
+  wizardStep: 1,              // 1 | 2 | 3 | 4 | 5
+  selectedCaseId: null,       // ID of the authorized case selected in Step 1
+  selectedDocType: null,      // e.g. 'case_progress_report', 'client_update_letter'
+  selectedDocCategory: null,  // 'report' | 'client-letter' | 'court-letter' | 'demand' | 'internal'
+
+  // ── Document Options (Step 3) ─────────────────────────────────────────────
+  docOptions: {
+    recipient: '',
+    purpose: '',
+    language: 'en',      // 'en' | 'sw' | 'en-sw'
+    tone: 'formal',      // 'formal' | 'professional' | 'client' | 'urgent' | 'internal'
+    length: 'standard',  // 'brief' | 'standard' | 'detailed'
+    letterhead: true,
+    signature: true,
+    attachments: false,
+  },
+  docInstructions: '',
+
+  // ── Source Selection (Step 4) ─────────────────────────────────────────────
+  selectedSources: {
+    caseId: true,
+    client: true,
+    parties: true,
+    facts: true,
+    courtHistory: true,
+    documents: true,
+    orders: false,
+    tasks: true,
+    deadlines: true,
+    evidence: false,
+    staff: true,
+    prevReports: false,
+    billing: false,
+  },
+
+  // ── Generation & Preview State ────────────────────────────────────────────
+  generationState: 'idle',   // 'idle' | 'generating' | 'done'
+  generatedDoc: null,        // { id, title, content, status, caseId, ... }
+
+  // ── My Documents Archive ──────────────────────────────────────────────────
+  myDocuments: [
+    {
+      id: 'gdoc-001',
+      caseId: 'case-001',
+      caseNumber: 'CV/2026/0042',
+      caseTitle: 'Jackson Mathias v Joseph Juma',
+      docType: 'client_update_letter',
+      docTypeLabel: 'Client Update Letter',
+      title: 'Client Update Letter — Hearing Date 20 September 2026',
+      generatedDate: '2026-09-10',
+      generatedBy: 'SLCMS System Administrator',
+      status: 'approved',
+      approvedBy: 'SLCMS System Administrator',
+    },
+    {
+      id: 'gdoc-002',
+      caseId: 'case-002',
+      caseNumber: 'CM/2026/0217',
+      caseTitle: 'Mwana Investments Ltd v Baraka Trading Co.',
+      docType: 'demand_letter',
+      docTypeLabel: 'Demand Letter',
+      title: 'Formal Demand Letter — TZS 240,000,000 Contract Breach',
+      generatedDate: '2026-09-08',
+      generatedBy: 'SLCMS System Administrator',
+      status: 'pending_review',
+      approvedBy: null,
+    },
+    {
+      id: 'gdoc-003',
+      caseId: 'case-003',
+      caseNumber: 'EM/2026/0089',
+      caseTitle: 'Dr. Fatuma Rashid v Muhimbili National Hospital',
+      docType: 'case_progress_report',
+      docTypeLabel: 'Case Progress Report',
+      title: 'Case Progress Report — Labour Division Trial Status',
+      generatedDate: '2026-09-12',
+      generatedBy: 'SLCMS System Administrator',
+      status: 'draft',
+      approvedBy: null,
+    },
+  ],
+  myDocumentsTab: 'all',   // 'all' | 'draft' | 'pending_review' | 'changes_requested' | 'approved'
+
+  // ── Legacy Research State (kept for compatibility — not used in generator) ─
+  activeMode: 'reports',
+  conversation: [],
   isSubmitting: false,
   isProcessing: false,
   activeDraftQuery: '',
   thoughtDetailsOpen: {},
-
-  // Active Sources for Right Sidebar
   activeSources: [],
   activeSourceHighlightId: null,
-
-  // Filters State
-  filters: {
-    scope: 'all', // 'all' | 'tanzlii' | 'legislation' | 'case_docs'
-    court: 'all',
-    year: 'all',
-    category: 'all',
-    judge: '',
-    caseNumber: '',
-    caseId: 'all'
-  },
-
-  // Research History Archive
-  researchHistory: [
-    { id: 'h-1', title: 'Muwinge vs Halima [2020] (Defective Record & De Novo)', date: '2026-08-30', query: 'Show facts of Abdallah Salum Muwinge v Halima Ismail' },
-    { id: 'h-2', title: 'Attilio v. Mbowe [1969] (Temporary Injunctions Test)', date: '2026-08-28', query: 'Summarize Attilio v. Mbowe' },
-    { id: 'h-3', title: 'Judgments from 2020 in Legal Library', date: '2026-08-27', query: 'show me all cases in 2020' },
-    { id: 'h-4', title: 'NBC v James Mrema [2024] (Metadata Only Record)', date: '2026-08-25', query: 'Show case information for National Bank of Commerce v James Mrema' }
-  ],
-
-  // UI Modals / Toggles
+  filters: { scope: 'all', court: 'all', year: 'all', category: 'all', judge: '', caseNumber: '', caseId: 'all' },
+  researchHistory: [],
   showFiltersModal: false,
   feedbackState: {},
   expandedPassages: {},
-  // Active Report View State (Dedicated Full-Page Case Report)
   activeReport: null,
   activeReportNotes: {},
-
-  // --------------------------------------------------------------------------
-  // DRAFTING STUDIO STATE (Integrated AI Draft Studio)
-  // --------------------------------------------------------------------------
   draftCaseId: '',
   draftType: 'demand_letter',
   currentDraftText: '',
-  draftStatus: 'idle', // 'idle' | 'generating' | 'review_required' | 'approved'
+  draftStatus: 'idle',
   draftInstructions: '',
-  draftTone: 'formal', // 'formal' | 'assertive' | 'conciliatory' | 'advisory'
-  draftLanguage: 'en', // 'en' | 'sw'
+  draftTone: 'formal',
+  draftLanguage: 'en',
   draftIncludeStatutes: true,
   lastGeneratedDraftId: null,
-  canvasViewMode: 'editor', // 'editor' | 'preview'
+  canvasViewMode: 'editor',
+  draftsArchive: [],
+  draftTemplates: {},
 
-  // Saved Drafts Archive
-  draftsArchive: [
-    {
-      id: 'drf-001',
-      caseId: 'case-101',
-      caseNumber: 'CV-2026-0842',
-      caseTitle: 'Vanguard Capital vs. Apex Tech Holdings',
-      client: 'Vanguard Capital Partners',
-      draftType: 'demand_letter',
-      title: 'Formal Demand Notice for Contractual Default & Software Licensing Warranty Breach',
-      date: '2026-08-28',
-      status: 'approved',
-      approvedBy: 'Eleanor Vance, Esq.',
-      preview: 'DEMAND FOR IMMEDIATE CURE OF MATERIAL BREACH OF SOFTWARE LICENSING AGREEMENT...'
-    },
-    {
-      id: 'drf-002',
-      caseId: 'case-104',
-      caseNumber: 'EM-2026-0774',
-      caseTitle: 'Dr. Clara Thorne vs. St. Jude Medical Network',
-      client: 'Dr. Clara Thorne, MD',
-      draftType: 'case_note',
-      title: 'Litigation Strategy Note: Retaliatory Termination & Hospital Whistleblower Defense',
-      date: '2026-08-30',
-      status: 'review_required',
-      approvedBy: null,
-      preview: 'INTERNAL MEMORANDUM & STRATEGY ASSESSMENT FOR HIGH COURT CIVIL LITIGATION...'
-    }
-  ],
+  // ── Report Generator legacy (kept for compatibility) ──────────────────────
+  reportType: 'case_analysis',
+  selectedReportCaseId: null,
+  activeReportContent: null,
 
-  // Preset instructions & templates per draft type (Section 6: SLCMS AI)
-  draftTemplates: {
-    client_letter: {
-      label: 'Draft Client Letters',
-      icon: '✉️',
-      defaultPrompt: 'Draft a comprehensive client advisory and status letter summarizing latest High Court developments, next procedural dates, counsel advice, and required instructions.',
-      description: 'Formal client correspondence communicating case status, statutory options, and tactical advice.'
-    },
-    case_note: {
-      label: 'Draft Case Notes',
-      icon: '📝',
-      defaultPrompt: 'Draft an analytical case note evaluating factual merits, witness statements, statutory provisions, and strategic vulnerabilities for the upcoming hearing.',
-      description: 'Internal tactical roadmap analyzing factual merits, evidentiary gaps, and defenses.'
-    },
-    internal_memo: {
-      label: 'Draft Internal Memoranda',
-      icon: '📑',
-      defaultPrompt: 'Draft an internal legal memorandum synthesizing relevant High Court and Court of Appeal precedents, statutory interpretation, and recommended litigation stance.',
-      description: 'Comprehensive research and procedural memorandum for senior partners and legal team.'
-    },
-    hearing_summary: {
-      label: 'Draft Hearing Summaries',
-      icon: '🏛️',
-      defaultPrompt: 'Draft a concise hearing summary recording judicial appearances, bench directives, preliminary objections argued, and subsequent chamber mention deadlines.',
-      description: 'Court record documenting oral arguments, bench rulings, and immediate next steps.'
-    },
-    demand_letter: {
-      label: 'Formal Demand Letter / Notice of Intention to Sue',
-      icon: '⚡',
-      defaultPrompt: 'Demand immediate payment of outstanding contractual sums and cure of warranty breach within 14 statutory days under the Law of Contract Act [Cap. 345 R.E. 2019].',
-      description: 'Formal pre-action letter citing statutory default and setting 14-day cure deadline.'
-    },
-    legal_opinion: {
-      label: 'Legal Opinion & Statutory Risk Assessment',
-      icon: '⚖️',
-      defaultPrompt: 'Prepare a formal written legal opinion advising the client on statutory compliance and likelihood of securing injunctive relief under Order XXXVII of the CPC.',
-      description: 'Comprehensive advisory opinion analyzing statutes and appellate precedents.'
-    }
-  },
-
-  /* --------------------------------------------------------------------------
-     INITIALIZATION & MAIN WORKSPACE RENDER
-     -------------------------------------------------------------------------- */
+  /* ==========================================================================
+     INITIALIZATION & MAIN RENDER
+     ========================================================================== */
   init() {
-    if (this.activeSources.length === 0 && typeof SLCMS_STATE !== 'undefined') {
-      this.activeSources = (SLCMS_STATE.tanzaniaJudgments || []).slice(0, 3);
+    // Initialize selectedCaseId from authorized cases
+    const authCases = this.getAuthorizedCases();
+    if (!this.selectedCaseId && authCases.length > 0) {
+      this.selectedCaseId = authCases[0].id;
     }
-    const cases = (SLCMS_STATE?.cases || []).filter(c => c.status !== 'Closed');
-    if (!this.draftCaseId && cases.length > 0) {
-      this.draftCaseId = cases[0].id;
-    }
-    if (!this.draftInstructions && this.draftTemplates[this.draftType]) {
-      this.draftInstructions = this.draftTemplates[this.draftType].defaultPrompt;
-    }
-    const urlParams = new URLSearchParams(window.location.search);
-    const autoQuery = urlParams.get('autoQuery');
-    if (autoQuery && this.conversation.length === 0 && !this.isProcessing) {
-      setTimeout(() => {
-        this.fillAndAsk(autoQuery);
-      }, 50);
+    // Legacy compat
+    if (!this.draftCaseId && authCases.length > 0) {
+      this.draftCaseId = authCases[0].id;
     }
   },
 
-  switchMode(mode) {
-    this.activeMode = mode;
+  // ── Sub-Page Navigation ───────────────────────────────────────────────────
+  navigateTo(page, params = {}) {
+    this.subPage = page;
+    if (params.step) this.wizardStep = params.step;
+    if (params.docType) { this.selectedDocType = params.docType; this.selectedDocCategory = params.category || null; }
+    if (params.tab) this.myDocumentsTab = params.tab;
     App.refreshCurrentView();
   },
 
-  openDraftMode(caseId) {
-    this.activeMode = 'drafting';
-    if (caseId) {
-      this.draftCaseId = caseId;
-    }
-    App.navigate('ai-assistant');
+  startNewDocument(category = null) {
+    this.wizardStep = 1;
+    this.selectedDocType = null;
+    this.selectedDocCategory = category;
+    this.docInstructions = '';
+    this.generationState = 'idle';
+    this.generatedDoc = null;
+    this.docOptions = { recipient: '', purpose: '', language: 'en', tone: 'formal', length: 'standard', letterhead: true, signature: true, attachments: false };
+    this.subPage = 'new-document';
+    App.refreshCurrentView();
   },
 
-  render() {
-    // If a complete case analysis report is active, render the dedicated full-page report view
-    if (this.activeReport && this.activeReport.caseRec) {
-      return this.renderCompleteCaseReportPage(this.activeReport.caseRec, this.activeReport.config);
+  goToStep(step) {
+    this.wizardStep = step;
+    App.refreshCurrentView();
+  },
+
+  // ── RBAC: Get Authorized Cases ────────────────────────────────────────────
+  getAuthorizedCases() {
+    const user = SLCMS_STATE.currentUser;
+    if (!user) return [];
+    const cases = SLCMS_STATE.cases || [];
+    if (user.role === 'Administrator') return cases;
+    return cases.filter(c => SLCMS_STATE.isUserAssignedToCase(user, c.id));
+  },
+
+  // ── RBAC: Check Case Access ───────────────────────────────────────────────
+  checkCaseAccess(caseId) {
+    const user = SLCMS_STATE.currentUser;
+    if (!user) return { allowed: false, reason: 'You must be signed in with an active account to generate documents.' };
+    if (!caseId) return { allowed: false, reason: 'No case selected.' };
+    if (user.status !== 'ACTIVE') return { allowed: false, reason: 'Your account is not active.' };
+
+    const c = (SLCMS_STATE.cases || []).find(x => x.id === caseId);
+    if (!c) {
+      return { allowed: false, reason: 'You cannot generate documents for this case because it has not been assigned to you. Contact the administrator or Lead Counsel.' };
+    }
+    if (c.status === 'Closed' || c.status === 'Archived') {
+      return { allowed: false, reason: 'This case is closed or archived. Document generation is restricted to active or authorized cases.' };
     }
 
+    if (user.role === 'Administrator') return { allowed: true };
+
+    const allowed = SLCMS_STATE.isUserAssignedToCase(user, caseId);
+    if (!allowed) {
+      if (typeof SLCMS_STATE.addAuditLog === 'function') {
+        SLCMS_STATE.addAuditLog(
+          'Document Generation Blocked (Unassigned Case)',
+          'Security & Compliance',
+          `Case ${c.caseNumber || caseId} access denied for ${user.email} (${user.role})`,
+          'Blocked'
+        );
+      }
+      return { allowed: false, reason: 'You cannot generate documents for this case because it has not been assigned to you. Contact the administrator or Lead Counsel.' };
+    }
+    return { allowed: true };
+  },
+
+  // ── Open Generator for a specific Case (from Case Details modal / External) ──
+  openForCase(caseId) {
+    const access = this.checkCaseAccess(caseId);
+    if (!access.allowed) {
+      if (typeof App !== 'undefined' && typeof App.showAccessRestrictedModal === 'function') {
+        App.showAccessRestrictedModal('Access Restricted', access.reason);
+      } else if (typeof App !== 'undefined' && typeof App.showToast === 'function') {
+        App.showToast(access.reason, 'error');
+      }
+      return;
+    }
+    this.selectedCaseId = caseId;
+    this.wizardStep = 2;
+    this.subPage = 'new-document';
+    if (typeof App !== 'undefined') {
+      App.navigate('ai-assistant');
+    }
+  },
+
+  // ── User's Role Tier ──────────────────────────────────────────────────────
+  getRoleTier() {
+    const role = (SLCMS_STATE.currentUser || {}).role || 'Legal Clerk';
+    if (role === 'Administrator' || role === 'Senior Lawyer') return 'senior';
+    if (role === 'Lawyer') return 'lawyer';
+    if (role === 'Intern') return 'intern';
+    return 'clerk';
+  },
+
+  canApproveDocuments() {
+    const role = (SLCMS_STATE.currentUser || {}).role || '';
+    return role === 'Administrator' || role === 'Senior Lawyer';
+  },
+
+  // ── Source Counter ────────────────────────────────────────────────────────
+  getSourceCount() {
+    return Object.values(this.selectedSources).filter(Boolean).length;
+  },
+
+  toggleSource(key) {
+    this.selectedSources[key] = !this.selectedSources[key];
+    // Live-update source counter
+    const counterEl = document.getElementById('dg-source-counter-text');
+    if (counterEl) {
+      const count = this.getSourceCount();
+      counterEl.innerHTML = `Sources selected: <strong>${count} case record${count !== 1 ? 's' : ''}</strong> and authorized documents`;
+    }
+  },
+
+  // ── Generate Document ─────────────────────────────────────────────────────
+  generateDocument() {
+    const access = this.checkCaseAccess(this.selectedCaseId);
+    if (!access.allowed) {
+      App.showToast('Access denied: ' + access.reason, 'error');
+      return;
+    }
+    this.generationState = 'generating';
+    this.wizardStep = 5;
+    App.refreshCurrentView();
+    // Simulate AI generation delay then show document
+    setTimeout(() => {
+      const c = (SLCMS_STATE.cases || []).find(x => x.id === this.selectedCaseId) || {};
+      this.generatedDoc = this.buildGeneratedDoc(c);
+      this.generationState = 'done';
+      this.subPage = 'preview';
+
+      if (typeof SLCMS_STATE.addAuditLog === 'function') {
+        SLCMS_STATE.addAuditLog(
+          'AI Document Generated',
+          'Document Generator',
+          `${this.getDocTypeLabel(this.selectedDocType)} generated for case ${c.caseNumber || c.id} by ${(SLCMS_STATE.currentUser||{}).name}`,
+          'Success'
+        );
+      }
+
+      App.refreshCurrentView();
+    }, 2200);
+  },
+
+  // ── Build Generated Document Object ──────────────────────────────────────
+  buildGeneratedDoc(c) {
+    const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const timeStr = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const typeLabel = this.getDocTypeLabel(this.selectedDocType);
+    const user = SLCMS_STATE.currentUser || {};
+    return {
+      id: 'gdoc-' + Date.now(),
+      caseId: c.id,
+      caseNumber: c.caseNumber || '[Case number required]',
+      caseTitle: c.title || '[Case title required]',
+      docType: this.selectedDocType,
+      docTypeLabel: typeLabel,
+      title: typeLabel + ' — ' + (c.title || 'Selected Case'),
+      generatedDate: dateStr,
+      generatedTime: timeStr,
+      generatedBy: user.name || 'SLCMS AI',
+      status: 'draft',
+      approvedBy: null,
+      instructions: this.docInstructions,
+      options: { ...this.docOptions },
+      sources: { ...this.selectedSources },
+      content: this.buildDocumentContent(c, this.selectedDocType, this.docInstructions, this.docOptions),
+      hasMissingInfo: false,
+    };
+  },
+
+  saveDocumentDraft() {
+    if (!this.generatedDoc) return;
+    const existingIndex = this.myDocuments.findIndex(d => d.id === this.generatedDoc.id);
+    if (existingIndex >= 0) {
+      this.myDocuments[existingIndex] = { ...this.generatedDoc };
+    } else {
+      this.myDocuments.unshift({ ...this.generatedDoc });
+    }
+    App.showToast && App.showToast('Draft saved to My Documents', 'success');
+  },
+
+  submitForReview() {
+    if (!this.generatedDoc) return;
+    this.generatedDoc.status = 'pending_review';
+    this.saveDocumentDraft();
+    if (typeof SLCMS_STATE.addAuditLog === 'function') {
+      SLCMS_STATE.addAuditLog(
+        'Document Submitted for Review',
+        'Document Generator',
+        `${this.generatedDoc?.title} submitted for review by ${(SLCMS_STATE.currentUser||{}).name}`,
+        'Success'
+      );
+    }
+    App.showToast && App.showToast('Document submitted for Senior Lawyer review', 'info');
+    App.refreshCurrentView();
+  },
+
+  approveDocument() {
+    if (!this.canApproveDocuments()) { App.showToast && App.showToast('You do not have permission to approve documents.', 'error'); return; }
+    if (!this.generatedDoc) return;
+    this.generatedDoc.status = 'approved';
+    this.generatedDoc.approvedBy = (SLCMS_STATE.currentUser || {}).name || 'Senior Advocate';
+    this.saveDocumentDraft();
+    if (typeof SLCMS_STATE.addAuditLog === 'function') {
+      SLCMS_STATE.addAuditLog(
+        'Document Approved',
+        'Document Generator',
+        `${this.generatedDoc?.title} approved by ${(SLCMS_STATE.currentUser||{}).name}`,
+        'Success'
+      );
+    }
+    App.showToast && App.showToast('Document approved successfully', 'success');
+    App.refreshCurrentView();
+  },
+
+  requestChanges() {
+    if (!this.canApproveDocuments()) { App.showToast && App.showToast('Only Senior Lawyers or Administrators can request revisions.', 'error'); return; }
+    if (!this.generatedDoc) return;
+    this.generatedDoc.status = 'changes_requested';
+    this.saveDocumentDraft();
+    if (typeof SLCMS_STATE.addAuditLog === 'function') {
+      SLCMS_STATE.addAuditLog(
+        'Document Changes Requested',
+        'Document Generator',
+        `${this.generatedDoc?.title} revision requested by ${(SLCMS_STATE.currentUser||{}).name}`,
+        'Success'
+      );
+    }
+    App.showToast && App.showToast('Status updated: Changes Requested', 'warning');
+    App.refreshCurrentView();
+  },
+
+  issueDocument() {
+    if (!this.canApproveDocuments()) { App.showToast && App.showToast('Only Senior Lawyers or Administrators can issue final documents.', 'error'); return; }
+    if (!this.generatedDoc) return;
+    this.generatedDoc.status = 'issued';
+    this.saveDocumentDraft();
+    if (typeof SLCMS_STATE.addAuditLog === 'function') {
+      SLCMS_STATE.addAuditLog(
+        'Document Officially Issued',
+        'Document Generator',
+        `${this.generatedDoc?.title} officially issued by ${(SLCMS_STATE.currentUser||{}).name}`,
+        'Success'
+      );
+    }
+    App.showToast && App.showToast('Document marked as Officially Issued', 'success');
+    App.refreshCurrentView();
+  },
+
+  copyDocumentText() {
+    const el = document.getElementById('dg-doc-content-inner');
+    if (el) {
+      const text = el.innerText;
+      navigator.clipboard.writeText(text).then(() => App.showToast && App.showToast('Copied to clipboard', 'success'));
+    }
+  },
+
+  printDocument() {
+    window.print();
+  },
+
+  exportPDF() {
+    if (typeof SLCMS_STATE.addAuditLog === 'function') {
+      SLCMS_STATE.addAuditLog(
+        'Document Downloaded (PDF)',
+        'Document Generator',
+        `${this.generatedDoc?.title || 'Document'} (${this.generatedDoc?.caseNumber || ''}) downloaded by ${(SLCMS_STATE.currentUser||{}).name}`,
+        'Success'
+      );
+    }
+    App.showToast && App.showToast('PDF export — printing dialog opened', 'info');
+    window.print();
+  },
+
+  exportWord() {
+    const el = document.getElementById('dg-doc-content-inner');
+    if (!el) return;
+    const html = el.innerHTML;
+    const blob = new Blob([`<html><body>${html}</body></html>`], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = (this.generatedDoc?.title || 'document') + '.doc';
+    a.click(); URL.revokeObjectURL(url);
+    if (typeof SLCMS_STATE.addAuditLog === 'function') {
+      SLCMS_STATE.addAuditLog(
+        'Document Downloaded (Word)',
+        'Document Generator',
+        `${this.generatedDoc?.title || 'Document'} (${this.generatedDoc?.caseNumber || ''}) downloaded by ${(SLCMS_STATE.currentUser||{}).name}`,
+        'Success'
+      );
+    }
+    App.showToast && App.showToast('Word document downloaded', 'success');
+  },
+
+  attachToCase() {
+    if (!this.generatedDoc) return;
+    this.saveDocumentDraft();
+    if (typeof SLCMS_STATE.addAuditLog === 'function') {
+      SLCMS_STATE.addAuditLog(
+        'Document Attached to Matter',
+        'Document Repository',
+        `${this.generatedDoc?.title} attached to case ${this.generatedDoc?.caseNumber}`,
+        'Success'
+      );
+    }
+    App.showToast && App.showToast('Document attached to case file', 'success');
+  },
+
+  deleteDocument() {
+    if (!this.generatedDoc) return;
+    this.myDocuments = this.myDocuments.filter(d => d.id !== this.generatedDoc.id);
+    this.generatedDoc = null;
+    this.subPage = 'my-documents';
+    App.refreshCurrentView();
+  },
+
+  openSavedDocument(docId) {
+    const doc = this.myDocuments.find(d => d.id === docId);
+    if (!doc) return;
+    // Restore context and show preview
+    this.generatedDoc = doc;
+    this.selectedCaseId = doc.caseId;
+    this.selectedDocType = doc.docType;
+    this.subPage = 'preview';
+    App.refreshCurrentView();
+  },
+
+  /* ==========================================================================
+     MAIN RENDER DISPATCHER
+     ========================================================================== */
+  render() {
     this.init();
-    const docLibrary = SLCMS_STATE.legalSourceDocuments || [];
-    const judgments = SLCMS_STATE.tanzaniaJudgments || [];
-    const readyDocsCount = judgments.filter(j => j.status === 'Ready for AI').length + docLibrary.filter(d => d.status === 'Ready for AI').length;
-    const activeFilterCount = this.getActiveFilterCount();
+    const user = SLCMS_STATE.currentUser;
+    if (!user || user.status !== 'ACTIVE') {
+      return `<div class="animate-fade tz-workspace-container"><div class="dg-access-denied" style="margin:2rem auto;max-width:560px;"><span class="dg-access-denied-icon">⛔</span><div><div class="dg-access-denied-title">Access Restricted</div><div class="dg-access-denied-desc">You must be logged in with an active account to use the AI Report &amp; Document Generator.</div></div></div></div>`;
+    }
+    let content;
+    switch (this.subPage) {
+      case 'new-document':   content = this.renderNewDocumentWizard(); break;
+      case 'preview':        content = this.renderPreview(); break;
+      case 'my-documents':   content = this.renderMyDocuments(); break;
+      case 'templates':      content = this.renderTemplates(); break;
+      default:               content = this.renderDashboard(); break;
+    }
+    return `<div class="animate-fade tz-workspace-container"><div class="dg-wrapper">${content}</div></div>`;
+  },
+
+  /* ==========================================================================
+     DASHBOARD — Landing Page
+     ========================================================================== */
+  renderDashboard() {
+    const user = SLCMS_STATE.currentUser || {};
+    const authCases = this.getAuthorizedCases();
+    const recentDocs = this.myDocuments.slice(0, 3);
+    const draftCount = this.myDocuments.filter(d => d.status === 'draft').length;
+    const pendingCount = this.myDocuments.filter(d => d.status === 'pending_review').length;
+    const approvedCount = this.myDocuments.filter(d => d.status === 'approved').length;
+
+    const quickActions = [
+      { icon: '✦', label: 'Start New Document', desc: 'Begin the 5-step document wizard', action: `AIAssistantView.startNewDocument()`, primary: true },
+      { icon: '📊', label: 'Generate Case Report', desc: 'Progress, summary or evidence report', action: `AIAssistantView.startNewDocument('report')` },
+      { icon: '✉️', label: 'Generate Client Letter', desc: 'Update, engagement, closure letters', action: `AIAssistantView.startNewDocument('client-letter')` },
+      { icon: '🏛️', label: 'Generate Court Letter', desc: 'Registry and filing correspondence', action: `AIAssistantView.startNewDocument('court-letter')` },
+      { icon: '⚡', label: 'Generate Demand Letter', desc: 'Formal demand or notice of action', action: `AIAssistantView.startNewDocument('demand')` },
+      { icon: '📑', label: 'Generate Internal Memo', desc: 'Assignment, handover, briefing notes', action: `AIAssistantView.startNewDocument('internal')` },
+      { icon: '🏛️', label: 'Court Attendance Report', desc: 'Document what happened in court', action: `AIAssistantView.startNewDocument('court-attendance')` },
+    ];
+
+    const recentDocHtml = recentDocs.length === 0
+      ? `<div class="dg-mydocs-empty" style="padding:1.25rem;text-align:left;"><span style="font-size:0.82rem;color:var(--color-text-secondary);">No documents generated yet. Start a new document above.</span></div>`
+      : recentDocs.map(d => `
+          <div class="dg-docs-item" onclick="AIAssistantView.openSavedDocument('${d.id}')">
+            <div class="dg-docs-item-left">
+              <div class="dg-docs-item-icon">${this.getDocTypeIcon(d.docType)}</div>
+              <div>
+                <div class="dg-docs-item-title">${this.escHtml(d.title)}</div>
+                <div class="dg-docs-item-meta">${this.escHtml(d.caseNumber)} &bull; ${this.escHtml(d.generatedDate || '')}</div>
+              </div>
+            </div>
+            <div class="dg-docs-item-right">
+              ${this.renderStatusBadge(d.status)}
+            </div>
+          </div>`).join('');
 
     return `
-      <div class="animate-fade tz-workspace-container ${this.activeMode === 'research' ? 'ai-research-mode-active' : ''}">
-        
-        <!-- 1. TOP HEADER & WORKSPACE NAVIGATION -->
-        <div class="tz-workspace-header">
+      <!-- Page Header -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1.4rem;flex-wrap:wrap;">
+        <div>
+          <div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:0.35rem;">
+            <span style="font-size:1.4rem;">✦</span>
+            <h1 style="font-size:1.35rem;font-weight:800;margin:0;color:var(--color-primary);">SLCMS AI Report &amp; Document Generator</h1>
+          </div>
+          <p style="font-size:0.82rem;color:var(--color-text-secondary);margin:0;max-width:560px;">
+            Generate reports, letters and internal documents from your assigned cases. Documents require professional review before being filed, signed or sent.
+          </p>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+          <button class="dg-appr-btn" onclick="AIAssistantView.navigateTo('my-documents')" style="gap:0.35rem;">📂 My Documents <span class="dg-tab-count">${this.myDocuments.length}</span></button>
+          <button class="dg-appr-btn" onclick="AIAssistantView.navigateTo('templates')">📋 Templates</button>
+        </div>
+      </div>
+
+      <!-- Role & Access Info -->
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+        <span style="font-size:0.75rem;color:var(--color-text-secondary);">Signed in as</span>
+        <span style="font-size:0.78rem;font-weight:700;color:var(--color-primary);">${this.escHtml(user.name || 'User')}</span>
+        <span class="dg-case-role-chip">⚙ ${this.escHtml(user.role || '')}</span>
+        <span style="font-size:0.75rem;color:var(--color-text-secondary);">&bull; ${authCases.length} case${authCases.length !== 1 ? 's' : ''} accessible</span>
+      </div>
+
+      <!-- Stats Row -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1.5rem;">
+        ${[
+          { label: 'Drafts', count: draftCount, color: '#64748B', icon: '📝', tab: 'draft' },
+          { label: 'Pending Review', count: pendingCount, color: '#B45309', icon: '⏳', tab: 'pending_review' },
+          { label: 'Approved', count: approvedCount, color: '#15803D', icon: '✅', tab: 'approved' },
+        ].map(s => `
+          <div class="dg-dash-card" onclick="AIAssistantView.navigateTo('my-documents',{tab:'${s.tab}'})" style="text-align:center;padding:1rem;">
+            <div style="font-size:1.4rem;margin-bottom:0.35rem;">${s.icon}</div>
+            <div style="font-size:1.5rem;font-weight:800;color:${s.color};">${s.count}</div>
+            <div style="font-size:0.73rem;color:var(--color-text-secondary);font-weight:600;">${s.label}</div>
+          </div>`).join('')}
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="dg-dash-section-title">Start a Document</div>
+      <div class="dg-dash-grid">
+        ${quickActions.map(a => `
+          <button class="dg-dash-card${a.primary ? ' dg-dash-primary' : ''}" onclick="${a.action}">
+            <span class="dg-dash-icon">${a.icon}</span>
+            <div class="dg-dash-label">${a.label}</div>
+            <div class="dg-dash-desc">${a.desc}</div>
+          </button>`).join('')}
+      </div>
+
+      <!-- Recently Generated -->
+      <div class="dg-dash-section-title">Recently Generated</div>
+      <div class="dg-docs-list">${recentDocHtml}</div>
+      ${recentDocs.length > 0 ? `<div style="text-align:center;margin-top:0.75rem;"><button class="dg-appr-btn" onclick="AIAssistantView.navigateTo('my-documents')">View all documents →</button></div>` : ''}
+    `;
+  },
+
+  /* ==========================================================================
+     5-STEP WIZARD — Shell + Steps
+     ========================================================================== */
+  renderNewDocumentWizard() {
+    const steps = [
+      { n: 1, label: 'Select Assigned Case', sub: 'Choose from your authorized cases' },
+      { n: 2, label: 'Select Document Type', sub: 'Reports, letters or internal docs' },
+      { n: 3, label: 'Give Instructions', sub: 'Describe what the AI should prepare' },
+      { n: 4, label: 'Select Information', sub: 'Choose case data sources' },
+      { n: 5, label: 'Generate Draft', sub: 'Review, edit and approve' },
+    ];
+
+    const stepHtml = {
+      1: this.renderStep1(),
+      2: this.renderStep2(),
+      3: this.renderStep3(),
+      4: this.renderStep4(),
+      5: this.renderStep5(),
+    }[this.wizardStep] || this.renderStep1();
+
+    const stepperHtml = steps.map(s => {
+      const cls = this.wizardStep > s.n ? 'dg-step-done' : this.wizardStep === s.n ? 'dg-step-active' : '';
+      const numContent = this.wizardStep > s.n ? '✓' : s.n;
+      return `
+        <div class="dg-stepper-item ${cls}">
+          <div class="dg-stepper-num">${numContent}</div>
+          <div class="dg-stepper-text">
+            <div class="dg-stepper-label">${s.label}</div>
+            <div class="dg-stepper-sub">${s.sub}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+      <!-- Wizard Header -->
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+        <button class="dg-preview-back-btn" onclick="AIAssistantView.navigateTo('dashboard')">← Dashboard</button>
+        <div>
+          <h2 style="font-size:1.1rem;font-weight:800;margin:0;color:var(--color-primary);">Create Case Document</h2>
+          <div style="font-size:0.75rem;color:var(--color-text-secondary);margin-top:0.1rem;">Step ${this.wizardStep} of 5</div>
+        </div>
+      </div>
+      <!-- Wizard Shell -->
+      <div class="dg-wizard-shell">
+        <!-- Stepper Sidebar -->
+        <div class="dg-stepper-sidebar">
+          <div class="dg-stepper-title">Progress</div>
+          <div class="dg-stepper-list">${stepperHtml}</div>
+        </div>
+        <!-- Step Content -->
+        <div class="dg-wizard-content">${stepHtml}</div>
+      </div>`;
+  },
+
+  /* ── Step 1: Select Assigned Case ─────────────────────────────────────── */
+  renderStep1() {
+    const authCases = this.getAuthorizedCases();
+    const selectedCase = (SLCMS_STATE.cases || []).find(c => c.id === this.selectedCaseId) || authCases[0];
+    const accessResult = selectedCase ? this.checkCaseAccess(selectedCase.id) : { allowed: false };
+
+    const caseOptions = authCases.length === 0
+      ? `<option value="">— No cases assigned to your account —</option>`
+      : authCases.map(c => `<option value="${c.id}" ${this.selectedCaseId === c.id ? 'selected' : ''}>${this.escHtml(c.title)} (${this.escHtml(c.caseNumber)}) — ${this.escHtml(c.status)}</option>`).join('');
+
+    const accessDeniedHtml = !accessResult.allowed && selectedCase ? `
+      <div class="dg-access-denied">
+        <span class="dg-access-denied-icon">⛔</span>
+        <div>
+          <div class="dg-access-denied-title">Access Restricted</div>
+          <div class="dg-access-denied-desc">You cannot generate documents for this case because it has not been assigned to you. Contact the administrator or Lead Counsel.</div>
+        </div>
+      </div>` : '';
+
+    const casePreviewHtml = selectedCase && accessResult.allowed ? `
+      <div class="dg-case-preview-card">
+        <div class="dg-case-preview-title">
+          📁 ${this.escHtml(selectedCase.title)}
+          ${this.renderStatusBadge(selectedCase.status)}
+        </div>
+        <div class="dg-case-meta-grid">
+          <div class="dg-case-meta-row"><strong>Case Number:</strong> <span class="dg-meta-val">${this.escHtml(selectedCase.caseNumber)}</span></div>
+          <div class="dg-case-meta-row"><strong>Client:</strong> <span class="dg-meta-val">${this.escHtml(selectedCase.client)}</span></div>
+          <div class="dg-case-meta-row"><strong>Case Type:</strong> <span class="dg-meta-val">${this.escHtml(selectedCase.type || selectedCase.caseType)}</span></div>
+          <div class="dg-case-meta-row"><strong>Court:</strong> <span class="dg-meta-val">${this.escHtml(selectedCase.court || '')}</span></div>
+          <div class="dg-case-meta-row"><strong>Status:</strong> <span class="dg-meta-val">${this.escHtml(selectedCase.status)}</span></div>
+          <div class="dg-case-meta-row"><strong>Next Hearing:</strong> <span class="dg-meta-val">${this.escHtml(selectedCase.nextHearingDate || 'Not scheduled')}</span></div>
+          <div class="dg-case-meta-row"><strong>Assigned Lawyer:</strong> <span class="dg-meta-val">${this.escHtml(selectedCase.lawyer || '')}</span></div>
+          <div class="dg-case-meta-row"><strong>Opposing Party:</strong> <span class="dg-meta-val">${this.escHtml(selectedCase.opposingParty || '')}</span></div>
+        </div>
+        <div class="dg-case-role-chip">✓ Case Assigned — You are authorized to generate documents</div>
+      </div>` : '';
+
+    const noAccess = !accessResult.allowed;
+
+    return `
+      <div class="dg-step-panel">
+        <div class="dg-step-header">
+          <div class="dg-step-header-num">1</div>
           <div>
-            <div class="flex items-center gap-2">
-              <h1 class="page-title" style="margin: 0; font-size: 1.35rem; display: flex; align-items: center; gap: 0.5rem;">
-                <span style="color: var(--color-gold);">🤖</span>
-                SLCMS AI
-              </h1>
-              <span class="badge badge-gold" style="font-size: 0.72rem; font-weight: 600;">
-                ${this.activeMode === 'drafting' ? '✍️ AI Draft' : this.activeMode === 'reports' ? '📊 Reports' : '⚖️ Research'}
-              </span>
-              <span class="badge badge-confidential tz-header-tag-hide-mobile" style="font-size: 0.7rem;">
-                Tanzanian Legal Intelligence
-              </span>
+            <div class="dg-step-header-title">Step 1: Select Assigned Case</div>
+            <div class="dg-step-header-required">Required — only your authorized cases are shown</div>
+          </div>
+        </div>
+        <div class="dg-step-body">
+          <label style="font-size:0.8rem;font-weight:700;color:var(--color-text-secondary);display:block;margin-bottom:0.5rem;">Select a case:</label>
+          <select class="dg-case-select" id="dg-case-select" onchange="AIAssistantView.onCaseChange(this.value)">
+            ${caseOptions}
+          </select>
+          ${authCases.length === 0 ? `<div class="dg-access-denied" style="margin-top:1rem;"><span class="dg-access-denied-icon">⚠️</span><div><div class="dg-access-denied-title">No Cases Assigned</div><div class="dg-access-denied-desc">You have no cases assigned to your account. Contact your administrator to be assigned to a case before generating documents.</div></div></div>` : ''}
+          ${accessDeniedHtml}
+          ${casePreviewHtml}
+        </div>
+        <div class="dg-step-footer">
+          <button class="dg-btn-prev" onclick="AIAssistantView.navigateTo('dashboard')">← Cancel</button>
+          <button class="dg-btn-next" onclick="AIAssistantView.proceedStep1()" ${noAccess || authCases.length === 0 ? 'disabled' : ''}>
+            Next: Document Type →
+          </button>
+        </div>
+      </div>`;
+  },
+
+  onCaseChange(id) {
+    this.selectedCaseId = id;
+    App.refreshCurrentView();
+  },
+
+  proceedStep1() {
+    const access = this.checkCaseAccess(this.selectedCaseId);
+    if (!access.allowed) { App.showToast('Access denied: ' + access.reason, 'error'); return; }
+    this.goToStep(2);
+  },
+
+  /* ── Step 2: Select Document Type ─────────────────────────────────────── */
+  renderStep2() {
+    const groups = [
+      {
+        title: '📊 Case Reports',
+        types: [
+          { key: 'case_progress_report', label: 'Case Progress Report', icon: '📈' },
+          { key: 'case_summary_report', label: 'Case Summary Report', icon: '📋' },
+          { key: 'court_attendance_report', label: 'Court Attendance Report', icon: '🏛️' },
+          { key: 'evidence_report', label: 'Evidence Report', icon: '🔍' },
+          { key: 'deadline_report', label: 'Deadline Report', icon: '⏰' },
+          { key: 'client_update_report', label: 'Client Update Report', icon: '📢' },
+          { key: 'closing_report', label: 'Case Closing Report', icon: '✅' },
+        ]
+      },
+      {
+        title: '✉️ Client Letters',
+        types: [
+          { key: 'client_engagement_letter', label: 'Client Engagement Letter', icon: '🤝' },
+          { key: 'client_update_letter', label: 'Case Update Letter', icon: '📬' },
+          { key: 'document_request_letter', label: 'Request for Documents', icon: '📎' },
+          { key: 'instructions_request_letter', label: 'Request for Instructions', icon: '📩' },
+          { key: 'appointment_letter', label: 'Appointment Letter', icon: '📅' },
+          { key: 'hearing_reminder', label: 'Hearing Reminder', icon: '🔔' },
+          { key: 'outcome_notification', label: 'Outcome Notification', icon: '⚖️' },
+          { key: 'closure_letter', label: 'Case Closure Letter', icon: '📫' },
+        ]
+      },
+      {
+        title: '🏛️ Court & Registry Letters',
+        types: [
+          { key: 'certified_proceedings_request', label: 'Request for Certified Proceedings', icon: '📜' },
+          { key: 'judgment_copy_request', label: 'Request for Judgment Copy', icon: '📃' },
+          { key: 'case_file_inspection', label: 'Case File Inspection Request', icon: '🔎' },
+          { key: 'filing_cover_letter', label: 'Filing Cover Letter', icon: '📤' },
+          { key: 'court_followup_letter', label: 'Follow-up Letter to Registry', icon: '📨' },
+        ]
+      },
+      {
+        title: '⚡ Demand & Opposing Letters',
+        types: [
+          { key: 'demand_letter', label: 'Demand Letter', icon: '⚡' },
+          { key: 'demand_response', label: 'Response to Demand', icon: '↩️' },
+          { key: 'settlement_invitation', label: 'Settlement Invitation', icon: '🤝' },
+          { key: 'notice_of_action', label: 'Notice of Intended Action', icon: '⚠️' },
+          { key: 'document_request_opposing', label: 'Document Request (Opposing)', icon: '📋' },
+        ]
+      },
+      {
+        title: '📑 Internal Firm Documents',
+        types: [
+          { key: 'internal_memo', label: 'Internal Case Memorandum', icon: '📑' },
+          { key: 'assignment_memo', label: 'Assignment Memorandum', icon: '👤' },
+          { key: 'handover_note', label: 'Handover Note', icon: '🔄' },
+          { key: 'research_request', label: 'Legal Research Request', icon: '🔬' },
+          { key: 'supervisor_briefing', label: 'Supervisor Briefing', icon: '📊' },
+          { key: 'conflict_check_report', label: 'Conflict-Check Report', icon: '⚖️' },
+        ]
+      }
+    ];
+
+    // Filter: Legal Clerk cannot do legal opinions
+    const tier = this.getRoleTier();
+
+    const groupsHtml = groups.map(g => `
+      <div class="dg-doctype-section">
+        <div class="dg-doctype-section-title">${g.title}</div>
+        <div class="dg-doctype-grid">
+          ${g.types.map(t => `
+            <button class="dg-doctype-tile${this.selectedDocType === t.key ? ' dg-tile-active' : ''}"
+              onclick="AIAssistantView.selectDocType('${t.key}')">
+              <span class="dg-doctype-tile-icon">${t.icon}</span>
+              <div class="dg-doctype-tile-label">${t.label}</div>
+            </button>`).join('')}
+        </div>
+      </div>`).join('');
+
+    return `
+      <div class="dg-step-panel">
+        <div class="dg-step-header">
+          <div class="dg-step-header-num">2</div>
+          <div>
+            <div class="dg-step-header-title">Step 2: Select Document Type</div>
+            <div class="dg-step-header-required">Required — select what the AI should generate</div>
+          </div>
+        </div>
+        <div class="dg-step-body" style="max-height:520px;overflow-y:auto;">${groupsHtml}</div>
+        <div class="dg-step-footer">
+          <button class="dg-btn-prev" onclick="AIAssistantView.goToStep(1)">← Back</button>
+          <button class="dg-btn-next" onclick="AIAssistantView.proceedStep2()" ${!this.selectedDocType ? 'disabled' : ''}>
+            Next: Instructions →
+          </button>
+        </div>
+      </div>`;
+  },
+
+  selectDocType(key) {
+    this.selectedDocType = key;
+    // Refresh just the next button state and tile highlights live
+    const tiles = document.querySelectorAll('.dg-doctype-tile');
+    tiles.forEach(t => {
+      const isActive = t.getAttribute('onclick')?.includes(`'${key}'`);
+      t.classList.toggle('dg-tile-active', isActive);
+    });
+    const nextBtn = document.querySelector('.dg-step-footer .dg-btn-next');
+    if (nextBtn) nextBtn.disabled = false;
+  },
+
+  proceedStep2() {
+    if (!this.selectedDocType) { App.showToast('Please select a document type', 'warning'); return; }
+    this.goToStep(3);
+  },
+
+  /* ── Step 3: Instructions ─────────────────────────────────────────────── */
+  renderStep3() {
+    const typeLabel = this.getDocTypeLabel(this.selectedDocType);
+    const placeholder = `Describe the document you need, its recipient, purpose, tone and important information to include.\n\nExample: Prepare a formal case-update letter to ${this.getSelectedCaseClient()} explaining that the next hearing is on [date]. Ask them to bring original documents and identification.`;
+
+    return `
+      <div class="dg-step-panel">
+        <div class="dg-step-header">
+          <div class="dg-step-header-num">3</div>
+          <div>
+            <div class="dg-step-header-title">Step 3: Give Instructions</div>
+            <div class="dg-step-header-required">Tell the AI what to prepare — be specific</div>
+          </div>
+        </div>
+        <div class="dg-step-body">
+          <div style="margin-bottom:0.85rem;">
+            <span style="font-size:0.8rem;font-weight:700;color:var(--color-text-secondary);">Generating: </span>
+            <span style="font-size:0.82rem;font-weight:700;color:var(--color-gold);">${this.escHtml(typeLabel)}</span>
+          </div>
+          <label style="font-size:0.8rem;font-weight:700;color:var(--color-text-secondary);display:block;margin-bottom:0.5rem;">What should the AI prepare?</label>
+          <textarea class="dg-instr-textarea" id="dg-instr-textarea" placeholder="${placeholder}"
+            oninput="AIAssistantView.docInstructions = this.value">${this.escHtml(this.docInstructions)}</textarea>
+
+          <!-- Options Grid -->
+          <div class="dg-opts-grid">
+            <div class="dg-opts-field">
+              <label class="dg-opts-label">Recipient</label>
+              <input class="dg-opts-input" id="dg-opt-recipient" type="text" placeholder="e.g. Jackson Mathias"
+                value="${this.escHtml(this.docOptions.recipient)}"
+                oninput="AIAssistantView.docOptions.recipient = this.value" />
             </div>
-            <p class="tz-header-desc-hide-mobile" style="color: var(--color-text-secondary); font-size: 0.84rem; margin-top: 0.2rem; margin-bottom: 0;">
-              ${this.activeMode === 'drafting' 
-                ? 'Synthesize initial legal documents, demand notices, strategy memos & legal opinions. All AI drafts require advocate review.' 
-                : this.activeMode === 'reports'
-                ? 'Generate comprehensive case analysis reports, TanzLII judicial precedent briefs, and litigation strategy memoranda.'
-                : '18 permanent question categories grounded on authentic TanzLII judicial precedents and Tanzanian statutes.'}
-            </p>
+            <div class="dg-opts-field">
+              <label class="dg-opts-label">Document Purpose</label>
+              <input class="dg-opts-input" id="dg-opt-purpose" type="text" placeholder="e.g. Hearing notification"
+                value="${this.escHtml(this.docOptions.purpose)}"
+                oninput="AIAssistantView.docOptions.purpose = this.value" />
+            </div>
+            <div class="dg-opts-field">
+              <label class="dg-opts-label">Language</label>
+              <select class="dg-opts-select" id="dg-opt-language" onchange="AIAssistantView.docOptions.language = this.value">
+                <option value="en" ${this.docOptions.language === 'en' ? 'selected' : ''}>English</option>
+                <option value="sw" ${this.docOptions.language === 'sw' ? 'selected' : ''}>Kiswahili</option>
+                <option value="en-sw" ${this.docOptions.language === 'en-sw' ? 'selected' : ''}>English and Kiswahili</option>
+              </select>
+            </div>
+            <div class="dg-opts-field">
+              <label class="dg-opts-label">Tone</label>
+              <select class="dg-opts-select" id="dg-opt-tone" onchange="AIAssistantView.docOptions.tone = this.value">
+                <option value="formal" ${this.docOptions.tone === 'formal' ? 'selected' : ''}>Formal Legal</option>
+                <option value="professional" ${this.docOptions.tone === 'professional' ? 'selected' : ''}>Professional and Simple</option>
+                <option value="client" ${this.docOptions.tone === 'client' ? 'selected' : ''}>Client-Friendly</option>
+                <option value="urgent" ${this.docOptions.tone === 'urgent' ? 'selected' : ''}>Urgent</option>
+                <option value="internal" ${this.docOptions.tone === 'internal' ? 'selected' : ''}>Internal Confidential</option>
+              </select>
+            </div>
+            <div class="dg-opts-field">
+              <label class="dg-opts-label">Length</label>
+              <select class="dg-opts-select" id="dg-opt-length" onchange="AIAssistantView.docOptions.length = this.value">
+                <option value="brief" ${this.docOptions.length === 'brief' ? 'selected' : ''}>Brief</option>
+                <option value="standard" ${this.docOptions.length === 'standard' ? 'selected' : ''}>Standard</option>
+                <option value="detailed" ${this.docOptions.length === 'detailed' ? 'selected' : ''}>Detailed</option>
+              </select>
+            </div>
           </div>
 
-          <!-- Top Navigation Action Bar with 3 Top Tabs -->
-          <div class="tz-top-nav-actions">
-            <!-- Mode Switcher Pill: Exactly 3 Top Tabs -->
-            <div class="tz-mode-switcher-pill">
-              <button class="btn btn-sm ${this.activeMode === 'research' ? 'btn-gold' : 'btn-ghost'}" 
-                      onclick="AIAssistantView.switchMode('research')" 
-                      title="Switch to Tanzanian Precedent Research & TanzLII Search">
-                <span>⚖️</span> Research
-              </button>
-              <button class="btn btn-sm ${this.activeMode === 'drafting' ? 'btn-gold' : 'btn-ghost'}" 
-                      onclick="AIAssistantView.switchMode('drafting')" 
-                      title="Switch to Legal Document & Memorandum Drafting Studio">
-                <span>✍️</span> Draft
-              </button>
-              <button class="btn btn-sm ${this.activeMode === 'reports' ? 'btn-gold' : 'btn-ghost'}" 
-                      onclick="AIAssistantView.switchMode('reports')" 
-                      title="Generate Complete Case Analysis & Precedent Briefs">
-                <span>📊</span> Reports
-              </button>
-            </div>
+          <!-- Toggles -->
+          <div class="dg-opts-toggles">
+            <div class="dg-opts-toggles-title">Include in Document</div>
+            ${[
+              { key: 'letterhead', label: 'Include letterhead' },
+              { key: 'signature', label: 'Include signature section' },
+              { key: 'attachments', label: 'Include attachments list' },
+            ].map(opt => `
+              <label class="dg-opts-toggle-row">
+                <input type="checkbox" id="dg-opt-${opt.key}" ${this.docOptions[opt.key] ? 'checked' : ''}
+                  onchange="AIAssistantView.docOptions['${opt.key}'] = this.checked" />
+                <span>${opt.label}</span>
+              </label>`).join('')}
+          </div>
+        </div>
+        <div class="dg-step-footer">
+          <button class="dg-btn-prev" onclick="AIAssistantView.goToStep(2)">← Back</button>
+          <button class="dg-btn-next" onclick="AIAssistantView.goToStep(4)">Next: Select Information →</button>
+        </div>
+      </div>`;
+  },
 
-            <!-- Tool Chips Strip (Horizontal swipeable on mobile, no 3-row wrapping) -->
-            <div class="tz-mobile-tool-chips">
-              ${this.activeMode === 'drafting' ? `
-                <button type="button" class="tz-tool-chip btn-secondary" onclick="AIAssistantView.resetDraftWorkspace()" title="Start a fresh draft">
-                  ✨ New Draft
-                </button>
-              ` : this.activeMode === 'reports' ? `
-                <button type="button" class="tz-tool-chip btn-secondary" onclick="AIAssistantView.generateNewReport()" title="Generate new report">
-                  ✨ Generate Report
-                </button>
-              ` : `
-                <button type="button" class="tz-tool-chip btn-gold" onclick="AIAssistantView.openYearBrowserModal()" title="Explore all judgments registered from 2020 to 2026">
-                  📅 2020–2026
-                </button>
-                <button type="button" class="tz-tool-chip" onclick="AIAssistantView.startNewResearch()" title="Start a new clean research session">
-                  ✨ New Research
-                </button>
-                <button type="button" class="tz-tool-chip" onclick="AIAssistantView.openMoreToolsModal()" title="Browse all 18 Question Categories">
-                  ⚡ 18 Categories
-                </button>
-                <button type="button" class="tz-tool-chip" onclick="AIAssistantView.openLibraryModal()" title="Browse indexed TanzLII library">
-                  📚 Library (${readyDocsCount})
-                </button>
-              `}
+  getSelectedCaseClient() {
+    const c = (SLCMS_STATE.cases || []).find(x => x.id === this.selectedCaseId);
+    return c ? c.client : 'the client';
+  },
+
+  /* ── Step 4: Select Information Sources ───────────────────────────────── */
+  renderStep4() {
+    const sources = [
+      { key: 'caseId',       label: 'Case Identification',   sub: 'Case number, court, type and status', icon: '🔖' },
+      { key: 'client',       label: 'Client Information',     sub: 'Client name and contact details', icon: '👤' },
+      { key: 'parties',      label: 'Parties',                sub: 'Plaintiff, defendant, counsel', icon: '⚖️' },
+      { key: 'facts',        label: 'Case Facts',             sub: 'Background facts and description', icon: '📋' },
+      { key: 'courtHistory', label: 'Court History',          sub: 'Hearings, mentions and registry', icon: '🏛️' },
+      { key: 'documents',    label: 'Uploaded Documents',     sub: 'Filed documents and attachments', icon: '📎' },
+      { key: 'orders',       label: 'Court Orders',           sub: 'Directions and orders issued', icon: '📜' },
+      { key: 'tasks',        label: 'Tasks',                  sub: 'Pending and completed tasks', icon: '✅' },
+      { key: 'deadlines',    label: 'Deadlines',              sub: 'Upcoming dates and time limits', icon: '⏰' },
+      { key: 'evidence',     label: 'Evidence',               sub: 'Documentary, witness and exhibits', icon: '🔍' },
+      { key: 'staff',        label: 'Assigned Staff',         sub: 'Lawyers, clerks and their roles', icon: '👥' },
+      { key: 'prevReports',  label: 'Previous Reports',       sub: 'Earlier AI-generated documents', icon: '📂' },
+      { key: 'billing',      label: 'Billing Information',    sub: 'Authorized — costs and payments only', icon: '💰' },
+    ];
+
+    const count = this.getSourceCount();
+
+    return `
+      <div class="dg-step-panel">
+        <div class="dg-step-header">
+          <div class="dg-step-header-num">4</div>
+          <div>
+            <div class="dg-step-header-title">Step 4: Select Information to Include</div>
+            <div class="dg-step-header-required">Choose which case data the AI may use</div>
+          </div>
+        </div>
+        <div class="dg-step-body">
+          <div class="dg-source-counter">
+            <span>📊</span>
+            <span id="dg-source-counter-text">Sources selected: <strong>${count} case record${count !== 1 ? 's' : ''}</strong> and authorized documents</span>
+          </div>
+          <div class="dg-source-grid">
+            ${sources.map(s => {
+              const isChecked = !!this.selectedSources[s.key];
+              return `
+                <div class="dg-source-item${isChecked ? ' dg-src-checked' : ''}" onclick="AIAssistantView.toggleSource('${s.key}'); this.classList.toggle('dg-src-checked'); this.querySelector('.dg-src-box').textContent = this.classList.contains('dg-src-checked') ? '✓' : '';">
+                  <div class="dg-src-box">${isChecked ? '✓' : ''}</div>
+                  <div>
+                    <div class="dg-src-label">${s.icon} ${s.label}</div>
+                    <div class="dg-src-sub">${s.sub}</div>
+                  </div>
+                </div>`;
+            }).join('')}
+          </div>
+          <div style="margin-top:1rem;padding:0.75rem;background:rgba(200,155,60,0.05);border:1px solid rgba(200,155,60,0.15);border-radius:8px;font-size:0.77rem;color:var(--color-text-secondary);line-height:1.6;">
+            ⚠️ <strong>The AI will only access authorized case data.</strong> It will never use information from unassigned cases. Missing required data will appear as a visible placeholder in the draft.
+          </div>
+        </div>
+        <div class="dg-step-footer">
+          <button class="dg-btn-prev" onclick="AIAssistantView.goToStep(3)">← Back</button>
+          <button class="dg-btn-next" onclick="AIAssistantView.generateDocument()">
+            ✦ Generate Draft →
+          </button>
+        </div>
+      </div>`;
+  },
+
+  /* ── Step 5: Generating / Ready ───────────────────────────────────────── */
+  renderStep5() {
+    if (this.generationState === 'generating') {
+      return `
+        <div class="dg-step-panel">
+          <div class="dg-step-header"><div class="dg-step-header-num">5</div><div><div class="dg-step-header-title">Step 5: Generate Draft</div></div></div>
+          <div class="dg-step-body">
+            <div class="dg-gen-area">
+              <div class="dg-gen-spinner">
+                <div class="dg-gen-dot"></div>
+                <div class="dg-gen-dot"></div>
+                <div class="dg-gen-dot"></div>
+              </div>
+              <div class="dg-gen-label">Preparing document...</div>
+              <div class="dg-gen-sub">Reading authorized case information &mdash; this takes a moment</div>
+            </div>
+          </div>
+        </div>`;
+    }
+    return `
+      <div class="dg-step-panel">
+        <div class="dg-step-header"><div class="dg-step-header-num">5</div><div><div class="dg-step-header-title">Step 5: Generate Draft</div></div></div>
+        <div class="dg-step-body">
+          <div class="dg-gen-area">
+            <span class="dg-gen-ready-icon">✦</span>
+            <div class="dg-gen-ready-title">Ready to Generate</div>
+            <div class="dg-gen-ready-desc">The AI will use the selected case information and your instructions to prepare a draft document. The result will require professional review before use.</div>
+            <button class="dg-btn-next" onclick="AIAssistantView.generateDocument()" style="margin:0 auto;">✦ Generate Draft</button>
+          </div>
+        </div>
+        <div class="dg-step-footer">
+          <button class="dg-btn-prev" onclick="AIAssistantView.goToStep(4)">← Back</button>
+        </div>
+      </div>`;
+  },
+
+  /* ==========================================================================
+     DOCUMENT PREVIEW
+     ========================================================================== */
+  renderPreview() {
+    const doc = this.generatedDoc;
+    if (!doc) {
+      return `<div style="text-align:center;padding:3rem;"><div style="font-size:2rem;margin-bottom:1rem;">⚠️</div><div>No document to preview. <button class="dg-appr-btn" onclick="AIAssistantView.startNewDocument()">Start a new document</button></div></div>`;
+    }
+    const isDraft = doc.status === 'draft';
+    const isPending = doc.status === 'pending_review';
+    const isApproved = doc.status === 'approved';
+    const canApprove = this.canApproveDocuments();
+    const user = SLCMS_STATE.currentUser || {};
+
+    return `
+      <div class="dg-preview-shell">
+        <!-- Top Bar -->
+        <div class="dg-preview-topbar">
+          <div class="dg-preview-topbar-left">
+            <button class="dg-preview-back-btn" onclick="AIAssistantView.navigateTo('dashboard')">← Dashboard</button>
+            <div>
+              <div class="dg-preview-title">${this.escHtml(doc.title)}</div>
+              <div class="dg-preview-meta">
+                ${this.renderStatusBadge(doc.status)} &nbsp;
+                Case: ${this.escHtml(doc.caseNumber)} &bull; Generated ${this.escHtml(doc.generatedDate || '')} at ${this.escHtml(doc.generatedTime || '')} &bull; By: ${this.escHtml(doc.generatedBy || '')}
+                ${isApproved ? ` &bull; Approved by: ${this.escHtml(doc.approvedBy || '')}` : ''}
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- WORKSPACE CONTENT: 3 CORE MODES -->
-        ${this.activeMode === 'drafting' 
-          ? this.renderDraftingStudio(readyDocsCount) 
-          : this.activeMode === 'reports'
-          ? this.renderReportGeneratorTab()
-          : this.renderResearchStudio(readyDocsCount, activeFilterCount)
-        }
+        <!-- AI Warning Banner -->
+        <div class="dg-ai-warning-banner">
+          <span class="dg-ai-warning-icon">⚠️</span>
+          <div class="dg-ai-warning-text">
+            <strong>AI-Generated Draft</strong> — Professional review is required before signing, filing or sending this document.
+            ${isDraft ? ' This document has <strong>not been approved</strong>.' : ''}
+            ${isPending ? ' This document is <strong>pending review</strong>.' : ''}
+            ${isApproved ? ' This document has been <strong>approved</strong> by ' + this.escHtml(doc.approvedBy || '') + '.' : ''}
+          </div>
+        </div>
 
+        <!-- Approval Action Bar -->
+        <div class="dg-approval-bar">
+          <div class="dg-approval-bar-left">
+            ${this.renderStatusBadge(doc.status)}
+            <span style="font-size:0.78rem;color:var(--color-text-secondary);">Attached to: ${this.escHtml(doc.caseTitle || '')}</span>
+          </div>
+          <div class="dg-approval-bar-actions">
+            <button class="dg-appr-btn" onclick="AIAssistantView.copyDocumentText()" title="Copy text">📋 Copy</button>
+            <button class="dg-appr-btn" onclick="AIAssistantView.saveDocumentDraft()" title="Save draft">💾 Save Draft</button>
+            ${isDraft ? `<button class="dg-appr-btn dg-appr-btn-primary" onclick="AIAssistantView.submitForReview()">📤 Submit for Review</button>` : ''}
+            ${(isDraft || isPending) && canApprove ? `<button class="dg-appr-btn dg-appr-btn-success" onclick="AIAssistantView.approveDocument()">✅ Approve Document</button>` : ''}
+            ${isPending && canApprove ? `<button class="dg-appr-btn dg-appr-btn-danger" onclick="AIAssistantView.requestChanges()" title="Request changes">↩ Request Changes</button>` : ''}
+            ${isApproved && canApprove ? `<button class="dg-appr-btn dg-appr-btn-primary" onclick="AIAssistantView.issueDocument()">📜 Issue Document</button>` : ''}
+            ${isApproved ? `<span class="dg-status dg-status-approved">✅ Approved</span>` : ''}
+            ${doc.status === 'issued' ? `<span class="dg-status dg-status-issued">📜 Officially Issued</span>` : ''}
+            ${doc.status === 'changes_requested' ? `<span class="dg-status dg-status-changes">↩ Changes Requested</span>` : ''}
+            <button class="dg-appr-btn" onclick="AIAssistantView.exportPDF()" title="Download PDF">⬇ PDF</button>
+            <button class="dg-appr-btn" onclick="AIAssistantView.exportWord()" title="Download Word">📄 Word</button>
+            <button class="dg-appr-btn" onclick="AIAssistantView.attachToCase()" title="Attach to case">📎 Attach</button>
+            <button class="dg-appr-btn dg-appr-btn-danger" onclick="AIAssistantView.deleteDocument()" title="Delete draft">🗑 Delete</button>
+          </div>
+        </div>
+
+        <!-- Document Canvas -->
+        <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:14px;overflow:hidden;">
+          <div id="dg-doc-content-inner" contenteditable="${isDraft || isPending ? 'true' : 'false'}" style="padding:2.5rem 3rem;outline:none;min-height:600px;font-family:'Times New Roman',serif;font-size:0.95rem;line-height:1.8;color:var(--color-text-main);">
+            ${doc.content || ''}
+          </div>
+        </div>
+
+        <!-- Sources Used -->
+        <div class="dg-sources-footer">
+          <strong>Information Sources Used:</strong> ${this.describeSourcesUsed(doc.sources)}.<br>
+          <strong>Constraint:</strong> This document was generated using authorized data from the assigned case only. No information from unrelated cases was accessed.
+        </div>
+      </div>`;
+  },
+
+  describeSourcesUsed(sources) {
+    if (!sources) return 'All available authorized case records';
+    const labels = {
+      caseId: 'Case identification', client: 'Client information', parties: 'Parties',
+      facts: 'Case facts', courtHistory: 'Court history', documents: 'Filed documents',
+      orders: 'Court orders', tasks: 'Tasks', deadlines: 'Deadlines',
+      evidence: 'Evidence records', staff: 'Assigned staff', prevReports: 'Previous reports', billing: 'Billing information',
+    };
+    const active = Object.entries(sources).filter(([k, v]) => v).map(([k]) => labels[k] || k);
+    return active.join(', ') || 'None selected';
+  },
+
+  /* ==========================================================================
+     MY DOCUMENTS
+     ========================================================================== */
+  renderMyDocuments() {
+    const tabs = [
+      { key: 'all', label: 'All', count: this.myDocuments.length },
+      { key: 'draft', label: 'Drafts', count: this.myDocuments.filter(d => d.status === 'draft').length },
+      { key: 'pending_review', label: 'Pending Review', count: this.myDocuments.filter(d => d.status === 'pending_review').length },
+      { key: 'changes_requested', label: 'Changes Requested', count: this.myDocuments.filter(d => d.status === 'changes_requested').length },
+      { key: 'approved', label: 'Approved', count: this.myDocuments.filter(d => d.status === 'approved').length },
+    ];
+
+    const filtered = this.myDocumentsTab === 'all'
+      ? this.myDocuments
+      : this.myDocuments.filter(d => d.status === this.myDocumentsTab);
+
+    const docsHtml = filtered.length === 0
+      ? `<div class="dg-mydocs-empty"><span class="dg-mydocs-empty-icon">📂</span><div style="font-size:0.85rem;color:var(--color-text-secondary);">No documents in this category.</div></div>`
+      : filtered.map(d => `
+          <div class="dg-docs-item" onclick="AIAssistantView.openSavedDocument('${d.id}')">
+            <div class="dg-docs-item-left">
+              <div class="dg-docs-item-icon">${this.getDocTypeIcon(d.docType)}</div>
+              <div>
+                <div class="dg-docs-item-title">${this.escHtml(d.title)}</div>
+                <div class="dg-docs-item-meta">${this.escHtml(d.docTypeLabel || '')} &bull; ${this.escHtml(d.caseNumber || '')} &bull; ${this.escHtml(d.caseTitle || '')} &bull; ${this.escHtml(d.generatedDate || '')}</div>
+                <div class="dg-docs-item-meta" style="margin-top:0.1rem;">By: ${this.escHtml(d.generatedBy || '')}${d.approvedBy ? ' &bull; Approved by: ' + this.escHtml(d.approvedBy) : ''}</div>
+              </div>
+            </div>
+            <div class="dg-docs-item-right">
+              ${this.renderStatusBadge(d.status)}
+            </div>
+          </div>`).join('');
+
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <button class="dg-preview-back-btn" onclick="AIAssistantView.navigateTo('dashboard')">← Dashboard</button>
+          <h2 style="font-size:1.1rem;font-weight:800;margin:0;color:var(--color-primary);">My Documents</h2>
+        </div>
+        <button class="dg-btn-next" onclick="AIAssistantView.startNewDocument()" style="padding:0.5rem 1rem;font-size:0.8rem;">+ New Document</button>
       </div>
-    `;
+      <div class="dg-tabs-row">
+        ${tabs.map(t => `
+          <button class="dg-tab${this.myDocumentsTab === t.key ? ' dg-tab-active' : ''}"
+            onclick="AIAssistantView.myDocumentsTab = '${t.key}'; App.refreshCurrentView();">
+            ${t.label}${t.count > 0 ? `<span class="dg-tab-count">${t.count}</span>` : ''}
+          </button>`).join('')}
+      </div>
+      <div class="dg-docs-list">${docsHtml}</div>`;
+  },
+
+  /* ==========================================================================
+     TEMPLATES
+     ========================================================================== */
+  renderTemplates() {
+    const cats = [
+      { icon: '📊', title: 'Case Reports', desc: 'Progress, summary, attendance, evidence and deadline reports', key: 'report' },
+      { icon: '✉️', title: 'Client Letters', desc: 'Engagement, updates, reminders and closure letters', key: 'client-letter' },
+      { icon: '🏛️', title: 'Court Letters', desc: 'Registry requests, filing covers and follow-up letters', key: 'court-letter' },
+      { icon: '⚡', title: 'Demand & Opposing', desc: 'Demand letters, responses and settlement invitations', key: 'demand' },
+      { icon: '📑', title: 'Internal Documents', desc: 'Memos, handover notes, briefings and research requests', key: 'internal' },
+    ];
+    return `
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+        <button class="dg-preview-back-btn" onclick="AIAssistantView.navigateTo('dashboard')">← Dashboard</button>
+        <h2 style="font-size:1.1rem;font-weight:800;margin:0;color:var(--color-primary);">Document Templates</h2>
+      </div>
+      <p style="font-size:0.83rem;color:var(--color-text-secondary);margin-bottom:1.25rem;">Select a category to start generating from a pre-structured template. All templates pull from your assigned case data.</p>
+      <div class="dg-dash-grid">
+        ${cats.map(c => `
+          <button class="dg-dash-card" onclick="AIAssistantView.startNewDocument('${c.key}')">
+            <span class="dg-dash-icon">${c.icon}</span>
+            <div class="dg-dash-label">${c.title}</div>
+            <div class="dg-dash-desc">${c.desc}</div>
+          </button>`).join('')}
+      </div>`;
+  },
+
+  /* ==========================================================================
+     DOCUMENT CONTENT BUILDER
+     ========================================================================== */
+  buildDocumentContent(c, docType, instructions, opts) {
+    const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const user = SLCMS_STATE.currentUser || {};
+    const firm = (typeof AppSettings !== 'undefined' && AppSettings.get('organizationName')) || (SLCMS_STATE.systemSettings && SLCMS_STATE.systemSettings.organizationName) || 'Somba Legal Chambers';
+    const sysName = (typeof AppSettings !== 'undefined' && AppSettings.get('systemName')) || (SLCMS_STATE.systemSettings && SLCMS_STATE.systemSettings.systemName) || 'Tanzania Smart Legal Case Management System';
+    const addr = (typeof AppSettings !== 'undefined' && AppSettings.get('officeAddress')) || (SLCMS_STATE.systemSettings && SLCMS_STATE.systemSettings.address) || 'Samora Avenue & Ohio Street, Dar es Salaam, Tanzania';
+    const phone = (typeof AppSettings !== 'undefined' && AppSettings.get('phoneNumber')) || (SLCMS_STATE.systemSettings && SLCMS_STATE.systemSettings.phone) || '+255 754 000 111';
+    const email = (typeof AppSettings !== 'undefined' && AppSettings.get('officialEmail')) || (SLCMS_STATE.systemSettings && SLCMS_STATE.systemSettings.officialEmail) || 'info@sombalegal.co.tz';
+    const logo = (typeof AppSettings !== 'undefined' && AppSettings.get('logoUrl')) || (SLCMS_STATE.systemSettings && SLCMS_STATE.systemSettings.logoUrl) || 'assets/SLCMS.png';
+
+    const recipient = opts.recipient || `<span class="dg-placeholder">[Recipient name required]</span>`;
+    const hearingDate = c.nextHearingDate ? this.formatDate(c.nextHearingDate) : `<span class="dg-placeholder">[Court hearing date required]</span>`;
+    const caseNum = c.caseNumber || `<span class="dg-placeholder">[Case number required]</span>`;
+    const clientName = c.client || `<span class="dg-placeholder">[Client name required]</span>`;
+    const court = c.court || `<span class="dg-placeholder">[Court name required]</span>`;
+    const opposingParty = c.opposingParty || `<span class="dg-placeholder">[Opposing party required]</span>`;
+
+    const letterhead = opts.letterhead !== false ? `
+      <div style="text-align:center;border-bottom:2px solid #C89B3C;padding-bottom:1rem;margin-bottom:1.5rem;">
+        <div style="margin-bottom: 0.5rem;"><img src="${logo}" alt="Firm Crest" style="max-height: 48px; object-fit: contain;"></div>
+        <div style="font-size:1.15rem;font-weight:800;color:#0A1B2D;letter-spacing:0.05em;">${firm}</div>
+        <div style="font-size:0.82rem;color:#475569;margin-top:0.25rem;">${addr} &bull; Tel: ${phone} &bull; ${email}</div>
+        <div style="font-size:0.75rem;color:#64748B;margin-top:0.15rem;">${sysName} &bull; Registered in the United Republic of Tanzania</div>
+      </div>` : '';
+
+    const signatureBlock = opts.signature !== false ? `
+      <div style="margin-top:3rem;">
+        <div style="font-weight:700;">Yours faithfully,</div>
+        <div style="margin-top:2.5rem;border-top:1px solid #CBD5E1;padding-top:0.5rem;display:inline-block;min-width:200px;">
+          <div>${this.escHtml(user.name || '[Assigned Lawyer\'s Name]')}</div>
+          <div style="font-size:0.82rem;color:#64748B;">${this.escHtml(user.role || 'Advocate')}</div>
+          <div style="font-size:0.82rem;color:#64748B;">${firm}</div>
+        </div>
+      </div>` : '';
+
+    // Route to the correct document template
+    switch(docType) {
+      case 'client_update_letter':
+      case 'client_update_report':
+        return this._tmplClientUpdateLetter(c, instructions, opts, { letterhead, signatureBlock, dateStr, recipient, hearingDate, caseNum, clientName, court, opposingParty });
+      case 'demand_letter':
+        return this._tmplDemandLetter(c, instructions, opts, { letterhead, signatureBlock, dateStr, recipient, hearingDate, caseNum, clientName, court, opposingParty });
+      case 'case_progress_report':
+        return this._tmplCaseProgressReport(c, instructions, opts, { letterhead, signatureBlock, dateStr, recipient, hearingDate, caseNum, clientName, court, opposingParty });
+      case 'case_summary_report':
+        return this._tmplCaseSummaryReport(c, instructions, opts, { letterhead, signatureBlock, dateStr, recipient, hearingDate, caseNum, clientName, court, opposingParty });
+      case 'court_attendance_report':
+        return this._tmplCourtAttendanceReport(c, instructions, opts, { letterhead, signatureBlock, dateStr, recipient, hearingDate, caseNum, clientName, court, opposingParty });
+      case 'internal_memo':
+      case 'assignment_memo':
+      case 'supervisor_briefing':
+        return this._tmplInternalMemo(c, instructions, opts, { letterhead, signatureBlock, dateStr, recipient, hearingDate, caseNum, clientName, court, opposingParty });
+      case 'client_engagement_letter':
+        return this._tmplEngagementLetter(c, instructions, opts, { letterhead, signatureBlock, dateStr, recipient, hearingDate, caseNum, clientName, court, opposingParty });
+      case 'closing_report':
+        return this._tmplClosingReport(c, instructions, opts, { letterhead, signatureBlock, dateStr, recipient, hearingDate, caseNum, clientName, court, opposingParty });
+      default:
+        return this._tmplGenericDocument(c, instructions, opts, { letterhead, signatureBlock, dateStr, recipient, hearingDate, caseNum, clientName, court, opposingParty, docType });
+    }
+  },
+
+  formatDate(d) {
+    if (!d) return '';
+    try { return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); } catch(e) { return d; }
+  },
+
+  /* ── Document Templates ───────────────────────────────────────────────── */
+  _tmplClientUpdateLetter(c, instructions, opts, ctx) {
+    const { letterhead, signatureBlock, dateStr, recipient, hearingDate, caseNum, clientName, court } = ctx;
+    const lastActivity = c.lastActivity || `<span class="dg-placeholder">[Recent court activity required]</span>`;
+    const tasks = (c.pendingTasks && c.pendingTasks.length) ? c.pendingTasks.slice(0, 2).join(' and ') : `<span class="dg-placeholder">[Client action items required]</span>`;
+    return `
+      ${letterhead}
+      <p style="text-align:right;">${dateStr}</p>
+      <p><strong>${recipient}</strong></p>
+      <p>&nbsp;</p>
+      <p><strong style="text-decoration:underline;">RE: UPDATE CONCERNING ${caseNum}</strong></p>
+      <p>Dear ${recipient},</p>
+      <p>We write to update you concerning the above matter currently before ${court}.</p>
+      <p>${lastActivity}</p>
+      <p>The court has scheduled the next hearing for <strong>${hearingDate}</strong>. It is important that you attend or confirm your availability with our office as soon as possible.</p>
+      <p>Before the hearing date, we kindly request that you provide the following:</p>
+      <ol style="margin:0.75rem 0 0.75rem 1.5rem;">
+        <li>${tasks}</li>
+        <li>Your identification documents (national ID or passport)</li>
+      </ol>
+      <p>Kindly contact our office if you require any clarification or have any questions regarding the above.</p>
+      ${signatureBlock}
+      <p style="margin-top:1.5rem;font-size:0.8rem;color:#94A3B8;font-style:italic;">Draft · Not Approved · Attached to ${this.escHtml(c.title || '')}</p>`;
+  },
+
+  _tmplDemandLetter(c, instructions, opts, ctx) {
+    const { letterhead, signatureBlock, dateStr, recipient, caseNum, clientName, opposingParty } = ctx;
+    return `
+      ${letterhead}
+      <p style="text-align:right;">${dateStr}</p>
+      <p><strong>${recipient || opposingParty}</strong><br>
+      <span class="dg-placeholder">[Address required]</span></p>
+      <p>&nbsp;</p>
+      <p><strong style="text-decoration:underline;">FORMAL DEMAND — ${caseNum}</strong></p>
+      <p>Dear Sir/Madam,</p>
+      <p>We act for and on behalf of our client, <strong>${clientName}</strong>, and write to demand the following:</p>
+      <p>${instructions || `<span class="dg-placeholder">[Specific demand details required from your instructions]</span>`}</p>
+      <p>TAKE NOTICE that unless the above demands are met within <strong>fourteen (14) days</strong> from the date of this letter, our client shall take all necessary legal steps to protect their rights, including but not limited to commencing formal legal proceedings against you without further notice.</p>
+      <p>We urge you to treat this matter with the urgency it deserves.</p>
+      ${signatureBlock}
+      <p style="margin-top:1.5rem;font-size:0.8rem;color:#94A3B8;font-style:italic;">Draft · Not Approved · Attached to ${this.escHtml(c.title || '')}</p>`;
+  },
+
+  _tmplCaseProgressReport(c, instructions, opts, ctx) {
+    const { letterhead, dateStr, caseNum, clientName, court, hearingDate } = ctx;
+    const tasks = (c.pendingTasks || []).map(t => `<li>${this.escHtml(t)}</li>`).join('') || '<li><span class="dg-placeholder">[Pending tasks required]</span></li>';
+    const docs = (c.documents || []).map(d => `<li>${this.escHtml(d)}</li>`).join('') || '<li><span class="dg-placeholder">[Filed documents required]</span></li>';
+    return `
+      ${letterhead}
+      <h2 style="font-size:1rem;font-weight:800;border-bottom:2px solid #C89B3C;padding-bottom:0.5rem;margin-bottom:1rem;">CASE PROGRESS REPORT</h2>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:0.88rem;">
+        ${[
+          ['Report Date', dateStr], ['Case Number', caseNum], ['Case Title', this.escHtml(c.title || '')],
+          ['Client', clientName], ['Court', court], ['Status', this.escHtml(c.status || '')],
+          ['Assigned Lawyer', this.escHtml(c.lawyer || '')], ['Next Hearing', hearingDate],
+        ].map(([k,v]) => `<tr><td style="padding:0.35rem 0.6rem;font-weight:700;width:35%;border:1px solid #E2E8F0;">${k}</td><td style="padding:0.35rem 0.6rem;border:1px solid #E2E8F0;">${v}</td></tr>`).join('')}
+      </table>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;color:#0A1B2D;">1. Case Background</h3>
+      <p>${this.escHtml(c.description || '')}${!c.description ? `<span class="dg-placeholder">[Case background required]</span>` : ''}</p>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;color:#0A1B2D;">2. Recent Activity</h3>
+      <p>${this.escHtml(c.lastActivity || '')}${!c.lastActivity ? `<span class="dg-placeholder">[Recent activity required]</span>` : ''}</p>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;color:#0A1B2D;">3. Documents Filed</h3>
+      <ul style="margin-left:1.5rem;">${docs}</ul>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;color:#0A1B2D;">4. Pending Tasks</h3>
+      <ul style="margin-left:1.5rem;">${tasks}</ul>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;color:#0A1B2D;">5. Recommended Next Action</h3>
+      <p>${instructions || `<span class="dg-placeholder">[Recommended action from supervising lawyer required]</span>`}</p>
+      <p style="margin-top:2rem;font-size:0.8rem;color:#94A3B8;font-style:italic;">Draft · Not Approved · Prepared by: ${this.escHtml((SLCMS_STATE.currentUser||{}).name||'')}</p>`;
+  },
+
+  _tmplCaseSummaryReport(c, instructions, opts, ctx) {
+    const { letterhead, dateStr, caseNum, clientName, court, hearingDate } = ctx;
+    return `
+      ${letterhead}
+      <h2 style="font-size:1rem;font-weight:800;border-bottom:2px solid #C89B3C;padding-bottom:0.5rem;margin-bottom:1rem;">CASE SUMMARY REPORT</h2>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:0.88rem;">
+        ${[['Case Number',caseNum],['Case Title',this.escHtml(c.title||'')],['Client',clientName],['Opposing Party',this.escHtml(c.opposingParty||'')],['Court',court],['Status',this.escHtml(c.status||'')]].map(([k,v])=>`<tr><td style="padding:0.35rem 0.6rem;font-weight:700;width:35%;border:1px solid #E2E8F0;">${k}</td><td style="padding:0.35rem 0.6rem;border:1px solid #E2E8F0;">${v}</td></tr>`).join('')}
+      </table>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">1. Background Facts</h3>
+      <p>${this.escHtml(c.facts||'') || `<span class="dg-placeholder">[Material facts required]</span>`}</p>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">2. Client's Position</h3>
+      <p>${instructions || `<span class="dg-placeholder">[Client's position from instructions required]</span>`}</p>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">3. Current Stage</h3>
+      <p>${this.escHtml(c.lastActivity||'') || `<span class="dg-placeholder">[Current procedural stage required]</span>`}</p>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">4. Next Steps</h3>
+      <ul style="margin-left:1.5rem;">${(c.pendingTasks||[]).map(t=>`<li>${this.escHtml(t)}</li>`).join('') || `<li><span class="dg-placeholder">[Next steps required]</span></li>`}</ul>
+      <p style="margin-top:2rem;font-size:0.8rem;color:#94A3B8;font-style:italic;">Draft · Not Approved · ${dateStr}</p>`;
+  },
+
+  _tmplCourtAttendanceReport(c, instructions, opts, ctx) {
+    const { letterhead, dateStr, caseNum, clientName, court, hearingDate } = ctx;
+    const user = SLCMS_STATE.currentUser || {};
+    return `
+      ${letterhead}
+      <h2 style="font-size:1rem;font-weight:800;border-bottom:2px solid #C89B3C;padding-bottom:0.5rem;margin-bottom:1rem;">COURT ATTENDANCE REPORT</h2>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:0.88rem;">
+        ${[
+          ['Court',court],['Case Number',caseNum],['Case Title',this.escHtml(c.title||'')],
+          ['Attendance Date',`<span class="dg-placeholder">[Date of court appearance required]</span>`],
+          ['Judicial Officer',`<span class="dg-placeholder">[Judge/Magistrate name required]</span>`],
+          ['Advocate Present',this.escHtml(user.name||'')],
+          ['Client Present',`<span class="dg-placeholder">[Yes/No]</span>`],
+          ['Next Hearing',hearingDate],
+        ].map(([k,v])=>`<tr><td style="padding:0.35rem 0.6rem;font-weight:700;width:35%;border:1px solid #E2E8F0;">${k}</td><td style="padding:0.35rem 0.6rem;border:1px solid #E2E8F0;">${v}</td></tr>`).join('')}
+      </table>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">What Happened in Court</h3>
+      <p>${instructions || `<span class="dg-placeholder">[Summary of what happened in court required from your instructions]</span>`}</p>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">Court Directions</h3>
+      <p><span class="dg-placeholder">[Court directions and orders required]</span></p>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">Tasks Arising</h3>
+      <ul style="margin-left:1.5rem;">${(c.pendingTasks||[]).slice(0,3).map(t=>`<li>${this.escHtml(t)}</li>`).join('') || `<li><span class="dg-placeholder">[Tasks arising from attendance required]</span></li>`}</ul>
+      <p style="margin-top:2rem;font-size:0.8rem;color:#94A3B8;font-style:italic;">Draft · Not Approved · Prepared by ${this.escHtml(user.name||'')} on ${dateStr}</p>`;
+  },
+
+  _tmplInternalMemo(c, instructions, opts, ctx) {
+    const { letterhead, dateStr, caseNum, clientName } = ctx;
+    const user = SLCMS_STATE.currentUser || {};
+    return `
+      ${letterhead}
+      <h2 style="font-size:1rem;font-weight:800;border-bottom:2px solid #C89B3C;padding-bottom:0.5rem;margin-bottom:1rem;">INTERNAL MEMORANDUM — CONFIDENTIAL</h2>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:0.88rem;">
+        ${[['To',`<span class="dg-placeholder">[Recipient required]</span>`],['From',this.escHtml(user.name||'')],['Date',dateStr],['Re',`${caseNum} — ${this.escHtml(c.title||'')}`],['Classification','INTERNAL — CONFIDENTIAL']].map(([k,v])=>`<tr><td style="padding:0.35rem 0.6rem;font-weight:700;width:25%;border:1px solid #E2E8F0;">${k}</td><td style="padding:0.35rem 0.6rem;border:1px solid #E2E8F0;">${v}</td></tr>`).join('')}
+      </table>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">Purpose</h3>
+      <p>${instructions || `<span class="dg-placeholder">[Memo purpose and content required from your instructions]</span>`}</p>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">Case Background</h3>
+      <p>${this.escHtml(c.description||'') || `<span class="dg-placeholder">[Background required]</span>`}</p>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">Recommended Action</h3>
+      <p><span class="dg-placeholder">[Recommended action required]</span></p>
+      <p style="margin-top:2rem;font-size:0.8rem;color:#94A3B8;font-style:italic;">Draft · Not Approved · Internal Use Only</p>`;
+  },
+
+  _tmplEngagementLetter(c, instructions, opts, ctx) {
+    const { letterhead, signatureBlock, dateStr, recipient, clientName } = ctx;
+    return `
+      ${letterhead}
+      <p style="text-align:right;">${dateStr}</p>
+      <p><strong>${recipient || clientName}</strong><br><span class="dg-placeholder">[Client address required]</span></p>
+      <p>&nbsp;</p>
+      <p><strong style="text-decoration:underline;">CLIENT ENGAGEMENT — ${this.escHtml(c.title||'')}</strong></p>
+      <p>Dear ${recipient || clientName},</p>
+      <p>We are pleased to confirm that <strong>SLCMS Law Associates</strong> has agreed to act as your legal representatives in the above matter.</p>
+      <p>${instructions || `<span class="dg-placeholder">[Scope of engagement required from your instructions]</span>`}</p>
+      <p>Our fees will be as agreed in the separate fee agreement. Please sign and return the enclosed copy of this letter to confirm your acceptance of our terms of engagement.</p>
+      ${signatureBlock}
+      <p style="margin-top:1.5rem;font-size:0.8rem;color:#94A3B8;font-style:italic;">Draft · Not Approved · ${dateStr}</p>`;
+  },
+
+  _tmplClosingReport(c, instructions, opts, ctx) {
+    const { letterhead, dateStr, caseNum, clientName, court } = ctx;
+    const user = SLCMS_STATE.currentUser || {};
+    return `
+      ${letterhead}
+      <h2 style="font-size:1rem;font-weight:800;border-bottom:2px solid #C89B3C;padding-bottom:0.5rem;margin-bottom:1rem;">CASE CLOSING REPORT</h2>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:0.88rem;">
+        ${[['Case Number',caseNum],['Client',clientName],['Court',court],['Closing Date',dateStr],['Prepared By',this.escHtml(user.name||'')]].map(([k,v])=>`<tr><td style="padding:0.35rem 0.6rem;font-weight:700;width:35%;border:1px solid #E2E8F0;">${k}</td><td style="padding:0.35rem 0.6rem;border:1px solid #E2E8F0;">${v}</td></tr>`).join('')}
+      </table>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">Final Outcome</h3>
+      <p>${instructions || `<span class="dg-placeholder">[Final outcome required from your instructions]</span>`}</p>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">Documents Completed</h3>
+      <ul style="margin-left:1.5rem;">${(c.documents||[]).map(d=>`<li>${this.escHtml(d)}</li>`).join('') || `<li><span class="dg-placeholder">[Documents list required]</span></li>`}</ul>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">Outstanding Obligations</h3>
+      <p><span class="dg-placeholder">[Outstanding obligations required]</span></p>
+      <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">File Closure Recommendation</h3>
+      <p><span class="dg-placeholder">[File closure recommendation required]</span></p>
+      <p style="margin-top:2rem;font-size:0.8rem;color:#94A3B8;font-style:italic;">Draft · Not Approved · ${dateStr}</p>`;
+  },
+
+  _tmplGenericDocument(c, instructions, opts, ctx) {
+    const { letterhead, signatureBlock, dateStr, caseNum, clientName, docType } = ctx;
+    return `
+      ${letterhead}
+      <p style="text-align:right;">${dateStr}</p>
+      <p><strong style="text-decoration:underline;">${this.escHtml(this.getDocTypeLabel(docType)).toUpperCase()} — ${caseNum}</strong></p>
+      <p><strong>Client:</strong> ${clientName}</p>
+      <p>&nbsp;</p>
+      <p>${instructions || `<span class="dg-placeholder">[Document content required from your instructions]</span>`}</p>
+      <p>&nbsp;</p>
+      <p><span class="dg-placeholder">[Additional content required]</span></p>
+      ${signatureBlock}
+      <p style="margin-top:1.5rem;font-size:0.8rem;color:#94A3B8;font-style:italic;">Draft · Not Approved · ${dateStr}</p>`;
+  },
+
+  /* ==========================================================================
+     HELPERS
+     ========================================================================== */
+  getDocTypeLabel(key) {
+    const labels = {
+      case_progress_report: 'Case Progress Report', case_summary_report: 'Case Summary Report',
+      court_attendance_report: 'Court Attendance Report', evidence_report: 'Evidence Report',
+      deadline_report: 'Deadline Report', client_update_report: 'Client Update Report',
+      closing_report: 'Case Closing Report', client_engagement_letter: 'Client Engagement Letter',
+      client_update_letter: 'Client Update Letter', document_request_letter: 'Request for Documents',
+      instructions_request_letter: 'Request for Instructions', appointment_letter: 'Appointment Letter',
+      hearing_reminder: 'Hearing Reminder', outcome_notification: 'Outcome Notification',
+      closure_letter: 'Case Closure Letter', certified_proceedings_request: 'Request for Certified Proceedings',
+      judgment_copy_request: 'Request for Judgment Copy', case_file_inspection: 'Case File Inspection Request',
+      filing_cover_letter: 'Filing Cover Letter', court_followup_letter: 'Follow-up Letter to Registry',
+      demand_letter: 'Demand Letter', demand_response: 'Response to Demand',
+      settlement_invitation: 'Settlement Invitation', notice_of_action: 'Notice of Intended Action',
+      document_request_opposing: 'Document Request (Opposing Party)', internal_memo: 'Internal Case Memorandum',
+      assignment_memo: 'Assignment Memorandum', handover_note: 'Handover Note',
+      research_request: 'Legal Research Request', supervisor_briefing: 'Supervisor Briefing',
+      conflict_check_report: 'Conflict-Check Report',
+    };
+    return labels[key] || (key || 'Document');
+  },
+
+  getDocTypeIcon(key) {
+    const icons = {
+      case_progress_report:'📈', case_summary_report:'📋', court_attendance_report:'🏛️',
+      evidence_report:'🔍', deadline_report:'⏰', client_update_report:'📢', closing_report:'✅',
+      client_engagement_letter:'🤝', client_update_letter:'📬', document_request_letter:'📎',
+      instructions_request_letter:'📩', appointment_letter:'📅', hearing_reminder:'🔔',
+      outcome_notification:'⚖️', closure_letter:'📫', demand_letter:'⚡', demand_response:'↩️',
+      settlement_invitation:'🤝', notice_of_action:'⚠️', internal_memo:'📑',
+      assignment_memo:'👤', handover_note:'🔄', research_request:'🔬', supervisor_briefing:'📊',
+      conflict_check_report:'⚖️', filing_cover_letter:'📤', court_followup_letter:'📨',
+    };
+    return icons[key] || '📄';
+  },
+
+  renderStatusBadge(status) {
+    const map = {
+      draft: ['dg-status-draft', 'Draft'],
+      pending_review: ['dg-status-pending', 'Pending Review'],
+      changes_requested: ['dg-status-changes', 'Changes Requested'],
+      approved: ['dg-status-approved', 'Approved'],
+      issued: ['dg-status-issued', 'Issued'],
+      archived: ['dg-status-archived', 'Archived'],
+      Active: ['dg-status-approved', 'Active'],
+      Pending: ['dg-status-pending', 'Pending'],
+      Closed: ['dg-status-archived', 'Closed'],
+    };
+    const [cls, label] = map[status] || ['dg-status-draft', status || 'Draft'];
+    return `<span class="dg-status ${cls}">${label}</span>`;
+  },
+
+  escHtml(str) {
+    if (str == null) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   },
 
   /* --------------------------------------------------------------------------
@@ -931,114 +2166,203 @@ const AIAssistantView = {
     const cases = SLCMS_STATE.cases || [];
     const activeCase = cases.find(c => c.id === this.selectedReportCaseId) || cases[0] || {};
     const judgments = SLCMS_STATE.tanzaniaJudgments || [];
+    const totalDocs = cases.length + judgments.length;
+    const readyCount = (SLCMS_STATE.tanzaniaJudgments || []).filter(j => j.status === 'Ready for AI').length;
+
+    const docTypes = [
+      { id: 'case_analysis',   icon: '📋', label: 'Case Report',        desc: 'Full case analysis & status brief' },
+      { id: 'judgment_brief',  icon: '⚖️', label: 'Judgment Brief',     desc: 'TanzLII precedent citation report' },
+      { id: 'strategy_memo',   icon: '📝', label: 'Legal Research',     desc: 'Research & strategy memorandum' },
+      { id: 'tasks_deadlines', icon: '⏰', label: 'Task & Deadline',    desc: 'Statutory deadline compliance report' },
+    ];
+
+    const inclusions = [
+      { key: 'inc_statutes',   label: 'Ground with Law of Contract Act [Cap. 345 R.E. 2019]', checked: true },
+      { key: 'inc_tanzlii',    label: 'Synthesize Relevant TanzLII Holdings (2020–2026)', checked: true },
+      { key: 'inc_roadmap',    label: 'Generate Advocate Action Roadmap', checked: true },
+    ];
+
+    const hasReport = this.activeReportContent !== null;
+    const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
     return `
-      <div class="animate-fade" style="margin-top: 1rem;">
-        <div class="grid grid-cols-12 gap-4">
-          
-          <!-- LEFT CONTROLS PANEL (4 Cols) -->
-          <div style="grid-column: span 4;" class="flex flex-col gap-4">
-            <div class="card" style="padding: 1.25rem;">
-              <h3 style="font-size: 1rem; font-weight: 700; color: var(--color-primary); margin: 0 0 0.85rem 0; display: flex; align-items: center; gap: 0.4rem;">
-                <span>📊</span> Report Configuration
-              </h3>
+      <div class="animate-fade" style="padding-bottom: 2rem;">
 
-              <!-- Report Type Selection (Section 6: Report Generator) -->
-              <div class="form-group" style="margin-bottom: 0.85rem;">
-                <label class="form-label required" style="font-size: 0.76rem; font-weight: 600;">Report Type</label>
-                <select id="rep-type-select" class="form-control" style="font-size: 0.82rem;" onchange="AIAssistantView.reportType = this.value; AIAssistantView.activeReportContent = null; App.refreshCurrentView();">
-                  <option value="case_analysis" ${this.reportType === 'case_analysis' ? 'selected' : ''}>📋 Generate a Case Report</option>
-                  <option value="judgment_brief" ${this.reportType === 'judgment_brief' ? 'selected' : ''}>⚖️ Generate a Judgment Report</option>
-                  <option value="strategy_memo" ${this.reportType === 'strategy_memo' ? 'selected' : ''}>📝 Generate a Legal Research Report</option>
-                  <option value="tasks_deadlines" ${this.reportType === 'tasks_deadlines' ? 'selected' : ''}>⏰ Generate a Task and Deadline Report</option>
-                </select>
+        <!-- ═══ HERO BANNER ═══ -->
+        <div class="rdg-hero">
+          <div class="rdg-hero-grid-overlay"></div>
+          <div class="rdg-hero-content">
+            <div class="rdg-hero-left">
+              <div class="rdg-hero-eyebrow">
+                <span class="rdg-hero-pill">✦ AI-Powered</span>
+                <span class="rdg-hero-pill">Tanzanian Legal Intelligence</span>
               </div>
+              <h1 class="rdg-hero-title">SLCMS AI <span>Report &</span><br>Document Generator</h1>
+              <p class="rdg-hero-desc">Generate comprehensive case analysis reports, TanzLII judicial precedent briefs, legal research memoranda, and statutory deadline compliance reports — all grounded in authentic Tanzanian law.</p>
+            </div>
 
-              <!-- Matter / Target Selection -->
-              <div class="form-group" style="margin-bottom: 0.85rem;">
-                <label class="form-label required" style="font-size: 0.76rem; font-weight: 600;">
-                  ${this.reportType === 'judgment_brief' ? 'Select Judicial Precedent' : 'Select Legal Matter'}
-                </label>
-                <select id="rep-target-select" class="form-control" style="font-size: 0.82rem;" onchange="AIAssistantView.selectedReportCaseId = this.value; AIAssistantView.activeReportContent = null; App.refreshCurrentView();">
-                  ${this.reportType === 'judgment_brief' ? 
-                    judgments.slice(0, 15).map(j => `<option value="${j.id}" ${this.selectedReportCaseId === j.id ? 'selected' : ''}>${j.title} (${j.citation || j.year})</option>`).join('')
-                    : cases.map(c => `<option value="${c.id}" ${this.selectedReportCaseId === c.id ? 'selected' : ''}>${c.caseNumber} - ${c.title}</option>`).join('')
-                  }
-                </select>
+            <div class="rdg-hero-stats">
+              <div class="rdg-stat-item">
+                <div class="rdg-stat-num">${cases.length}</div>
+                <div class="rdg-stat-label">Active Matters</div>
               </div>
-
-              <!-- Options Checklist -->
-              <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 0.75rem; margin-bottom: 1rem; font-size: 0.76rem; display: flex; flex-direction: column; gap: 0.45rem;">
-                <div style="font-weight: 700; color: var(--color-primary); margin-bottom: 0.2rem;">Analysis Inclusions:</div>
-                <label class="flex items-center gap-2" style="cursor: pointer;">
-                  <input type="checkbox" checked style="accent-color: var(--color-gold);">
-                  <span>Ground with Law of Contract Act [Cap. 345 R.E. 2019]</span>
-                </label>
-                <label class="flex items-center gap-2" style="cursor: pointer;">
-                  <input type="checkbox" checked style="accent-color: var(--color-gold);">
-                  <span>Synthesize Relevant TanzLII Holdings (2020–2026)</span>
-                </label>
-                <label class="flex items-center gap-2" style="cursor: pointer;">
-                  <input type="checkbox" checked style="accent-color: var(--color-gold);">
-                  <span>Generate Recommended Advocate Action Roadmap</span>
-                </label>
+              <div class="rdg-stat-divider"></div>
+              <div class="rdg-stat-item">
+                <div class="rdg-stat-num">${judgments.length}</div>
+                <div class="rdg-stat-label">TanzLII Precedents</div>
               </div>
-
-              <!-- Action Button -->
-              <button class="btn btn-gold w-full" onclick="AIAssistantView.generateReportFromForm()" style="font-weight: 700; padding: 0.6rem 1rem;">
-                <span>✨ Synthesize Legal Intelligence Brief</span>
+              <div class="rdg-stat-divider"></div>
+              <div class="rdg-stat-item">
+                <div class="rdg-stat-num">4</div>
+                <div class="rdg-stat-label">Report Types</div>
+              </div>
+              <div class="rdg-stat-divider"></div>
+              <button class="rdg-hero-generate-btn" onclick="AIAssistantView.generateReportFromForm()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                Generate Now
               </button>
             </div>
-
-            <!-- Quick Template Info Card -->
-            <div class="card" style="padding: 1.15rem; background: #F8FAFC; border: 1px solid var(--color-border);">
-              <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--color-primary); margin: 0 0 0.4rem 0;">
-                🛡️ Statutory Compliance Standard
-              </h4>
-              <p style="font-size: 0.75rem; color: var(--color-text-secondary); line-height: 1.5; margin: 0;">
-                All intelligence briefs generated via SLCMS AI are formatted according to the Tanzanian High Court practice rules. All findings are for advisory use and require Advocate verification.
-              </p>
-            </div>
           </div>
+        </div>
 
-          <!-- RIGHT CANVAS PANEL (8 Cols) -->
-          <div style="grid-column: span 8;" class="flex flex-col gap-4">
-            <div class="card" style="padding: 1.5rem; min-height: 600px; display: flex; flex-direction: column;">
-              
-              <!-- Canvas Header -->
-              <div class="flex items-center justify-between" style="border-bottom: 1px solid var(--color-border); padding-bottom: 0.85rem; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
-                <div>
-                  <h3 style="margin: 0; font-size: 1.1rem; color: var(--color-primary);">
-                    Intelligence Report Canvas
-                  </h3>
-                  <div style="font-size: 0.74rem; color: var(--color-text-secondary); margin-top: 0.15rem;">
-                    Target: <strong>${activeCase.title || 'Selected Precedent'}</strong> &middot; Ref: <code style="font-family: var(--font-mono); color: var(--color-gold);">${activeCase.caseNumber || 'N/A'}</code>
-                  </div>
+        <!-- ═══ DOCUMENT TYPE SELECTOR CARDS ═══ -->
+        <div class="rdg-type-cards">
+          ${docTypes.map(dt => `
+            <button class="rdg-type-card ${this.reportType === dt.id ? 'rdg-card-active' : ''}"
+                    onclick="AIAssistantView.reportType = '${dt.id}'; AIAssistantView.activeReportContent = null; App.refreshCurrentView();">
+              <div class="rdg-card-active-dot"></div>
+              <div class="rdg-type-icon-box">${dt.icon}</div>
+              <div class="rdg-type-card-title">${dt.label}</div>
+              <div class="rdg-type-card-desc">${dt.desc}</div>
+            </button>
+          `).join('')}
+        </div>
+
+        <!-- ═══ MAIN 2-COLUMN LAYOUT ═══ -->
+        <div class="rdg-main-layout">
+
+          <!-- LEFT: Configuration Panel -->
+          <div class="rdg-config-panel">
+
+            <!-- Matter Selection Card -->
+            <div class="rdg-config-card">
+              <div class="rdg-config-card-header">
+                <div class="rdg-config-card-header-icon">🗂️</div>
+                <h3 class="rdg-config-card-title">Select ${this.reportType === 'judgment_brief' ? 'Judicial Precedent' : 'Legal Matter'}</h3>
+              </div>
+              <div class="rdg-config-card-body">
+                <label class="rdg-matter-label">Target ${this.reportType === 'judgment_brief' ? 'Precedent' : 'Matter'}</label>
+                <select class="rdg-matter-select" id="rep-target-select"
+                        onchange="AIAssistantView.selectedReportCaseId = this.value; AIAssistantView.activeReportContent = null; App.refreshCurrentView();">
+                  ${this.reportType === 'judgment_brief'
+                    ? judgments.slice(0, 15).map(j => `<option value="${j.id}" ${this.selectedReportCaseId === j.id ? 'selected' : ''}>${j.title} (${j.citation || j.year})</option>`).join('')
+                    : cases.map(c => `<option value="${c.id}" ${this.selectedReportCaseId === c.id ? 'selected' : ''}>${c.caseNumber} — ${c.title}</option>`).join('')
+                  }
+                </select>
+
+                ${activeCase.id ? `
+                <div style="margin-top: 0.85rem; padding: 0.75rem; background: rgba(200,155,60,0.05); border-radius: 9px; border: 1px solid rgba(200,155,60,0.15); font-size: 0.76rem; line-height: 1.55;">
+                  <div style="font-weight: 700; color: var(--color-primary); margin-bottom: 0.3rem;">📁 ${activeCase.title || 'Selected Matter'}</div>
+                  <div style="color: var(--color-text-secondary);">Ref: <strong style="color: var(--color-gold);">${activeCase.caseNumber || 'N/A'}</strong></div>
+                  <div style="color: var(--color-text-secondary);">Court: ${activeCase.court || 'High Court of Tanzania'}</div>
+                  <div style="color: var(--color-text-secondary);">Status: <span style="color: #22C55E; font-weight: 600;">${activeCase.status || 'Active'}</span></div>
                 </div>
+                ` : ''}
+              </div>
+            </div>
 
-                <div class="flex items-center gap-2">
-                  <button class="btn btn-secondary btn-sm" onclick="AIAssistantView.copyReportText()" title="Copy brief to clipboard">
-                    📋 Copy
-                  </button>
-                  <button class="btn btn-secondary btn-sm" onclick="AIAssistantView.exportReportWord()" title="Export as Word .doc/.docx">
-                    📄 Export Word
-                  </button>
-                  <button class="btn btn-secondary btn-sm" onclick="AIAssistantView.exportReportPDF()" title="Export / Print as PDF">
-                    📑 Export PDF
-                  </button>
-                  <button class="btn btn-gold btn-sm" onclick="AIAssistantView.attachReportToCase('${activeCase.id}')" title="Attach to case files">
-                    💾 Attach to Case
-                  </button>
+            <!-- Analysis Inclusions Card -->
+            <div class="rdg-config-card">
+              <div class="rdg-config-card-header">
+                <div class="rdg-config-card-header-icon">⚙️</div>
+                <h3 class="rdg-config-card-title">Analysis Inclusions</h3>
+              </div>
+              <div class="rdg-config-card-body">
+                <div class="rdg-inclusion-list">
+                  ${inclusions.map(inc => `
+                    <label class="rdg-inclusion-item rdg-checked" onclick="this.classList.toggle('rdg-checked'); this.querySelector('.rdg-inclusion-checkbox').textContent = this.classList.contains('rdg-checked') ? '✓' : '';">
+                      <input type="checkbox" checked>
+                      <div class="rdg-inclusion-checkbox">✓</div>
+                      <span class="rdg-inclusion-text">${inc.label}</span>
+                    </label>
+                  `).join('')}
                 </div>
               </div>
+            </div>
 
-              <!-- Report Body -->
-              <div id="report-canvas-body" style="flex: 1;">
+            <!-- Generate Button -->
+            <button class="rdg-generate-btn" onclick="AIAssistantView.generateReportFromForm()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              ✨ Synthesize Legal Intelligence Brief
+            </button>
+
+            <!-- Compliance Note -->
+            <div class="rdg-compliance-note">
+              <span class="rdg-compliance-icon">🛡️</span>
+              <p class="rdg-compliance-text">
+                <strong>Statutory Compliance Standard:</strong> All reports are formatted per Tanzanian High Court practice rules. Findings are for advisory use and require Advocate verification.
+              </p>
+            </div>
+
+          </div>
+
+          <!-- RIGHT: Canvas Panel -->
+          <div class="rdg-canvas-panel">
+
+            <!-- Canvas Top Bar -->
+            <div class="rdg-canvas-topbar">
+              <div class="rdg-canvas-topbar-left">
+                <div class="rdg-canvas-dot"></div>
+                <div class="rdg-canvas-title-block">
+                  <div class="rdg-canvas-title">Intelligence Report Canvas</div>
+                  <div class="rdg-canvas-meta">
+                    Target: <strong>${activeCase.title || 'Selected Matter'}</strong>
+                    &middot; Ref: <code>${activeCase.caseNumber || 'N/A'}</code>
+                  </div>
+                </div>
+              </div>
+              <div class="rdg-canvas-actions">
+                <button class="rdg-action-btn" onclick="AIAssistantView.copyReportText()" title="Copy to clipboard">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  Copy
+                </button>
+                <button class="rdg-action-btn" onclick="AIAssistantView.exportReportWord()" title="Export Word">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Word
+                </button>
+                <button class="rdg-action-btn" onclick="AIAssistantView.exportReportPDF()" title="Export PDF">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                  PDF
+                </button>
+                <button class="rdg-action-btn rdg-action-btn-gold" onclick="AIAssistantView.attachReportToCase('${activeCase.id}')" title="Attach to case">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                  Attach to Case
+                </button>
+              </div>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="rdg-canvas-status-bar">
+              <span class="rdg-status-chip">
+                <span class="rdg-status-chip-dot"></span>
+                Ready
+              </span>
+              <span class="rdg-status-sep">|</span>
+              <span class="rdg-status-chip">📊 ${docTypes.find(d => d.id === this.reportType)?.label || 'Case Report'}</span>
+              <span class="rdg-status-sep">|</span>
+              <span class="rdg-status-chip">🏛️ Tanzanian Law</span>
+              <span class="rdg-status-sep">|</span>
+              <span class="rdg-status-chip" style="color: var(--color-gold);">✦ SLCMS AI</span>
+            </div>
+
+            <!-- Canvas Body -->
+            <div class="rdg-canvas-body">
+              <div id="report-canvas-body">
                 ${this.renderActiveReportText(activeCase)}
               </div>
             </div>
-          </div>
 
+          </div>
         </div>
       </div>
     `;
@@ -1048,153 +2372,136 @@ const AIAssistantView = {
     const isJudgment = this.reportType === 'judgment_brief';
     const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
+    if (!c || (!c.id && !c.title)) {
+      return `
+        <div class="rdg-empty-canvas">
+          <div class="rdg-empty-icon">📄</div>
+          <h3 class="rdg-empty-title">Intelligence Canvas Ready</h3>
+          <p class="rdg-empty-desc">Select a legal matter or judicial precedent on the left, configure your analysis inclusions, then click <strong>Synthesize Legal Intelligence Brief</strong> to generate your report.</p>
+          <button class="rdg-generate-btn" style="max-width: 280px;" onclick="AIAssistantView.generateReportFromForm()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            ✨ Generate Report
+          </button>
+        </div>
+      `;
+    }
+
     if (this.reportType === 'tasks_deadlines') {
       const activeTasks = (SLCMS_STATE.tasks || []).filter(t => !c.id || t.caseId === c.id || t.caseNumber === c.caseNumber);
       const pendingCount = activeTasks.filter(t => t.status !== 'completed').length;
       const completedCount = activeTasks.filter(t => t.status === 'completed').length;
 
       return `
-        <div class="slcms-legal-parchment" style="padding: 1.75rem 2rem; font-family: 'Georgia', 'Times New Roman', serif; line-height: 1.75; font-size: 0.88rem; color: var(--color-text-main); position: relative; min-height: 480px;">
-          <div class="slcms-parchment-watermark">STATUTORY DOCKET</div>
-          
-          <div style="text-align: center; border-bottom: 2px double var(--color-gold); padding-bottom: 0.85rem; margin-bottom: 1.25rem;">
-            <div style="font-size: 1.15rem; font-weight: 800; letter-spacing: 0.08em; color: var(--color-primary); text-transform: uppercase;">
-              SLCMS ADVOCATES &amp; LEGAL CONSULTANTS
-            </div>
-            <div style="font-size: 0.74rem; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.15rem;">
-              Samora Avenue &amp; Ohio Street, Dar es Salaam &middot; Practice Management Audit
-            </div>
-            <div style="font-size: 0.74rem; color: var(--color-gold); font-weight: 700; margin-top: 0.35rem;">
-              TASK AND STATUTORY DEADLINE COMPLIANCE REPORT
-            </div>
-          </div>
+        <div class="rdg-document-letterhead">
+          <div class="rdg-letterhead-watermark">STATUTORY DOCKET</div>
+          <div class="rdg-letterhead-inner">
 
-          <div style="margin-bottom: 1.25rem; font-size: 0.82rem; background: #F8FAFC; border: 1px solid #E2E8F0; padding: 0.75rem 1rem; border-radius: 6px;">
-            <div><strong>AUDIT DATE:</strong> ${dateStr}</div>
-            <div><strong>MATTER SCOPE:</strong> ${c.caseNumber || 'Firm-wide'} &mdash; ${c.title || 'All Active Matters'}</div>
-            <div><strong>PENDING STATUTORY DEADLINES:</strong> ${pendingCount} Active Milestones</div>
-            <div><strong>COMPLETED DOCKET ITEMS:</strong> ${completedCount} Filed Actions</div>
-            <div><strong>STATUTORY GOVERNANCE:</strong> High Court of Tanzania Civil Procedure Code &amp; Appellate Rules</div>
-          </div>
+            <div class="rdg-letterhead-top">
+              <div class="rdg-firm-name">SLCMS Advocates &amp; Legal Consultants</div>
+              <div class="rdg-firm-subtitle">Samora Avenue &amp; Ohio Street, Dar es Salaam &middot; Practice Management Audit</div>
+              <div class="rdg-doc-title-badge">Task &amp; Statutory Deadline Compliance Report</div>
+            </div>
 
-          <div style="margin-bottom: 1.25rem;">
-            <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary); border-bottom: 1px solid var(--color-gold); padding-bottom: 0.25rem; margin-bottom: 0.5rem;">
-              1. SCHEDULE OF STATUTORY DEADLINES &amp; ACTION ITEMS
-            </h4>
-            <table style="width: 100%; font-size: 0.82rem; border-collapse: collapse; margin-top: 0.5rem;">
+            <div class="rdg-meta-grid">
+              <div class="rdg-meta-row"><strong>AUDIT DATE:</strong> ${dateStr}</div>
+              <div class="rdg-meta-row"><strong>MATTER:</strong> ${c.caseNumber || 'Firm-wide'}</div>
+              <div class="rdg-meta-row"><strong>PENDING MILESTONES:</strong> ${pendingCount} Items</div>
+              <div class="rdg-meta-row"><strong>COMPLETED:</strong> ${completedCount} Filed Actions</div>
+              <div class="rdg-meta-row" style="grid-column: span 2;"><strong>GOVERNANCE:</strong> High Court CPC &amp; Appellate Rules</div>
+            </div>
+
+            <div class="rdg-section-heading"><span class="rdg-section-num">1</span> Schedule of Statutory Deadlines &amp; Action Items</div>
+            <table class="rdg-tasks-table">
               <thead>
-                <tr style="background: #F1F5F9; border-bottom: 1px solid #CBD5E1; text-align: left;">
-                  <th style="padding: 0.4rem 0.5rem;">Task / Milestone</th>
-                  <th style="padding: 0.4rem 0.5rem;">Assigned Staff</th>
-                  <th style="padding: 0.4rem 0.5rem;">Statutory Due</th>
-                  <th style="padding: 0.4rem 0.5rem;">Priority</th>
-                  <th style="padding: 0.4rem 0.5rem;">Status</th>
+                <tr>
+                  <th>Task / Milestone</th>
+                  <th>Assigned Staff</th>
+                  <th>Statutory Due</th>
+                  <th>Priority</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 ${activeTasks.map(t => `
-                  <tr style="border-bottom: 1px solid #E2E8F0;">
-                    <td style="padding: 0.4rem 0.5rem;"><strong>${t.title}</strong><br><small style="color: #64748B;">${t.caseNumber}</small></td>
-                    <td style="padding: 0.4rem 0.5rem;">${t.assignedTo || 'Unassigned'}</td>
-                    <td style="padding: 0.4rem 0.5rem; font-family: var(--font-mono); font-weight: 600;">${t.dueDate}</td>
-                    <td style="padding: 0.4rem 0.5rem;"><span class="badge badge-priority-${(t.priority || '').toLowerCase()}">${t.priority || 'Normal'}</span></td>
-                    <td style="padding: 0.4rem 0.5rem;">${(t.status || '').toUpperCase()}</td>
+                  <tr>
+                    <td><strong>${t.title}</strong><br><small style="color: #64748B;">${t.caseNumber}</small></td>
+                    <td>${t.assignedTo || 'Unassigned'}</td>
+                    <td style="font-family: var(--font-mono); font-weight: 600;">${t.dueDate}</td>
+                    <td><span class="badge badge-priority-${(t.priority || '').toLowerCase()}">${t.priority || 'Normal'}</span></td>
+                    <td>${(t.status || '').toUpperCase()}</td>
                   </tr>
                 `).join('')}
               </tbody>
             </table>
-          </div>
 
-          <div style="margin-bottom: 1.25rem;">
-            <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary); border-bottom: 1px solid var(--color-gold); padding-bottom: 0.25rem; margin-bottom: 0.5rem;">
-              2. RISK COMPLIANCE AUDIT &amp; LEAD COUNSEL SUMMARY
-            </h4>
-            <p style="text-align: justify; margin-bottom: 0.5rem;">
-              All registered statutory filings are synchronized with the Electronic Case Management System (e-Courts) and NYSCEF dockets. Unassigned tasks have been flagged for administrative allocation to prevent procedural default under Order IX of the Civil Procedure Code.
-            </p>
-          </div>
+            <div class="rdg-section-heading"><span class="rdg-section-num">2</span> Risk Compliance Audit &amp; Lead Counsel Summary</div>
+            <p class="rdg-body-text">All registered statutory filings are synchronized with the Electronic Case Management System (e-Courts) and NYSCEF dockets. Unassigned tasks have been flagged for administrative allocation to prevent procedural default under Order IX of the Civil Procedure Code.</p>
 
-          <div style="border-top: 1px solid #CBD5E1; padding-top: 0.75rem; margin-top: 1.5rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #64748B;">
-            <div>Prepared by: <strong>SLCMS Automated Legal Intelligence</strong></div>
-            <div>Reviewed by: <strong>Managing Partner / Senior Counsel</strong></div>
+            <div class="rdg-document-footer">
+              <div>Prepared by: <strong>SLCMS Automated Legal Intelligence</strong></div>
+              <div>Reviewed by: <strong>Managing Partner / Senior Counsel</strong></div>
+            </div>
           </div>
         </div>
       `;
     }
 
+    const reportTitle = {
+      case_analysis: 'Comprehensive Case Analysis &amp; Status Report',
+      judgment_brief: 'TanzLII Judicial Precedent &amp; Citation Brief',
+      strategy_memo: 'Substantive Legal Research &amp; Strategy Memorandum',
+    }[this.reportType] || 'Comprehensive Legal Report';
+
     return `
-      <div class="slcms-legal-parchment" style="padding: 1.75rem 2rem; font-family: 'Georgia', 'Times New Roman', serif; line-height: 1.75; font-size: 0.88rem; color: var(--color-text-main); position: relative; min-height: 480px;">
-        <div class="slcms-parchment-watermark">CONFIDENTIAL BRIEF</div>
-        
-        <div style="text-align: center; border-bottom: 2px double var(--color-gold); padding-bottom: 0.85rem; margin-bottom: 1.25rem;">
-          <div style="font-size: 1.15rem; font-weight: 800; letter-spacing: 0.08em; color: var(--color-primary); text-transform: uppercase;">
-            SLCMS ADVOCATES &amp; LEGAL CONSULTANTS
-          </div>
-          <div style="font-size: 0.74rem; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.15rem;">
-            Samora Avenue &amp; Ohio Street, Dar es Salaam &middot; Privileged Attorney-Client Dossier
-          </div>
-          <div style="font-size: 0.74rem; color: var(--color-gold); font-weight: 700; margin-top: 0.35rem;">
-            ${this.reportType === 'case_analysis' ? 'COMPREHENSIVE CASE ANALYSIS & STATUS REPORT' : this.reportType === 'judgment_brief' ? 'TANZLII JUDICIAL PRECEDENT & CITATION BRIEF' : this.reportType === 'strategy_memo' ? 'SUBSTANTIVE LEGAL RESEARCH & STRATEGY MEMORANDUM' : 'COMPREHENSIVE LEGAL REPORT'}
-          </div>
-        </div>
+      <div class="rdg-document-letterhead">
+        <div class="rdg-letterhead-watermark">CONFIDENTIAL BRIEF</div>
+        <div class="rdg-letterhead-inner">
 
-        <div style="margin-bottom: 1.25rem; font-size: 0.82rem; background: #F8FAFC; border: 1px solid #E2E8F0; padding: 0.75rem 1rem; border-radius: 6px;">
-          <div><strong>DATE OF BRIEFING:</strong> ${dateStr}</div>
-          <div><strong>MATTER REFERENCE:</strong> ${c.caseNumber || 'TZ-HC-2026'} &mdash; ${c.title || 'Selected Legal Matter'}</div>
-          <div><strong>CLIENT / BENEFICIARY:</strong> ${c.client || 'Client On File'}</div>
-          <div><strong>SUPERVISING ADVOCATE:</strong> Wakili Juma Mwangi, Adv. (Senior Lawyer)</div>
-          <div><strong>CLASSIFICATION:</strong> Strictly Confidential &middot; Legal Professional Privilege</div>
-        </div>
+          <div class="rdg-letterhead-top">
+            <div class="rdg-firm-name">SLCMS Advocates &amp; Legal Consultants</div>
+            <div class="rdg-firm-subtitle">Samora Avenue &amp; Ohio Street, Dar es Salaam &middot; Privileged Attorney-Client Dossier</div>
+            <div class="rdg-doc-title-badge">${reportTitle}</div>
+          </div>
 
-        <div style="margin-bottom: 1.25rem;">
-          <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary); border-bottom: 1px solid var(--color-gold); padding-bottom: 0.25rem; margin-bottom: 0.5rem;">
-            1. EXECUTIVE SUMMARY &amp; PROCEDURAL POSTURE
-          </h4>
-          <p style="margin-bottom: 0.5rem; text-align: justify;">
-            This legal intelligence report provides an automated synthesis of the proceedings, statutory grounding, and judicial precedents governing the matter of <strong>${c.title || 'the referenced matter'}</strong> currently pending before the ${c.court || 'High Court of Tanzania'}.
-          </p>
-          <p style="text-align: justify;">
-            The central controversy involves claims under commercial contract agreements, procedural timelines under the Civil Procedure Code [Cap. 33 R.E. 2019], and relevant statutory remedies for breach of contractual warranties and liquidated damages.
-          </p>
-        </div>
+          <div class="rdg-meta-grid">
+            <div class="rdg-meta-row"><strong>DATE OF BRIEFING:</strong> ${dateStr}</div>
+            <div class="rdg-meta-row"><strong>MATTER REF:</strong> <span style="color: var(--color-gold); font-weight: 700;">${c.caseNumber || 'TZ-HC-2026'}</span></div>
+            <div class="rdg-meta-row"><strong>MATTER TITLE:</strong> ${c.title || 'Selected Legal Matter'}</div>
+            <div class="rdg-meta-row"><strong>CLIENT:</strong> ${c.client || 'Client On File'}</div>
+            <div class="rdg-meta-row"><strong>SUPERVISING ADVOCATE:</strong> Wakili Juma Mwangi, Adv.</div>
+            <div class="rdg-meta-row"><strong>CLASSIFICATION:</strong> Strictly Confidential &middot; Legal Privilege</div>
+          </div>
 
-        <div style="margin-bottom: 1.25rem;">
-          <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary); border-bottom: 1px solid var(--color-gold); padding-bottom: 0.25rem; margin-bottom: 0.5rem;">
-            2. APPLICABLE STATUTORY FRAMEWORK (TANZANIA)
-          </h4>
-          <ul style="padding-left: 1.25rem; margin-bottom: 0.5rem;">
-            <li><strong>Law of Contract Act [Cap. 345 R.E. 2019]:</strong> Section 73 &mdash; Right to claim compensation for loss or damage caused by breach of contract.</li>
-            <li><strong>Civil Procedure Code [Cap. 33 R.E. 2019]:</strong> Order XXXVII &mdash; Chamber summons applications, interlocutory orders, and temporary injunctions.</li>
-            <li><strong>Law of Limitation Act [Cap. 89 R.E. 2019]:</strong> Statutory limitation period for actions founded on contract (6 years).</li>
+          <div class="rdg-section-heading"><span class="rdg-section-num">1</span> Executive Summary &amp; Procedural Posture</div>
+          <p class="rdg-body-text">This legal intelligence report provides an automated synthesis of the proceedings, statutory grounding, and judicial precedents governing the matter of <strong>${c.title || 'the referenced matter'}</strong> currently pending before the ${c.court || 'High Court of Tanzania at Dar es Salaam'}.</p>
+          <p class="rdg-body-text">The central controversy involves claims under commercial contract agreements, procedural timelines under the Civil Procedure Code [Cap. 33 R.E. 2019], and relevant statutory remedies for breach of contractual warranties and liquidated damages.</p>
+
+          <div class="rdg-section-heading"><span class="rdg-section-num">2</span> Applicable Statutory Framework (Tanzania)</div>
+          <ul class="rdg-statute-list">
+            <li><span class="rdg-statute-bullet"></span><span><strong>Law of Contract Act [Cap. 345 R.E. 2019]:</strong> Section 73 &mdash; Right to claim compensation for loss or damage caused by breach of contract.</span></li>
+            <li><span class="rdg-statute-bullet"></span><span><strong>Civil Procedure Code [Cap. 33 R.E. 2019]:</strong> Order XXXVII &mdash; Chamber summons applications, interlocutory orders, and temporary injunctions.</span></li>
+            <li><span class="rdg-statute-bullet"></span><span><strong>Law of Limitation Act [Cap. 89 R.E. 2019]:</strong> Statutory limitation period for actions founded on contract (6 years).</span></li>
           </ul>
-        </div>
 
-        <div style="margin-bottom: 1.25rem;">
-          <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary); border-bottom: 1px solid var(--color-gold); padding-bottom: 0.25rem; margin-bottom: 0.5rem;">
-            3. KEY TANZLII JUDICIAL PRECEDENTS &amp; RATIO DECIDENDI
-          </h4>
-          <div style="margin-bottom: 0.45rem;">
-            &bull; <strong>Attilio v. Mbowe [1969] HCD 284:</strong> Settled the definitive three-tier test for granting temporary injunctive relief (prima facie case with probability of success, irreparable injury, and balance of convenience).
+          <div class="rdg-section-heading"><span class="rdg-section-num">3</span> Key TanzLII Judicial Precedents &amp; Ratio Decidendi</div>
+          <div class="rdg-precedent-card">
+            <strong>Attilio v. Mbowe [1969] HCD 284:</strong> Settled the definitive three-tier test for granting temporary injunctive relief (prima facie case with probability of success, irreparable injury, and balance of convenience).
           </div>
-          <div style="margin-bottom: 0.45rem;">
-            &bull; <strong>Abdallah Salum Muwinge v Halima Ismail [2020] TZHC 412:</strong> Highlights procedural integrity, admissibility of secondary digital documentation, and limits on preliminary objections.
+          <div class="rdg-precedent-card">
+            <strong>Abdallah Salum Muwinge v Halima Ismail [2020] TZHC 412:</strong> Highlights procedural integrity, admissibility of secondary digital documentation, and limits on preliminary objections.
           </div>
-        </div>
 
-        <div style="margin-bottom: 1.25rem;">
-          <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary); border-bottom: 1px solid var(--color-gold); padding-bottom: 0.25rem; margin-bottom: 0.5rem;">
-            4. TACTICAL RECOMMENDATIONS &amp; IMMEDIATE ACTION ITEMS
-          </h4>
-          <ol style="padding-left: 1.25rem; margin-bottom: 0.5rem;">
-            <li>Issue formal statutory 14-day notice of intention to sue specifying precise cure conditions and claimed default amount.</li>
-            <li>File Chamber Summons supported by affidavit for preserving disputed property pending final decree.</li>
-            <li>Schedule witness conferencing and document verification with lead counsel before next court mention.</li>
+          <div class="rdg-section-heading"><span class="rdg-section-num">4</span> Tactical Recommendations &amp; Immediate Action Items</div>
+          <ol class="rdg-action-list">
+            <li>Issue formal statutory 14-day notice of intention to sue specifying precise cure conditions and claimed default amount under Cap. 345.</li>
+            <li>File Chamber Summons supported by affidavit for preserving disputed property pending final decree under Order XXXVII CPC.</li>
+            <li>Schedule witness conferencing and document verification with lead counsel before next court mention date.</li>
           </ol>
-        </div>
 
-        <div style="border-top: 1px solid #CBD5E1; padding-top: 0.75rem; margin-top: 1.5rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #64748B;">
-          <div>Prepared by: <strong>SLCMS Automated Legal Intelligence</strong></div>
-          <div>Reviewed by: <strong>Lead Litigation Advocate</strong></div>
+          <div class="rdg-document-footer">
+            <div>Prepared by: <strong>SLCMS Automated Legal Intelligence</strong></div>
+            <div>Reviewed by: <strong>Lead Litigation Advocate</strong></div>
+          </div>
         </div>
       </div>
     `;
@@ -7279,7 +8586,10 @@ ${this.escapeHtml(doc.rawExtractedText || doc.relevantPassage || doc.ratioDecide
 // Backwards compatibility bridge: routes legacy AIDraftAssistantView calls to AIAssistantView
 window.AIDraftAssistantView = {
   openForCase(caseId) {
-    AIAssistantView.openDraftMode(caseId);
+    AIAssistantView.openForCase(caseId);
+  },
+  openDraftMode(caseId) {
+    AIAssistantView.openForCase(caseId);
   },
   resetWorkspace() {
     AIAssistantView.resetDraftWorkspace();

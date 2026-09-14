@@ -11,7 +11,14 @@ const App = {
   inactivityWarningTimer: null,
   pendingRedirectRoute: null,
 
-  init() {
+  async init() {
+    if (typeof AppSettings !== 'undefined') {
+      try {
+        await AppSettings.load();
+      } catch (e) {
+        console.warn('AppSettings load deferred:', e);
+      }
+    }
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('demo') === 'admin') {
       sessionStorage.setItem('slcms_auth', 'true');
@@ -28,6 +35,9 @@ const App = {
     // Check if initial load is an unauthenticated attempt on a protected route
     if (!this.isLoggedIn) {
       document.getElementById('app-root').innerHTML = AuthView.render();
+      if (typeof AppSettings !== 'undefined') {
+        AppSettings.apply();
+      }
       if (window.location.hash && window.location.hash !== '#' && window.location.hash !== '#login') {
         this.pendingRedirectRoute = window.location.hash.replace('#', '');
         this.showToast('Please sign in to continue.', 'info');
@@ -115,11 +125,11 @@ const App = {
         <div class="sidebar-header" style="display: flex; align-items: center; justify-content: space-between;">
           <div class="flex items-center gap-2.5" style="min-width: 0; flex: 1; cursor: pointer;" onclick="App.navigate('dashboard'); App.closeMobileSidebar();" title="SLCMS Dashboard">
             <div class="sidebar-logo" style="padding: 0; background: transparent; border: none; flex-shrink: 0;">
-              <img src="assets/SLCMS.png" alt="SLCMS Emblem" style="width: 38px; height: 38px; border-radius: 50%; display: block; object-fit: contain; box-shadow: 0 0 10px rgba(200, 155, 60, 0.4);">
+              <img src="assets/SLCMS.png" data-setting-image="logoUrl" alt="SLCMS Emblem" style="width: 38px; height: 38px; border-radius: 50%; display: block; object-fit: contain; box-shadow: 0 0 10px rgba(200, 155, 60, 0.4);">
             </div>
             <div class="sidebar-brand-text">
-              <div class="brand-title">SLCMS</div>
-              <div class="brand-subtitle">Smart Legal Case Management</div>
+              <div class="brand-title" data-setting="shortName">SLCMS</div>
+              <div class="brand-subtitle" data-setting="systemName">Smart Legal Case Management</div>
             </div>
           </div>
           <button class="mobile-drawer-close-btn" onclick="App.closeMobileSidebar()" aria-label="Close navigation drawer" title="Close">
@@ -183,14 +193,14 @@ const App = {
             
             <!-- Mobile SLCMS Brand Header (Visible on Mobile) -->
             <div class="mobile-topbar-brand" onclick="App.navigate('dashboard')">
-              <span class="mobile-topbar-title">SLCMS<span style="color: var(--color-gold, #C89B3C);">.</span></span>
+              <span class="mobile-topbar-title"><span data-setting="shortName">SLCMS</span><span style="color: var(--color-gold, #C89B3C);">.</span></span>
               <span id="mobile-topbar-page-label" class="mobile-topbar-subtitle">DASHBOARD</span>
             </div>
 
             <div class="breadcrumb-area">
               <h2 id="topbar-page-title" class="page-title">Executive Dashboard</h2>
               <div class="breadcrumb-trail">
-                <a href="javascript:void(0)" onclick="App.navigate('dashboard')">SLCMS Law Firm</a>
+                <a href="javascript:void(0)" onclick="App.navigate('dashboard')" data-setting="organizationName">SLCMS Law Firm</a>
                 <span>/</span>
                 <span id="topbar-breadcrumb-current" style="color: var(--color-gold);">Workspace</span>
               </div>
@@ -263,6 +273,12 @@ const App = {
 
         <!-- 3. CENTRAL DYNAMIC CONTENT CONTAINER -->
         <main id="main-content-container" class="content-area"></main>
+
+        <!-- System Branding & Governance Footer -->
+        <footer class="app-system-footer" style="padding: 10px 24px; font-size: 0.74rem; color: var(--color-text-muted); border-top: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div><span data-setting="systemName">Smart Legal Case Management System</span> &bull; <span data-setting="organizationName">Somba Legal Chambers</span></div>
+          <div><span data-setting="shortName">SLCMS</span> Enterprise &bull; <span data-setting="officialEmail">info@sombalegal.co.tz</span> &bull; <span data-setting="phoneNumber">+255 754 000 111</span></div>
+        </footer>
       </div>
 
       <!-- 4. MOBILE BOTTOM NAVIGATION BAR (hidden on desktop via CSS) -->
@@ -393,6 +409,14 @@ const App = {
         if (route) this.navigate(route);
       }
     });
+
+    // Unsaved changes warning
+    window.addEventListener('beforeunload', (e) => {
+      if (typeof AdminView !== 'undefined' && Object.keys(AdminView.unsavedSections || {}).length > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
   },
 
   // Inactivity Session Management (Requirement 14)
@@ -410,14 +434,18 @@ const App = {
     clearTimeout(this.inactivityWarningTimer);
     clearTimeout(this.inactivityTimer);
 
-    // In a production environment, this would be 28 minutes. For testing, we set the lifecycle.
+    const sessionMins = (typeof AppSettings !== 'undefined')
+      ? parseInt(AppSettings.get('sessionDurationMinutes', 60), 10)
+      : ((typeof SLCMS_STATE !== 'undefined' && SLCMS_STATE.systemSettings?.sessionDurationMinutes) || 60);
+    const warnMins = Math.max(1, sessionMins - 2);
+
     this.inactivityWarningTimer = setTimeout(() => {
       this.triggerInactivityWarning();
-    }, 28 * 60 * 1000);
+    }, warnMins * 60 * 1000);
 
     this.inactivityTimer = setTimeout(() => {
       this.forceInactivityLogout();
-    }, 30 * 60 * 1000);
+    }, sessionMins * 60 * 1000);
   },
 
   triggerInactivityWarning() {
@@ -646,7 +674,7 @@ const App = {
       'cases': 'Cases',
       'clients': 'Clients',
       'tasks': 'Tasks & Deadlines',
-      'ai-assistant': 'SLCMS AI',
+      'ai-assistant': 'AI Document Generator',
       'case-library': 'Case Library'
     };
 
@@ -798,6 +826,9 @@ const App = {
             }
           }
         }, 120);
+      }
+      if (typeof AppSettings !== 'undefined') {
+        AppSettings.apply();
       }
     } catch(e){}
   },
@@ -1440,6 +1471,9 @@ const App = {
       ${navItem('cases', icons.cases, 'Cases', casesAttentionCount, "App.navigate('cases', { filter: 'attention' })", 'danger')}
       ${navItem('clients', icons.clients, 'Clients')}
       ${navItem('tasks', icons.tasks, 'Tasks & Deadlines')}
+
+      ${sectionLabel('DOCUMENT GENERATION')}
+      ${navItem('ai-assistant', icons.ai, 'Document Generator')}
 
       ${sectionLabel('LEGAL RESEARCH & PRECEDENTS')}
       ${navItem('case-library', icons.library, 'Case Library', judgmentsCount, null, 'info')}
