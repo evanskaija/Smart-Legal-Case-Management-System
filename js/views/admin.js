@@ -1312,7 +1312,15 @@ const AdminView = {
                 <div class="adm-prov-group">
                   <label class="adm-prov-label">Select Case</label>
                   <select id="cu-case-id" class="adm-prov-select">
-                    ${(SLCMS_STATE.cases || []).map(c => `<option value="${c.id}">${c.caseNumber} - ${c.title}</option>`).join('')}
+                    ${(() => {
+                      const demoIds = ['case-001', 'case-002', 'case-003', 'case-004', 'case-005', 'case-101', 'case-102', 'case-103', 'case-104', 'case-105'];
+                      const demoNums = ['CV/2026/0042', 'CM/2026/0217', 'EM/2026/0089', 'CA/2026/0321', 'CR/2026/0014'];
+                      const regCases = (SLCMS_STATE.cases || []).filter(c => c && !demoIds.includes(c.id) && !demoNums.includes(c.caseNumber));
+                      if (regCases.length === 0) {
+                        return '<option value="">No registered cases in system (Register a case first)</option>';
+                      }
+                      return regCases.map(c => `<option value="${c.id}">${c.caseNumber} - ${c.title}</option>`).join('');
+                    })()}
                   </select>
                 </div>
 
@@ -1491,6 +1499,14 @@ const AdminView = {
   toggleProvisionCaseAssignment(checked) {
     const el = document.getElementById('cu-assign-case-fields');
     if (el) el.style.display = checked ? 'block' : 'none';
+    if (checked) {
+      const demoIds = ['case-001', 'case-002', 'case-003', 'case-004', 'case-005', 'case-101', 'case-102', 'case-103', 'case-104', 'case-105'];
+      const demoNums = ['CV/2026/0042', 'CM/2026/0217', 'EM/2026/0089', 'CA/2026/0321', 'CR/2026/0014'];
+      const regCases = (SLCMS_STATE.cases || []).filter(c => c && !demoIds.includes(c.id) && !demoNums.includes(c.caseNumber));
+      if (regCases.length === 0) {
+        App.showToast('Note: Only client cases registered in the system can be assigned. No cases registered yet.', 'info');
+      }
+    }
   },
 
   handleProvisionNameInput(name) {
@@ -1701,7 +1717,29 @@ const AdminView = {
   openAssignCaseModal(userId, tempPassword = null) {
     const user = SLCMS_STATE.users.find(u => u.id === userId);
     if (!user) return;
-    const cases = SLCMS_STATE.cases || [];
+    const demoIds = ['case-001', 'case-002', 'case-003', 'case-004', 'case-005', 'case-101', 'case-102', 'case-103', 'case-104', 'case-105'];
+    const demoNums = ['CV/2026/0042', 'CM/2026/0217', 'EM/2026/0089', 'CA/2026/0321', 'CR/2026/0014'];
+    const cases = (SLCMS_STATE.cases || []).filter(c => c && !demoIds.includes(c.id) && !demoNums.includes(c.caseNumber));
+
+    if (cases.length === 0) {
+      App.openModal(`
+        <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+          <h3 class="modal-title" style="color: #FFFFFF; display: flex; align-items: center; gap: 0.5rem;">
+            <span>⚖️</span> Assign Case: ${user.name}
+          </h3>
+          <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 2rem 1.5rem; text-align: center;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">⚖️</div>
+          <h4 style="font-weight: 700; color: #1E293B; margin-bottom: 0.5rem;">No Registered Cases in System</h4>
+          <p style="font-size: 0.88rem; color: #64748B; max-width: 440px; margin: 0 auto 1.5rem auto; line-height: 1.5;">
+            Cases available for staff assignment must be registered in the system by advocates/clerks. Case Library precedents cannot be assigned to staff.
+          </p>
+          <button class="btn btn-primary" onclick="App.closeModal(); App.navigate('cases');">Go to Cases &amp; Matters</button>
+        </div>
+      `);
+      return;
+    }
 
     App.openModal(`
       <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
@@ -2131,6 +2169,30 @@ const AdminView = {
   },
 
   openAssignUserModal() {
+    const demoIds = ['case-001', 'case-002', 'case-003', 'case-004', 'case-005', 'case-101', 'case-102', 'case-103', 'case-104', 'case-105'];
+    const demoNums = ['CV/2026/0042', 'CM/2026/0217', 'EM/2026/0089', 'CA/2026/0321', 'CR/2026/0014'];
+    const registeredCases = (SLCMS_STATE.cases || []).filter(c => c && !demoIds.includes(c.id) && !demoNums.includes(c.caseNumber));
+
+    if (registeredCases.length === 0) {
+      App.openModal(`
+        <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+          <h3 class="modal-title" style="color: #FFFFFF; display: flex; align-items: center; gap: 0.5rem;">
+            <span>⚖️</span> Assign User Access to Legal Matter
+          </h3>
+          <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 2rem 1.5rem; text-align: center;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">⚖️</div>
+          <h4 style="font-weight: 700; color: #1E293B; margin-bottom: 0.5rem;">No Registered Cases in System</h4>
+          <p style="font-size: 0.88rem; color: #64748B; max-width: 440px; margin: 0 auto 1.5rem auto; line-height: 1.5;">
+            Cases available for staff assignment must be registered in the system by advocates/clerks. Case Library precedents cannot be assigned to staff.
+          </p>
+          <button class="btn btn-primary" onclick="App.closeModal(); App.navigate('cases');">Go to Cases &amp; Matters</button>
+        </div>
+      `);
+      return;
+    }
+
     App.openModal(`
       <div class="modal-header">
         <h3 class="modal-title">Assign User Access to Legal Matter</h3>
@@ -2141,7 +2203,7 @@ const AdminView = {
           <div class="form-group" style="margin-bottom: 1rem;">
             <label class="form-label required">Select Case Matter</label>
             <select id="ac-case-id" class="form-control" required>
-              ${SLCMS_STATE.cases.map(c => `<option value="${c.id}">${c.caseNumber} — ${c.title}</option>`).join('')}
+              ${registeredCases.map(c => `<option value="${c.id}">${c.caseNumber} — ${c.title}</option>`).join('')}
             </select>
           </div>
 

@@ -403,11 +403,42 @@ const App = {
         AICopilot.openDrawer();
       }, 300);
     }
+    if (urlParams.get('registerSampleCase') === 'true') {
+      SLCMS_STATE.addCase({
+        id: 'case-firm-001',
+        caseNumber: 'LIT/2026/0088',
+        title: 'Serengeti Breweries Ltd v Trax Logistics Ltd',
+        caseType: 'Commercial Litigation',
+        status: 'Active',
+        lawyer: 'Adv. Robert Kasoma',
+        client: 'Serengeti Breweries Ltd'
+      });
+    }
+
     const openModalParam = urlParams.get('openModal');
     if (openModalParam === 'createUser') {
       setTimeout(() => {
         if (typeof AdminView !== 'undefined' && AdminView.openCreateUserModal) {
           AdminView.openCreateUserModal();
+          if (urlParams.get('assignCaseNow') === 'true') {
+            setTimeout(() => {
+              const chk = document.getElementById('cu-assign-case-toggle');
+              if (chk) {
+                chk.checked = true;
+                AdminView.toggleProvisionCaseAssignment(true);
+              }
+              const modalBody = document.querySelector('.adm-prov-body');
+              if (modalBody) {
+                modalBody.scrollTop = modalBody.scrollHeight;
+              }
+            }, 100);
+          }
+        }
+      }, 250);
+    } else if (openModalParam === 'assignUser') {
+      setTimeout(() => {
+        if (typeof AdminView !== 'undefined' && AdminView.openAssignUserModal) {
+          AdminView.openAssignUserModal();
         }
       }, 250);
     } else if (openModalParam === 'newCase') {

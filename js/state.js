@@ -95,159 +95,8 @@ const SLCMS_STATE = {
     }
   },
 
-  // Cases (AI Report & Document Generator — Demo Cases)
-  cases: [
-    {
-      id: 'case-001',
-      caseNumber: 'CV/2026/0042',
-      title: 'Jackson Mathias v Joseph Juma',
-      client: 'Jackson Mathias',
-      clientId: 'cli-001',
-      type: 'Civil — Land Dispute',
-      caseType: 'Civil',
-      subType: 'Land Dispute',
-      status: 'Active',
-      court: 'High Court of Tanzania at Dar es Salaam',
-      registry: 'Dar es Salaam High Court Registry',
-      filingDate: '2026-01-15',
-      nextHearingDate: '2026-09-20',
-      lawyer: 'Adv. Eleanor Vance',
-      seniorLawyer: 'SLCMS System Administrator',
-      supportingStaff: 'Gabriel Mushi',
-      assignedLawyerId: 'usr-002',
-      seniorLawyerId: 'usr-001',
-      clerkId: 'usr-004',
-      description: 'Dispute over ownership of a parcel of land (Plot 14, Block C) in Kinondoni District. Claimant alleges fraudulent transfer by the defendant.',
-      accessLevel: 'Restricted',
-      facts: 'Plaintiff claims ownership of Plot 14, Block C, Kinondoni since 2015. Defendant alleges purchase from a third party in 2024. Title deed dispute pending.',
-      lastActivity: 'Court mention on 5 September 2026. Next hearing set for 20 September 2026.',
-      documents: ['Plaint filed', 'Written Statement of Defence received', 'Certificate of Title (disputed)'],
-      pendingTasks: ['Obtain certified copy of title deed', 'File witness list', 'Prepare hearing bundle'],
-      caseSummary: 'Land ownership dispute before the High Court. Evidence stage — documentary evidence being collated.',
-      opposingCounsel: 'Adv. John Kenyatta',
-      opposingParty: 'Joseph Juma',
-    },
-    {
-      id: 'case-002',
-      caseNumber: 'CM/2026/0217',
-      title: 'Mwana Investments Ltd v Baraka Trading Co.',
-      client: 'Mwana Investments Ltd',
-      clientId: 'cli-002',
-      type: 'Commercial — Contract Breach',
-      caseType: 'Commercial',
-      subType: 'Contract Breach',
-      status: 'Active',
-      court: 'Commercial Court of Tanzania',
-      registry: 'Commercial Division Registry',
-      filingDate: '2026-03-02',
-      nextHearingDate: '2026-10-08',
-      lawyer: 'Adv. Eleanor Vance',
-      seniorLawyer: 'SLCMS System Administrator',
-      supportingStaff: '',
-      assignedLawyerId: 'usr-002',
-      seniorLawyerId: 'usr-001',
-      clerkId: '',
-      description: 'Claim for TZS 240,000,000 arising from breach of a supply agreement for construction materials. Defendant failed to deliver agreed consignment.',
-      accessLevel: 'Restricted',
-      facts: 'Plaintiff entered into a supply contract dated 12 October 2025. Defendant received a 40% advance (TZS 96,000,000) but failed to deliver. Plaintiff has suffered loss of project revenue.',
-      lastActivity: 'Interlocutory application for summary judgment filed on 20 August 2026.',
-      documents: ['Supply contract', 'Bank transfer receipts', 'Demand letter (30 Jul 2026)', 'Written Statement of Defence'],
-      pendingTasks: ['Hearing for summary judgment — 8 Oct 2026', 'Witness statements (2 witnesses)'],
-      caseSummary: 'Commercial contract breach. Summary judgment application pending before the Commercial Court.',
-      opposingCounsel: 'Adv. Salome Mbeki',
-      opposingParty: 'Baraka Trading Co.',
-    },
-    {
-      id: 'case-003',
-      caseNumber: 'EM/2026/0089',
-      title: 'Dr. Fatuma Rashid v Muhimbili National Hospital',
-      client: 'Dr. Fatuma Rashid',
-      clientId: 'cli-003',
-      type: 'Employment — Wrongful Dismissal',
-      caseType: 'Employment',
-      subType: 'Wrongful Dismissal',
-      status: 'Active',
-      court: 'High Court of Tanzania (Labour Division) at Dar es Salaam',
-      registry: 'Labour Division Registry',
-      filingDate: '2026-02-20',
-      nextHearingDate: '2026-11-03',
-      lawyer: 'Adv. Eleanor Vance',
-      seniorLawyer: 'SLCMS System Administrator',
-      supportingStaff: '',
-      assignedLawyerId: 'usr-002',
-      seniorLawyerId: 'usr-001',
-      clerkId: '',
-      description: 'Claim for wrongful and unlawful dismissal, reinstatement, and terminal benefits. Applicant was dismissed without fair procedure under the Employment and Labour Relations Act No. 6 of 2004.',
-      accessLevel: 'Restricted',
-      facts: 'Applicant served as Senior Medical Officer for 14 years. Dismissed by letter dated 10 January 2026 without a hearing. No show-cause notice issued. Respondent claims absenteeism.',
-      lastActivity: 'Mediation at CMA concluded without settlement on 12 July 2026. Matter referred to Labour Court.',
-      documents: ['Dismissal letter', 'CMA certificate', 'Employment contract', 'Payslips (12 months)'],
-      pendingTasks: ['File Statement of Facts', 'Identify expert medical witness'],
-      caseSummary: 'Wrongful dismissal after 14 years of service. CMA mediation failed. Full trial before Labour Division.',
-      opposingCounsel: 'State Attorney Juma Banda',
-      opposingParty: 'Muhimbili National Hospital',
-    },
-    {
-      id: 'case-004',
-      caseNumber: 'CA/2026/0321',
-      title: 'Coastal Properties Ltd v Dar es Salaam City Council',
-      client: 'Coastal Properties Ltd',
-      clientId: 'cli-004',
-      type: 'Administrative — Compulsory Acquisition',
-      caseType: 'Administrative',
-      subType: 'Compulsory Acquisition',
-      status: 'Pending',
-      court: 'High Court of Tanzania (Land Division) at Dar es Salaam',
-      registry: 'Land Division Registry',
-      filingDate: '2026-05-11',
-      nextHearingDate: '2026-12-01',
-      lawyer: 'Adv. Eleanor Vance',
-      seniorLawyer: 'SLCMS System Administrator',
-      supportingStaff: 'Gabriel Mushi',
-      assignedLawyerId: 'usr-002',
-      seniorLawyerId: 'usr-001',
-      clerkId: 'usr-004',
-      description: 'Challenge to compulsory acquisition of prime commercial property without adequate and prompt compensation as required by Article 24 of the Constitution.',
-      accessLevel: 'Restricted',
-      facts: 'City Council issued acquisition notice in March 2026 for Plot 88, Ocean Road. Compensation offered (TZS 1.2bn) is alleged to be far below market value (TZS 4.8bn). Property has been partially demolished.',
-      lastActivity: 'Originating summons filed. Respondent served. Hearing scheduled for December 2026.',
-      documents: ['Acquisition notice', 'Valuation reports (2)', 'Constitutional petition'],
-      pendingTasks: ['Expert valuation report', 'Skeleton arguments due 1 Nov 2026'],
-      caseSummary: 'Constitutional challenge to compulsory acquisition. Compensation dispute. High Court — Land Division.',
-      opposingCounsel: 'State Attorney Mary Nyerere',
-      opposingParty: 'Dar es Salaam City Council',
-    },
-    {
-      id: 'case-005',
-      caseNumber: 'CR/2026/0014',
-      title: 'Republic v Hassan Omari Chande (Forgery)',
-      client: 'Hassan Omari Chande',
-      clientId: 'cli-005',
-      type: 'Criminal — Forgery',
-      caseType: 'Criminal',
-      subType: 'Forgery & Uttering',
-      status: 'Active',
-      court: 'Resident Magistrate Court of Dar es Salaam at Kisutu',
-      registry: 'Kisutu Magistrate Court Registry',
-      filingDate: '2026-04-03',
-      nextHearingDate: '2026-09-28',
-      lawyer: 'Adv. Eleanor Vance',
-      seniorLawyer: 'SLCMS System Administrator',
-      supportingStaff: '',
-      assignedLawyerId: 'usr-002',
-      seniorLawyerId: 'usr-001',
-      clerkId: '',
-      description: 'Client charged under s.333 of the Penal Code with forgery and uttering a forged document (land transfer certificate). Maximum penalty 7 years imprisonment.',
-      accessLevel: 'Restricted',
-      facts: 'Accused allegedly forged a certificate of occupancy to obtain a bank loan of TZS 15,000,000. Bank discovered the forgery upon security review. Three prosecution witnesses identified.',
-      lastActivity: 'Bail granted — TZS 1,000,000. Plea of Not Guilty entered 3 May 2026. Prosecution case-in-chief ongoing.',
-      documents: ['Charge sheet', 'Bail bond', 'Plea record', 'Prosecution witness list'],
-      pendingTasks: ['Cross-examine PW-3 (Forensic document examiner)', 'File no-case submission if applicable'],
-      caseSummary: 'Criminal defence — forgery charges. Prosecution case ongoing. Defence preparing cross-examination.',
-      opposingCounsel: 'D/Insp. Abdallah Mrisho (Police Prosecutor)',
-      opposingParty: 'Republic of Tanzania',
-    },
-  ],
+  // Cases (Initial database state: 0 cases - only cases registered by the system)
+  cases: [],
 
   // Clients (Initial database state: 0 clients - calculated from database)
   clients: [],
@@ -1580,20 +1429,20 @@ const SLCMS_STATE = {
       const savedCasesJson = localStorage.getItem('slcms_persisted_cases');
       if (savedCasesJson) {
         const savedCases = JSON.parse(savedCasesJson);
-        const DEMO_CASE_IDS = ['case-101', 'case-102', 'case-103', 'case-104', 'case-105', 'case-001', 'case-002'];
+        const DEMO_CASE_IDS = ['case-001', 'case-002', 'case-003', 'case-004', 'case-005', 'case-101', 'case-102', 'case-103', 'case-104', 'case-105'];
+        const DEMO_CASE_NUMS = ['CV/2026/0042', 'CM/2026/0217', 'EM/2026/0089', 'CA/2026/0321', 'CR/2026/0014'];
         if (Array.isArray(savedCases) && savedCases.length > 0) {
-          savedCases.filter(sc => !DEMO_CASE_IDS.includes(sc.id)).forEach(sc => {
-            const idx = this.cases.findIndex(c => (sc.id && c.id === sc.id) || (sc.caseNumber && c.caseNumber === sc.caseNumber));
-            if (idx >= 0) {
-              this.cases[idx] = Object.assign({}, this.cases[idx], sc);
-            } else {
-              this.cases.unshift(sc);
-            }
-          });
+          const registeredOnly = savedCases.filter(sc => sc && !DEMO_CASE_IDS.includes(sc.id) && !DEMO_CASE_NUMS.includes(sc.caseNumber));
+          this.cases = registeredOnly;
+        } else {
+          this.cases = [];
         }
+      } else {
+        this.cases = [];
       }
     } catch (e) {
       console.warn('Cases restore error:', e);
+      this.cases = [];
     }
   },
 
@@ -3884,6 +3733,12 @@ const SLCMS_STATE = {
   addInvoice(invData) {
     this.invoices.unshift(invData);
     this.addAuditLog('Invoice Generated', 'Billing & Payments', `${invData.invoiceNo} (${invData.total})`);
+  },
+
+  getRegisteredCases() {
+    const demoIds = ['case-001', 'case-002', 'case-003', 'case-004', 'case-005', 'case-101', 'case-102', 'case-103', 'case-104', 'case-105'];
+    const demoNums = ['CV/2026/0042', 'CM/2026/0217', 'EM/2026/0089', 'CA/2026/0321', 'CR/2026/0014'];
+    return (this.cases || []).filter(c => c && !demoIds.includes(c.id) && !demoNums.includes(c.caseNumber));
   },
 
   // ==========================================================================
