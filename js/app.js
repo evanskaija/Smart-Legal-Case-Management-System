@@ -1636,12 +1636,9 @@ const App = {
       ${navItem('dashboard', icons.dashboard, 'Dashboard')}
       ${navItem('clients', icons.clients, 'Clients')}
       ${!isAdmin ? navItem('cases', icons.cases, 'Cases and Matters', casesAttentionCount, "App.navigate('cases', { filter: 'attention' })", 'danger') : ''}
-      ${!isAdmin ? navItem('documents', icons.documents, 'Documents') : ''}
       ${navItem('tasks', icons.tasks, 'Tasks and Deadlines')}
-      ${!isAdmin ? navItem('communications', icons.communications, 'Communications and Tracking') : ''}
 
       ${sectionLabel('LEGAL ASSISTANCE')}
-      ${!isAdmin ? navItem('ai-drafting', icons.aiDrafting, 'SLCMS AI Drafting') : ''}
       ${navItem('legal-ai', icons.legalAi, 'Tanzania Legal AI')}
       ${navItem('case-library', icons.library, 'Case Library', judgmentsCount, null, 'info')}
       ${!isAdmin ? navItem('reports', icons.reports, 'Generated Reports') : ''}
