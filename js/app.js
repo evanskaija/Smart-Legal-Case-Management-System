@@ -20,9 +20,28 @@ const App = {
       }
     }
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('demo') === 'admin') {
+    const demoParam = urlParams.get('demo');
+    if (demoParam) {
       sessionStorage.setItem('slcms_auth', 'true');
-      sessionStorage.setItem('slcms_current_user', JSON.stringify(SLCMS_STATE.currentUser));
+      if (demoParam === 'lawyer') {
+        const lawyerUser = (SLCMS_STATE.users || []).find(u => u.role === 'Lawyer') || { id: 'USR-002', name: 'Advocate J. M. Temu', role: 'Lawyer', email: 'temu@slcms-law.co.tz' };
+        SLCMS_STATE.currentUser = lawyerUser;
+        sessionStorage.setItem('slcms_current_user', JSON.stringify(lawyerUser));
+        sessionStorage.setItem('slcms_current_user_id', lawyerUser.id);
+      } else if (demoParam === 'senior_lawyer') {
+        const snrUser = (SLCMS_STATE.users || []).find(u => u.role === 'Senior Lawyer') || { id: 'USR-001', name: 'Senior Advocate E. M. Kaija', role: 'Senior Lawyer', email: 'kaija@slcms-law.co.tz' };
+        SLCMS_STATE.currentUser = snrUser;
+        sessionStorage.setItem('slcms_current_user', JSON.stringify(snrUser));
+        sessionStorage.setItem('slcms_current_user_id', snrUser.id);
+      } else if (demoParam === 'clerk') {
+        const clerkUser = (SLCMS_STATE.users || []).find(u => u.role === 'Legal Clerk') || { id: 'USR-003', name: 'Legal Clerk P. M. Shirima', role: 'Legal Clerk', email: 'clerk@slcms-law.co.tz' };
+        SLCMS_STATE.currentUser = clerkUser;
+        sessionStorage.setItem('slcms_current_user', JSON.stringify(clerkUser));
+        sessionStorage.setItem('slcms_current_user_id', clerkUser.id);
+      } else {
+        sessionStorage.setItem('slcms_current_user', JSON.stringify(SLCMS_STATE.currentUser));
+        sessionStorage.setItem('slcms_current_user_id', SLCMS_STATE.currentUser?.id);
+      }
     }
     if (typeof SLCMS_STATE !== 'undefined' && typeof SLCMS_STATE.restoreSessionUser === 'function') {
       SLCMS_STATE.restoreSessionUser();
@@ -582,9 +601,47 @@ const App = {
     // Check Role Restrictions (Direct URLs cannot bypass role restrictions - Section 13)
     const role = SLCMS_STATE.currentUser?.role;
 
-    // Strict Administrator-only modules (Non-admins blocked with standard denial)
-    if (cleanRoute.startsWith('admin') || cleanRoute === 'user-management' || cleanRoute === 'settings' || cleanRoute === 'backup') {
-      if (role !== 'Administrator') {
+    // Administrator Separation of Duties Guard (Legal practice casework, documents, communications & AI drafting restricted)
+    if (role === 'Administrator') {
+      if (cleanRoute === 'cases' || cleanRoute === 'documents' || cleanRoute === 'ai-drafting' || cleanRoute === 'ai-draft-assistant' || cleanRoute === 'reports' || cleanRoute === 'case-assignments' || cleanRoute === 'admin-assignments' || cleanRoute === 'communications' || cleanRoute === 'case-tracking') {
+        const container = document.getElementById('main-content-container');
+        if (container) {
+          container.innerHTML = `
+            <div class="card empty-state animate-fade" style="padding: 4rem 2rem; text-align: center; max-width: 620px; margin: 3rem auto; border-top: 4px solid var(--color-warning, #F59E0B);">
+              <div style="width: 72px; height: 72px; margin: 0 auto 1.5rem auto; border-radius: 50%; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center;">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+              </div>
+              <h2 style="color: #92400E; margin-bottom: 0.6rem; font-size: 1.5rem; font-family: var(--font-heading);">
+                Separation of Duties Restriction
+              </h2>
+              <p style="color: var(--color-text-secondary); line-height: 1.6; margin-bottom: 1.5rem; font-size: 0.92rem;">
+                Under law firm data protection and ethical governance standards, administrative personnel do not have access to legal documents, communications &amp; tracking, AI drafting, client reports, or case assignment. These functions are exclusively managed by practicing advocates and senior lawyers.
+              </p>
+              <button class="btn btn-primary" onclick="App.navigate('dashboard')">Return to Admin Dashboard</button>
+            </div>
+          `;
+        } else {
+          this.showAccessRestrictedModal('Access Restricted', 'This module is restricted to practicing advocates and senior lawyers under law firm separation of duties.');
+        }
+        return;
+      }
+    }
+
+    // Strict Senior Lawyer & Managing Partner module for case assignments
+    if (cleanRoute === 'case-assignments' || cleanRoute === 'admin-assignments') {
+      if (role !== 'Managing Partner' && role !== 'Senior Lawyer') {
+        const container = document.getElementById('main-content-container');
+        if (container && typeof AdminView !== 'undefined') {
+          container.innerHTML = AdminView.renderAccessDeniedView();
+        } else {
+          this.showAccessRestrictedModal('Access Restricted', 'Access restricted. Only Senior Lawyers and Managing Partners can manage case assignments.');
+        }
+        return;
+      }
+    } else if (cleanRoute.startsWith('admin') || cleanRoute === 'user-management' || cleanRoute === 'settings' || cleanRoute === 'backup' || cleanRoute === 'activity-logs') {
+      if (role !== 'Administrator' && role !== 'Managing Partner') {
         const container = document.getElementById('main-content-container');
         if (container && typeof AdminView !== 'undefined') {
           container.innerHTML = AdminView.renderAccessDeniedView();
@@ -634,7 +691,6 @@ const App = {
       this.updateMobileNav(cleanRoute);
     }
 
-
     const activeRouteMap = {
       'admin/dashboard': 'dashboard',
       'admin-dashboard': 'dashboard',
@@ -642,11 +698,29 @@ const App = {
       'lawyer/dashboard': 'dashboard',
       'clerk/dashboard': 'dashboard',
       'user-management': 'admin-users',
+      'admin-users': 'admin-users',
       'settings': 'admin-settings',
-      'admin-security': 'admin-security-activity',
-      'admin-logs': 'admin-security-activity',
+      'admin-settings': 'admin-settings',
+      'admin-security': 'activity-logs',
+      'admin-logs': 'activity-logs',
+      'admin-security-activity': 'activity-logs',
+      'activity-logs': 'activity-logs',
+      'case-assignments': 'case-assignments',
+      'admin-assignments': 'case-assignments',
       'backup': 'admin-backup',
-      'admin-backup': 'admin-backup'
+      'admin-backup': 'admin-backup',
+      'ai-draft-assistant': 'ai-drafting',
+      'ai-drafting': 'ai-drafting',
+      'legal-ai': 'legal-ai',
+      'ai-assistant': 'legal-ai',
+      'case-tracking': 'communications',
+      'communications': 'communications',
+      'documents': 'documents',
+      'cases': 'cases',
+      'clients': 'clients',
+      'tasks': 'tasks',
+      'case-library': 'case-library',
+      'reports': 'reports'
     };
     const effectiveRoute = activeRouteMap[cleanRoute] || cleanRoute;
 
@@ -676,19 +750,28 @@ const App = {
       'senior-lawyer/dashboard': 'Senior Lawyer Dashboard',
       'lawyer/dashboard': 'Lawyer Dashboard',
       'clerk/dashboard': 'Legal Clerk Dashboard',
-      'admin-users': 'Users & Roles',
-      'admin-security-activity': 'Security Activity',
+      'admin-users': 'Users and Roles',
+      'case-assignments': 'Case Assignments',
+      'activity-logs': 'Activity Logs',
+      'admin-security-activity': 'Activity Logs',
       'admin-settings': 'System Settings',
-      'admin-backup': '7. Backup & Recovery',
-      'backup': '7. Backup & Recovery',
-      'user-management': 'Users & Roles',
+      'admin-backup': 'Backup',
+      'backup': 'Backup',
+      'user-management': 'Users and Roles',
       'settings': 'System Settings',
       'dashboard': (role === 'Administrator' || role === 'Managing Partner') ? 'Admin Dashboard' : 'Dashboard',
-      'cases': 'Cases',
-      'clients': 'Clients',
-      'tasks': 'Tasks & Deadlines',
-      'ai-assistant': 'AI Document Generator',
-      'case-library': 'Case Library'
+      'cases': 'Cases and Matters',
+      'clients': 'Clients Directory',
+      'documents': 'Document Vault',
+      'tasks': 'Tasks and Deadlines',
+      'communications': 'Communications and Tracking',
+      'case-tracking': 'Case Tracking & Timeline',
+      'ai-drafting': 'SLCMS AI Drafting',
+      'ai-draft-assistant': 'SLCMS AI Drafting',
+      'legal-ai': 'Tanzania Legal AI',
+      'ai-assistant': 'Tanzania Legal AI',
+      'case-library': 'Case Library',
+      'reports': 'Generated Reports'
     };
 
     const pageTitleElem = document.getElementById('topbar-page-title');
@@ -698,9 +781,16 @@ const App = {
 
     const mobileLabelElem = document.getElementById('mobile-topbar-page-label');
     if (mobileLabelElem) {
-      const pageName = (titleMap[cleanRoute] || 'Dashboard')
+      let pageName = (titleMap[cleanRoute] || 'Dashboard')
         .replace(/^(Admin|Senior Lawyer|Lawyer|Legal Clerk)\s+/i, '')
         .toUpperCase();
+      if (cleanRoute === 'ai-assistant') {
+        pageName = 'AI DOCS';
+      } else if (cleanRoute === 'case-library') {
+        pageName = 'LIBRARY';
+      } else if (cleanRoute === 'tasks') {
+        pageName = 'TASKS';
+      }
       mobileLabelElem.innerText = pageName;
     }
 
@@ -747,10 +837,16 @@ const App = {
           AdminView.activeTab = 'users';
           container.innerHTML = AdminView.render();
           break;
+        case 'case-assignments':
+        case 'admin-assignments':
+          AdminView.activeTab = 'assignments';
+          container.innerHTML = AdminView.render();
+          break;
+        case 'activity-logs':
         case 'admin-security-activity':
         case 'admin-security':
         case 'admin-logs':
-          AdminView.activeTab = 'security-activity';
+          AdminView.activeTab = 'logs';
           container.innerHTML = AdminView.render();
           break;
         case 'admin-settings':
@@ -764,23 +860,66 @@ const App = {
           container.innerHTML = AdminView.render();
           break;
         case 'cases':
-          if (params && params.filter === 'attention') {
-            CasesView.selectedFilterStatus = 'Attention';
+          try {
+            if (params && params.filter === 'attention') {
+              CasesView.selectedFilterStatus = 'Attention';
+            }
+            container.innerHTML = CasesView.render();
+          } catch (error) {
+            console.error('Admin Cases rendering failed:', error);
+            if (typeof CasesView !== 'undefined' && typeof CasesView.renderPageError === 'function') {
+              container.innerHTML = CasesView.renderPageError('Cases could not be displayed. Please refresh or contact the system administrator.');
+            } else {
+              container.innerHTML = `
+                <div class="card" style="padding: 3rem 1.5rem; text-align: center; margin: 1.5rem 0; border: 1px solid #FCA5A5; background: #FEF2F2; border-radius: 8px;">
+                  <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">⚠️</div>
+                  <h3 style="color: #991B1B; font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem;">Matter Service Notice</h3>
+                  <p style="color: #7F1D1D; max-width: 500px; margin: 0 auto 1.25rem auto; line-height: 1.5;">
+                    Cases could not be displayed. Please refresh or contact the system administrator.
+                  </p>
+                  <button class="btn btn-secondary btn-sm" onclick="location.reload()">Refresh Page</button>
+                </div>
+              `;
+            }
           }
-          container.innerHTML = CasesView.render();
           break;
         case 'clients':
           container.innerHTML = ClientsView.render();
           break;
         case 'documents':
-          this.navigate('dashboard');
-          return;
+          container.innerHTML = typeof DocumentsView !== 'undefined' ? DocumentsView.render() : '<div class="card p-6">Documents module loading...</div>';
+          break;
         case 'tasks':
           container.innerHTML = TasksView.render();
           break;
+        case 'communications':
+        case 'case-tracking':
+          container.innerHTML = typeof CommunicationsView !== 'undefined' ? CommunicationsView.render() : '<div class="card p-6">Communications and Tracking module loading...</div>';
+          break;
+        case 'ai-drafting':
+        case 'ai-draft-assistant':
+          container.innerHTML = typeof AIDraftAssistantView !== 'undefined' ? AIDraftAssistantView.render() : '<div class="card p-6">AI Drafting Studio loading...</div>';
+          break;
+        case 'legal-ai':
         case 'ai-assistant':
-          if (params && params.mode) {
-            AIAssistantView.activeMode = params.mode;
+          if (params) {
+            if (params.mode) AIAssistantView.activeMode = params.mode;
+            if (params.subPage) AIAssistantView.subPage = params.subPage;
+            if (params.step) AIAssistantView.wizardStep = parseInt(params.step) || 1;
+            if (params.category) AIAssistantView.selectedDocCategory = params.category;
+            if (params.docType) AIAssistantView.selectedDocType = params.docType;
+            if (params.tab) AIAssistantView.myDocumentsTab = params.tab;
+            if (params.docId) {
+              const doc = AIAssistantView.myDocuments.find(d => d.id === params.docId);
+              if (doc) {
+                AIAssistantView.generatedDoc = doc;
+                AIAssistantView.selectedCaseId = doc.caseId;
+                AIAssistantView.selectedDocType = doc.docType;
+                AIAssistantView.subPage = 'preview';
+              }
+            }
+          } else if (cleanRoute === 'legal-ai') {
+            AIAssistantView.activeMode = 'research';
           }
           container.innerHTML = AIAssistantView.render();
           break;
@@ -789,6 +928,12 @@ const App = {
             CaseLibraryView.activeCategory = params.filter === 'ready' ? 'READY_FOR_AI' : 'ALL';
           }
           container.innerHTML = (typeof CaseLibraryView !== 'undefined') ? CaseLibraryView.render() : '<div class="card" style="padding:3rem;text-align:center;"><p>Case Library loading...</p></div>';
+          break;
+        case 'reports':
+          container.innerHTML = typeof ReportsView !== 'undefined' ? ReportsView.render() : '<div class="card p-6">Generated Reports loading...</div>';
+          if (typeof ReportsView !== 'undefined' && typeof ReportsView.initCharts === 'function') {
+            setTimeout(() => ReportsView.initCharts(), 50);
+          }
           break;
         default:
           if (role === 'Administrator') {
@@ -1468,40 +1613,62 @@ const App = {
 
     const icons = {
       dashboard: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>`,
-      cases: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`,
       clients: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+      cases: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`,
       documents: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`,
       tasks: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`,
-      ai: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+      communications: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+      aiDrafting: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`,
+      legalAi: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
       library: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 7h8M8 11h6"/></svg>`,
+      reports: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
       users: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
-      security: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+      assignments: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>`,
+      activityLogs: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>`,
       settings: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
       backup: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`
     };
 
+    const isAdmin = (role === 'Administrator');
+
     let html = `
-      ${sectionLabel('MAIN MENU')}
+      ${sectionLabel('CORE OPERATIONS')}
       ${navItem('dashboard', icons.dashboard, 'Dashboard')}
-      ${navItem('cases', icons.cases, 'Cases', casesAttentionCount, "App.navigate('cases', { filter: 'attention' })", 'danger')}
       ${navItem('clients', icons.clients, 'Clients')}
-      ${navItem('tasks', icons.tasks, 'Tasks & Deadlines')}
+      ${!isAdmin ? navItem('cases', icons.cases, 'Cases and Matters', casesAttentionCount, "App.navigate('cases', { filter: 'attention' })", 'danger') : ''}
+      ${!isAdmin ? navItem('documents', icons.documents, 'Documents') : ''}
+      ${navItem('tasks', icons.tasks, 'Tasks and Deadlines')}
+      ${!isAdmin ? navItem('communications', icons.communications, 'Communications and Tracking') : ''}
 
-      ${sectionLabel('DOCUMENT GENERATION')}
-      ${navItem('ai-assistant', icons.ai, 'Document Generator')}
-
-      ${sectionLabel('LEGAL RESEARCH & PRECEDENTS')}
+      ${sectionLabel('LEGAL ASSISTANCE')}
+      ${!isAdmin ? navItem('ai-drafting', icons.aiDrafting, 'SLCMS AI Drafting') : ''}
+      ${navItem('legal-ai', icons.legalAi, 'Tanzania Legal AI')}
       ${navItem('case-library', icons.library, 'Case Library', judgmentsCount, null, 'info')}
+      ${!isAdmin ? navItem('reports', icons.reports, 'Generated Reports') : ''}
     `;
 
-    // ADMINISTRATION section for Administrator & Managing Partner
-    if (role === 'Administrator' || role === 'Managing Partner') {
+    // ADMINISTRATION section for Administrator & Managing Partner, plus Case Assignments for Senior Lawyer
+    if (role === 'Administrator') {
       html += `
         ${sectionLabel('ADMINISTRATION')}
-        ${navItem('admin-users', icons.users, 'Users & Roles')}
-        ${navItem('admin-security-activity', icons.security, 'Security Activity')}
+        ${navItem('admin-users', icons.users, 'Users and Roles')}
+        ${navItem('activity-logs', icons.activityLogs, 'Activity Logs')}
         ${navItem('admin-settings', icons.settings, 'System Settings')}
-        ${navItem('admin-backup', icons.backup, '7. Backup & Recovery')}
+        ${navItem('admin-backup', icons.backup, 'Backup')}
+      `;
+    } else if (role === 'Managing Partner') {
+      html += `
+        ${sectionLabel('ADMINISTRATION')}
+        ${navItem('admin-users', icons.users, 'Users and Roles')}
+        ${navItem('case-assignments', icons.assignments, 'Case Assignments')}
+        ${navItem('activity-logs', icons.activityLogs, 'Activity Logs')}
+        ${navItem('admin-settings', icons.settings, 'System Settings')}
+        ${navItem('admin-backup', icons.backup, 'Backup')}
+      `;
+    } else if (role === 'Senior Lawyer') {
+      html += `
+        ${sectionLabel('ADMINISTRATION')}
+        ${navItem('case-assignments', icons.assignments, 'Case Assignments')}
       `;
     }
 
@@ -1510,17 +1677,16 @@ const App = {
     // Synchronize Mobile Bottom Nav for RBAC
     const aiTab = document.getElementById('mobile-nav-ai-tab');
     if (aiTab) {
-      if (role === 'Legal Clerk') {
-        aiTab.setAttribute('data-route', 'documents');
-        aiTab.setAttribute('onclick', "App.navigate('documents')");
+      if (role === 'Administrator') {
+        aiTab.setAttribute('data-route', 'admin-users');
+        aiTab.setAttribute('onclick', "App.navigate('admin-users')");
         aiTab.innerHTML = `
           <span class="mobile-bottom-nav-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
           </span>
-          <span>Vault</span>
+          <span>Users</span>
         `;
       } else {
         aiTab.setAttribute('data-route', 'case-library');
