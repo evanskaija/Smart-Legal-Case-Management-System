@@ -35,6 +35,29 @@ const AdminView = {
       return this.renderAccessDeniedView();
     }
 
+    // Support query params or session storage for direct deep linking (e.g. ?tab=users&status=LOCKED)
+    if (typeof window !== 'undefined' && window.location) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab') || sessionStorage.getItem('slcms_admin_tab');
+      if (tabParam) {
+        this.activeTab = tabParam;
+        sessionStorage.removeItem('slcms_admin_tab');
+      }
+      const statusParam = urlParams.get('status') || sessionStorage.getItem('slcms_admin_status');
+      if (statusParam) {
+        this.statusFilter = statusParam;
+        if (statusParam === 'LOCKED') {
+          this.accessFilter = 'all';
+        }
+        sessionStorage.removeItem('slcms_admin_status');
+      }
+      const accessParam = urlParams.get('access') || sessionStorage.getItem('slcms_admin_access');
+      if (accessParam) {
+        this.accessFilter = accessParam;
+        sessionStorage.removeItem('slcms_admin_access');
+      }
+    }
+
     return `
       <div class="admin-workspace animate-fade">
         <!-- TOP VIEW HEADER & SEPARATION OF DUTIES BADGE -->
@@ -65,11 +88,11 @@ const AdminView = {
           <button class="tab-btn ${this.activeTab === 'dashboard' ? 'active' : ''}" onclick="AdminView.switchTab('dashboard')">
             <span>Admin Dashboard</span>
           </button>
-          <button class="tab-btn ${this.activeTab === 'users' || this.activeTab === 'roles' || this.activeTab === 'assignments' ? 'active' : ''}" onclick="AdminView.switchTab('users')">
+          <button class="tab-btn ${this.activeTab === 'users' || this.activeTab === 'roles' ? 'active' : ''}" onclick="AdminView.switchTab('users')">
             <span>Users &amp; Roles (${SLCMS_STATE.users.length})</span>
           </button>
           <button class="tab-btn ${this.activeTab === 'logs' || this.activeTab === 'security-activity' || this.activeTab === 'security' ? 'active' : ''}" onclick="AdminView.switchTab('security-activity')">
-            <span>Security Activity (15)</span>
+            <span>Security Activity (<span id="adm-tab-sec-count">${(SLCMS_STATE.activityLogs || []).length}</span>)</span>
           </button>
           <button class="tab-btn ${this.activeTab === 'settings' || this.activeTab === 'caselibrary' ? 'active' : ''}" onclick="AdminView.switchTab('settings')">
             <span>System Settings</span>
@@ -90,9 +113,20 @@ const AdminView = {
   switchTab(tab, options = {}) {
     this.activeTab = tab;
     if (options.roleFilter) this.roleFilter = options.roleFilter;
-    if (options.statusFilter) this.statusFilter = options.statusFilter;
+    if (options.statusFilter) {
+      this.statusFilter = options.statusFilter;
+      // If filtering by locked accounts, ensure access filter displays all staff so unaccessed accounts needing attention are visible
+      if (options.statusFilter === 'LOCKED' && (!options.accessFilter || options.accessFilter === 'accessed')) {
+        this.accessFilter = 'all';
+      }
+    }
+    if (options.accessFilter) this.accessFilter = options.accessFilter;
     if (options.searchQuery !== undefined) this.searchQuery = options.searchQuery;
     
+    if (tab === 'security-activity' || tab === 'logs') {
+      this.loadSecurityActivity();
+    }
+
     // Sync URL and refresh view
     const container = document.getElementById('admin-tab-content');
     if (container) {
@@ -172,9 +206,20 @@ const AdminView = {
   // ==========================================================================
   renderAdminDashboard() {
     const dateStr = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    const unresolvedAlertsCount = (typeof SLCMS_STATE !== 'undefined' && typeof SLCMS_STATE.getUnresolvedAlertsCount === 'function') 
-      ? SLCMS_STATE.getUnresolvedAlertsCount() 
-      : 0;
+    const activeAlerts = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.securityAlerts))
+      ? SLCMS_STATE.securityAlerts.filter(a => !a.resolved)
+      : [];
+    const lockedUsers = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.users))
+      ? SLCMS_STATE.users.filter(u => {
+          const s = (u.accountStatus || u.status || '').toUpperCase();
+          return s === 'LOCKED' || s === 'TEMPORARILY_LOCKED' || u.adminLocked === true || Boolean(u.lockedUntil);
+        })
+      : [];
+    const attentionUserIds = new Set([
+      ...activeAlerts.map(a => a.userId || a.user_id || a.staffId).filter(Boolean),
+      ...lockedUsers.map(u => u.id)
+    ]);
+    const unresolvedAlertsCount = attentionUserIds.size > 0 ? attentionUserIds.size : Math.max(activeAlerts.length, lockedUsers.length);
 
     const metrics = (typeof SLCMS_STATE !== 'undefined' && typeof SLCMS_STATE.getDashboardMetrics === 'function')
       ? SLCMS_STATE.getDashboardMetrics()
@@ -185,13 +230,14 @@ const AdminView = {
           lawyers: (SLCMS_STATE.users || []).filter(u => u.role === 'Lawyer').length,
           legalClerks: (SLCMS_STATE.users || []).filter(u => u.role === 'Legal Clerk').length,
           firstLoginRequired: (SLCMS_STATE.users || []).filter(u => (u.status || '').toUpperCase() === 'FIRST_LOGIN_RESET' || u.first_login_required).length,
-          lockedAccounts: 0
+          lockedAccounts: lockedUsers.length
         };
 
-    // Schedule immediate asynchronous fetch and render of security alerts
+    // Schedule immediate asynchronous fetch and render of security & system activity
     setTimeout(() => {
-      if (typeof AdminView !== 'undefined' && typeof AdminView.loadSecurityAlerts === 'function') {
-        AdminView.loadSecurityAlerts();
+      if (typeof AdminView !== 'undefined') {
+        if (typeof AdminView.loadSecuritySystemActivity === 'function') AdminView.loadSecuritySystemActivity();
+        if (typeof AdminView.loadSecurityActivity === 'function') AdminView.loadSecurityActivity();
       }
     }, 10);
 
@@ -224,7 +270,7 @@ const AdminView = {
               <div class="adm-hero-pill-num text-gold">${(SLCMS_STATE.caseLibrary || []).length || 76}</div>
               <div class="adm-hero-pill-label">Judgments</div>
             </div>
-            <div class="adm-hero-pill-item ${unresolvedAlertsCount > 0 ? 'adm-pill-danger-bg' : ''}" onclick="AdminView.switchTab('users', { statusFilter: 'LOCKED' })" title="Needs attention accounts">
+            <div class="adm-hero-pill-item ${unresolvedAlertsCount > 0 ? 'adm-pill-danger-bg' : ''}" onclick="AdminView.switchTab('users', { statusFilter: 'LOCKED', accessFilter: 'all' })" title="Needs attention accounts">
               <div id="adm-hero-attention-count" class="adm-hero-pill-num ${unresolvedAlertsCount > 0 ? 'text-red' : 'text-teal'}">${unresolvedAlertsCount}</div>
               <div class="adm-hero-pill-label ${unresolvedAlertsCount > 0 ? 'text-red-label' : ''}">Needs Attention</div>
             </div>
@@ -267,7 +313,7 @@ const AdminView = {
           </div>
 
           <!-- Card 2: Needs Attention (Dynamic Counter) -->
-          <div class="adm-core-metric-card ${unresolvedAlertsCount > 0 ? 'adm-border-danger' : ''}" onclick="AdminView.switchTab('users', { statusFilter: 'LOCKED' })">
+          <div class="adm-core-metric-card ${unresolvedAlertsCount > 0 ? 'adm-border-danger' : ''}" onclick="AdminView.switchTab('users', { statusFilter: 'LOCKED', accessFilter: 'all' })">
             <div class="adm-core-card-top">
               <span class="adm-core-card-title" style="color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#1E293B'};">Needs Attention</span>
               <span id="adm-core-attention-badge" class="adm-core-badge" style="background: ${unresolvedAlertsCount > 0 ? '#FEE2E2' : '#ECFDF5'}; color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#059669'};">${unresolvedAlertsCount > 0 ? 'LOCK' : 'OK'}</span>
@@ -316,112 +362,15 @@ const AdminView = {
               <span class="adm-core-card-title">Security Events</span>
               <span class="adm-core-badge" style="background: #F3E8FF; color: #7E22CE;">SEC</span>
             </div>
-            <div class="adm-core-card-val" style="color: #7E22CE;">1</div>
+            <div class="adm-core-card-val" id="adm-metric-sec-events" style="color: #7E22CE;">${(SLCMS_STATE.activityLogs || []).length}</div>
             <div class="adm-core-card-sub">Security events logged</div>
             <div class="adm-core-tag" style="background: #F3E8FF; color: #7E22CE;">Audit Trail Active</div>
           </div>
         </div>
 
-        <!-- 3. TWO COLUMN SECTION: ALERTS & SENTINEL WATCH -->
-        <div class="adm-split-section">
-          <!-- Left Column: Security & Access Alerts -->
-          <div class="adm-column-card">
-            <div class="adm-column-header">
-              <div class="flex items-center gap-2">
-                <span id="adm-alerts-indicator-dot" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${unresolvedAlertsCount > 0 ? '#EF4444' : '#10B981'};"></span>
-                <h3 class="adm-column-title">Security &amp; Access Alerts</h3>
-                <span id="adm-alerts-count-badge" class="${unresolvedAlertsCount > 0 ? 'adm-tag-danger-outline' : 'adm-tag-green-pill'}">${unresolvedAlertsCount > 0 ? unresolvedAlertsCount + ' ATTENTION' : '0 requiring attention'}</span>
-              </div>
-              <a href="javascript:void(0)" onclick="AdminView.switchTab('users', { statusFilter: 'LOCKED' })" class="adm-link-gold">View Directory &rarr;</a>
-            </div>
-
-            <div id="adm-security-alerts-container" class="adm-alerts-stack">
-              <!-- Dynamically populated by AdminView.loadSecurityAlerts() -->
-              <div style="padding: 1.5rem; text-align: center; color: #64748B; font-size: 0.85rem;">
-                Loading security alerts...
-              </div>
-            </div>
-          </div>
-
-          <!-- Right Column: Security Monitoring -->
-          <div class="adm-column-card">
-            <div class="adm-column-header">
-              <div class="flex items-center gap-2">
-                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10B981;"></span>
-                <h3 class="adm-column-title">Security Monitoring</h3>
-                <span class="adm-tag-green-pill">MONITORING ACTIVE</span>
-              </div>
-              <a href="javascript:void(0)" onclick="AdminView.switchTab('security-activity')" class="adm-link-gold">Full Audit Trail &rarr;</a>
-            </div>
-
-            <!-- Top Summary Strip -->
-            <div class="adm-sentinel-status-bar">
-              <div class="adm-sentinel-col">
-                <div class="adm-sentinel-label">SECURITY GATE</div>
-                <div class="adm-sentinel-val" style="color: #059669;">&check; 0 Breaches Detected</div>
-              </div>
-              <div class="adm-sentinel-divider"></div>
-              <div class="adm-sentinel-col">
-                <div class="adm-sentinel-label">AUDIT INTEGRITY</div>
-                <div class="adm-sentinel-val" style="color: #1D4ED8;">&#128737; 100% Sealed</div>
-              </div>
-              <div class="adm-sentinel-divider"></div>
-              <div class="adm-sentinel-col">
-                <div class="adm-sentinel-label">CIPHER SUITE</div>
-                <div class="adm-sentinel-val" style="color: #B45309;">&#128274; TLS 1.3 / AES-256</div>
-              </div>
-            </div>
-
-            <div class="adm-alerts-stack">
-              <!-- Event 1: Ledger Sealed -->
-              <div class="adm-alert-box adm-alert-border-green">
-                <div class="adm-alert-icon-square" style="background: #ECFDF5; color: #059669;">🛡️</div>
-                <div class="adm-alert-content">
-                  <div class="adm-alert-row">
-                    <span class="adm-alert-headline">Audit Log Ledger Sealed</span>
-                    <span class="adm-pill-green">COMMITTED</span>
-                  </div>
-                  <div class="adm-alert-text">Tamper-evident ledger sealed for litigation dockets &amp; audit records</div>
-                  <div class="adm-alert-footer-text">3 mins ago &bull; System Automated Task</div>
-                </div>
-                <button class="btn btn-secondary btn-sm adm-alert-action-btn" onclick="AdminView.switchTab('security-activity')">
-                  View Log
-                </button>
-              </div>
-
-              <!-- Event 2: Administrative Session -->
-              <div class="adm-alert-box adm-alert-border-blue">
-                <div class="adm-alert-icon-square" style="background: #EFF6FF; color: #1D4ED8;">👤</div>
-                <div class="adm-alert-content">
-                  <div class="adm-alert-row">
-                    <span class="adm-alert-headline">Administrative Session Verified</span>
-                    <span class="adm-pill-blue">VERIFIED</span>
-                  </div>
-                  <div class="adm-alert-text">Privilege check passed for System Administrator (ADM-0001)</div>
-                  <div class="adm-alert-footer-text">18 mins ago &bull; HQ Secure Gateway</div>
-                </div>
-                <button class="btn btn-secondary btn-sm adm-alert-action-btn" onclick="AdminView.switchTab('security-activity')">
-                  Inspect
-                </button>
-              </div>
-
-              <!-- Event 3: Cryptographic Backup -->
-              <div class="adm-alert-box adm-alert-border-yellow">
-                <div class="adm-alert-icon-square" style="background: #FFFBEB; color: #D97706;">💾</div>
-                <div class="adm-alert-content">
-                  <div class="adm-alert-row">
-                    <span class="adm-alert-headline">Automated System Backup</span>
-                    <span class="adm-pill-warning">ENCRYPTED</span>
-                  </div>
-                  <div class="adm-alert-text">Snapshot #BKP-2026-09-09 healthy (2.4 GB encrypted database state)</div>
-                  <div class="adm-alert-footer-text">1 hour ago &bull; Secure Storage Vault</div>
-                </div>
-                <button class="btn btn-secondary btn-sm adm-alert-action-btn" onclick="AdminView.switchTab('backup')">
-                  Snapshot
-                </button>
-              </div>
-            </div>
-          </div>
+        <!-- 3. SECURITY & SYSTEM ACTIVITY PANEL -->
+        <div id="adm-security-system-activity-panel">
+          ${this.renderSecuritySystemActivityHTML()}
         </div>
 
         <!-- 4. QUICK ACTIONS SECTION (MATCHING SCREENSHOT 2) -->
@@ -475,21 +424,21 @@ const AdminView = {
             </div>
           </div>
 
-          <!-- Action 3: Assign Case Dockets -->
-          <div class="adm-action-tile" onclick="AdminView.switchTab('assignments')">
+          <!-- Action 3: System Settings -->
+          <div class="adm-action-tile" onclick="AdminView.switchTab('settings')">
             <div class="adm-action-tile-top">
               <div class="adm-action-icon-box" style="background: #F5F3FF; color: #7C3AED;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                 </svg>
               </div>
-              <span class="adm-action-badge" style="background: #F5F3FF; color: #7C3AED;">LITIGATION</span>
+              <span class="adm-action-badge" style="background: #F5F3FF; color: #7C3AED;">CONFIG</span>
             </div>
-            <div class="adm-action-title">Assign Case Dockets</div>
-            <div class="adm-action-desc">Matter access governance, lead advocate designation, and clerk permissions.</div>
+            <div class="adm-action-title">System Settings</div>
+            <div class="adm-action-desc">Configure firm metadata, session timeouts, and AI research parameters.</div>
             <div class="adm-action-footer">
-              <span>Docket Access</span>
+              <span>Configuration</span>
               <span>&rarr;</span>
             </div>
           </div>
@@ -569,10 +518,33 @@ const AdminView = {
       return 0;
     });
 
+    // Unresolved security alerts for cross-referencing accounts requiring attention
+    const activeAlerts = (typeof SLCMS_STATE !== 'undefined' && typeof SLCMS_STATE.getSecurityAlerts === 'function')
+      ? SLCMS_STATE.getSecurityAlerts({ status: 'unresolved' })
+      : [];
+    const alertUserIds = new Set(activeAlerts.map(a => a.userId || a.user_id).filter(Boolean));
+    const nowMs = Date.now();
+
     const filteredUsers = sortedUsers.filter(u => {
+      const currentStatus = (u.accountStatus || u.status || 'ACTIVE').toUpperCase();
+      const isLockedOrAttention = (
+        currentStatus === 'LOCKED' ||
+        currentStatus === 'TEMPORARILY_LOCKED' ||
+        (u.status || '').toUpperCase() === 'LOCKED' ||
+        (u.status || '').toUpperCase() === 'TEMPORARILY_LOCKED' ||
+        u.adminLocked === true ||
+        Boolean(u.lockedUntil && (typeof u.lockedUntil === 'number' ? nowMs < u.lockedUntil : new Date(u.lockedUntil).getTime() > nowMs)) ||
+        alertUserIds.has(u.id) ||
+        alertUserIds.has(u.user_id) ||
+        alertUserIds.has(u.userId) ||
+        alertUserIds.has(u.staffId) ||
+        alertUserIds.has(u.employeeId)
+      );
+
       // Access filter: only display users who accessed the system by default
       const hasAccessed = Boolean(u.lastLogin && !u.lastLogin.toLowerCase().includes('never') && u.lastLogin.trim() !== '');
-      if (this.accessFilter === 'accessed' && !hasAccessed) {
+      // When filtering by LOCKED or attention, do not exclude unaccessed locked accounts
+      if (this.accessFilter === 'accessed' && !hasAccessed && !(this.statusFilter === 'LOCKED' && isLockedOrAttention)) {
         return false;
       }
       if (this.accessFilter === 'never' && hasAccessed) {
@@ -598,12 +570,11 @@ const AdminView = {
         }
       }
       // Status filter
-      const currentStatus = (u.accountStatus || u.status || 'ACTIVE').toUpperCase();
       if (this.statusFilter !== 'all') {
         if (this.statusFilter === 'FIRST_LOGIN_RESET' && currentStatus !== 'FIRST_LOGIN_RESET') return false;
         if (this.statusFilter === 'ACTIVE' && currentStatus !== 'ACTIVE') return false;
         if (this.statusFilter === 'PENDING_APPROVAL' && !currentStatus.includes('PENDING')) return false;
-        if (this.statusFilter === 'LOCKED' && currentStatus !== 'LOCKED' && u.status !== 'Locked') return false;
+        if (this.statusFilter === 'LOCKED' && !isLockedOrAttention) return false;
         if (this.statusFilter === 'SUSPENDED' && currentStatus !== 'SUSPENDED') return false;
         if (this.statusFilter === 'DEACTIVATED' && currentStatus !== 'DEACTIVATED') return false;
       }
@@ -688,7 +659,7 @@ const AdminView = {
             <!-- Showing pill & Add Button -->
             <div class="adm-toolbar-right">
               <span class="adm-showing-pill">
-                SHOWING ${filteredUsers.length} OF ${SLCMS_STATE.users.length} ACCOUNTS ${this.accessFilter === 'accessed' ? '(ACCESSED ONLY)' : ''}
+                SHOWING ${filteredUsers.length} OF ${SLCMS_STATE.users.length} ACCOUNTS ${this.accessFilter === 'accessed' && this.statusFilter !== 'LOCKED' ? '(ACCESSED ONLY)' : ''}
               </span>
               <button class="adm-toolbar-btn-gold" onclick="AdminView.openCreateUserModal()">
                 Add Lawyer / User
@@ -723,7 +694,15 @@ const AdminView = {
               </tr>
             </thead>
             <tbody>
-              ${filteredUsers.map(u => {
+              ${filteredUsers.length === 0 ? `
+                <tr>
+                  <td colspan="8" style="text-align: center; padding: 3rem 1.5rem; color: #64748B;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
+                    <div style="font-weight: 700; font-size: 0.95rem; color: #1E293B; margin-bottom: 0.25rem;">No accounts match this filter criteria</div>
+                    <div style="font-size: 0.82rem; color: #64748B;">Try selecting "All Staff (Accessed &amp; Unaccessed)" in the access dropdown or resetting your filters.</div>
+                  </td>
+                </tr>
+              ` : filteredUsers.map(u => {
                 const rollNo = this.getUserRollNumber(u);
                 const roleBadge = this.getUserRoleBadgeHtml(u);
                 const statusBadge = this.getUserStatusBadgeHtml(u);
@@ -732,6 +711,7 @@ const AdminView = {
                 const staffId = u.staffId || u.employeeId || 'ADM-0001';
                 const casesCount = (u.assignedCaseIds && u.assignedCaseIds.length) ? u.assignedCaseIds.length : (u.activeCases || 0);
                 const curStatus = (u.accountStatus || u.status || 'ACTIVE').toUpperCase();
+                const isLockedUser = curStatus === 'LOCKED' || curStatus === 'TEMPORARILY_LOCKED' || u.adminLocked === true || Boolean(u.lockedUntil);
 
                 return `
                   <tr>
@@ -785,6 +765,9 @@ const AdminView = {
                     <!-- 8. ACTIONS -->
                     <td style="text-align: right; position: relative;">
                       <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.35rem;">
+                        ${isLockedUser ? `
+                          <button class="adm-table-action-btn" onclick="AdminView.openUnlockUserModal('${u.id}')" title="Unlock Account" style="color: #DC2626; border-color: #FCA5A5; font-weight: 700; background: #FEF2F2;">Unlock</button>
+                        ` : ''}
                         <button class="adm-table-action-btn" onclick="AdminView.viewUserDetails('${u.id}')" title="View Full Details">View</button>
                         <button class="adm-table-action-btn" onclick="AdminView.openEditUserModal('${u.id}')" title="Edit Profile & Details">Edit</button>
                         <div class="adm-dropdown-container" style="position: relative; display: inline-block;">
@@ -797,8 +780,8 @@ const AdminView = {
                             <a href="javascript:void(0)" onclick="AdminView.openRoleModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #1E293B; text-decoration: none;">🛡️ Change Role</a>
                             <a href="javascript:void(0)" onclick="AdminView.openIssueTempPasswordModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #1E293B; text-decoration: none;">🔑 Issue New Temp Password</a>
                             <a href="javascript:void(0)" onclick="AdminView.openForcePasswordResetModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #1E293B; text-decoration: none;">🔄 Force Password Reset</a>
-                            ${(curStatus === 'ACTIVE') ? `<a href="javascript:void(0)" onclick="AdminView.openLockUserModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #DC2626; text-decoration: none;">🔒 Lock Account</a>` : ''}
-                            ${(curStatus === 'LOCKED') ? `<a href="javascript:void(0)" onclick="AdminView.openUnlockUserModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #059669; text-decoration: none;">🔓 Unlock Account</a>` : ''}
+                            ${(!isLockedUser && curStatus === 'ACTIVE') ? `<a href="javascript:void(0)" onclick="AdminView.openLockUserModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #DC2626; text-decoration: none;">🔒 Lock Account</a>` : ''}
+                            ${(isLockedUser) ? `<a href="javascript:void(0)" onclick="AdminView.openUnlockUserModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #059669; text-decoration: none;">🔓 Unlock Account</a>` : ''}
                             ${(curStatus !== 'SUSPENDED' && curStatus !== 'DEACTIVATED') ? `<a href="javascript:void(0)" onclick="AdminView.openSuspendUserModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #D97706; text-decoration: none;">⏸️ Suspend</a>` : ''}
                             ${(curStatus !== 'DEACTIVATED') ? `<a href="javascript:void(0)" onclick="AdminView.openDeactivateUserModal('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #DC2626; text-decoration: none;">⛔ Deactivate</a>` : ''}
                             ${(curStatus === 'DEACTIVATED') ? `<a href="javascript:void(0)" onclick="AdminView.reactivateUser('${u.id}')" class="adm-dropdown-item" style="display: block; padding: 0.45rem 1rem; font-size: 0.82rem; color: #059669; text-decoration: none;">✅ Reactivate</a>` : ''}
@@ -910,14 +893,17 @@ const AdminView = {
 
   getUserStatusBadgeHtml(u) {
     const status = (u.accountStatus || u.status || 'ACTIVE').toUpperCase();
+    if (status === 'LOCKED' || u.adminLocked === true) {
+      return `<span class="adm-status-pill-locked"><span class="adm-dot-red"></span> Locked</span>`;
+    }
+    if (status === 'TEMPORARILY_LOCKED' || (u.lockedUntil && (typeof u.lockedUntil === 'number' ? Date.now() < u.lockedUntil : new Date(u.lockedUntil).getTime() > Date.now()))) {
+      return `<span class="adm-status-pill-locked" style="background:#FEE2E2;color:#DC2626;border-color:#F87171;"><span class="adm-dot-red"></span> Temp Locked</span>`;
+    }
     if (status === 'FIRST_LOGIN_RESET' || (u.first_login_required && !u.firstLoginStatus?.includes('Completed'))) {
       return `<span class="badge" style="background:#FEF3C7;color:#92400E;border:1px solid #F59E0B;font-weight:700;font-size:0.75rem;padding:0.2rem 0.55rem;border-radius:6px;">First Login Reset</span>`;
     }
     if (status === 'ACTIVE') {
       return `<span class="adm-status-pill-active"><span class="adm-dot-green"></span> Active</span>`;
-    }
-    if (status === 'LOCKED') {
-      return `<span class="adm-status-pill-locked"><span class="adm-dot-red"></span> Locked</span>`;
     }
     if (status === 'SUSPENDED') {
       return `<span class="adm-status-pill-pending" style="background:#FFFBEB;color:#D97706;border-color:#FDE68A;">Suspended</span>`;
@@ -1000,6 +986,9 @@ const AdminView = {
 
   handleStatusFilter(status) {
     this.statusFilter = status;
+    if (status === 'LOCKED' && this.accessFilter === 'accessed') {
+      this.accessFilter = 'all';
+    }
     const container = document.getElementById('admin-tab-content');
     if (container) container.innerHTML = this.renderActiveTabContent();
   },
@@ -2471,7 +2460,15 @@ const AdminView = {
               </tr>
             </thead>
             <tbody>
-              ${logs.length === 0 ? `
+              ${totalLogs === 0 ? `
+                <tr>
+                  <td colspan="7" style="text-align: center; padding: 3rem 1.5rem; color: #64748B;">
+                    <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🛡️</div>
+                    <div style="font-weight: 700; color: #1E293B; font-size: 1.05rem;">No Security Activity Recorded Yet</div>
+                    <div style="font-size: 0.85rem; color: #64748B; margin-top: 0.25rem;">Live audit trail records will appear here whenever users log in, fail authentication, or have credentials modified.</div>
+                  </td>
+                </tr>
+              ` : logs.length === 0 ? `
                 <tr>
                   <td colspan="7" style="text-align: center; padding: 2.5rem 1rem; color: #94A3B8;">
                     <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔍</div>
@@ -2526,7 +2523,13 @@ const AdminView = {
         <!-- 6. MOBILE CARDS VIEW (ONLY SHOWN ON MOBILE WHEN CARDS IS SELECTED) -->
         ${this.mobileLogsView === 'cards' ? `
           <div class="adm-sec-mobile-cards">
-            ${logs.length === 0 ? `
+            ${totalLogs === 0 ? `
+              <div class="adm-sec-empty-state" style="text-align: center; padding: 2.5rem 1rem; border-radius: 14px;">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">🛡️</div>
+                <div style="font-weight: 700; color: #1E293B;">No Security Activity Recorded Yet</div>
+                <div style="font-size: 0.82rem; color: #64748B; margin-top: 0.25rem;">Live audit trail records will appear here whenever users log in.</div>
+              </div>
+            ` : logs.length === 0 ? `
               <div class="adm-sec-empty-state" style="text-align: center; padding: 2.5rem 1rem; border-radius: 14px;">
                 <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔍</div>
                 <div style="font-weight: 700; color: #64748B;">No security activity logs found.</div>
@@ -4804,8 +4807,616 @@ const AdminView = {
   },
 
   // ==========================================================================
-  // REAL SECURITY & ACCESS ALERTS ENGINE (Dynamic Database-Driven)
+  // REAL SECURITY & SYSTEM ACTIVITY PANEL (100% Database-Driven)
   // ==========================================================================
+  renderSecuritySystemActivityHTML(data = null) {
+    const s = data || this.cachedSecurityStatus || {
+      systemStatus: 'Normal',
+      statusMessage: 'No security issues currently require administrator attention.',
+      failedLoginsToday: 0,
+      lockedAccountsCount: 0,
+      unresolvedAlertsCount: 0,
+      unresolvedAlerts: [],
+      recentEvents: [],
+      latestBackup: null
+    };
+
+    const isAttention = s.systemStatus === 'Attention Required' || s.lockedAccountsCount > 0 || s.unresolvedAlertsCount > 0;
+    const statusLabel = isAttention ? 'Attention Required' : 'Normal';
+    const statusMsg = s.statusMessage || (isAttention ? 'Security issues require administrator attention.' : 'No security issues currently require administrator attention.');
+
+    const failedCount = s.failedLoginsToday || 0;
+    const lockedCount = s.lockedAccountsCount || 0;
+    let alertsList = (s.unresolvedAlerts || []).slice();
+    if (s.lockedUsers && s.lockedUsers.length > 0) {
+      s.lockedUsers.forEach(u => {
+        const alreadyIn = alertsList.some(a => (a.userId === u.id || a.user_id === u.id));
+        if (!alreadyIn) {
+          alertsList.push({
+            alertType: u.adminLocked ? 'ADMIN_LOCK' : 'TEMPORARY_LOCK',
+            userId: u.id,
+            name: u.name,
+            role: u.role,
+            staffId: u.staffId || u.id,
+            description: u.adminLocked ? 'Security review requested' : '3 failed login attempts',
+            lockedAtTime: 'Today',
+            unlockTime: u.lockedUntil ? new Date(u.lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (u.adminLocked ? 'Indefinite' : 'in 2 minutes'),
+            lockedBy: 'System Administrator'
+          });
+        }
+      });
+    }
+    const alertsCount = Math.max(alertsList.length, s.unresolvedAlertsCount || 0);
+    const eventsList = (s.recentEvents || []).slice(0, 5);
+    const backup = s.latestBackup;
+
+    // 1. Build Alerts HTML
+    let alertsHtml = '';
+    if (alertsCount === 0 || alertsList.length === 0) {
+      alertsHtml = `
+        <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 10px; padding: 0.9rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; color: #166534; font-size: 0.86rem;">
+          <span style="font-size: 1.2rem; color: #15803D; font-weight: 800;">✓</span>
+          <div>
+            <strong style="display: block; font-size: 0.9rem; color: #14532D;">No security alerts</strong>
+            <span>All staff accounts are currently accessible according to their status.</span>
+          </div>
+        </div>
+      `;
+    } else {
+      alertsHtml = alertsList.map(alt => {
+        const isTemp = alt.alertType === 'TEMPORARY_LOCK' || alt.alert_type === 'TEMPORARY_LOCK';
+        const name = alt.name || alt.fullName || 'Staff Member';
+        const role = alt.role || 'Staff';
+        const staffId = alt.staffId || alt.staff_id || alt.userId || 'N/A';
+        const lockTime = alt.lockedAtTime || (alt.createdAt ? new Date(alt.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent');
+        const unlockTime = alt.unlockTime || (alt.lockedUntil ? new Date(alt.lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'in 2 minutes');
+        const uid = alt.userId || alt.user_id;
+
+        if (isTemp) {
+          return `
+            <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-left: 4px solid #F59E0B; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem;">
+                  <span style="font-size: 1.1rem;">🔒</span>
+                  <strong style="font-size: 0.96rem; color: #92400E;">Account Temporarily Locked</strong>
+                </div>
+                <div style="font-size: 0.92rem; font-weight: 700; color: #1E293B;">
+                  ${name}
+                </div>
+                <div style="font-size: 0.84rem; color: #78350F; margin-top: 0.25rem;">
+                  <strong>Reason:</strong> ${alt.description || '3 failed login attempts'}
+                </div>
+                <div style="font-size: 0.84rem; color: #059669; font-weight: 600; margin-top: 0.2rem;">
+                  <strong>Unlock Time:</strong> ${unlockTime}
+                </div>
+              </div>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button class="btn btn-secondary btn-sm" onclick="AdminView.viewUserActivity('${uid}')">
+                  View Activity
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="AdminView.unlockAccountAction('${uid}')">
+                  Unlock Account
+                </button>
+              </div>
+            </div>
+          `;
+        } else {
+          return `
+            <div style="background: #FEF2F2; border: 1px solid #FECDD3; border-left: 4px solid #EF4444; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem;">
+                  <span style="font-size: 1.1rem;">🔒</span>
+                  <strong style="font-size: 0.96rem; color: #991B1B;">Account Locked by Administrator</strong>
+                </div>
+                <div style="font-size: 0.92rem; font-weight: 700; color: #1E293B;">
+                  ${name}
+                </div>
+                <div style="font-size: 0.84rem; color: #991B1B; margin-top: 0.25rem;">
+                  <strong>Reason:</strong> ${alt.description || 'Security review requested'}
+                </div>
+                <div style="font-size: 0.84rem; color: #64748B; margin-top: 0.2rem;">
+                  <strong>Locked By:</strong> ${alt.lockedBy || 'System Administrator'}
+                </div>
+              </div>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button class="btn btn-secondary btn-sm" onclick="AdminView.viewUserActivity('${uid}')">
+                  View Activity
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="AdminView.unlockAccountAction('${uid}')">
+                  Unlock Account
+                </button>
+              </div>
+            </div>
+          `;
+        }
+      }).join('');
+    }
+
+    // 2. Build Recent Events Rows
+    let eventsHtml = '';
+    if (eventsList.length === 0) {
+      eventsHtml = `
+        <tr>
+          <td colspan="4" style="text-align: center; padding: 2.75rem 1.5rem; color: #64748B;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🛡️</div>
+            <div style="font-size: 0.96rem; font-weight: 800; color: #1E293B; margin-bottom: 0.35rem;">
+              No recent security activity
+            </div>
+            <div style="font-size: 0.82rem; color: #64748B; max-width: 480px; margin: 0 auto; line-height: 1.4;">
+              Login attempts and important account-security actions will appear here automatically.
+            </div>
+          </td>
+        </tr>
+      `;
+    } else {
+      eventsHtml = eventsList.map(e => {
+        let badgeStyle = 'background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0;';
+        const res = (e.result || '').toLowerCase();
+        if (res.includes('locked')) {
+          badgeStyle = 'background: #FEF2F2; color: #B91C1C; border: 1px solid #FCA5A5;';
+        } else if (res.includes('fail') || res.includes('denied')) {
+          badgeStyle = 'background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A;';
+        } else if (res.includes('temporary password') || res.includes('updated') || res.includes('created')) {
+          badgeStyle = 'background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE;';
+        } else if (res.includes('deactivated')) {
+          badgeStyle = 'background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1;';
+        }
+        return `
+          <tr>
+            <td style="font-size: 0.82rem; color: #64748B; white-space: nowrap; font-family: monospace; padding: 0.75rem 1rem;">${e.time}</td>
+            <td style="font-size: 0.86rem; font-weight: 700; color: #0F172A; padding: 0.75rem 1rem;">${e.user || e.userName}</td>
+            <td style="font-size: 0.85rem; color: #334155; padding: 0.75rem 1rem;">${e.event || e.eventType}</td>
+            <td style="padding: 0.75rem 1rem;">
+              <span style="display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 700; ${badgeStyle}">
+                ${e.result}
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // 3. Build Backup Status HTML
+    let backupHtml = '';
+    if (!backup) {
+      backupHtml = `
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+          <div style="display: flex; align-items: center; gap: 0.85rem;">
+            <span style="font-size: 1.6rem; color: #94A3B8;">💾</span>
+            <div>
+              <div style="font-size: 0.9rem; font-weight: 800; color: #475569;">
+                No backup has been created yet.
+              </div>
+              <div style="font-size: 0.8rem; color: #64748B; margin-top: 0.2rem;">
+                Create the first backup to protect users, cases, clients, tasks and documents.
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-gold btn-sm" onclick="AdminView.triggerCreateBackup()">
+            Create Backup
+          </button>
+        </div>
+      `;
+    } else if (backup.status === 'Failed') {
+      backupHtml = `
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+          <div style="display: flex; align-items: center; gap: 0.85rem;">
+            <span style="font-size: 1.6rem; color: #EF4444;">⚠️</span>
+            <div>
+              <div style="font-size: 0.9rem; font-weight: 800; color: #DC2626;">
+                Latest backup failed
+              </div>
+              <div style="font-size: 0.8rem; color: #64748B; margin-top: 0.2rem;">
+                Failure recorded at ${backup.dateFormatted || backup.createdAt}. Check storage availability and try again.
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="AdminView.triggerCreateBackup()">
+            Retry Backup
+          </button>
+        </div>
+      `;
+    } else {
+      backupHtml = `
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+          <div style="display: flex; align-items: center; gap: 0.85rem;">
+            <span style="font-size: 1.6rem;">💾</span>
+            <div>
+              <div style="font-size: 0.9rem; font-weight: 800; color: #0F172A; display: flex; align-items: center; gap: 0.5rem;">
+                <span>Latest Backup</span>
+                <span class="badge badge-success" style="font-size: 0.7rem; background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0;">Status: Successful</span>
+              </div>
+              <div style="font-size: 0.8rem; color: #64748B; margin-top: 0.2rem;">
+                Date: <strong style="color: #1E293B;">${backup.dateFormatted || backup.createdAt}</strong> &bull; Size: <strong style="color: #1E293B;">${backup.sizeFormatted}</strong> &bull; Created by: <strong style="color: #1E293B;">${backup.createdBy}</strong>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-secondary btn-sm" onclick="AdminView.triggerCreateBackup()">
+              Create Backup
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="AdminView.openBackupHistoryModal()">
+              View Backup History
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="card adm-security-panel" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
+        
+        <!-- Header & System Status -->
+        <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #F1F5F9; padding-bottom: 1.25rem; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+              <span style="font-size: 1.4rem;">🛡️</span>
+              <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: #0F172A; font-family: var(--font-heading);">
+                Security &amp; System Activity
+              </h3>
+            </div>
+            <p style="margin: 0.25rem 0 0; font-size: 0.82rem; color: #64748B;">
+              Help the administrator see login problems, locked accounts, important system actions and backup status.
+            </p>
+          </div>
+
+          <!-- System Status Badge -->
+          <div id="adm-sys-status-badge" style="display: flex; align-items: center; gap: 0.5rem; background: ${isAttention ? '#FEF2F2' : '#ECFDF5'}; border: 1px solid ${isAttention ? '#FCA5A5' : '#A7F3D0'}; padding: 0.45rem 1rem; border-radius: 999px;">
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${isAttention ? '#EF4444' : '#10B981'};"></span>
+            <span style="font-size: 0.85rem; font-weight: 800; color: ${isAttention ? '#B91C1C' : '#047857'};">
+              System Status: ${statusLabel}
+            </span>
+          </div>
+        </div>
+
+        <!-- Status Explanation Banner -->
+        <div id="adm-sys-status-banner" style="background: ${isAttention ? '#FFF1F2' : '#F8FAFC'}; border: 1px solid ${isAttention ? '#FECDD3' : '#E2E8F0'}; border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; color: ${isAttention ? '#9F1239' : '#334155'};">
+          <span style="font-size: 1.1rem;">${isAttention ? '⚠️' : '✓'}</span>
+          <span id="adm-sys-status-message" style="font-weight: 600;">
+            ${statusMsg}
+          </span>
+        </div>
+
+        <!-- 1. CURRENT SECURITY STATUS (3 Small Cards) -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+          <!-- Card 1: Failed Logins Today -->
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1rem;">
+            <div style="font-size: 0.75rem; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Failed Logins Today</div>
+            <div id="adm-stat-failed-today" style="font-size: 1.8rem; font-weight: 800; color: #1E293B; margin: 0.35rem 0 0.15rem;">${failedCount}</div>
+            <div style="font-size: 0.75rem; color: #94A3B8;">Unsuccessful login attempts recorded today</div>
+          </div>
+
+          <!-- Card 2: Locked Accounts -->
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1rem;">
+            <div style="font-size: 0.75rem; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Locked Accounts</div>
+            <div id="adm-stat-locked-accounts" style="font-size: 1.8rem; font-weight: 800; color: ${lockedCount > 0 ? '#EF4444' : '#10B981'}; margin: 0.35rem 0 0.15rem;">${lockedCount}</div>
+            <div style="font-size: 0.75rem; color: #94A3B8;">Temporarily or manually locked accounts</div>
+          </div>
+
+          <!-- Card 3: Unresolved Alerts -->
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1rem;">
+            <div style="font-size: 0.75rem; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">Unresolved Alerts</div>
+            <div id="adm-stat-unresolved-alerts" style="font-size: 1.8rem; font-weight: 800; color: ${alertsCount > 0 ? '#EF4444' : '#10B981'}; margin: 0.35rem 0 0.15rem;">${alertsCount}</div>
+            <div style="font-size: 0.75rem; color: #94A3B8;">Security events requiring administrator action</div>
+          </div>
+        </div>
+
+        <!-- 2. SECURITY ALERTS -->
+        <div style="margin-bottom: 1.5rem;">
+          <div style="font-size: 0.85rem; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem;">
+            Security Alerts
+          </div>
+          <div id="adm-sec-alerts-wrapper">
+            ${alertsHtml}
+          </div>
+        </div>
+
+        <!-- 3. RECENT SECURITY ACTIVITY -->
+        <div style="margin-bottom: 1.5rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <div style="font-size: 0.85rem; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.5px;">
+              Recent Security Activity
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="AdminView.switchTab('security-activity')">
+              <span>View Full Activity Log &rarr;</span>
+            </button>
+          </div>
+
+          <div class="table-container" style="border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; margin-bottom: 0.5rem;">
+            <table class="data-table" style="width: 100%; margin: 0;">
+              <thead style="background: #F8FAFC;">
+                <tr>
+                  <th style="width: 20%; padding: 0.75rem 1rem; font-size: 0.75rem; text-align: left; font-weight: 700; color: #475569; letter-spacing: 0.5px;">TIME</th>
+                  <th style="width: 28%; padding: 0.75rem 1rem; font-size: 0.75rem; text-align: left; font-weight: 700; color: #475569; letter-spacing: 0.5px;">USER</th>
+                  <th style="width: 30%; padding: 0.75rem 1rem; font-size: 0.75rem; text-align: left; font-weight: 700; color: #475569; letter-spacing: 0.5px;">EVENT</th>
+                  <th style="width: 22%; padding: 0.75rem 1rem; font-size: 0.75rem; text-align: left; font-weight: 700; color: #475569; letter-spacing: 0.5px;">RESULT</th>
+                </tr>
+              </thead>
+              <tbody id="adm-recent-events-tbody">
+                ${eventsHtml}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 4. BACKUP STATUS -->
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1.1rem 1.25rem; margin-bottom: 1.5rem;" id="adm-backup-status-wrapper">
+          ${backupHtml}
+        </div>
+
+        <!-- 5. ADMINISTRATOR ACTIONS (4 Actions) -->
+        <div style="border-top: 1px solid #F1F5F9; padding-top: 1.25rem;">
+          <div style="font-size: 0.8rem; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem;">
+            Administrator Actions
+          </div>
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="AdminView.switchTab('security-activity')">
+              <span>📜 View Activity Log</span>
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="AdminView.openManageLockedAccountsModal()">
+              <span>🔒 Manage Locked Accounts</span>
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="AdminView.openAdminResetPasswordModal()">
+              <span>🔑 Reset User Password</span>
+            </button>
+            <button class="btn btn-gold btn-sm" onclick="AdminView.triggerCreateBackup()">
+              <span>💾 Create Backup</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    `;
+  },
+
+  async loadSecuritySystemActivity() {
+    let data = null;
+    try {
+      const res = await fetch('/api/admin/security-status');
+      if (res.ok) {
+        data = await res.json();
+        this.cachedSecurityStatus = data;
+      }
+    } catch (e) {
+      console.warn('Could not fetch security status from server:', e);
+    }
+
+    if (data) {
+      const panel = document.getElementById('adm-security-system-activity-panel');
+      if (panel) {
+        panel.innerHTML = this.renderSecuritySystemActivityHTML(data);
+      }
+
+      // Update hero attention counter
+      const heroAttention = document.getElementById('adm-hero-attention-count');
+      if (heroAttention) {
+        const cnt = data.unresolvedAlertsCount || 0;
+        heroAttention.textContent = cnt;
+        heroAttention.className = `adm-hero-pill-num ${cnt > 0 ? 'text-red' : 'text-teal'}`;
+      }
+    }
+  },
+
+  async openManageLockedAccountsModal() {
+    let users = [];
+    try {
+      const res = await fetch('/api/admin/users');
+      if (res.ok) {
+        users = await res.json();
+      } else {
+        users = SLCMS_STATE.users || [];
+      }
+    } catch (e) {
+      users = SLCMS_STATE.users || [];
+    }
+
+    const nowMs = Date.now();
+    const lockedUsers = users.filter(u => 
+      u.adminLocked === true || 
+      u.accountStatus === 'LOCKED' || 
+      (u.accountStatus === 'TEMPORARILY_LOCKED' && (!u.lockedUntil || nowMs < u.lockedUntil)) ||
+      (u.lockedUntil && nowMs < u.lockedUntil)
+    );
+
+    const content = lockedUsers.length === 0 ? `
+      <div style="text-align: center; padding: 2.5rem 1rem; color: #166534;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">✓</div>
+        <h4 style="font-size: 1.1rem; font-weight: 800; color: #15803D; margin: 0 0 0.25rem;">All Staff Accounts Accessible</h4>
+        <p style="font-size: 0.85rem; color: #4B5563; margin: 0;">There are currently no temporarily or manually locked accounts in the system.</p>
+      </div>
+    ` : `
+      <div class="table-container">
+        <table class="data-table" style="width: 100%;">
+          <thead>
+            <tr>
+              <th>Staff Member</th>
+              <th>Role</th>
+              <th>Lock Type</th>
+              <th>Status</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lockedUsers.map(u => {
+              const isTemp = u.accountStatus === 'TEMPORARILY_LOCKED' || (u.lockedUntil && nowMs < u.lockedUntil);
+              const lockType = u.adminLocked ? 'Administrator Lock (Indefinite)' : (isTemp ? 'Temporary Lock (2 mins)' : 'Locked');
+              return `
+                <tr>
+                  <td>
+                    <strong>${u.name}</strong>
+                    <div style="font-size: 0.75rem; color: #64748B;">${u.staffId || u.id}</div>
+                  </td>
+                  <td>${u.role}</td>
+                  <td><span class="badge ${u.adminLocked ? 'badge-danger' : 'badge-warning'}">${lockType}</span></td>
+                  <td><span class="badge badge-danger">LOCKED</span></td>
+                  <td style="text-align: right;">
+                    <button class="btn btn-secondary btn-sm" onclick="App.closeModal(); AdminView.viewUserActivity('${u.id}')" style="margin-right: 0.4rem;">Activity</button>
+                    <button class="btn btn-primary btn-sm" onclick="App.closeModal(); AdminView.unlockAccountAction('${u.id}')">Unlock</button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    App.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+        <h3 class="modal-title" style="color: #FFFFFF;">🔒 Manage Locked Accounts</h3>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem;">
+        ${content}
+      </div>
+      <div class="modal-footer" style="padding: 1rem 1.5rem; background: #F8FAFC; border-top: 1px solid #E2E8F0; display: flex; justify-content: flex-end;">
+        <button class="btn btn-secondary btn-sm" onclick="App.closeModal()">Close</button>
+      </div>
+    `, 'modal-lg');
+  },
+
+  async openAdminResetPasswordModal() {
+    let users = [];
+    try {
+      const res = await fetch('/api/admin/users');
+      if (res.ok) users = await res.json();
+      else users = SLCMS_STATE.users || [];
+    } catch (e) {
+      users = SLCMS_STATE.users || [];
+    }
+
+    const options = users.map(u => `<option value="${u.id}">${u.name} (${u.staffId || u.id}) — ${u.role}</option>`).join('');
+
+    App.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+        <h3 class="modal-title" style="color: #FFFFFF;">🔑 Reset User Password</h3>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem;">
+        <p style="font-size: 0.85rem; color: #475569; margin-bottom: 1.25rem;">
+          Select a staff member to generate a single-use temporary password. The user will be required to create a new password upon their next login.
+        </p>
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label required" style="font-weight: 700;">Select Staff Member</label>
+          <select id="admin-reset-user-select" class="form-control" style="font-weight: 600;">
+            ${options}
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 1rem 1.5rem; background: #F8FAFC; border-top: 1px solid #E2E8F0; display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <button class="btn btn-secondary btn-sm" onclick="App.closeModal()">Cancel</button>
+        <button class="btn btn-gold btn-sm" onclick="
+          const uid = document.getElementById('admin-reset-user-select').value;
+          App.closeModal();
+          AdminView.resetPasswordAction(uid);
+        ">
+          Generate Temporary Password &rarr;
+        </button>
+      </div>
+    `, 'modal-md');
+  },
+
+  async triggerCreateBackup() {
+    App.showToast('Initiating encrypted system database backup...', 'info');
+    try {
+      const res = await fetch('/api/admin/backups', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        App.showToast(`System backup successfully created (${data.backup.sizeFormatted})!`, 'success');
+        this.loadSecuritySystemActivity();
+        this.loadSecurityActivity();
+      } else {
+        App.showToast('Backup creation failed. Check storage.', 'error');
+      }
+    } catch (e) {
+      console.error(e);
+      App.showToast('Network error during backup operation.', 'error');
+    }
+  },
+
+  async openBackupHistoryModal() {
+    let backups = [];
+    try {
+      const res = await fetch('/api/admin/backups');
+      if (res.ok) backups = await res.json();
+    } catch (e) {
+      console.error(e);
+    }
+
+    const rows = (!backups || backups.length === 0) ? `
+      <tr><td colspan="5" style="text-align: center; padding: 2rem; color: #64748B;">No backup archives recorded yet.</td></tr>
+    ` : backups.map(b => `
+      <tr>
+        <td><strong>${b.dateFormatted || b.createdAt}</strong></td>
+        <td><span style="font-family: monospace; font-size: 0.8rem;">${b.filename}</span></td>
+        <td><span class="badge badge-success" style="background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0;">${b.status}</span></td>
+        <td>${b.sizeFormatted}</td>
+        <td>${b.createdBy}</td>
+      </tr>
+    `).join('');
+
+    App.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+        <h3 class="modal-title" style="color: #FFFFFF;">💾 System Backup History</h3>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem;">
+        <div class="table-container">
+          <table class="data-table" style="width: 100%;">
+            <thead>
+              <tr>
+                <th>Date &amp; Time</th>
+                <th>Snapshot Filename</th>
+                <th>Status</th>
+                <th>Size</th>
+                <th>Created By</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 1rem 1.5rem; background: #F8FAFC; border-top: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn btn-gold btn-sm" onclick="App.closeModal(); AdminView.triggerCreateBackup()">+ Create New Backup</button>
+        <button class="btn btn-secondary btn-sm" onclick="App.closeModal()">Close</button>
+      </div>
+    `, 'modal-lg');
+  },
+
+  // ==========================================================================
+  // REAL SECURITY & ACCESS ALERTS & ACTIVITY ENGINE (Dynamic Database-Driven)
+  // ==========================================================================
+  async loadSecurityActivity() {
+    try {
+      const res = await fetch('/api/admin/security-activity');
+      if (res.ok) {
+        const logs = await res.json();
+        SLCMS_STATE.activityLogs = Array.isArray(logs) ? logs : [];
+      }
+    } catch (e) {
+      console.warn('Could not fetch server security activity:', e);
+    }
+    this.updateSecurityActivityCounts();
+
+    // If currently on security-activity tab, refresh the table container
+    if (this.activeTab === 'security-activity' || this.activeTab === 'logs') {
+      const container = document.getElementById('admin-tab-content');
+      if (container) {
+        container.innerHTML = this.renderActivityLogsTab();
+      }
+    }
+  },
+
+  updateSecurityActivityCounts() {
+    const count = (SLCMS_STATE.activityLogs || []).length;
+    const tabCount = document.getElementById('adm-tab-sec-count');
+    if (tabCount) tabCount.textContent = count;
+    const metricVal = document.getElementById('adm-metric-sec-events');
+    if (metricVal) metricVal.textContent = count;
+  },
+
   async loadSecurityAlerts() {
     let alerts = [];
     try {
@@ -4888,7 +5499,50 @@ const AdminView = {
       const maskedIp = this.maskIp(alt.ipAddress || '197.250.48.12');
       const timeAgo = this.formatAlertTime(alt.createdAt || alt.lockedAt);
 
-      if (alt.alertType === 'ACCOUNT_LOCKED') {
+      // 1. TEMPORARY LOGIN LOCK (Exact Format: 🔒 Temporary Login Lock / Joseph Moss · Legal Clerk · EMP-1017 / Three unsuccessful login attempts / Locked at: 10:42 AM · Access available again: 10:44 AM / Actions: View Activity · Lock Account)
+      if (alt.alertType === 'TEMPORARY_LOCK' || alt.alert_type === 'TEMPORARY_LOCK' || (alt.alertType === 'ACCOUNT_LOCKED' && alt.lockedUntil)) {
+        const lockedAtStr = alt.lockedAtTime || (alt.createdAt ? new Date(alt.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:42 AM');
+        const unlockTimeStr = alt.unlockTime || (alt.lockedUntil ? new Date(alt.lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:44 AM');
+
+        return `
+          <div class="adm-alert-box adm-alert-border-red animate-fade" style="padding: 1.15rem; background: #FEF2F2; border-left: 4px solid #DC2626; border-radius: 8px; margin-bottom: 0.85rem;">
+            <div class="flex items-start gap-3">
+              <div class="adm-alert-icon-square" style="background: #FEE2E2; color: #DC2626; font-size: 1.25rem; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; flex-shrink: 0;">🔒</div>
+              <div class="adm-alert-content" style="flex: 1;">
+                <div class="adm-alert-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                  <span class="adm-alert-headline" style="font-weight: 800; font-size: 0.95rem; color: #991B1B;">Temporary Login Lock</span>
+                  <span class="adm-pill-danger" style="background: #FEE2E2; color: #DC2626; font-weight: 700; font-size: 0.72rem; padding: 0.15rem 0.5rem; border-radius: 4px;">2 MIN LOCK</span>
+                </div>
+                <div style="font-weight: 700; color: #1E293B; font-size: 0.9rem; margin-bottom: 0.2rem;">
+                  ${alt.name || alt.fullName || user.name} &bull; ${alt.role || user.role || 'Staff'} &bull; ${alt.staffId || user.staffId || 'EMP-1017'}
+                </div>
+                <div class="adm-alert-text" style="color: #475569; font-size: 0.85rem; margin-bottom: 0.35rem;">
+                  ${alt.description || 'Three unsuccessful login attempts'}
+                </div>
+                <div class="adm-alert-footer-text" style="font-size: 0.8rem; color: #64748B;">
+                  <strong>Locked at:</strong> ${lockedAtStr} &bull; <strong>Access available again:</strong> ${unlockTimeStr}
+                </div>
+                <div class="flex items-center gap-2 mt-3" style="margin-top: 0.75rem; flex-wrap: wrap;">
+                  <button class="btn btn-secondary btn-sm" onclick="AdminView.viewUserActivity('${alt.userId || user.id}')" style="font-weight: 600; font-size: 0.78rem;">
+                    View Activity
+                  </button>
+                  <button class="btn btn-danger btn-sm" onclick="AdminView.lockAccountAction('${alt.userId || user.id}')" style="font-weight: 600; font-size: 0.78rem; background: #DC2626; color: #FFFFFF;">
+                    Lock Account
+                  </button>
+                  <button class="btn btn-gold btn-sm" onclick="AdminView.unlockAccountAction('${alt.userId || user.id}')" style="font-weight: 600; font-size: 0.78rem;">
+                    Unlock Account
+                  </button>
+                  <button class="btn btn-ghost btn-sm" onclick="AdminView.resetPasswordAction('${alt.userId || user.id}')" style="font-weight: 600; font-size: 0.78rem;">
+                    Reset Password
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (alt.alertType === 'ACCOUNT_LOCKED' || alt.alert_type === 'ADMIN_LOCK') {
         const isAuto = alt.lockedReason === 'TOO_MANY_FAILED_LOGINS';
         return `
           <div class="adm-alert-box adm-alert-border-red animate-fade">
@@ -4899,18 +5553,18 @@ const AdminView = {
                 <span class="adm-pill-danger">${isAuto ? 'LOCKED' : 'ADMIN LOCK'}</span>
               </div>
               <div class="adm-alert-text">
-                ${isAuto ? `5 consecutive failed logins from IP ${maskedIp} &bull; ${alt.role || 'Staff'} (${alt.staffId || user.staffId || 'N/A'})` : `Locked by ${alt.lockedBy || 'Administrator'} &bull; Reason: ${alt.lockedReason || 'Administrative decision'}`}
+                ${isAuto ? `3 consecutive failed logins from IP ${maskedIp} &bull; ${alt.role || 'Staff'} (${alt.staffId || user.staffId || 'N/A'})` : `Locked by ${alt.lockedBy || 'Administrator'} &bull; Reason: ${alt.lockedReason || 'Administrative decision'}`}
               </div>
               <div class="adm-alert-footer-text">${timeAgo} &bull; ${isAuto ? 'Automated Security Lockout' : 'Manual Admin Governance'}</div>
               <div class="flex items-center gap-2 mt-2" style="margin-top: 0.6rem;">
-                <button class="btn btn-gold btn-sm" onclick="AdminView.openUnlockUserModal('${alt.userId}')">
+                <button class="btn btn-gold btn-sm" onclick="AdminView.unlockAccountAction('${alt.userId || user.id}')">
                   Unlock Account
                 </button>
-                <button class="btn btn-secondary btn-sm" onclick="AdminView.confirmUnlockAndForcePasswordReset('${alt.userId}')">
-                  Unlock and Force Password Reset
+                <button class="btn btn-secondary btn-sm" onclick="AdminView.resetPasswordAction('${alt.userId || user.id}')">
+                  Reset Password
                 </button>
-                <button class="btn btn-ghost btn-sm" onclick="AdminView.viewUserDetails('${alt.userId}')">
-                  Review Activity
+                <button class="btn btn-ghost btn-sm" onclick="AdminView.viewUserActivity('${alt.userId || user.id}')">
+                  View Activity
                 </button>
               </div>
             </div>
@@ -5203,6 +5857,156 @@ const AdminView = {
       this.loadSecurityAlerts();
       App.refreshCurrentView();
     }
+  },
+
+  // --------------------------------------------------------------------------
+  // 4 Core Administrator Security Alert Actions
+  // --------------------------------------------------------------------------
+  async viewUserActivity(userId) {
+    const user = (SLCMS_STATE.users || []).find(u => u.id === userId || u.staffId === userId) || { name: 'Staff Member', staffId: userId };
+    let events = [];
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/activity`);
+      if (res.ok) {
+        events = await res.json();
+      }
+    } catch (e) {
+      console.warn('Could not fetch server activity, reading local events:', e);
+    }
+    if (!events || events.length === 0) {
+      events = (SLCMS_STATE.securityEvents || []).filter(e => e.userId === userId || e.user_id === userId);
+    }
+
+    const rows = events.length > 0 ? events.map(evt => {
+      const timeStr = evt.eventTime ? new Date(evt.eventTime).toLocaleString() : (evt.time || 'Recent');
+      const badgeClass = evt.eventType === 'LOGIN_SUCCESS' ? 'badge-success' : (evt.eventType === 'TEMPORARY_LOCK' || evt.eventType === 'ADMIN_LOCK' ? 'badge-danger' : 'badge-neutral');
+      return `
+        <tr>
+          <td style="font-size: 0.82rem; white-space: nowrap;">${timeStr}</td>
+          <td><span class="badge ${badgeClass}" style="font-size: 0.72rem;">${evt.eventType || 'EVENT'}</span></td>
+          <td style="font-size: 0.85rem;">${evt.description || 'System security event'}</td>
+          <td style="font-size: 0.82rem; font-family: monospace;">${evt.ipAddress || '127.0.0.1'}</td>
+        </tr>
+      `;
+    }).join('') : `<tr><td colspan="4" style="text-align: center; padding: 2rem; color: #64748B;">No recent security activity logged for this account.</td></tr>`;
+
+    App.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
+        <h3 class="modal-title" style="color: #FFFFFF;">📜 Security Activity History: ${user.name} (${user.staffId || user.employeeId || userId})</h3>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem; max-height: 70vh; overflow-y: auto;">
+        <div class="table-container">
+          <table class="data-table" style="width: 100%;">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Event Type</th>
+                <th>Details</th>
+                <th>IP Address</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 1rem 1.5rem; background: #F8FAFC; border-top: 1px solid #E2E8F0; display: flex; justify-content: flex-end;">
+        <button class="btn btn-primary btn-sm" onclick="App.closeModal()">Close</button>
+      </div>
+    `, 'modal-lg');
+  },
+
+  async lockAccountAction(userId) {
+    const user = (SLCMS_STATE.users || []).find(u => u.id === userId || u.staffId === userId);
+    const userName = user ? user.name : userId;
+    if (!confirm(`Are you sure you want to lock the account for ${userName}? Access will remain blocked indefinitely until an administrator unlocks it.`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/lock`, { method: 'POST' });
+      if (res.ok) {
+        if (user) {
+          user.adminLocked = true;
+          user.accountStatus = 'LOCKED';
+          user.lockedUntil = null;
+        }
+        App.showToast(`Account for ${userName} has been locked by administrator.`, 'info');
+      } else {
+        SLCMS_STATE.lockAccount(userId, 'Administrator lock');
+        App.showToast(`Account for ${userName} locked.`, 'info');
+      }
+    } catch (e) {
+      SLCMS_STATE.lockAccount(userId, 'Administrator lock');
+      App.showToast(`Account for ${userName} locked.`, 'info');
+    }
+    this.loadSecurityAlerts();
+    this.loadSecurityActivity();
+    this.loadSecuritySystemActivity();
+    App.refreshCurrentView();
+  },
+
+  async unlockAccountAction(userId) {
+    const user = (SLCMS_STATE.users || []).find(u => u.id === userId || u.staffId === userId);
+    const userName = user ? user.name : userId;
+
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/unlock`, { method: 'POST' });
+      if (res.ok) {
+        if (user) {
+          user.adminLocked = false;
+          user.accountStatus = 'ACTIVE';
+          user.failedAttempts = 0;
+          user.lockedUntil = null;
+        }
+        App.showToast(`Account for ${userName} unlocked successfully. Full access restored.`, 'success');
+      } else {
+        SLCMS_STATE.unlockAccount(userId, 'Administrator manual unlock');
+        App.showToast(`Account for ${userName} unlocked successfully.`, 'success');
+      }
+    } catch (e) {
+      SLCMS_STATE.unlockAccount(userId, 'Administrator manual unlock');
+      App.showToast(`Account for ${userName} unlocked successfully.`, 'success');
+    }
+    this.loadSecurityAlerts();
+    this.loadSecurityActivity();
+    this.loadSecuritySystemActivity();
+    App.refreshCurrentView();
+  },
+
+  async resetPasswordAction(userId) {
+    const user = (SLCMS_STATE.users || []).find(u => u.id === userId || u.staffId === userId);
+    const userName = user ? user.name : userId;
+
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/reset-password`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        const tempPass = data.temporaryPassword || 'TempPass' + Math.floor(1000 + Math.random() * 9000) + '!';
+        if (user) {
+          user.passwordPlain = tempPass;
+          user.mustChangePassword = true;
+        }
+        this.openTemporaryCredentialsModal(user || { name: userName, staffId: userId }, tempPass);
+        App.showToast(`Temporary password generated for ${userName}. User must change password on next login.`, 'success');
+      } else {
+        const fallbackRes = SLCMS_STATE.generateNewTemporaryPassword(userId);
+        const tempPass = fallbackRes?.temporaryPassword || 'TempPass' + Math.floor(1000 + Math.random() * 9000) + '!';
+        this.openTemporaryCredentialsModal(user || { name: userName, staffId: userId }, tempPass);
+        App.showToast(`Temporary password generated for ${userName}.`, 'success');
+      }
+    } catch (e) {
+      const fallbackRes = SLCMS_STATE.generateNewTemporaryPassword(userId);
+      const tempPass = fallbackRes?.temporaryPassword || 'TempPass' + Math.floor(1000 + Math.random() * 9000) + '!';
+      this.openTemporaryCredentialsModal(user || { name: userName, staffId: userId }, tempPass);
+      App.showToast(`Temporary password generated for ${userName}.`, 'success');
+    }
+    this.loadSecurityAlerts();
+    this.loadSecurityActivity();
+    this.loadSecuritySystemActivity();
+    App.refreshCurrentView();
   },
 
   // ==========================================================================

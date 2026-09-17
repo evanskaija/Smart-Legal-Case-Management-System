@@ -157,13 +157,14 @@ Write-Host "SLCMS Backend & Web Server listening on http://127.0.0.1:$port/"
 try {
     while ($listener.IsListening) {
         $context = $listener.GetContext()
-        $req = $context.Request
-        $res = $context.Response
-        
-        $res.AddHeader("Access-Control-Allow-Origin", "*")
-        $res.AddHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-        $res.AddHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-        $res.AddHeader("Access-Control-Allow-Credentials", "true")
+        try {
+            $req = $context.Request
+            $res = $context.Response
+            
+            $res.AddHeader("Access-Control-Allow-Origin", "*")
+            $res.AddHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+            $res.AddHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+            $res.AddHeader("Access-Control-Allow-Credentials", "true")
 
         if ($req.HttpMethod -eq "OPTIONS") {
             $res.StatusCode = 200
@@ -1009,6 +1010,9 @@ try {
             $res.StatusCode = 404
         }
         $res.Close()
+    } catch {
+        try { $context.Response.Close() } catch {}
+    }
     }
 } finally {
     $listener.Stop()

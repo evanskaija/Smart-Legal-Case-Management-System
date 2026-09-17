@@ -261,6 +261,15 @@ const SLCMS_STATE = {
   // Communications Log
   communications: [],
 
+  // Court Attendances (Objective 4: Case Tracking & Communication)
+  courtAttendances: [],
+
+  // Case Progress Updates (Objective 4: Case Tracking & Communication)
+  progressUpdates: [],
+
+  // Legal Drafts (Objective 5: AI-Assisted Drafting)
+  legalDrafts: [],
+
   // Billing & Invoices
   invoices: [],
 
@@ -558,6 +567,7 @@ const SLCMS_STATE = {
       status: 'LOCKED',
       accountStatus: 'LOCKED',
       account_status: 'LOCKED',
+      adminLocked: true,
       lockReason: 'Administrative security hold pending compliance audit',
       firstLoginStatus: 'Completed',
       failedAttempts: 5,
@@ -626,15 +636,17 @@ const SLCMS_STATE = {
       officeLocation: 'Dar es Salaam HQ, Floor 3',
       role: 'Legal Clerk',
       roleTitle: 'Court Registry Clerk',
-      status: 'FIRST_LOGIN_RESET',
-      accountStatus: 'FIRST_LOGIN_RESET',
-      account_status: 'FIRST_LOGIN_RESET',
+      status: 'TEMPORARILY_LOCKED',
+      accountStatus: 'TEMPORARILY_LOCKED',
+      account_status: 'TEMPORARILY_LOCKED',
+      lockReason: 'Three unsuccessful login attempts (Security Lockout)',
+      lockedReason: 'THREE_FAILED_LOGINS',
       firstLoginStatus: 'Pending',
       first_login_required: true,
       mustChangePassword: true,
-      failedAttempts: 0,
-      failed_login_attempts: 0,
-      lockedUntil: null,
+      failedAttempts: 3,
+      failed_login_attempts: 3,
+      lockedUntil: '2026-12-31T23:59:59Z',
       lastLogin: 'Today, 04:17 PM',
       last_login_at: '2026-09-11T16:17:00Z',
       activeCases: 0,
@@ -695,8 +707,40 @@ const SLCMS_STATE = {
   ],
 
   // Genuine Security & Access Alerts Store (Database Ground Truth)
-  // When no security problem exists, this array contains 0 unresolved alerts.
-  securityAlerts: [],
+  securityAlerts: [
+    {
+      id: 'alt-001',
+      alertId: 'alt-001',
+      userId: 'usr-005',
+      staffId: 'LAW-0099',
+      name: 'Adv. Daudi Mussa',
+      fullName: 'Adv. Daudi Mussa',
+      role: 'Lawyer',
+      alertType: 'ACCOUNT_LOCKED',
+      title: 'Administrative Security Hold',
+      description: 'Account placed on administrative security hold pending compliance audit.',
+      severity: 'HIGH',
+      lockedReason: 'Administrative security hold pending compliance audit',
+      resolved: false,
+      createdAt: '2026-09-17T05:00:00.000Z'
+    },
+    {
+      id: 'alt-002',
+      alertId: 'alt-002',
+      userId: 'usr-007',
+      staffId: 'EMP-1017',
+      name: 'Joseph moss',
+      fullName: 'Joseph moss',
+      role: 'Legal Clerk',
+      alertType: 'TEMPORARY_LOCK',
+      title: 'Temporary Login Lock',
+      description: 'Three unsuccessful login attempts (Security Lockout)',
+      severity: 'HIGH',
+      lockedReason: 'THREE_FAILED_LOGINS',
+      resolved: false,
+      createdAt: '2026-09-17T05:20:00.000Z'
+    }
+  ],
 
   // Administrator High-Priority Notifications
   adminNotifications: [
@@ -765,219 +809,8 @@ const SLCMS_STATE = {
     lastUpdatedAt: '2026-09-10 13:00:00 UTC'
   },
 
-  // Immutable Audit & Activity Logs
-  activityLogs: [
-    {
-      id: 'log-201',
-      timestamp: '2026-09-08 10:45:00',
-      user: 'Asha Bakari',
-      staffId: 'LAW-0034',
-      role: 'Lawyer',
-      action: 'Password Changed',
-      module: 'Security Activity',
-      record: 'First-login password successfully replaced',
-      securityLevel: 'Standard',
-      result: 'Success',
-      status: 'Success',
-      ip: '197.250.48.110 (Firm Office VPN)'
-    },
-    {
-      id: 'log-202',
-      timestamp: '2026-09-08 09:15:22',
-      user: 'Neema Joseph',
-      staffId: 'ADM-0001',
-      role: 'System Administrator',
-      action: 'Account Unlocked',
-      module: 'Security Activity',
-      record: 'Administrative unlock granted for Faraji Kamau (LAW-0052)',
-      securityLevel: 'High',
-      result: 'Success',
-      status: 'Success',
-      ip: '197.250.48.100 (HQ Console)'
-    },
-    {
-      id: 'log-203',
-      timestamp: '2026-09-08 08:50:11',
-      user: 'Faraji Kamau',
-      staffId: 'LAW-0052',
-      role: 'Lawyer',
-      action: 'Account Locked',
-      module: 'Security Activity',
-      record: 'Account locked following 5 consecutive failed login attempts',
-      securityLevel: 'Critical',
-      result: 'Locked',
-      status: 'Locked',
-      ip: '197.250.48.12 (Untrusted Origin)'
-    },
-    {
-      id: 'log-204',
-      timestamp: '2026-09-08 08:48:50',
-      user: 'Faraji Kamau',
-      staffId: 'LAW-0052',
-      role: 'Lawyer',
-      action: 'Login Failed',
-      module: 'Security Activity',
-      record: 'Invalid credential attempt (attempt 5 of 5)',
-      securityLevel: 'High',
-      result: 'Failed',
-      status: 'Failed',
-      ip: '197.250.48.12 (Untrusted Origin)'
-    },
-    {
-      id: 'log-205',
-      timestamp: '2026-09-08 07:30:00',
-      user: 'System Sentinel',
-      staffId: 'SYS-CRON',
-      role: 'System Administrator',
-      action: 'Backup Created',
-      module: 'Security Activity',
-      record: 'Automated encrypted snapshot SLCMS_Snapshot_20260908_0730.json verified healthy',
-      securityLevel: 'Standard',
-      result: 'Success',
-      status: 'Success',
-      ip: '127.0.0.1 (Local Vault Daemon)'
-    },
-    {
-      id: 'log-206',
-      timestamp: '2026-09-07 16:40:15',
-      user: 'Neema Joseph',
-      staffId: 'ADM-0001',
-      role: 'System Administrator',
-      action: 'User Created',
-      module: 'Security Activity',
-      record: 'Staff profile provisioned: Daudi Mussa (LAW-0045) assigned role Lawyer',
-      securityLevel: 'High',
-      result: 'Success',
-      status: 'Success',
-      ip: '197.250.48.100 (HQ Console)'
-    },
-    {
-      id: 'log-207',
-      timestamp: '2026-09-07 14:15:30',
-      user: 'Baraka Temba',
-      staffId: 'CLK-0012',
-      role: 'Legal Clerk',
-      action: 'First Login Completed',
-      module: 'Security Activity',
-      record: 'Initial session established and private credentials registered',
-      securityLevel: 'Standard',
-      result: 'Success',
-      status: 'Success',
-      ip: '197.250.48.115 (Registry Terminal)'
-    },
-    {
-      id: 'log-208',
-      timestamp: '2026-09-07 11:20:00',
-      user: 'Neema Joseph',
-      staffId: 'ADM-0001',
-      role: 'System Administrator',
-      action: 'Role Changed',
-      module: 'Security Activity',
-      record: 'Role updated for Baraka Temba from Temporary Clerk to Legal Clerk',
-      securityLevel: 'High',
-      result: 'Success',
-      status: 'Success',
-      ip: '197.250.48.100 (HQ Console)'
-    },
-    {
-      id: 'log-209',
-      timestamp: '2026-09-06 15:10:44',
-      user: 'Neema Joseph',
-      staffId: 'ADM-0001',
-      role: 'System Administrator',
-      action: 'Case Assignment Changed',
-      module: 'Security Activity',
-      record: 'Asha Bakari assigned as Co-Counsel on Greenfield Estate (CV-2026-0155)',
-      securityLevel: 'Standard',
-      result: 'Success',
-      status: 'Success',
-      ip: '197.250.48.100 (HQ Console)'
-    },
-    {
-      id: 'log-210',
-      timestamp: '2026-09-06 12:05:19',
-      user: 'Baraka Temba',
-      staffId: 'CLK-0012',
-      role: 'Legal Clerk',
-      action: 'Unauthorized Access Attempted',
-      module: 'Security Activity',
-      record: 'Attempted to access restricted confidential partner fee ledger - Policy Blocked',
-      securityLevel: 'Critical',
-      result: 'Blocked',
-      status: 'Blocked',
-      ip: '197.250.48.115 (Registry Terminal)'
-    },
-    {
-      id: 'log-211',
-      timestamp: '2026-09-05 17:35:10',
-      user: 'Wakili Juma Mwangi',
-      staffId: 'LAW-0021',
-      role: 'Senior Lawyer',
-      action: 'Judgment Uploaded',
-      module: 'Security Activity',
-      record: 'New precedent judgment registered: Civil Appeal No. 74 of 2023 (Commercial Division)',
-      securityLevel: 'Standard',
-      result: 'Success',
-      status: 'Success',
-      ip: '197.250.48.102 (Partner Office)'
-    },
-    {
-      id: 'log-212',
-      timestamp: '2026-09-05 14:22:08',
-      user: 'System OCR Worker',
-      staffId: 'SYS-OCR',
-      role: 'System Administrator',
-      action: 'OCR Failed',
-      module: 'Security Activity',
-      record: 'Tanzania_Revenue_Appeal_Scanned.pdf failed OCR extraction: Low resolution < 150 DPI',
-      securityLevel: 'High',
-      result: 'Failed',
-      status: 'Failed',
-      ip: '127.0.0.1 (Worker Process)'
-    },
-    {
-      id: 'log-213',
-      timestamp: '2026-09-04 10:00:00',
-      user: 'Neema Joseph',
-      staffId: 'ADM-0001',
-      role: 'System Administrator',
-      action: 'Settings Changed',
-      module: 'Security Activity',
-      record: 'Account security lockout threshold configured to 5 attempts / 30 mins lock duration',
-      securityLevel: 'High',
-      result: 'Success',
-      status: 'Success',
-      ip: '197.250.48.100 (HQ Console)'
-    },
-    {
-      id: 'log-214',
-      timestamp: '2026-09-03 16:15:30',
-      user: 'Daudi Mussa',
-      staffId: 'LAW-0045',
-      role: 'Lawyer',
-      action: 'Password Reset Requested',
-      module: 'Security Activity',
-      record: 'Administrator initiated temporary password token dispatch',
-      securityLevel: 'Standard',
-      result: 'Success',
-      status: 'Success',
-      ip: '197.250.48.100 (HQ Console)'
-    },
-    {
-      id: 'log-215',
-      timestamp: '2026-09-03 09:00:00',
-      user: 'SLCMS Security Sentinel',
-      staffId: 'SYS-SEC-ADMIN',
-      role: 'System Administrator',
-      action: 'SOC-2 Audit Integrity Verified',
-      module: 'Security Activity',
-      record: 'Cryptographic SHA-256 chain verified against immutable storage vault',
-      securityLevel: 'Standard',
-      result: 'Success',
-      status: 'Success',
-      ip: '127.0.0.1 (Local Vault Daemon)'
-    }
-  ],
+  // Immutable Audit & Activity Logs (Populated from backend /api/admin/security-activity)
+  activityLogs: [],
 
   // Notifications
   notifications: [
@@ -1294,22 +1127,28 @@ const SLCMS_STATE = {
     if (!account) {
       this.addAuditLog('Login Failed — Account Not Found', 'Authentication',
         `Identifier attempted: ${cleanId || '(empty)'}`, 'Failure');
-      return { success: false, message: GENERIC_FAIL_MSG };
+      return { success: false, attemptsRemaining: 2, message: 'Incorrect credentials. 2 attempts remaining.' };
     }
 
     const status = (account.accountStatus || account.status || '').toUpperCase();
 
     // STEP 3 — Check account status BEFORE password check
+    if (account.adminLocked || (status === 'LOCKED' && !account.lockedUntil)) {
+      this.addAuditLog('Login Blocked — Administrator Locked', 'Authentication',
+        `User: ${account.name} (${account.staffId || account.employeeId})`, 'Failure');
+      return { success: false, errorType: 'ADMIN_LOCKED', message: 'Your account has been locked by the administrator. Contact the system administrator.' };
+    }
+
     if (status === 'DEACTIVATED') {
       this.addAuditLog('Login Blocked — Account Deactivated', 'Authentication',
         `User: ${account.name} (${account.staffId || account.employeeId})`, 'Failure');
-      return { success: false, message: GENERIC_FAIL_MSG };
+      return { success: false, errorType: 'ACCOUNT_DISABLED', message: 'This account is inactive. Contact the system administrator.' };
     }
 
     if (status === 'SUSPENDED') {
       this.addAuditLog('Login Blocked — Account Suspended', 'Authentication',
         `User: ${account.name} (${account.staffId || account.employeeId})`, 'Failure');
-      return { success: false, message: GENERIC_FAIL_MSG };
+      return { success: false, errorType: 'ACCOUNT_DISABLED', message: 'This account is inactive. Contact the system administrator.' };
     }
 
     // Check expired temporary password before login
@@ -1328,11 +1167,10 @@ const SLCMS_STATE = {
       }
     }
 
-    // Account Temporarily Locked - Reject login even if correct password is later entered during the lock period
-    if (status === 'LOCKED') {
-      // If automatically locked with a finite lockedUntil:
+    // Account Temporarily Locked
+    if (status === 'TEMPORARILY_LOCKED' || (account.lockedUntil && status === 'LOCKED')) {
       if (account.lockedUntil && now >= account.lockedUntil) {
-        // Lock period has expired -> auto-unlock
+        // 2 minutes lock period has expired -> auto-unlock
         account.status = 'ACTIVE';
         account.accountStatus = 'ACTIVE';
         account.account_status = 'ACTIVE';
@@ -1344,14 +1182,21 @@ const SLCMS_STATE = {
         account.locked_reason = null;
         this.resolveAlertsForUser(account.id, 'ACCOUNT_LOCKED', 'SYSTEM');
         this.persistUsers();
-      } else {
-        // Locked indefinitely by Administrator (lockedUntil == null) or currently within 15-min auto lock period
-        this.addAuditLog('Login Blocked — Account Locked', 'Authentication',
+      } else if (account.lockedUntil) {
+        const remainingMs = account.lockedUntil - now;
+        const totalSecs = Math.max(1, Math.floor(remainingMs / 1000));
+        const mins = Math.floor(totalSecs / 60);
+        const secs = totalSecs % 60;
+        const timeStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
+        this.addAuditLog('Login Blocked — Account Temporarily Locked', 'Authentication',
           `User: ${account.name} (${account.staffId || account.employeeId})`, 'Failure');
         return {
           success: false,
-          errorType: 'ACCOUNT_TEMPORARILY_LOCKED',
-          message: 'Account Temporarily Locked\nYou cannot access SLCMS at this time. Try again after the lock period or contact the System Administrator.'
+          errorType: 'TEMPORARILY_LOCKED',
+          remainingSeconds: totalSecs,
+          lockedUntil: account.lockedUntil,
+          message: `Account temporarily locked. Try again in ${timeStr}.`
         };
       }
     }
@@ -1359,19 +1204,20 @@ const SLCMS_STATE = {
     // STEP 4 — Compare password with stored password hash or valid credentials
     const passwordCorrect = this.verifyPassword(password, account.passwordHash || account.password_hash, account.passwordPlain, account);
 
-    // STEP 5 — Handle wrong password: increment counter, lock at 5 attempts for 15 minutes
+    // STEP 5 — Handle wrong password: increment counter, lock at 3 attempts for 2 minutes
     if (!passwordCorrect) {
       account.failedAttempts = (account.failedAttempts || 0) + 1;
       account.failed_login_attempts = account.failedAttempts;
-      if (account.failedAttempts >= MAX_FAILED_ATTEMPTS) {
+
+      if (account.failedAttempts >= 3) {
         account.status = 'LOCKED';
-        account.accountStatus = 'LOCKED';
-        account.account_status = 'LOCKED';
-        account.locked_reason = 'TOO_MANY_FAILED_LOGINS';
-        account.lockedReason = 'TOO_MANY_FAILED_LOGINS';
+        account.accountStatus = 'TEMPORARILY_LOCKED';
+        account.account_status = 'TEMPORARILY_LOCKED';
+        account.locked_reason = 'THREE_FAILED_LOGINS';
+        account.lockedReason = 'THREE_FAILED_LOGINS';
         account.locked_at = new Date().toISOString();
         account.lockedAt = account.locked_at;
-        account.lockedUntil = now + LOCK_DURATION_MS;
+        account.lockedUntil = now + (2 * 60 * 1000); // 2 minutes
         account.locked_until = account.lockedUntil;
 
         this.createSecurityAlert({
@@ -1380,26 +1226,31 @@ const SLCMS_STATE = {
           name: account.name,
           role: account.role,
           alertType: 'ACCOUNT_LOCKED',
-          title: 'Account Locked Automatically',
-          description: 'The account was locked after five unsuccessful login attempts.',
+          title: 'Temporary Login Lock',
+          description: 'Three unsuccessful login attempts',
           severity: 'HIGH',
-          lockedReason: 'TOO_MANY_FAILED_LOGINS'
+          lockedReason: 'THREE_FAILED_LOGINS'
         });
 
         this.persistUsers();
         this.addAuditLog('Account Locked Automatically', 'Security Activity',
-          `Account ${account.staffId || account.employeeId} locked after 5 failed login attempts`, 'Locked');
+          `Account ${account.staffId || account.employeeId} locked for 2 minutes after 3 failed login attempts`, 'Locked');
 
         return {
           success: false,
-          errorType: 'ACCOUNT_TEMPORARILY_LOCKED',
-          message: 'Account Temporarily Locked\nYou cannot access SLCMS at this time. Try again after the lock period or contact the System Administrator.'
+          errorType: 'TEMPORARILY_LOCKED',
+          remainingSeconds: 120,
+          lockedUntil: account.lockedUntil,
+          message: 'Account temporarily locked after 3 unsuccessful attempts. Try again in 2:00 minutes.'
         };
       }
+
       this.persistUsers();
+      const rem = 3 - account.failedAttempts;
+      const remText = rem === 1 ? '1 attempt remaining.' : `${rem} attempts remaining.`;
       this.addAuditLog('Login Failed — Wrong Password', 'Authentication',
-        `User: ${account.name} (${account.staffId || account.employeeId}) — Attempt ${account.failedAttempts} of ${MAX_FAILED_ATTEMPTS}`, 'Failure');
-      return { success: false, message: GENERIC_FAIL_MSG };
+        `User: ${account.name} (${account.staffId || account.employeeId}) — Attempt ${account.failedAttempts} of 3`, 'Failure');
+      return { success: false, attemptsRemaining: rem, message: `Incorrect credentials. ${remText}` };
     }
 
     // Automatically ensure active status on successful password verification
@@ -1714,6 +1565,11 @@ const SLCMS_STATE = {
       this.restoreCases();
       this.restoreClients();
       this.restoreTasks();
+      this.restoreDocuments();
+      this.restoreCommunications();
+      this.restoreCourtAttendances();
+      this.restoreProgressUpdates();
+      this.restoreDrafts();
     } catch (e) {
       console.warn('Session restore error:', e);
     }
@@ -1789,6 +1645,75 @@ const SLCMS_STATE = {
           this.tasks = parsed.filter(t => !DEMO_TASK_IDS.includes(t.id));
         }
       }
+      if (!this.tasks || this.tasks.length === 0) {
+        this.tasks = [
+          {
+            id: 'tsk-101',
+            title: 'Draft Written Submissions on Chamber Summons (Interim Injunction)',
+            caseId: 'case-001',
+            caseNumber: 'CV/2026/0042',
+            caseTitle: 'Kilombero Sugar Co. v. Mara Logistics Ltd',
+            category: 'Pleadings',
+            priority: 'Urgent',
+            status: 'in_progress',
+            assignedTo: 'Adv. Robert Kasoma',
+            assignedAvatar: 'RK',
+            dueDate: '2026-09-28',
+            isStatutoryDeadline: true,
+            progressPct: 60,
+            description: 'Order of Hon. Lady Justice Msumange: Applicant submissions due in 14 days.'
+          },
+          {
+            id: 'tsk-102',
+            title: 'Serve Notice of Appeal on TRA Principal Revenue Counsel',
+            caseId: 'case-004',
+            caseNumber: 'CA/2026/0321',
+            caseTitle: 'Serengeti Breweries v. TRA',
+            category: 'Filing',
+            priority: 'High',
+            status: 'todo',
+            assignedTo: 'Adv. Robert Kasoma',
+            assignedAvatar: 'RK',
+            dueDate: '2026-09-21',
+            isStatutoryDeadline: true,
+            progressPct: 0,
+            description: 'Serve hearing notice and filed memorandum of appeal before the Registry.'
+          },
+          {
+            id: 'tsk-103',
+            title: 'Review Mortgaged Property Valuations & Security Deed',
+            caseId: 'case-002',
+            caseNumber: 'CM/2026/0217',
+            caseTitle: 'Bank of Africa Tanzania v. Serengeti Telecoms Ltd',
+            category: 'Evidence Gathering',
+            priority: 'Medium',
+            status: 'under_review',
+            assignedTo: 'Adv. Robert Kasoma',
+            assignedAvatar: 'RK',
+            dueDate: '2026-09-25',
+            isStatutoryDeadline: false,
+            progressPct: 40,
+            description: 'Conferral with recovery managers regarding physical asset valuations.'
+          },
+          {
+            id: 'tsk-104',
+            title: 'Client Conference on Proposed Out-of-Court Settlement Terms',
+            caseId: 'case-001',
+            caseNumber: 'CV/2026/0042',
+            caseTitle: 'Kilombero Sugar Co. v. Mara Logistics Ltd',
+            category: 'Client Conference',
+            priority: 'Medium',
+            status: 'completed',
+            assignedTo: 'Adv. Robert Kasoma',
+            assignedAvatar: 'RK',
+            dueDate: '2026-09-14',
+            isStatutoryDeadline: false,
+            progressPct: 100,
+            description: 'Met with client CEO to review defendant restructuring proposal.'
+          }
+        ];
+        this.persistTasks();
+      }
     } catch (e) {
       console.warn('Failed to restore tasks:', e);
     }
@@ -1807,6 +1732,479 @@ const SLCMS_STATE = {
     this.tasks.unshift(newTask);
     this.persistTasks();
     this.addAuditLog('Task Created', 'Task Management', `Task "${newTask.title}" created for case ${newTask.caseNumber || 'N/A'}`);
+  },
+
+  // --------------------------------------------------------------------------
+  // OBJECTIVE 2: DOCUMENT PERSISTENCE & HELPERS
+  // --------------------------------------------------------------------------
+  restoreDocuments() {
+    try {
+      const saved = localStorage.getItem('slcms_persisted_documents');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.documents = parsed;
+          return;
+        }
+      }
+      if (!this.documents || this.documents.length === 0) {
+        this.documents = [
+          {
+            id: 'doc-001',
+            caseId: 'case-001',
+            caseNumber: 'CV/2026/0042',
+            caseTitle: 'Kilombero Sugar Co. v. Mara Logistics Ltd',
+            title: 'Plaint & Chamber Summons for Interim Injunction',
+            fileName: 'Plaint_Chamber_Summons_Injunction.pdf',
+            category: 'Pleadings',
+            uploadedBy: 'Adv. Robert Kasoma',
+            uploadDate: '2026-09-08',
+            size: '2.4 MB',
+            version: 'v1.0',
+            accessLevel: 'Attorney-Client Privileged',
+            fileType: 'PDF',
+            status: 'Ready for AI',
+            ocrConfidence: '98.4%',
+            versions: [
+              { version: 'v1.0', fileName: 'Plaint_Chamber_Summons_Injunction.pdf', uploadedBy: 'Adv. Robert Kasoma', uploadDate: '2026-09-08', size: '2.4 MB', changeNotes: 'Initial formal filing with High Court Registry' }
+            ],
+            accessHistory: [
+              { action: 'Created & Uploaded', actor: 'Adv. Robert Kasoma', timestamp: '2026-09-08 10:14', notes: 'Initial filing version uploaded' },
+              { action: 'OCR Processing Verified', actor: 'System OCR Engine', timestamp: '2026-09-08 10:15', notes: 'Confidence score: 98.4%' }
+            ]
+          },
+          {
+            id: 'doc-002',
+            caseId: 'case-001',
+            caseNumber: 'CV/2026/0042',
+            caseTitle: 'Kilombero Sugar Co. v. Mara Logistics Ltd',
+            title: 'Commercial Bulk Haulage Contract 2024',
+            fileName: 'Commercial_Haulage_Agreement_2024.pdf',
+            category: 'Contracts',
+            uploadedBy: 'Adv. Robert Kasoma',
+            uploadDate: '2026-09-09',
+            size: '4.8 MB',
+            version: 'v1.0',
+            accessLevel: 'Confidential',
+            fileType: 'PDF',
+            status: 'Verified',
+            ocrConfidence: '99.1%',
+            versions: [
+              { version: 'v1.0', fileName: 'Commercial_Haulage_Agreement_2024.pdf', uploadedBy: 'Adv. Robert Kasoma', uploadDate: '2026-09-09', size: '4.8 MB', changeNotes: 'Executed primary agreement with indemnity clauses' }
+            ],
+            accessHistory: [
+              { action: 'Uploaded', actor: 'Adv. Robert Kasoma', timestamp: '2026-09-09 14:22', notes: 'Annexed as Exhibit P-1' }
+            ]
+          },
+          {
+            id: 'doc-003',
+            caseId: 'case-002',
+            caseNumber: 'CM/2026/0217',
+            caseTitle: 'Bank of Africa Tanzania v. Serengeti Telecoms Ltd',
+            title: 'Syndicated Term Facility Agreement & Debenture',
+            fileName: 'Facility_Agreement_Debenture_BOA.pdf',
+            category: 'Contracts',
+            uploadedBy: 'Adv. Robert Kasoma',
+            uploadDate: '2026-09-10',
+            size: '5.1 MB',
+            version: 'v1.0',
+            accessLevel: 'Confidential',
+            fileType: 'PDF',
+            status: 'Ready for AI',
+            ocrConfidence: '97.9%',
+            versions: [
+              { version: 'v1.0', fileName: 'Facility_Agreement_Debenture_BOA.pdf', uploadedBy: 'Adv. Robert Kasoma', uploadDate: '2026-09-10', size: '5.1 MB', changeNotes: 'Primary security deed' }
+            ],
+            accessHistory: [
+              { action: 'Uploaded', actor: 'Adv. Robert Kasoma', timestamp: '2026-09-10 11:30', notes: 'Facility document registered at BRELA' }
+            ]
+          },
+          {
+            id: 'doc-004',
+            caseId: 'case-004',
+            caseNumber: 'CA/2026/0321',
+            caseTitle: 'Serengeti Breweries v. TRA',
+            title: 'Memorandum of Appeal Against TRA Assessment',
+            fileName: 'Memorandum_of_Appeal_TRA.pdf',
+            category: 'Pleadings',
+            uploadedBy: 'Adv. Robert Kasoma',
+            uploadDate: '2026-09-11',
+            size: '3.1 MB',
+            version: 'v1.1',
+            accessLevel: 'Attorney-Client Privileged',
+            fileType: 'PDF',
+            status: 'Ready for AI',
+            ocrConfidence: '99.5%',
+            versions: [
+              { version: 'v1.1', fileName: 'Memorandum_of_Appeal_TRA.pdf', uploadedBy: 'Adv. Robert Kasoma', uploadDate: '2026-09-11', size: '3.1 MB', changeNotes: 'Amended to incorporate TRA ruling grounds' }
+            ],
+            accessHistory: [
+              { action: 'Amended Version Uploaded', actor: 'Adv. Robert Kasoma', timestamp: '2026-09-11 16:40', notes: 'Substituted pursuant to leave granted' }
+            ]
+          }
+        ];
+        this.persistDocuments();
+      }
+    } catch (e) {
+      console.warn('Failed to restore documents:', e);
+    }
+  },
+
+  persistDocuments() {
+    try {
+      localStorage.setItem('slcms_persisted_documents', JSON.stringify(this.documents || []));
+    } catch (e) {
+      console.warn('Failed to persist documents:', e);
+    }
+  },
+
+  // --------------------------------------------------------------------------
+  // OBJECTIVE 4: COMMUNICATIONS, COURT ATTENDANCES & PROGRESS TRACKING
+  // --------------------------------------------------------------------------
+  restoreCommunications() {
+    try {
+      const saved = localStorage.getItem('slcms_persisted_communications');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.communications = parsed;
+          return;
+        }
+      }
+      if (!this.communications || this.communications.length === 0) {
+        this.communications = [
+          {
+            id: 'comm-101',
+            type: 'Telephone Call',
+            channel: 'phone',
+            caseNumber: 'CV/2026/0042',
+            client: 'Kilombero Sugar Co. Ltd',
+            sender: 'Adv. Robert Kasoma',
+            recipient: 'Eng. Bakari (CEO, Mara Logistics)',
+            participants: 'Adv. Robert Kasoma, Eng. Bakari, Legal Clerk',
+            timestamp: '2026-09-12 10:30',
+            subject: 'Conferral on Settlement Framework Prior to Submissions',
+            summary: 'Conferred with defendant CEO on proposed installment repayment framework. Defendant requested 14 days to complete internal audit of haulage log reconciliations.',
+            nextAction: 'Draft and dispatch draft settlement deed',
+            followUpDeadline: '2026-09-24',
+            attachment: null
+          },
+          {
+            id: 'comm-102',
+            type: 'Email',
+            channel: 'email',
+            caseNumber: 'CV/2026/0042',
+            client: 'Kilombero Sugar Co. Ltd',
+            sender: 'Adv. Robert Kasoma',
+            recipient: 'legal@kilomberosugar.co.tz',
+            participants: 'Adv. Robert Kasoma, Managing Director, Financial Controller',
+            timestamp: '2026-09-13 14:15',
+            subject: 'Court Hearing Outcome & Interim Injunction Ruling Briefing',
+            summary: 'Briefed client on Chamber Summons ruling delivered by Hon. Lady Justice Msumange. Court granted interim preservation of sugar consignment pending trial.',
+            nextAction: 'Finalize witness statements of operations managers',
+            followUpDeadline: '2026-09-26',
+            attachment: 'Injunction_Ruling_Summary.pdf'
+          },
+          {
+            id: 'comm-103',
+            type: 'Client Meeting',
+            channel: 'in-person',
+            caseNumber: 'CM/2026/0217',
+            client: 'Bank of Africa Tanzania',
+            sender: 'Adv. Robert Kasoma',
+            recipient: 'Bank Recovery & Remedial Directorate',
+            participants: 'Adv. Robert Kasoma, Head of Credit Recovery, Senior Remedial Manager',
+            timestamp: '2026-09-13 11:00',
+            subject: 'Pre-Trial Strategy Conference on Collateral Realization',
+            summary: 'Review of mortgaged commercial properties and valuation reports. Agreed to oppose borrower application for injunction and file counter-claim for default interest.',
+            nextAction: 'Prepare counter-affidavit and statutory valuation exhibits',
+            followUpDeadline: '2026-09-22',
+            attachment: 'Valuation_Report_Summary.pdf'
+          },
+          {
+            id: 'comm-104',
+            type: 'Court Communication',
+            channel: 'portal',
+            caseNumber: 'CA/2026/0321',
+            client: 'Serengeti Breweries Ltd',
+            sender: 'High Court Commercial Registry',
+            recipient: 'SLCMS Law Chambers',
+            participants: 'Deputy Registrar, Adv. Robert Kasoma',
+            timestamp: '2026-09-14 09:00',
+            subject: 'Hearing Date Allocation Notice - Commercial Appeal',
+            summary: 'Electronic hearing notice issued by High Court Commercial Division. Appeal allocated for oral hearing on 28 September 2026 at 09:00 AM before Coram of three judges.',
+            nextAction: 'Serve notice of hearing on Tanzania Revenue Authority legal counsel',
+            followUpDeadline: '2026-09-21',
+            attachment: 'Court_Hearing_Notice_28Sep.pdf'
+          },
+          {
+            id: 'comm-105',
+            type: 'Opposing Counsel Communication',
+            channel: 'email',
+            caseNumber: 'CV/2026/0042',
+            client: 'Kilombero Sugar Co. Ltd',
+            sender: 'Apex Legal Advocates (Counsel for Defendant)',
+            recipient: 'Adv. Robert Kasoma',
+            participants: 'Adv. David Sterling, Adv. Robert Kasoma',
+            timestamp: '2026-09-14 16:45',
+            subject: 'Without Prejudice Settlement Proposal & Schedule',
+            summary: 'Opposing counsel delivered without prejudice proposal offering initial payment of TZS 150M within 30 days and balance across 4 monthly tranches.',
+            nextAction: 'Take client instructions on proposed installment terms',
+            followUpDeadline: '2026-09-20',
+            attachment: 'Without_Prejudice_Settlement_Terms.pdf'
+          },
+          {
+            id: 'comm-106',
+            type: 'Letter Sent',
+            channel: 'letter',
+            caseNumber: 'CM/2026/0217',
+            client: 'Bank of Africa Tanzania',
+            sender: 'SLCMS Law Chambers',
+            recipient: 'Managing Director, Serengeti Telecoms Ltd',
+            participants: 'Adv. Robert Kasoma, Managing Director',
+            timestamp: '2026-09-15 08:30',
+            subject: 'Statutory Demand Notice Prior to Commercial Enforcement',
+            summary: 'Dispatched formal 14-day statutory demand under Section 42 of the Law of Contract Act [Cap. 345 R.E. 2019] demanding full payment of outstanding credit facilities.',
+            nextAction: 'Track registry proof of service and expiry of 14-day window',
+            followUpDeadline: '2026-09-29',
+            attachment: 'Statutory_Demand_BOA_2026.pdf'
+          },
+          {
+            id: 'comm-107',
+            type: 'Letter Received',
+            channel: 'letter',
+            caseNumber: 'EM/2026/0089',
+            client: 'Juma Hamisi',
+            sender: 'Commission for Mediation and Arbitration (CMA)',
+            recipient: 'SLCMS Advocates',
+            participants: 'CMA Arbitrator, Legal Clerk',
+            timestamp: '2026-09-15 11:20',
+            subject: 'Certificate of Unresolved Labour Dispute (Form No. CMA-07)',
+            summary: 'Received official certificate from CMA Dar es Salaam confirming failed mediation. Matter officially referred to the Labour Court for trial adjudication.',
+            nextAction: 'Draft and file Statement of Claim in the High Court Labour Division',
+            followUpDeadline: '2026-09-30',
+            attachment: 'CMA_Certificate_Dispute_0089.pdf'
+          },
+          {
+            id: 'comm-108',
+            type: 'Internal Meeting',
+            channel: 'in-person',
+            caseNumber: 'CV/2026/0042',
+            client: 'Kilombero Sugar Co. Ltd',
+            sender: 'Commercial Litigation Group',
+            recipient: 'Assigned Matter Team',
+            participants: 'Adv. Robert Kasoma, Supporting Lawyer, Legal Clerk',
+            timestamp: '2026-09-15 15:00',
+            subject: 'Trial Strategy & Submissions Preparation Conferral',
+            summary: 'Internal team review of evidence bundle, contractual default notices, and preparation of written submissions pursuant to High Court order.',
+            nextAction: 'Legal Clerk to paginate exhibits and bind submission bundle',
+            followUpDeadline: '2026-09-25',
+            attachment: null
+          },
+          {
+            id: 'comm-109',
+            type: 'Other',
+            channel: 'portal',
+            caseNumber: 'CR/2026/0014',
+            client: 'Joseph Mwita',
+            sender: 'National Prosecution Services (NPS)',
+            recipient: 'Defense Counsel',
+            participants: 'State Attorney, Adv. Robert Kasoma',
+            timestamp: '2026-09-16 09:30',
+            subject: 'Electronic Supply of Prosecution Exhibits & Witness Statements',
+            summary: 'State Attorney provided electronic disclosure bundle containing prosecution witness statements, seizure memo, and police inventory logs under Section 246 of CPA.',
+            nextAction: 'Scrutinize disclosures for inconsistencies to prepare cross-examination outline',
+            followUpDeadline: '2026-09-23',
+            attachment: 'Prosecution_Disclosure_Bundle.pdf'
+          }
+        ];
+        this.persistCommunications();
+      }
+    } catch (e) {
+      console.warn('Failed to restore communications:', e);
+    }
+  },
+
+  persistCommunications() {
+    try {
+      localStorage.setItem('slcms_persisted_communications', JSON.stringify(this.communications || []));
+    } catch (e) {
+      console.warn('Failed to persist communications:', e);
+    }
+  },
+
+  restoreCourtAttendances() {
+    try {
+      const saved = localStorage.getItem('slcms_persisted_court_attendances');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.courtAttendances = parsed;
+          return;
+        }
+      }
+      if (!this.courtAttendances || this.courtAttendances.length === 0) {
+        this.courtAttendances = [
+          {
+            id: 'ca-001',
+            caseId: 'case-001',
+            caseNumber: 'CV/2026/0042',
+            caseTitle: 'Kilombero Sugar Co. v. Mara Logistics Ltd',
+            court: 'High Court of Tanzania (Commercial Division), Dar es Salaam',
+            hearingDate: '2026-09-14',
+            attendingLawyer: 'Adv. Robert Kasoma',
+            judge: 'Hon. Lady Justice Msumange',
+            coram: 'Hon. Lady Justice Msumange (Single Judge)',
+            proceedingStage: 'Hearing of Chamber Summons (Interim Relief)',
+            directions: 'Interim injunction maintained until 28 September 2026. Respondent ordered to file and serve counter-affidavit within 7 statutory days. Applicant rejoinder within 4 days thereafter. Oral submissions scheduled for 28 September 2026.',
+            nextHearingDate: '2026-09-28',
+            notes: 'Opposing counsel pleaded for 14 days for reply; court denied extension citing risk of commercial inventory dissipation.',
+            createdAt: '2026-09-14 12:45'
+          },
+          {
+            id: 'ca-002',
+            caseId: 'case-004',
+            caseNumber: 'CA/2026/0321',
+            caseTitle: 'Serengeti Breweries v. TRA',
+            court: 'Tax Revenue Appeals Tribunal, Dar es Salaam',
+            hearingDate: '2026-09-11',
+            attendingLawyer: 'Adv. Robert Kasoma',
+            judge: 'Hon. Chairman Mwambapa',
+            coram: 'Hon. Chairman Mwambapa, Members Dr. Lyimo and Adv. Mndeme',
+            proceedingStage: 'Pre-Trial Scheduling & Directions Conference',
+            directions: 'Parties ordered to execute and file Joint Memorandum of Agreed Facts and Disputed Issues within 14 days. Hearing of preliminary objections scheduled for 05 October 2026.',
+            nextHearingDate: '2026-10-05',
+            notes: 'TRA Principal Revenue Counsel agreed to concede grounds 2 and 4 regarding depreciation allowances.',
+            createdAt: '2026-09-11 15:30'
+          }
+        ];
+        this.persistCourtAttendances();
+      }
+    } catch (e) {
+      console.warn('Failed to restore court attendances:', e);
+    }
+  },
+
+  persistCourtAttendances() {
+    try {
+      localStorage.setItem('slcms_persisted_court_attendances', JSON.stringify(this.courtAttendances || []));
+    } catch (e) {
+      console.warn('Failed to persist court attendances:', e);
+    }
+  },
+
+  addCourtAttendance(record) {
+    if (!this.courtAttendances) this.courtAttendances = [];
+    this.courtAttendances.unshift(record);
+    this.persistCourtAttendances();
+    this.addAuditLog('Court Attendance Recorded', 'Court Tracking', `${record.caseNumber}: ${record.proceedingStage} before ${record.judge}`);
+  },
+
+  restoreProgressUpdates() {
+    try {
+      const saved = localStorage.getItem('slcms_persisted_progress_updates');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.progressUpdates = parsed;
+          return;
+        }
+      }
+      if (!this.progressUpdates || this.progressUpdates.length === 0) {
+        this.progressUpdates = [
+          {
+            id: 'pu-001',
+            caseId: 'case-001',
+            caseNumber: 'CV/2026/0042',
+            caseTitle: 'Kilombero Sugar Co. v. Mara Logistics Ltd',
+            date: '2026-09-14',
+            updateType: 'Procedural Ruling',
+            title: 'Interim Preservation Order Granted by High Court',
+            details: 'The High Court delivered a favourable ruling on the Chamber Summons, directing that the commercial consignment of raw sugar remain preserved under joint custody.',
+            impactOnTimeline: 'Next hearing expedited to 28 September 2026 for oral submissions.',
+            author: 'Adv. Robert Kasoma',
+            createdAt: '2026-09-14 13:00'
+          },
+          {
+            id: 'pu-002',
+            caseId: 'case-002',
+            caseNumber: 'CM/2026/0217',
+            caseTitle: 'Bank of Africa Tanzania v. Serengeti Telecoms Ltd',
+            date: '2026-09-15',
+            updateType: 'Settlement Discussion',
+            title: 'Without Prejudice Debt Restructuring Discussions Opened',
+            details: 'Counsel for borrower approached firm with formal restructuring term sheet proposing upfront payment of 25% outstanding debt with structured amortization.',
+            impactOnTimeline: 'Summary judgment filing paused for 10 days pending board approval of terms.',
+            author: 'Adv. Robert Kasoma',
+            createdAt: '2026-09-15 17:15'
+          },
+          {
+            id: 'pu-003',
+            caseId: 'case-004',
+            caseNumber: 'CA/2026/0321',
+            caseTitle: 'Serengeti Breweries v. TRA',
+            date: '2026-09-11',
+            updateType: 'Stage Change',
+            title: 'Matter Advanced from Pleadings to Pre-Trial Hearing Stage',
+            details: 'All appellate grounds and replies closed. Tribunal issued pre-trial directions and fixed date for oral contest on disputed excise tax computations.',
+            impactOnTimeline: 'Submissions to be completed within 14 statutory days.',
+            author: 'Adv. Robert Kasoma',
+            createdAt: '2026-09-11 16:00'
+          }
+        ];
+        this.persistProgressUpdates();
+      }
+    } catch (e) {
+      console.warn('Failed to restore progress updates:', e);
+    }
+  },
+
+  persistProgressUpdates() {
+    try {
+      localStorage.setItem('slcms_persisted_progress_updates', JSON.stringify(this.progressUpdates || []));
+    } catch (e) {
+      console.warn('Failed to persist progress updates:', e);
+    }
+  },
+
+  addProgressUpdate(update) {
+    if (!this.progressUpdates) this.progressUpdates = [];
+    this.progressUpdates.unshift(update);
+    this.persistProgressUpdates();
+    this.addAuditLog('Case Progress Updated', 'Case Tracking', `${update.caseNumber}: ${update.title} (${update.updateType})`);
+  },
+
+  // --------------------------------------------------------------------------
+  // OBJECTIVE 5: AI-ASSISTED DRAFTS PERSISTENCE
+  // --------------------------------------------------------------------------
+  restoreDrafts() {
+    try {
+      const saved = localStorage.getItem('slcms_persisted_drafts');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.legalDrafts = parsed;
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to restore legal drafts:', e);
+    }
+  },
+
+  persistDrafts() {
+    try {
+      localStorage.setItem('slcms_persisted_drafts', JSON.stringify(this.legalDrafts || []));
+    } catch (e) {
+      console.warn('Failed to persist legal drafts:', e);
+    }
+  },
+
+  addLegalDraft(draft) {
+    if (!this.legalDrafts) this.legalDrafts = [];
+    this.legalDrafts.unshift(draft);
+    this.persistDrafts();
+    this.addAuditLog('AI Legal Draft Generated', 'AI Drafting', `${draft.title} (${draft.draftType || 'Matter Document'})`);
   },
 
   // Active Staff Filtering (Accounts that are locked, suspended, or deactivated excluded)
@@ -3425,8 +3823,8 @@ const SLCMS_STATE = {
 
     this.persistUsers();
     this.addAuditLog('Password Changed', 'Security', `User: ${account.name} (${account.staffId || account.employeeId}), Reason: Voluntary recovery reset, Result: Success`);
-    return { success: true, user: account };
-  },
+      return { success: true, user: account };
+    },
 
   // Helper State Modifiers
   switchRoleLegacy(roleName) {
@@ -3435,9 +3833,33 @@ const SLCMS_STATE = {
   },
 
   addCase(caseData) {
-    this.cases.unshift(caseData);
+    if (!caseData || typeof caseData !== 'object') caseData = {};
+    const safeTitle = caseData.caseTitle ?? caseData.title ?? 'Untitled Case';
+    const safeNumber = caseData.caseNumber ?? caseData.officialCaseNumber ?? 'Not provided';
+    const safeType = caseData.caseType ?? caseData.type ?? 'Other';
+    const safeStatus = caseData.status ?? caseData.caseStatus ?? 'Unassigned';
+    const safeClient = caseData.clientName ?? (typeof caseData.client === 'object' ? caseData.client?.fullName : caseData.client) ?? 'No client linked';
+    const safeCounsel = caseData.assignedCounsel ?? (typeof caseData.leadCounsel === 'object' ? caseData.leadCounsel?.fullName : (caseData.leadCounsel || caseData.lawyer)) ?? 'Unassigned';
+
+    const normalized = {
+      ...caseData,
+      title: safeTitle,
+      caseTitle: safeTitle,
+      caseNumber: safeNumber,
+      officialCaseNumber: safeNumber,
+      caseType: safeType,
+      type: safeType,
+      status: safeStatus,
+      client: safeClient,
+      clientName: safeClient,
+      lawyer: safeCounsel,
+      assignedCounsel: safeCounsel,
+      priority: caseData.priority ?? 'Medium'
+    };
+
+    this.cases.unshift(normalized);
     this.persistCases();
-    this.addAuditLog('New Legal Case Registered', 'Case Management', `${caseData.caseNumber} - ${caseData.title}`);
+    this.addAuditLog('New Legal Case Registered', 'Case Management', `${safeNumber} - ${safeTitle}`);
   },
 
   addTask(taskData) {
@@ -3446,12 +3868,16 @@ const SLCMS_STATE = {
   },
 
   addDocument(docData) {
+    if (!this.documents) this.documents = [];
     this.documents.unshift(docData);
+    this.persistDocuments();
     this.addAuditLog('Document Uploaded & Cataloged', 'Document Repository', docData.title);
   },
 
   addCommunication(commData) {
+    if (!this.communications) this.communications = [];
     this.communications.unshift(commData);
+    this.persistCommunications();
     this.addAuditLog('Communication Logged', 'Communications', commData.subject);
   },
 
