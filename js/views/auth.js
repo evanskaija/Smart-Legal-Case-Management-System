@@ -1155,30 +1155,37 @@ const AuthView = {
     (async () => {
       let authResult = null;
       try {
-        const response = await fetch('/api/auth/login', {
+        const fetchFn = (typeof window.slcmsFetch === 'function') ? window.slcmsFetch : fetch;
+        const response = await fetchFn('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ identifier: emailVal, email: emailVal, password: passwordVal })
         });
         authResult = await response.json();
       } catch (err) {
+        console.warn('[SLCMS Auth] Backend call unavailable, checking offline state engine:', err);
         // Fallback to client state engine
         authResult = SLCMS_STATE.serverAuthenticate(emailVal, passwordVal, rememberMeCheck?.checked);
       }
 
-      if (!authResult.success) {
+      if (!authResult || !authResult.success) {
         if (btn) { btn.innerHTML = 'Login'; btn.disabled = false; }
-        if (authResult.errorType === 'TEMPORARILY_LOCKED' && authResult.lockedUntil) {
+        if (authResult && authResult.errorType === 'TEMPORARILY_LOCKED' && authResult.lockedUntil) {
           this.startLockCountdown(authResult.lockedUntil, authResult.message);
         } else {
-          this.showServerAlert(authResult.message);
+          this.showServerAlert(authResult ? authResult.message : 'Unable to connect to the authentication server. Please verify network.');
         }
         return;
       }
 
       // Handle First-Login Password Change Intercept
-      if (authResult.requiresFirstLoginChange) {
-        this.tempAuthUser = authResult.user;
+      if (authResult.requiresFirstLoginChange || authResult.mustChangePassword) {
+        this.tempAuthUser = authResult.user || {
+          id: authResult.staffId || emailVal,
+          staffId: authResult.staffId,
+          email: emailVal,
+          role: authResult.role || 'LAWYER'
+        };
         this.currentViewMode = 'first_login_password_change';
         window.location.hash = '#/change-first-password';
         if (btn) { btn.innerHTML = 'Login'; btn.disabled = false; }
@@ -1186,16 +1193,29 @@ const AuthView = {
         return;
       }
 
-      // Complete Login: Store session and redirect to role dashboard
+      // Complete Login: Authoritative role returned by the backend
+      const userRole = authResult.role || (authResult.user && (authResult.user.role || authResult.user.roleKey)) || 'LAWYER';
+      const currentUserObj = authResult.user || {
+        id: authResult.staffId,
+        staffId: authResult.staffId,
+        name: emailVal.split('@')[0],
+        email: emailVal,
+        role: userRole
+      };
+
       sessionStorage.setItem('slcms_auth', 'true');
       sessionStorage.setItem('slcms_token', authResult.token || ('slcms_jwt_' + Date.now()));
-      if (authResult.user) {
-        sessionStorage.setItem('slcms_current_user', JSON.stringify(authResult.user));
-        sessionStorage.setItem('slcms_current_user_id', authResult.user.id);
-        if (rememberMeCheck?.checked) {
-          localStorage.setItem('slcms_persisted_current_user', JSON.stringify(authResult.user));
-          localStorage.setItem('slcms_remembered_staff_id', emailVal);
-        }
+      sessionStorage.setItem('slcms_current_user', JSON.stringify(currentUserObj));
+      sessionStorage.setItem('slcms_current_user_id', currentUserObj.id || authResult.staffId);
+
+      if (rememberMeCheck?.checked) {
+        localStorage.setItem('slcms_persisted_current_user', JSON.stringify(currentUserObj));
+        localStorage.setItem('slcms_remembered_staff_id', emailVal);
+      }
+
+      // Sync local runtime state user
+      if (typeof SLCMS_STATE !== 'undefined') {
+        SLCMS_STATE.currentUser = currentUserObj;
       }
 
       App.isLoggedIn = true;
@@ -1203,7 +1223,7 @@ const AuthView = {
 
       const rawDestination = authResult.destination ||
         (typeof SLCMS_STATE !== 'undefined' && typeof SLCMS_STATE.getPermittedDestination === 'function'
-          ? SLCMS_STATE.getPermittedDestination(authResult.user?.role)
+          ? SLCMS_STATE.getPermittedDestination(userRole)
           : '/dashboard');
       const destination = rawDestination.replace(/^\/+/, '');
       App.navigate(destination);
@@ -1213,7 +1233,7 @@ const AuthView = {
   },
 
   // First Login Password Update Handler (Section 6)
-  handleFirstLoginSubmit(e) {
+  async handleFirstLoginSubmit(e) {
     e.preventDefault();
     const tempPass = document.getElementById('temp-password-input')?.value;
     const newPass = document.getElementById('new-password-input')?.value;
@@ -1238,15 +1258,42 @@ const AuthView = {
 
     if (hasError) return;
 
-    const res = SLCMS_STATE.completeFirstLoginPasswordChange(this.tempAuthUser.id, tempPass, newPass);
-    if (!res.success) {
-      const alertEl = document.getElementById('first-login-alert');
-      const textEl = document.getElementById('first-login-alert-text');
-      if (alertEl && textEl) {
-        textEl.innerText = res.message;
-        alertEl.classList.remove('hidden');
+    // Call backend API to persist password change in the permanent database
+    const alertEl = document.getElementById('first-login-alert');
+    const textEl = document.getElementById('first-login-alert-text');
+
+    try {
+      const fetchFn = (typeof window.slcmsFetch === 'function') ? window.slcmsFetch : fetch;
+      const response = await fetchFn('/api/auth/change-first-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: this.tempAuthUser ? this.tempAuthUser.id : '',
+          identifier: this.tempAuthUser ? (this.tempAuthUser.email || this.tempAuthUser.staffId) : '',
+          temporaryPassword: tempPass,
+          newPassword: newPass
+        })
+      });
+      const resData = await response.json();
+      if (!response.ok || !resData.success) {
+        if (alertEl && textEl) {
+          textEl.innerText = resData.message || 'Failed to update password. Please verify credentials.';
+          alertEl.classList.remove('hidden');
+        }
+        return;
       }
-      return;
+    } catch (err) {
+      console.warn('[SLCMS] Permanent DB change-first-password endpoint reached offline, attempting local state change:', err);
+      if (typeof SLCMS_STATE !== 'undefined' && SLCMS_STATE.completeFirstLoginPasswordChange) {
+        const localRes = SLCMS_STATE.completeFirstLoginPasswordChange(this.tempAuthUser.id, tempPass, newPass);
+        if (!localRes.success) {
+          if (alertEl && textEl) {
+            textEl.innerText = localRes.message;
+            alertEl.classList.remove('hidden');
+          }
+          return;
+        }
+      }
     }
 
     // Invalidate temporary session and return to login page (Section 6)
@@ -1258,19 +1305,18 @@ const AuthView = {
     window.location.hash = '#/login';
     document.getElementById('app-root').innerHTML = this.render();
 
-    // Show exact message on login page per Section 6
+    // Show exact confirmation message on login page per Section 6
     setTimeout(() => {
       this.showServerAlert(
         '<span style="color:#059669; font-weight:700;">✓</span> Password created successfully. Log in using your new private password.'
       );
-      const alertEl = document.getElementById('auth-server-alert');
-      if (alertEl) {
-        alertEl.classList.remove('hidden');
-        alertEl.style.background = '#F0FDF4';
-        alertEl.style.borderColor = '#10B981';
-        alertEl.style.color = '#065F46';
+      const alertBox = document.getElementById('auth-server-alert');
+      if (alertBox) {
+        alertBox.classList.remove('hidden');
+        alertBox.style.background = '#F0FDF4';
+        alertBox.style.color = '#065F46';
       }
-    }, 100);
+    }, 50);
   },
 
   // No cancel allowed — user must complete the reset

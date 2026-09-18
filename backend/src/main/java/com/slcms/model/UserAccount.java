@@ -1,51 +1,141 @@
 package com.slcms.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Entity representing an authenticated or provisioned user in SLCMS.
+ * JPA Entity representing an authenticated or provisioned user in SLCMS.
+ * Mapped to the persistent 'users' table in PostgreSQL / MySQL / H2.
  */
+@Entity
+@Table(name = "users")
 public class UserAccount {
+
+    @Id
+    @Column(length = 50)
     private String id;
+
+    @Column(name = "staff_id", length = 50, unique = true, nullable = false)
     private String staffId;
+
+    @Column(name = "employee_id", length = 50)
     private String employeeId;
+
+    @Column(name = "name", length = 150, nullable = false)
     private String name;
+
+    @Column(name = "email", length = 150, unique = true, nullable = false)
     private String email;
+
+    @Column(name = "phone", length = 50)
     private String phone;
+
+    @Transient
+    @JsonIgnore
     private String passwordPlain;
+
+    @Column(name = "password_hash", length = 255, nullable = false)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String passwordHash;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", length = 50, nullable = false)
     private UserRole role;
+
+    @Column(name = "role_title", length = 100)
     private String roleTitle;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 50)
     private UserStatus status; // Legacy compatibility
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "account_status", length = 50, nullable = false)
     private AccountStatus accountStatus; // PENDING_VERIFICATION, PENDING_APPROVAL, ACTIVE, FIRST_LOGIN_RESET, LOCKED, SUSPENDED, DEACTIVATED
+
+    @Column(name = "department", length = 100)
     private String department;
+
+    @Column(name = "bar_number", length = 50)
     private String barNumber;
+
+    @Column(name = "advocate_number", length = 50)
     private String advocateNumber;
+
+    @Column(name = "practising_cert_no", length = 50)
     private String practisingCertNo;
+
+    @Column(name = "national_id_ref", length = 50)
     private String nationalIdRef;
+
+    @Column(name = "identity_verification_status", length = 50)
     private String identityVerificationStatus; // VERIFIED, PENDING_REVIEW, REJECTED
+
+    @Column(name = "invitation_id", length = 50)
     private String invitationId;
+
+    @Column(name = "approved_by", length = 50)
     private String approvedBy;
+
+    @Column(name = "approved_at")
     private LocalDateTime approvedAt;
+
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    @Column(name = "avatar_img", length = 500)
     private String avatarImg;
+
+    @Column(name = "must_change_password")
     private boolean mustChangePassword;
+
+    @Column(name = "failed_attempts")
     private int failedAttempts;
+
+    @Column(name = "failed_login_attempts")
     private int failedLoginAttempts;
+
+    @Column(name = "first_login_required")
     private boolean firstLoginRequired;
+
+    @Column(name = "temporary_password_expires_at")
     private LocalDateTime temporaryPasswordExpiresAt;
+
+    @Column(name = "locked_at")
     private LocalDateTime lockedAt;
+
+    @Column(name = "locked_until")
     private Long lockedUntil;
+
+    @Column(name = "locked_by", length = 50)
     private String lockedBy;
+
+    @Column(name = "locked_reason", length = 100)
     private String lockedReason;
+
+    @Column(name = "admin_locked")
     private boolean adminLocked;
+
+    @Column(name = "last_successful_login")
     private LocalDateTime lastSuccessfulLogin;
+
+    @Column(name = "last_failed_login")
     private LocalDateTime lastFailedLogin;
+
+    @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
+
+    @Column(name = "password_changed_at")
     private LocalDateTime passwordChangedAt;
+
+    @Column(name = "last_login", length = 50)
     private String lastLogin;
+
+    @Transient
     private List<String> assignedCaseIds = new ArrayList<>();
 
     public UserAccount() {}
@@ -59,7 +149,6 @@ public class UserAccount {
         this.name = name;
         this.email = email;
         this.passwordPlain = passwordPlain;
-        this.passwordHash = "argon2:$2b$12$" + id.hashCode();
         this.role = role;
         this.roleTitle = roleTitle;
         this.accountStatus = accountStatus;

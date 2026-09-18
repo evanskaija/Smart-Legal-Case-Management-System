@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    SLCMS - State Store & Data Fixtures
    Zero-Trust Role-Based Access Control (RBAC) Architecture
    ========================================================================== */
@@ -792,6 +792,22 @@ const SLCMS_STATE = {
     });
   },
 
+  async syncUsersFromBackend() {
+    try {
+      const fetchFn = (typeof window.slcmsFetch === 'function') ? window.slcmsFetch : fetch;
+      const res = await fetchFn('/api/admin/users', { credentials: 'include' });
+      if (res.ok) {
+        const users = await res.json();
+        if (Array.isArray(users) && users.length > 0) {
+          this.users = users;
+          console.log(`[SLCMS State] Synchronized ${users.length} accounts from permanent online database.`);
+        }
+      }
+    } catch (e) {
+      console.warn('[SLCMS State] Backend user sync deferred:', e.message);
+    }
+  },
+
   initInitialAdminAccount() {
     // 1. Initial Administrator Details
     const initialStaffId = 'ADM-0001';
@@ -1268,60 +1284,26 @@ const SLCMS_STATE = {
         });
       }
 
-      // 1. Restore persisted users directory if available
+      // 1. Sync users from permanent backend online database
+      this.syncUsersFromBackend();
+
+      // Ensure seed initial admin account is present in runtime state if empty
       const savedUsersJson = localStorage.getItem('slcms_persisted_users');
       if (savedUsersJson) {
         try {
           const savedUsers = JSON.parse(savedUsersJson);
-          const DEMO_BLACKLIST = [
-            'robert.kasoma', 'neema.mwangi', 'julian.mercer', 'david.croft', 'maya.patel',
-            'marcus.bell', 'alan.sterling', 'victoria.hayes', 'faraji.kamau',
-            'grace.temba', 'asha.bakari', 'baraka.temba', 'neema.joseph', 'juma.mwangi',
-            'david.mushi', 'teresa.bradley', 'sophia.chen', 'alexandre.sterling', 'eleanor.vance',
-            'zuhura.moyo', 'rashid.salim', 'grace.mollel',
-            'usr-011', 'usr-012', 'usr-013', 'usr-014', 'usr-015', 'usr-016', 'emp-1002', 'emp-1003',
-            'emp-1004', 'emp-1005', 'emp-1006', 'emp-1007', 'emp-1010', 'adv-0041', 'adv-0089'
-          ];
           if (Array.isArray(savedUsers) && savedUsers.length > 0) {
-            // Reconstruct users directly from savedUsers list so deleted accounts remain deleted
             const validSavedUsers = savedUsers.filter(su => {
-              const uname = (su.username || '').toLowerCase();
               const sid = (su.staffId || su.employeeId || '').toUpperCase();
               const uid = (su.id || '').toLowerCase();
               const email = (su.email || '').toLowerCase();
-              const name = (su.name || '').toLowerCase();
-
-              // Respect deleted accounts list
-              if (deletedIds.includes(uid) || deletedIds.includes(email) || deletedIds.includes(sid)) {
-                return false;
-              }
-
-              // Discard any blacklisted demonstration account
-              if (DEMO_BLACKLIST.includes(uname) || DEMO_BLACKLIST.includes(uid) || 
-                  DEMO_BLACKLIST.some(b => email.includes(b)) ||
-                  DEMO_BLACKLIST.some(b => uname.includes(b)) ||
-                  name.includes('kasoma') || name.includes('mwangi') || name.includes('mercer') ||
-                  name.includes('croft') || name.includes('patel') || name.includes('marcus bell') ||
-                  name.includes('alan sterling') || name.includes('victoria hayes') || name.includes('neema joseph')) {
-                return false;
-              }
-
-              return true;
+              return !deletedIds.includes(uid) && !deletedIds.includes(email) && !deletedIds.includes(sid);
             });
-
             if (validSavedUsers.length > 0) {
-              // Ensure root admin account is present
-              const hasAdmin = validSavedUsers.some(u => (u.staffId || u.employeeId || '').toUpperCase() === 'ADM-0001');
-              if (!hasAdmin) {
-                const rootAdmin = this.users.find(u => (u.staffId || u.employeeId || '').toUpperCase() === 'ADM-0001');
-                if (rootAdmin) validSavedUsers.unshift(rootAdmin);
-              }
               this.users = validSavedUsers;
             }
           }
-        } catch (e) {
-          console.warn('Error reading saved users:', e);
-        }
+        } catch (e) {}
       }
 
       // Ensure seed initial admin account is created and unique

@@ -17,45 +17,60 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class RBACSecurityService {
 
-    private final Map<String, UserAccount> userDatabase = new ConcurrentHashMap<>();
+    private final com.slcms.repository.UserRepository userRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private final List<Map<String, Object>> auditLogs = Collections.synchronizedList(new ArrayList<>());
     private final List<com.slcms.model.SecurityAlert> securityAlerts = Collections.synchronizedList(new ArrayList<>());
     private final List<com.slcms.model.SecurityEvent> securityEvents = Collections.synchronizedList(new ArrayList<>());
 
-    public RBACSecurityService() {
-        seedInitialUsers();
+    @org.springframework.beans.factory.annotation.Autowired
+    public RBACSecurityService(com.slcms.repository.UserRepository userRepository,
+                               org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        seedInitialUsersIfEmpty();
     }
 
-    private void seedInitialUsers() {
-        // Ground truth initial database state: Sole initial Administrator account
-        UserAccount admin = new UserAccount(
-            "usr-001", "ADM-0001", "SLCMS System Administrator", "admin@slcms.local", "SecretLawFirm2026!",
-            UserRole.ADMINISTRATOR, "System Administrator", com.slcms.model.AccountStatus.FIRST_LOGIN_RESET,
-            "System Governance & Administration", null, true,
-            Collections.emptyList()
-        );
-        admin.setPhone("+255 700 000 001");
-        admin.setNationalIdRef("NIDA-19800101-0001-01");
-        admin.setFirstLoginRequired(true);
-        admin.setLastLoginAt(null);
-        userDatabase.put(admin.getEmail().toLowerCase(), admin);
-        userDatabase.put("slcms.admin", admin);
+    private void seedInitialUsersIfEmpty() {
+        try {
+            if (userRepository.count() == 0) {
+                // Ground truth initial database state: Sole initial Administrator account
+                UserAccount admin = new UserAccount(
+                    "usr-001", "ADM-0001", "SLCMS System Administrator", "admin@slcms.local", "SecretLawFirm2026!",
+                    UserRole.ADMINISTRATOR, "System Administrator", com.slcms.model.AccountStatus.FIRST_LOGIN_RESET,
+                    "System Governance & Administration", null, true,
+                    Collections.emptyList()
+                );
+                admin.setPhone("+255 700 000 001");
+                admin.setNationalIdRef("NIDA-19800101-0001-01");
+                admin.setPasswordHash(passwordEncoder.encode("SecretLawFirm2026!"));
+                admin.setPasswordPlain("SecretLawFirm2026!");
+                admin.setFirstLoginRequired(true);
+                admin.setMustChangePassword(true);
+                admin.setLastLoginAt(null);
+                userRepository.save(admin);
+            }
+        } catch (Exception e) {
+            System.err.println("Database initialization notice: " + e.getMessage());
+        }
     }
 
     public List<UserAccount> getAllUsers() {
-        return new ArrayList<>(userDatabase.values());
+        return userRepository.findAll();
     }
 
     public UserAccount getUserByEmail(String email) {
-        if (email == null) return null;
-        return userDatabase.get(email.trim().toLowerCase());
+        if (email == null || email.trim().isEmpty()) return null;
+        return userRepository.findByEmailIgnoreCase(email.trim()).orElse(null);
     }
 
     public UserAccount getUserById(String id) {
-        if (id == null) return null;
-        return userDatabase.values().stream()
-                .filter(u -> id.equalsIgnoreCase(u.getId()))
-                .findFirst().orElse(null);
+        if (id == null || id.trim().isEmpty()) return null;
+        String cleanId = id.trim();
+        return userRepository.findById(cleanId)
+                .or(() -> userRepository.findByStaffIdIgnoreCase(cleanId))
+                .or(() -> userRepository.findByEmployeeIdIgnoreCase(cleanId))
+                .orElse(null);
     }
 
     /**
@@ -368,6 +383,7 @@ public class RBACSecurityService {
         alert.setLockedBy(lockedBy);
         alert.setLockedReason(reason);
         createSecurityAlert(alert);
+        userRepository.save(user);
         return true;
     }
 
@@ -394,6 +410,8 @@ public class RBACSecurityService {
             user.setStatus(com.slcms.model.UserStatus.ACTIVE);
         }
 
+        userRepository.save(user);
+
         // Resolve existing lock alert(s)
         resolveAlertsForUser(user.getId(), com.slcms.model.AlertType.ACCOUNT_LOCKED, unlockedBy);
 
@@ -413,12 +431,13 @@ public class RBACSecurityService {
         if (user == null) return false;
 
         user.setPasswordPlain(newTempPass);
-        user.setPasswordHash("argon2:$2b$12$" + newTempPass.hashCode());
+        user.setPasswordHash(passwordEncoder.encode(newTempPass));
         user.setMustChangePassword(true);
         user.setFirstLoginRequired(true);
         user.setTemporaryPasswordExpiresAt(LocalDateTime.now().plusHours(24));
         user.setAccountStatus(com.slcms.model.AccountStatus.FIRST_LOGIN_RESET);
         user.setStatus(com.slcms.model.UserStatus.FIRST_LOGIN_PENDING);
+        userRepository.save(user);
 
         recordSecurityEvent(new com.slcms.model.SecurityEvent(
             "evt-" + System.currentTimeMillis(), user.getId(), user.getName(),
@@ -436,11 +455,13 @@ public class RBACSecurityService {
         if (user == null) return false;
 
         user.setPasswordPlain(newPassword);
-        user.setPasswordHash("argon2:$2b$12$" + newPassword.hashCode());
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
         user.setMustChangePassword(false);
         user.setFirstLoginRequired(false);
         user.setAccountStatus(com.slcms.model.AccountStatus.ACTIVE);
         user.setStatus(com.slcms.model.UserStatus.ACTIVE);
+        user.setPasswordChangedAt(LocalDateTime.now());
+        userRepository.save(user);
 
         recordSecurityEvent(new com.slcms.model.SecurityEvent(
             "evt-" + System.currentTimeMillis(), user.getId(), user.getName(),
@@ -452,7 +473,7 @@ public class RBACSecurityService {
 
     public boolean createUser(UserAccount newUser) {
         if (newUser == null || newUser.getId() == null) return false;
-        userDatabase.put(newUser.getEmail().toLowerCase(), newUser);
+        userRepository.save(newUser);
 
         recordSecurityEvent(new com.slcms.model.SecurityEvent(
             "evt-" + System.currentTimeMillis(), newUser.getId(), newUser.getName(),
@@ -468,6 +489,7 @@ public class RBACSecurityService {
 
         user.setStatus(com.slcms.model.UserStatus.DEACTIVATED);
         user.setAccountStatus(com.slcms.model.AccountStatus.DEACTIVATED);
+        userRepository.save(user);
 
         recordSecurityEvent(new com.slcms.model.SecurityEvent(
             "evt-" + System.currentTimeMillis(), user.getId(), user.getName(),
@@ -482,6 +504,7 @@ public class RBACSecurityService {
         if (user == null || newRole == null) return false;
 
         user.setRole(newRole);
+        userRepository.save(user);
 
         recordSecurityEvent(new com.slcms.model.SecurityEvent(
             "evt-" + System.currentTimeMillis(), user.getId(), user.getName(),
@@ -496,10 +519,7 @@ public class RBACSecurityService {
         UserAccount user = getUserById(userId);
         if (user == null) return false;
 
-        userDatabase.values().removeIf(u -> userId.equalsIgnoreCase(u.getId()));
-        if (user.getEmail() != null) {
-            userDatabase.remove(user.getEmail().toLowerCase());
-        }
+        userRepository.delete(user);
 
         recordSecurityEvent(new com.slcms.model.SecurityEvent(
             "evt-" + System.currentTimeMillis(), user.getId(), user.getName(),

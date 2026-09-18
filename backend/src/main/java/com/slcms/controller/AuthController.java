@@ -22,10 +22,16 @@ import java.util.*;
 public class AuthController {
 
     private final RBACSecurityService rbacSecurityService;
+    private final com.slcms.repository.UserRepository userRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Autowired
-    public AuthController(RBACSecurityService rbacSecurityService) {
+    public AuthController(RBACSecurityService rbacSecurityService,
+                          com.slcms.repository.UserRepository userRepository,
+                          org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
         this.rbacSecurityService = rbacSecurityService;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /**
@@ -168,8 +174,17 @@ public class AuthController {
             }
         }
 
-        boolean passwordMatch = password.equals(user.getPasswordPlain()) || 
-                               (user.getPasswordHash() != null && user.getPasswordHash().equals(password));
+        boolean passwordMatch = false;
+        if (user.getPasswordHash() != null && !user.getPasswordHash().isEmpty()) {
+            if (user.getPasswordHash().startsWith("$2a$") || user.getPasswordHash().startsWith("$2b$") || user.getPasswordHash().startsWith("$2y$")) {
+                passwordMatch = passwordEncoder.matches(password, user.getPasswordHash());
+            } else {
+                passwordMatch = user.getPasswordHash().equals(password) || (user.getPasswordPlain() != null && user.getPasswordPlain().equals(password));
+            }
+        }
+        if (!passwordMatch && user.getPasswordPlain() != null && !user.getPasswordPlain().isEmpty()) {
+            passwordMatch = user.getPasswordPlain().equals(password);
+        }
 
         if (!passwordMatch) {
             int attempts = user.getFailedAttempts() + 1;
@@ -194,6 +209,7 @@ public class AuthController {
                 user.setLockedAt(java.time.LocalDateTime.now());
                 user.setLockedUntil(nowMs + lockDurationMs);
                 user.setLockedReason("THREE_FAILED_LOGINS");
+                userRepository.save(user);
 
                 com.slcms.model.SecurityAlert alert = new com.slcms.model.SecurityAlert(
                         "alt-" + System.currentTimeMillis(),
@@ -229,6 +245,7 @@ public class AuthController {
                         ));
             }
 
+            userRepository.save(user);
             String remainingMsg = remaining == 1 ? "1 attempt remaining." : remaining + " attempts remaining.";
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of(
@@ -245,6 +262,7 @@ public class AuthController {
         user.setLockedAt(null);
         user.setLockedReason(null);
         user.setLastSuccessfulLogin(java.time.LocalDateTime.now());
+        userRepository.save(user);
 
         // Record LOGIN_ATTEMPT / Successful in Security Events database
         rbacSecurityService.recordSecurityEvent(new com.slcms.model.SecurityEvent(
@@ -260,18 +278,78 @@ public class AuthController {
         if (user.isMustChangePassword() || user.getStatus() == UserStatus.FIRST_LOGIN_PENDING || user.getAccountStatus() == AccountStatus.FIRST_LOGIN_RESET) {
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "message", "Login successful. Welcome to SLCMS.",
+                "authenticated", true,
+                "staffId", user.getStaffId(),
+                "role", user.getRole().name(),
+                "roleDisplayName", user.getRole().getDisplayName(),
+                "mustChangePassword", true,
                 "requiresFirstLoginChange", true,
-                "user", Map.of("id", user.getId(), "email", user.getEmail(), "name", user.getName(), "role", user.getRole().getDisplayName())
+                "message", "Login successful. Welcome to SLCMS.",
+                "user", Map.of(
+                    "id", user.getId(),
+                    "staffId", user.getStaffId(),
+                    "email", user.getEmail(),
+                    "name", user.getName(),
+                    "role", user.getRole().getDisplayName(),
+                    "roleKey", user.getRole().name(),
+                    "mustChangePassword", true
+                )
             ));
         }
 
         return ResponseEntity.ok(Map.of(
             "success", true,
-            "message", "Login successful. Welcome to SLCMS.",
+            "authenticated", true,
+            "staffId", user.getStaffId(),
+            "role", user.getRole().name(),
+            "roleDisplayName", user.getRole().getDisplayName(),
+            "mustChangePassword", false,
             "requiresFirstLoginChange", false,
+            "message", "Login successful. Welcome to SLCMS.",
             "token", "slcms_jwt_" + UUID.randomUUID(),
             "user", user
+        ));
+    }
+
+    /**
+     * POST /api/auth/change-first-password
+     * Allows newly provisioned staff (e.g. Lawyer) to set their permanent private password.
+     */
+    @PostMapping("/change-first-password")
+    public ResponseEntity<?> changeFirstLoginPassword(@RequestBody Map<String, String> payload) {
+        String identifier = payload.get("identifier");
+        String userId = payload.get("userId");
+        String newPassword = payload.get("newPassword");
+
+        if (newPassword == null || newPassword.length() < 10) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "New password must be at least 10 characters long."));
+        }
+
+        UserAccount user = null;
+        if (userId != null && !userId.trim().isEmpty()) {
+            user = rbacSecurityService.getUserById(userId.trim());
+        }
+        if (user == null && identifier != null && !identifier.trim().isEmpty()) {
+            user = rbacSecurityService.getUserByEmail(identifier.trim());
+        }
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("success", false, "message", "User account not found."));
+        }
+
+        boolean updated = rbacSecurityService.changeUserPassword(user.getId(), newPassword);
+        if (!updated) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("success", false, "message", "Could not update password."));
+        }
+
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "authenticated", true,
+            "staffId", user.getStaffId(),
+            "role", user.getRole().name(),
+            "roleDisplayName", user.getRole().getDisplayName(),
+            "mustChangePassword", false,
+            "message", "Password successfully changed. You can now log in with your new password."
         ));
     }
 }

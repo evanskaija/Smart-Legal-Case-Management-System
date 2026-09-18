@@ -305,6 +305,17 @@ function Check-RateLimit($ip) {
     }
 }
 
+function Send-JsonResponse($res, [int]$statusCode, $obj) {
+    $res.StatusCode = $statusCode
+    $res.ContentType = 'application/json; charset=utf-8'
+    $json = if ($obj -is [string]) { $obj } else { $obj | ConvertTo-Json -Depth 10 -Compress }
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
+    $res.ContentLength64 = $bytes.Length
+    $res.OutputStream.Write($bytes, 0, $bytes.Length)
+    $res.OutputStream.Flush()
+    $res.Close()
+}
+
 $listener = New-Object System.Net.HttpListener
 $listener.Prefixes.Add("http://127.0.0.1:$port/")
 $listener.Start()
@@ -317,9 +328,14 @@ try {
             $req = $context.Request
             $res = $context.Response
             
-            $res.AddHeader("Access-Control-Allow-Origin", "*")
+            $origin = $req.Headers["Origin"]
+            if ($origin) {
+                $res.AddHeader("Access-Control-Allow-Origin", $origin)
+            } else {
+                $res.AddHeader("Access-Control-Allow-Origin", "*")
+            }
             $res.AddHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-            $res.AddHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+            $res.AddHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-User-Role")
             $res.AddHeader("Access-Control-Allow-Credentials", "true")
 
         if ($req.HttpMethod -eq "OPTIONS") {
@@ -348,9 +364,14 @@ try {
             $bodyStr = $reader.ReadToEnd()
             $body = $null
             try { $body = $bodyStr | ConvertFrom-Json } catch {}
-
-            $idInput = if ($body) { if ($body.email) { $body.email } else { $body.identifier } } else { "" }
-            $password = if ($body) { $body.password } else { "" }
+            $idInput = ""
+            if ($body) {
+                if ($body.staffId) { $idInput = $body.staffId }
+                elseif ($body.identifier) { $idInput = $body.identifier }
+                elseif ($body.email) { $idInput = $body.email }
+                elseif ($body.username) { $idInput = $body.username }
+            }
+            $password = if ($body -and $body.password) { $body.password } else { "" }
             [System.IO.File]::WriteAllText("c:\Users\messi\OneDrive\Desktop\SLCMS\scratch\body_debug.txt", "BODY: '$bodyStr', ID: '$idInput', PWD: '$password'", [System.Text.Encoding]::UTF8)
 
             $cleanId = ($idInput + "").Trim().ToLower()
@@ -551,23 +572,121 @@ try {
 
             # Login Success!
             Write-Host ">>> REACHED SUCCESS BRANCH FOR $($matchedUser.name)"
-            $matchedUser.failedAttempts = 0
-            $matchedUser.lockedUntil = $null
-            $matchedUser.lastSuccessfulLogin = [DateTime]::UtcNow.ToString("o")
+            try { $matchedUser.failedAttempts = 0 } catch {}
+            try { $matchedUser.lockedUntil = $null } catch {}
+            try { $matchedUser.lastSuccessfulLogin = [DateTime]::UtcNow.ToString("o") } catch {}
             Save-DbUsers $users
 
             Add-DbEvent $matchedUser.id "Login attempt" "Login successful" $clientIp "Successful" $matchedUser.name
 
-            $res.StatusCode = 200
+            if ($matchedUser.mustChangePassword -eq $true -or $matchedUser.accountStatus -eq "FIRST_LOGIN_RESET" -or $matchedUser.status -like "*Required*") {
+                $res.StatusCode = 200
+                $outObj = @{
+                    success = $true
+                    authenticated = $true
+                    staffId = $matchedUser.staffId
+                    role = if ($matchedUser.roleKey) { $matchedUser.roleKey } else { $matchedUser.role }
+                    roleDisplayName = $matchedUser.role
+                    mustChangePassword = $true
+                    requiresFirstLoginChange = $true
+                    message = "Login successful. Welcome to SLCMS."
+                    user = @{
+                        id = $matchedUser.id
+                        staffId = $matchedUser.staffId
+                        email = $matchedUser.email
+                        name = $matchedUser.name
+                        role = $matchedUser.role
+                        roleKey = if ($matchedUser.roleKey) { $matchedUser.roleKey } else { $matchedUser.role }
+                        mustChangePassword = $true
+                    }
+                }
+                Send-JsonResponse $res 200 $outObj
+                continue
+            }
+
             $outObj = @{
                 success = $true
+                authenticated = $true
+                staffId = $matchedUser.staffId
+                role = if ($matchedUser.roleKey) { $matchedUser.roleKey } else { $matchedUser.role }
+                roleDisplayName = $matchedUser.role
+                mustChangePassword = $false
+                requiresFirstLoginChange = $false
                 message = "Login successful. Welcome to SLCMS."
                 token = "slcms_jwt_$([Guid]::NewGuid().ToString('N'))"
                 user = $matchedUser
             }
-            $bytes = [System.Text.Encoding]::UTF8.GetBytes(($outObj | ConvertTo-Json -Depth 6 -Compress))
-            $res.OutputStream.Write($bytes, 0, $bytes.Length)
-            $res.Close()
+            Send-JsonResponse $res 200 $outObj
+            continue
+        }
+
+        # -------------------------------------------------------------
+        # 1b. POST /api/auth/change-first-password
+        # -------------------------------------------------------------
+        if ($localPath -eq '/api/auth/change-first-password' -and $req.HttpMethod -eq 'POST') {
+            $reader = New-Object System.IO.StreamReader($req.InputStream, [System.Text.Encoding]::UTF8)
+            $bodyStr = $reader.ReadToEnd()
+            $body = $null
+            try { $body = $bodyStr | ConvertFrom-Json } catch {}
+
+            $userId = if ($body) { if ($body.userId) { $body.userId } elseif ($body.staffId) { $body.staffId } else { "" } } else { "" }
+            $ident = if ($body) { if ($body.identifier) { $body.identifier } elseif ($body.staffId) { $body.staffId } elseif ($body.email) { $body.email } else { "" } } else { "" }
+            $newPassword = if ($body -and $body.newPassword) { $body.newPassword } else { "" }
+
+            if (-not $newPassword -or $newPassword.Length -lt 10) {
+                $res.StatusCode = 400
+                $res.ContentType = 'application/json; charset=utf-8'
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes('{"success":false,"message":"New password must be at least 10 characters long."}')
+                $res.OutputStream.Write($bytes, 0, $bytes.Length)
+                $res.Close()
+                continue
+            }
+
+            $users = @(Get-DbUsers)
+            $u = $null
+            if ($userId) {
+                $u = $users | Where-Object { $_.id -eq $userId -or $_.staffId -eq $userId } | Select-Object -First 1
+            }
+            if (-not $u -and $ident) {
+                $u = $users | Where-Object { $_.email -eq $ident -or $_.staffId -eq $ident } | Select-Object -First 1
+            }
+
+            if (-not $u) {
+                $res.StatusCode = 404
+                $res.ContentType = 'application/json; charset=utf-8'
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes('{"success":false,"message":"User account not found."}')
+                $res.OutputStream.Write($bytes, 0, $bytes.Length)
+                $res.Close()
+                continue
+            }
+
+            try { $u.passwordPlain = $newPassword } catch {}
+            try { $u.passwordHash = "argon2:`$2b`$12`$hash$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())" } catch {}
+            try { $u.mustChangePassword = $false } catch {}
+            try { $u.firstLoginRequired = $false } catch {}
+            try { $u.status = "Active" } catch {}
+            try { $u.accountStatus = "ACTIVE" } catch {}
+            if ($u.PSObject.Properties['passwordChangedAt']) {
+                $u.passwordChangedAt = [DateTime]::UtcNow.ToString("o")
+            } else {
+                $u | Add-Member -NotePropertyName "passwordChangedAt" -NotePropertyValue ([DateTime]::UtcNow.ToString("o")) -Force -ErrorAction SilentlyContinue
+            }
+            Save-DbUsers $users
+
+            Add-DbEvent $u.id "Password management" "First-login password changed successfully" $clientIp "Successful" $u.name
+
+            $res.StatusCode = 200
+            $res.ContentType = 'application/json; charset=utf-8'
+            $outObj = @{
+                success = $true
+                authenticated = $true
+                staffId = $u.staffId
+                role = if ($u.roleKey) { $u.roleKey } else { $u.role }
+                roleDisplayName = $u.role
+                mustChangePassword = $false
+                message = "Password successfully changed. You can now log in with your new password."
+            }
+            Send-JsonResponse $res 200 $outObj
             continue
         }
 
@@ -1189,12 +1308,135 @@ try {
         # -------------------------------------------------------------
         # 8. GET /api/admin/users
         # -------------------------------------------------------------
-        if ($localPath -eq '/api/admin/users') {
-            $res.ContentType = 'application/json; charset=utf-8'
+        if ($localPath -eq '/api/admin/users' -and $req.HttpMethod -eq 'GET') {
             $users = @(Get-DbUsers)
-            $bytes = [System.Text.Encoding]::UTF8.GetBytes(($users | ConvertTo-Json -Depth 6))
-            $res.OutputStream.Write($bytes, 0, $bytes.Length)
-            $res.Close()
+            Send-JsonResponse $res 200 $users
+            continue
+        }
+
+        # -------------------------------------------------------------
+        # 8b. POST /api/admin/users (Administrator Staff Creation)
+        # -------------------------------------------------------------
+        if ($localPath -eq '/api/admin/users' -and $req.HttpMethod -eq 'POST') {
+            $reader = New-Object System.IO.StreamReader($req.InputStream, [System.Text.Encoding]::UTF8)
+            $bodyStr = $reader.ReadToEnd()
+            $body = $null
+            try { $body = $bodyStr | ConvertFrom-Json } catch {}
+
+            $fullName = if ($body) { if ($body.fullName) { $body.fullName } else { $body.name } } else { "" }
+            $email = if ($body) { $body.email } else { "" }
+            $phone = if ($body) { $body.phone } else { "+255 754 000 000" }
+            $role = if ($body) { $body.role } else { "Lawyer" }
+            $staffId = if ($body) { $body.staffId } else { "" }
+            $tempPassword = if ($body) { $body.temporaryPassword } else { "" }
+            $department = if ($body) { $body.department } else { "Commercial Litigation" }
+            $advocateNumber = if ($body) { $body.advocateNumber } else { "" }
+
+            if (-not $fullName -or -not $email) {
+                $res.StatusCode = 400
+                $res.ContentType = 'application/json; charset=utf-8'
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes('{"success":false,"message":"Full name and email are required."}')
+                $res.OutputStream.Write($bytes, 0, $bytes.Length)
+                $res.Close()
+                continue
+            }
+
+            $users = @(Get-DbUsers)
+            $cleanEmail = $email.Trim().ToLower()
+
+            $existing = $users | Where-Object { $_.email -and $_.email.ToLower() -eq $cleanEmail } | Select-Object -First 1
+            if ($existing) {
+                $res.StatusCode = 409
+                $res.ContentType = 'application/json; charset=utf-8'
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes('{"success":false,"message":"An account with this email address already exists."}')
+                $res.OutputStream.Write($bytes, 0, $bytes.Length)
+                $res.Close()
+                continue
+            }
+
+            # Generate Staff ID if not provided
+            if (-not $staffId) {
+                $prefix = if ($role -match "Admin") { "ADM" } elseif ($role -match "Clerk") { "CLK" } else { "LAW" }
+                $staffId = "$prefix-" + (Get-Random -Minimum 1000 -Maximum 9999)
+                while ($users | Where-Object { $_.staffId -eq $staffId }) {
+                    $staffId = "$prefix-" + (Get-Random -Minimum 1000 -Maximum 9999)
+                }
+            } else {
+                $staffId = $staffId.Trim().ToUpper()
+                if ($users | Where-Object { $_.staffId -eq $staffId }) {
+                    $res.StatusCode = 409
+                    $res.ContentType = 'application/json; charset=utf-8'
+                    $bytes = [System.Text.Encoding]::UTF8.GetBytes('{"success":false,"message":"An account with this Staff ID already exists."}')
+                    $res.OutputStream.Write($bytes, 0, $bytes.Length)
+                    $res.Close()
+                    continue
+                }
+            }
+
+            if (-not $tempPassword) {
+                $tempPassword = "SLCMS#" + (Get-Random -Minimum 100000 -Maximum 999999) + "!"
+            }
+
+            $roleKey = switch -Regex ($role) {
+                'Admin'  { 'ADMINISTRATOR' }
+                'Senior' { 'SENIOR_COUNSEL' }
+                'Clerk'  { 'LEGAL_CLERK' }
+                'Partner'{ 'MANAGING_PARTNER' }
+                default  { 'ASSOCIATE_LAWYER' }
+            }
+
+            $roleDisplayName = switch ($roleKey) {
+                'ADMINISTRATOR'    { 'Administrator' }
+                'SENIOR_COUNSEL'   { 'Senior Lawyer' }
+                'LEGAL_CLERK'      { 'Legal Clerk' }
+                'MANAGING_PARTNER' { 'Managing Partner' }
+                default            { 'Lawyer' }
+            }
+
+            $nowMs = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+            $newUser = [PSCustomObject]@{
+                id = "usr-$nowMs-$((New-Guid).ToString().Substring(0,4))"
+                staffId = $staffId
+                employeeId = $staffId
+                name = $fullName.Trim()
+                email = $cleanEmail
+                phone = $phone.Trim()
+                passwordPlain = $tempPassword
+                passwordHash = "argon2:`$2b`$12`$hash$nowMs"
+                role = $roleDisplayName
+                roleKey = $roleKey
+                roleTitle = $roleDisplayName
+                status = "First-Login Setup Required"
+                accountStatus = "FIRST_LOGIN_RESET"
+                mustChangePassword = $true
+                firstLoginRequired = $true
+                temporaryPassword = $tempPassword
+                temporaryPasswordExpiresAt = [DateTime]::UtcNow.AddHours(24).ToString("o")
+                department = $department
+                advocateNumber = $advocateNumber
+                lawyerNumber = $advocateNumber
+                practisingCertNo = if ($roleKey -like "*LAWYER*") { "PC-TZ-2026-$(Get-Random -Minimum 1000 -Maximum 9999)" } else { $null }
+                lockedUntil = $null
+                adminLocked = $false
+                lastSuccessfulLogin = $null
+                failedAttempts = 0
+                failedLoginAttempts = 0
+                passwordChangedAt = $null
+                lastLogin = "Never"
+                createdAt = [DateTime]::UtcNow.ToString("o")
+            }
+
+            $users += $newUser
+            Save-DbUsers $users
+
+            $outObj = @{
+                success = $true
+                message = "Staff account successfully created and saved to permanent database."
+                user = $newUser
+                temporaryPassword = $tempPassword
+                staffId = $staffId
+            }
+            Send-JsonResponse $res 201 $outObj
             continue
         }
 
@@ -1843,6 +2085,7 @@ try {
         }
         $res.Close()
     } catch {
+        Write-Host "EXCEPTION IN REQUEST: $($_.Exception.ToString())"
         try { $context.Response.Close() } catch {}
     }
     }

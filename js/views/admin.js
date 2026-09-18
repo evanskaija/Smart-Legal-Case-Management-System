@@ -1937,7 +1937,7 @@ const AdminView = {
     if (sumPass) sumPass.innerText = pass || 'SLCMS#Haf49&7';
   },
 
-  handleCreateUserSubmit(e) {
+  async handleCreateUserSubmit(e) {
     e.preventDefault();
     const name = document.getElementById('cu-name')?.value?.trim();
     const staffId = document.getElementById('cu-staff-id')?.value?.trim();
@@ -1950,15 +1950,16 @@ const AdminView = {
     const department = document.getElementById('cu-department')?.value || 'Commercial Litigation';
     const tempPass = document.getElementById('cu-temp-pass')?.value?.trim();
 
-    if (!name || !staffId || !email || !tempPass) {
+    if (!name || !email || !tempPass) {
       App.showToast('Please complete all required fields.', 'error');
       return;
     }
 
     const payload = {
       name,
-      staffId,
-      employeeId: staffId,
+      fullName: name,
+      staffId: staffId || null,
+      employeeId: staffId || null,
       username: username || (SLCMS_STATE.generateUsernameFromName ? SLCMS_STATE.generateUsernameFromName(name) : 'user'),
       email,
       phone: phone || '+255 754 000 111',
@@ -1982,18 +1983,67 @@ const AdminView = {
       payload.accessLevel = document.getElementById('cu-case-access')?.value || 'View and Edit';
     }
 
-    const res = SLCMS_STATE.createAdminUser(payload);
-    if (!res.success) {
-      App.showToast(res.message, 'error');
-      return;
+    // Persist through backend API to the permanent online database
+    let createdUser = null;
+    let createdTempPass = tempPass;
+
+    try {
+      const fetchFn = (typeof window.slcmsFetch === 'function') ? window.slcmsFetch : fetch;
+      const response = await fetchFn('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const resData = await response.json();
+      if (!response.ok || !resData.success) {
+        App.showToast(resData.message || 'Error provisioning account on backend.', 'error');
+        return;
+      }
+
+      createdUser = resData.user || {
+        id: resData.staffId || ('usr-' + Date.now()),
+        staffId: resData.staffId || staffId,
+        name: name,
+        email: email,
+        role: role
+      };
+      createdTempPass = resData.temporaryPassword || tempPass;
+
+      // Update local memory copy for instant responsive UI rendering
+      if (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.users)) {
+        const localUser = Object.assign({}, payload, createdUser, {
+          temporaryPassword: createdTempPass,
+          passwordPlain: createdTempPass,
+          status: 'First-Login Setup Required',
+          accountStatus: 'FIRST_LOGIN_RESET',
+          mustChangePassword: true,
+          firstLoginRequired: true
+        });
+        const existingIdx = SLCMS_STATE.users.findIndex(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+        if (existingIdx >= 0) {
+          SLCMS_STATE.users[existingIdx] = localUser;
+        } else {
+          SLCMS_STATE.users.unshift(localUser);
+        }
+      }
+    } catch (err) {
+      console.warn('[SLCMS Admin] Online user creation failed, attempting local fallback:', err);
+      const res = SLCMS_STATE.createAdminUser(payload);
+      if (!res.success) {
+        App.showToast(res.message, 'error');
+        return;
+      }
+      createdUser = res.user;
+      createdTempPass = res.temporaryPassword;
     }
 
     App.closeModal();
 
     if (!assignCaseNow) {
-      this.promptPostCreationCaseAssignment(res.user, res.temporaryPassword);
+      this.promptPostCreationCaseAssignment(createdUser, createdTempPass);
     } else {
-      this.openTemporaryCredentialsModal(res.user, res.temporaryPassword);
+      this.openTemporaryCredentialsModal(createdUser, createdTempPass);
       this.switchTab('users');
     }
   },
@@ -2008,7 +2058,7 @@ const AdminView = {
       </div>
       <div class="modal-body" style="padding: 1.5rem; text-align: left;">
         <div style="font-size: 1rem; color: #0F172A; margin-bottom: 1rem;">
-          Account for <strong>${user.name}</strong> (<code style="color: #B45309; font-weight: 700;">${user.staffId}</code>) was provisioned successfully.
+          Account for <strong>${user.name}</strong> (<code style="color: #B45309; font-weight: 700;">${user.staffId || user.employeeId}</code>) was provisioned successfully.
         </div>
         <div class="alert alert-gold" style="margin-bottom: 1.5rem;">
           <strong>Case Assignment:</strong> Would you like to assign a case to this staff member now?
@@ -2018,23 +2068,15 @@ const AdminView = {
             Finish
           </button>
           <button class="btn btn-gold" onclick="AdminView.openAssignCaseModal('${user.id}', '${tempPassword}')" style="font-weight: 800; padding: 0.65rem 1.4rem;">
-            Assign Case
+            Assign Case →
           </button>
         </div>
       </div>
-    `, 'modal-md');
+    `);
   },
 
   finishUserCreation(userId, tempPassword) {
     App.closeModal();
-    const user = SLCMS_STATE.users.find(u => u.id === userId);
-    if (user && tempPassword) {
-      this.openTemporaryCredentialsModal(user, tempPassword);
-    } else {
-      App.refreshCurrentView();
-    }
-  },
-
   openAssignCaseModal(userId, tempPassword = null) {
     const user = SLCMS_STATE.users.find(u => u.id === userId);
     if (!user) return;
@@ -2217,22 +2259,18 @@ const AdminView = {
 
   async loadUsers() {
     try {
-      const response = await fetch("/api/admin/users", { credentials: "include" });
+      const fetchFn = (typeof window.slcmsFetch === 'function') ? window.slcmsFetch : fetch;
+      const response = await fetchFn("/api/admin/users", { credentials: "include" });
       if (response.ok) {
         const users = await response.json();
         if (Array.isArray(users) && users.length > 0) {
-          users.forEach(u => {
-            const idx = SLCMS_STATE.users.findIndex(su => su.id === u.id || (su.staffId && su.staffId === u.staffId));
-            if (idx >= 0) {
-              SLCMS_STATE.users[idx] = Object.assign({}, SLCMS_STATE.users[idx], u);
-            } else {
-              SLCMS_STATE.users.push(u);
-            }
-          });
+          if (typeof SLCMS_STATE !== 'undefined') {
+            SLCMS_STATE.users = users;
+          }
         }
       }
     } catch (err) {
-      // Standalone mode
+      console.warn('[SLCMS Admin] Failed to fetch users from backend API:', err);
     }
   },
 

@@ -383,6 +383,49 @@ const SettingsView = {
                 <span>Export Full System Backup (.JSON)</span>
               </button>
             </div>
+
+            <!-- PERMANENT ONLINE DATABASE & SPRING BOOT BACKEND API -->
+            <div class="card" style="background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 12px; padding: 1.25rem;">
+              <div class="card-header" style="padding: 0 0 0.75rem 0; border-bottom: 1px solid #E2E8F0; margin-bottom: 0.85rem;">
+                <div>
+                  <h3 class="card-title" style="font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #0284C7;">
+                      <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+                      <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/>
+                    </svg>
+                    Backend API &amp; Online Database (Vercel Integration)
+                  </h3>
+                  <div class="card-subtitle" style="font-size: 0.75rem; color: #64748B;">Permanent Java Spring Boot backend server address</div>
+                </div>
+              </div>
+
+              <p style="font-size: 0.8rem; color: #475569; margin-bottom: 0.85rem; line-height: 1.5;">
+                When deployed on Vercel, enter the address of your hosted Spring Boot server (e.g. Render, Railway, Fly.io) connected to PostgreSQL/MySQL.
+              </p>
+
+              <div class="form-group" style="margin-bottom: 0.75rem;">
+                <label class="form-label" style="font-weight: 700; font-size: 0.8rem;">Backend API Base URL</label>
+                <div style="display: flex; gap: 0.5rem;">
+                  <input type="text" id="cfg-backend-api-url" class="form-control" style="font-size: 0.82rem;"
+                    placeholder="https://your-slcms-backend.onrender.com"
+                    value="${(window.SLCMS_CONFIG && window.SLCMS_CONFIG.API_BASE_URL) || ''}">
+                  <button class="btn btn-gold btn-sm" onclick="SettingsView.saveBackendApiUrl()" style="white-space: nowrap;">
+                    Save URL
+                  </button>
+                </div>
+              </div>
+
+              <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 0.5rem; border-top: 1px solid #F1F5F9;">
+                <div id="cfg-backend-status-indicator" style="font-size: 0.78rem; font-weight: 700; color: #0284C7;">
+                  ${(window.SLCMS_CONFIG && window.SLCMS_CONFIG.API_BASE_URL) ? 'Active: ' + window.SLCMS_CONFIG.API_BASE_URL : 'Status: Local / Same-Origin'}
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="SettingsView.testBackendConnection()">
+                  Test Connection
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -451,5 +494,49 @@ const SettingsView = {
 
     SLCMS_STATE.addAuditLog('System Backup Downloaded', 'Administration', 'Full JSON database export');
     App.showToast('Full system backup file successfully generated & downloaded!', 'success');
+  },
+
+  saveBackendApiUrl() {
+    const input = document.getElementById('cfg-backend-api-url');
+    const val = input ? input.value.trim() : '';
+    if (window.setSLCMSBackendUrl) {
+      window.setSLCMSBackendUrl(val);
+    }
+    const indicator = document.getElementById('cfg-backend-status-indicator');
+    if (indicator) {
+      indicator.textContent = val ? `Active: ${val}` : 'Status: Local / Same-Origin';
+      indicator.style.color = '#0284C7';
+    }
+    App.showToast(val ? `Backend API URL saved: ${val}` : 'Backend URL reset to local default', 'success');
+  },
+
+  async testBackendConnection() {
+    const indicator = document.getElementById('cfg-backend-status-indicator');
+    if (indicator) {
+      indicator.textContent = 'Testing connection...';
+      indicator.style.color = '#F59E0B';
+    }
+    try {
+      const resp = await window.slcmsFetch('/api/settings/organization');
+      if (resp && resp.ok) {
+        if (indicator) {
+          indicator.textContent = '● Connected: Backend online';
+          indicator.style.color = '#10B981';
+        }
+        App.showToast('Successfully connected to backend API & database!', 'success');
+      } else {
+        if (indicator) {
+          indicator.textContent = `● Warning: Backend responded (${resp.status})`;
+          indicator.style.color = '#F59E0B';
+        }
+        App.showToast(`Backend responded with status: ${resp.status}`, 'warning');
+      }
+    } catch (err) {
+      if (indicator) {
+        indicator.textContent = '● Error: Could not reach backend';
+        indicator.style.color = '#EF4444';
+      }
+      App.showToast('Failed to connect to backend server. Verify the URL and CORS settings.', 'error');
+    }
   }
 };
