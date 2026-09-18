@@ -1154,26 +1154,57 @@ const AuthView = {
     // Backend-backed authentication with offline fallback
     (async () => {
       let authResult = null;
-      try {
-        const fetchFn = (typeof window.slcmsFetch === 'function') ? window.slcmsFetch : fetch;
-        const response = await fetchFn('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ identifier: emailVal, email: emailVal, password: passwordVal })
-        });
-        authResult = await response.json();
-      } catch (err) {
-        console.warn('[SLCMS Auth] Backend call unavailable, checking offline state engine:', err);
-        // Fallback to client state engine
+      const isBackendConfigured = !!(window.SLCMS_CONFIG && window.SLCMS_CONFIG.API_BASE_URL) || 
+                                  window.location.hostname === 'localhost' || 
+                                  window.location.hostname === '127.0.0.1';
+
+      if (isBackendConfigured) {
+        try {
+          const fetchFn = (typeof window.slcmsFetch === 'function') ? window.slcmsFetch : fetch;
+          const response = await fetchFn('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: emailVal, staffId: emailVal, email: emailVal, password: passwordVal })
+          });
+
+          if (response.ok || [401, 403, 423, 429].includes(response.status)) {
+            try {
+              authResult = await response.json();
+            } catch (e) {
+              authResult = null;
+            }
+          }
+
+          if (!authResult || response.status === 404 || response.status === 405) {
+            console.warn(`[SLCMS Auth] Backend returned status ${response.status}. Falling back to state engine.`);
+            authResult = SLCMS_STATE.serverAuthenticate(emailVal, passwordVal, rememberMeCheck?.checked);
+          }
+        } catch (err) {
+          console.warn('[SLCMS Auth] Backend call unavailable, checking offline state engine:', err);
+          authResult = SLCMS_STATE.serverAuthenticate(emailVal, passwordVal, rememberMeCheck?.checked);
+        }
+      } else {
+        // Direct state engine authentication for static Vercel hosting prior to backend URL configuration
         authResult = SLCMS_STATE.serverAuthenticate(emailVal, passwordVal, rememberMeCheck?.checked);
       }
 
       if (!authResult || !authResult.success) {
-        if (btn) { btn.innerHTML = 'Login'; btn.disabled = false; }
+        if (btn) {
+          btn.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <polyline points="10 17 15 12 10 7"/>
+              <line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+            Sign In to Workspace
+          `;
+          btn.disabled = false;
+        }
         if (authResult && authResult.errorType === 'TEMPORARILY_LOCKED' && authResult.lockedUntil) {
-          this.startLockCountdown(authResult.lockedUntil, authResult.message);
+          this.startLockCountdown(authResult.lockedUntil, authResult.message || 'Account temporarily locked.');
         } else {
-          this.showServerAlert(authResult ? authResult.message : 'Unable to connect to the authentication server. Please verify network.');
+          const failMsg = (authResult && (authResult.message || authResult.error)) || 'Incorrect credentials. Please verify your Staff ID and password.';
+          this.showServerAlert(failMsg);
         }
         return;
       }
@@ -1262,33 +1293,44 @@ const AuthView = {
     const alertEl = document.getElementById('first-login-alert');
     const textEl = document.getElementById('first-login-alert-text');
 
-    try {
-      const fetchFn = (typeof window.slcmsFetch === 'function') ? window.slcmsFetch : fetch;
-      const response = await fetchFn('/api/auth/change-first-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: this.tempAuthUser ? this.tempAuthUser.id : '',
-          identifier: this.tempAuthUser ? (this.tempAuthUser.email || this.tempAuthUser.staffId) : '',
-          temporaryPassword: tempPass,
-          newPassword: newPass
-        })
-      });
-      const resData = await response.json();
-      if (!response.ok || !resData.success) {
-        if (alertEl && textEl) {
-          textEl.innerText = resData.message || 'Failed to update password. Please verify credentials.';
-          alertEl.classList.remove('hidden');
+    let backendUpdated = false;
+    const isBackendConfigured = !!(window.SLCMS_CONFIG && window.SLCMS_CONFIG.API_BASE_URL) || 
+                                window.location.hostname === 'localhost' || 
+                                window.location.hostname === '127.0.0.1';
+
+    if (isBackendConfigured) {
+      try {
+        const fetchFn = (typeof window.slcmsFetch === 'function') ? window.slcmsFetch : fetch;
+        const response = await fetchFn('/api/auth/change-first-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: this.tempAuthUser ? this.tempAuthUser.id : '',
+            staffId: this.tempAuthUser ? (this.tempAuthUser.staffId || this.tempAuthUser.id) : '',
+            identifier: this.tempAuthUser ? (this.tempAuthUser.email || this.tempAuthUser.staffId) : '',
+            currentPassword: tempPass,
+            temporaryPassword: tempPass,
+            newPassword: newPass
+          })
+        });
+        if (response.ok) {
+          const resData = await response.json();
+          if (resData && resData.success) {
+            backendUpdated = true;
+          }
         }
-        return;
+      } catch (err) {
+        console.warn('[SLCMS] Backend change-first-password unreachable, falling back to local state:', err);
       }
-    } catch (err) {
-      console.warn('[SLCMS] Permanent DB change-first-password endpoint reached offline, attempting local state change:', err);
+    }
+
+    if (!backendUpdated) {
       if (typeof SLCMS_STATE !== 'undefined' && SLCMS_STATE.completeFirstLoginPasswordChange) {
-        const localRes = SLCMS_STATE.completeFirstLoginPasswordChange(this.tempAuthUser.id, tempPass, newPass);
+        const targetId = this.tempAuthUser ? (this.tempAuthUser.id || this.tempAuthUser.staffId) : '';
+        const localRes = SLCMS_STATE.completeFirstLoginPasswordChange(targetId, tempPass, newPass);
         if (!localRes.success) {
           if (alertEl && textEl) {
-            textEl.innerText = localRes.message;
+            textEl.innerText = localRes.message || 'Failed to update password. Please check your credentials.';
             alertEl.classList.remove('hidden');
           }
           return;

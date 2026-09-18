@@ -1154,9 +1154,8 @@ const SLCMS_STATE = {
     };
   },
 
-  // First Login Password Update per Requirements 5, 6, 7
   completeFirstLoginPasswordChange(userId, currentTempPassword, newPassword) {
-    const account = this.users.find(u => u.id === userId);
+    const account = this.users.find(u => u.id === userId || u.staffId === userId || u.employeeId === userId);
     if (!account) return { success: false, message: 'Account not found.' };
 
     if (!this.verifyPassword(currentTempPassword, account.passwordHash || account.password_hash, account.passwordPlain)) {
