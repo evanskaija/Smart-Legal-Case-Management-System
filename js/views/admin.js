@@ -2077,6 +2077,14 @@ const AdminView = {
 
   finishUserCreation(userId, tempPassword) {
     App.closeModal();
+    const user = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.users)) ? SLCMS_STATE.users.find(u => u.id === userId) : null;
+    if (user && tempPassword) {
+      this.openTemporaryCredentialsModal(user, tempPassword);
+    } else {
+      App.refreshCurrentView();
+    }
+  },
+
   openAssignCaseModal(userId, tempPassword = null) {
     const user = SLCMS_STATE.users.find(u => u.id === userId);
     if (!user) return;
