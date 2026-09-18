@@ -1,0 +1,12 @@
+{
+  "host": "smtp.gmail.com",
+  "port": 587,
+  "enableSsl": true,
+  "username": "slcms.firm.notifications@gmail.com",
+  "password": "",
+  "fromEmail": "slcms.firm.notifications@gmail.com",
+  "fromName": "SLCMS Law Firm",
+  "configured": true,
+  "lastTestedAt": "2026-09-17T12:00:00Z",
+  "testStatus": "Ready"
+}

@@ -12,10 +12,164 @@ const CasesView = {
   newCaseViewMode: 'stepper',
   newCaseData: null,
 
-  render() {
-    const filteredCases = this.getFilteredCases();
+  /**
+   * Reusable text normalizer.
+   * Safely coerces null/undefined values to empty string and returns trimmed lowercase text.
+   */
+  normalizeText(value) {
+    return String(value ?? '').trim().toLowerCase();
+  },
 
+  /**
+   * Supply safe default values for case records before rendering or filtering.
+   * Bridges frontend & backend naming conventions (caseTitle vs title, caseType vs type, clientName vs client).
+   */
+  prepareCase(caseItem = {}) {
+    return this.normalizeCase(caseItem);
+  },
+
+  normalizeCase(caseItem = {}) {
+    if (!caseItem || typeof caseItem !== 'object') {
+      caseItem = {};
+    }
+    const rawId = caseItem.id ?? caseItem.caseId ?? null;
+    const title = caseItem.caseTitle ?? caseItem.title ?? 'Untitled Case';
+    const caseNumber = caseItem.caseNumber ?? caseItem.officialCaseNumber ?? 'Not provided';
+    const caseType = caseItem.caseType ?? caseItem.type ?? 'Other';
+    const status = caseItem.status ?? caseItem.caseStatus ?? 'Unassigned';
+    const priority = caseItem.priority ?? 'Medium';
+    const clientName = caseItem.clientName ?? (typeof caseItem.client === 'object' ? caseItem.client?.fullName : caseItem.client) ?? 'No client linked';
+    const court = caseItem.court ?? 'Not provided';
+    const registry = caseItem.registry ?? '';
+    const decisionYear = caseItem.decisionYear ?? caseItem.year ?? 'Not provided';
+    const assignedCounsel = caseItem.assignedCounsel ?? (typeof caseItem.leadCounsel === 'object' ? caseItem.leadCounsel?.fullName : (caseItem.leadCounsel || caseItem.lawyer)) ?? 'Unassigned';
+
+    return {
+      ...caseItem,
+      id: rawId,
+      caseTitle: title,
+      title: title,
+      caseNumber: caseNumber,
+      officialCaseNumber: caseNumber,
+      caseType: caseType,
+      type: caseType,
+      status: status,
+      priority: priority,
+      clientName: clientName,
+      client: clientName,
+      clientType: caseItem.clientType || 'Individual',
+      court: court,
+      registry: registry,
+      decisionYear: decisionYear,
+      assignedCounsel: assignedCounsel,
+      lawyer: assignedCounsel,
+      lawyerAvatar: caseItem.lawyerAvatar || (assignedCounsel ? assignedCounsel.charAt(0).toUpperCase() : 'U'),
+      nextHearingDate: caseItem.nextHearingDate || 'TBD',
+      description: caseItem.description || 'No description provided.',
+      facts: caseItem.facts || '',
+      pendingTasks: Array.isArray(caseItem.pendingTasks) ? caseItem.pendingTasks : [],
+      documents: Array.isArray(caseItem.documents) ? caseItem.documents : [],
+      linkedPrecedents: Array.isArray(caseItem.linkedPrecedents) ? caseItem.linkedPrecedents : []
+    };
+  },
+
+  /**
+   * Safe case search and filtering function.
+   * Handles missing/undefined fields, searches across all case metadata, and guards dropdown filters.
+   */
+  filterCases(cases, searchValue, statusFilter, typeFilter, priorityFilter) {
+    const query = this.normalizeText(searchValue !== undefined ? searchValue : this.searchQuery);
+    const selectedStatus = this.normalizeText(statusFilter !== undefined ? statusFilter : this.selectedFilterStatus);
+    const selectedType = this.normalizeText(typeFilter !== undefined ? typeFilter : this.selectedFilterType);
+    const selectedPriority = this.normalizeText(priorityFilter !== undefined ? priorityFilter : this.selectedFilterPriority);
+
+    const safeList = (Array.isArray(cases) ? cases : [])
+      .filter(Boolean)
+      .map(item => this.normalizeCase(item));
+
+    return safeList.filter(item => {
+      if (!item) return false;
+
+      // Access Control
+      if (typeof SLCMS_STATE !== 'undefined' && SLCMS_STATE.canAccessCase && !SLCMS_STATE.canAccessCase(SLCMS_STATE.currentUser, item.id)) {
+        return false;
+      }
+
+      const title = this.normalizeText(item.caseTitle ?? item.title);
+      const number = this.normalizeText(item.caseNumber ?? item.officialCaseNumber);
+      const client = this.normalizeText(item.clientName ?? item.client);
+      const lawyer = this.normalizeText(item.assignedCounsel ?? item.lawyer);
+      const court = this.normalizeText(item.court);
+      const registry = this.normalizeText(item.registry);
+      const type = this.normalizeText(item.caseType ?? item.type ?? 'OTHER');
+      const status = this.normalizeText(item.status ?? 'UNASSIGNED');
+      const priority = this.normalizeText(item.priority ?? 'MEDIUM');
+
+      const matchesSearch = !query || [
+        title,
+        number,
+        type,
+        status,
+        client,
+        court,
+        registry,
+        lawyer
+      ].some(val => val.includes(query));
+
+      let matchesStatus = false;
+      if (selectedStatus === 'all' || !selectedStatus) {
+        matchesStatus = true;
+      } else if (selectedStatus === 'attention') {
+        matchesStatus = (item.id === 'case-103' || item.id === 'case-105' || item.id === 'case-106' || item.attentionRequired === true);
+      } else {
+        matchesStatus = (status === selectedStatus);
+      }
+
+      const matchesType = selectedType === 'all' || !selectedType || type === selectedType;
+      const matchesPriority = selectedPriority === 'all' || !selectedPriority || priority === selectedPriority;
+
+      return matchesSearch && matchesStatus && matchesType && matchesPriority;
+    });
+  },
+
+  getFilteredCases(sourceCases) {
+    const rawList = sourceCases || (Array.isArray(SLCMS_STATE?.cases) ? SLCMS_STATE.cases : []);
+    return this.filterCases(rawList, this.searchQuery, this.selectedFilterStatus, this.selectedFilterType, this.selectedFilterPriority);
+  },
+
+  renderPageError(message) {
     return `
+      <div class="cases-view-container animate-fade">
+        <div class="view-header cases-view-header">
+          <div>
+            <h1 class="page-title cases-page-title">Legal Matters &amp; Cases</h1>
+            <p class="cases-page-subtitle">
+              Manage litigation proceedings, corporate advisory files, discovery records and court schedules
+            </p>
+          </div>
+        </div>
+        <div class="card error-state" style="padding: 3.5rem 1.5rem; text-align: center; margin: 1.5rem 0; border: 1px solid #FCA5A5; background: #FEF2F2; border-radius: var(--radius-md);">
+          <div class="empty-icon" style="font-size: 2.8rem; margin-bottom: 0.85rem;">⚠️</div>
+          <h3 class="empty-title" style="font-size: 1.25rem; color: #991B1B; font-weight: 700; margin-bottom: 0.5rem;">Matter Service Notice</h3>
+          <p class="empty-desc" style="color: #7F1D1D; max-width: 500px; margin: 0 auto 1.5rem auto; line-height: 1.5;">
+            ${message || 'Cases could not be displayed. Please refresh or contact the system administrator.'}
+          </p>
+          <div class="flex items-center justify-center gap-2">
+            <button class="btn btn-secondary btn-sm" onclick="location.reload()">Refresh Page</button>
+            <button class="btn btn-gold btn-sm" onclick="CasesView.clearFilters(); App.navigate('cases');">Reset Filters</button>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  render() {
+    try {
+      const rawCases = Array.isArray(SLCMS_STATE?.cases) ? SLCMS_STATE.cases : [];
+      const safeCases = rawCases.filter(Boolean).map(c => this.prepareCase(c));
+      const filteredCases = this.getFilteredCases(safeCases);
+
+      return `
       <div class="cases-view-container animate-fade">
         <!-- View Header -->
         <div class="view-header cases-view-header">
@@ -34,12 +188,14 @@ const CasesView = {
               </svg>
               <span>Export Case List</span>
             </button>
+            ${SLCMS_STATE.currentUser?.role !== 'Administrator' ? `
             <button class="btn btn-gold cases-header-btn" onclick="CasesView.openNewCaseModal()">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
               <span>Add New Case</span>
             </button>
+            ` : ''}
           </div>
         </div>
 
@@ -163,7 +319,7 @@ const CasesView = {
               <button class="btn btn-secondary btn-sm cases-admin-action-btn" onclick="CasesView.openAccessListModal()">
                 <span>👥 View Who Has Access</span>
               </button>
-              <button class="btn btn-secondary btn-sm cases-admin-action-btn cases-admin-action-archive" onclick="CasesView.openArchiveModal()">
+              <button class="btn btn-secondary btn-sm cases-admin-action-archive" onclick="CasesView.openArchiveModal()">
                 <span>📦 Archive Matter</span>
               </button>
             </div>
@@ -178,54 +334,32 @@ const CasesView = {
         ${this.currentViewMode === 'table' ? this.renderCasesTable(filteredCases) : this.renderCasesCards(filteredCases)}
       </div>
     `;
-  },
-
-  getFilteredCases() {
-    const user = SLCMS_STATE.currentUser;
-    return SLCMS_STATE.cases.filter(c => {
-      // Role & Assignment Access Control
-      if (!SLCMS_STATE.canAccessCase(user, c.id)) {
-        return false;
-      }
-
-      const matchSearch = !this.searchQuery || 
-        c.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        c.caseNumber.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        c.client.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        c.lawyer.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        c.court.toLowerCase().includes(this.searchQuery.toLowerCase());
-
-      let matchStatus = false;
-      if (this.selectedFilterStatus === 'All') {
-        matchStatus = true;
-      } else if (this.selectedFilterStatus === 'Attention') {
-        matchStatus = (c.id === 'case-103' || c.id === 'case-105' || c.id === 'case-106' || c.attentionRequired === true);
-      } else {
-        matchStatus = (c.status === this.selectedFilterStatus);
-      }
-      const matchType = this.selectedFilterType === 'All' || c.caseType === this.selectedFilterType;
-      const matchPriority = this.selectedFilterPriority === 'All' || c.priority === this.selectedFilterPriority;
-
-      return matchSearch && matchStatus && matchType && matchPriority;
-    });
+    } catch (error) {
+      console.error('Admin Cases rendering failed:', error);
+      return this.renderPageError('Cases could not be displayed. Please refresh or contact the system administrator.');
+    }
   },
 
   renderCasesTable(casesList) {
-    if (casesList.length === 0) {
-      if (SLCMS_STATE.cases.length === 0 || (!this.searchQuery && this.selectedFilterStatus === 'All' && this.selectedFilterType === 'All' && this.selectedFilterPriority === 'All')) {
+    if (!Array.isArray(casesList) || casesList.length === 0) {
+      const totalCases = Array.isArray(SLCMS_STATE?.cases) ? SLCMS_STATE.cases.length : 0;
+      if (totalCases === 0 || (!this.searchQuery && this.selectedFilterStatus === 'All' && this.selectedFilterType === 'All' && this.selectedFilterPriority === 'All')) {
+        const isAdmin = SLCMS_STATE.currentUser?.role === 'Administrator';
         return `
           <div class="card empty-state" style="padding: 3.5rem 1.5rem; text-align: center; margin: 1rem 0;">
             <div class="empty-icon" style="font-size: 2.8rem; margin-bottom: 0.85rem;">⚖️</div>
-            <h3 class="empty-title" style="font-size: 1.25rem; color: var(--color-primary); font-weight: 700;">No cases yet</h3>
+            <h3 class="empty-title" style="font-size: 1.25rem; color: var(--color-primary); font-weight: 700;">No cases registered yet</h3>
             <p class="empty-desc" style="color: var(--color-text-secondary); max-width: 480px; margin: 0.5rem auto 1.5rem auto; line-height: 1.5;">
-              There are currently no legal matters registered. Begin by registering a client and adding a new case matter.
+              ${isAdmin ? 'No cases have been registered in the system yet.' : 'Add the first case to begin managing assignments and documents.'}
             </p>
+            ${!isAdmin ? `
             <button class="btn btn-gold" onclick="CasesView.openNewCaseModal()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
               <span>+ Add New Case</span>
             </button>
+            ` : ''}
           </div>
         `;
       }
@@ -262,7 +396,14 @@ const CasesView = {
               </tr>
             </thead>
             <tbody>
-              ${casesList.map(c => `
+              ${casesList.map(rawC => {
+                const c = this.normalizeCase(rawC);
+                const priorityClass = this.normalizeText(c.priority);
+                const statusClass = this.normalizeText(c.status).replace(/\s+/g, '');
+                const leadCounselName = String(c.lawyer || '').split(',')[0].trim() || 'Unassigned';
+                const avatarLetter = c.lawyerAvatar || leadCounselName.charAt(0).toUpperCase() || 'U';
+
+                return `
                 <tr>
                   <td>
                     <span style="font-family: var(--font-mono); font-weight: 700; font-size: 0.82rem; color: var(--color-primary);">
@@ -286,8 +427,8 @@ const CasesView = {
                   </td>
                   <td>
                     <div class="flex items-center gap-2">
-                      <div class="avatar avatar-sm avatar-navy">${c.lawyerAvatar}</div>
-                      <span style="font-size: 0.82rem; font-weight: 500;">${c.lawyer.split(',')[0]}</span>
+                      <div class="avatar avatar-sm avatar-navy">${avatarLetter}</div>
+                      <span style="font-size: 0.82rem; font-weight: 500;">${leadCounselName}</span>
                     </div>
                   </td>
                   <td>
@@ -296,10 +437,10 @@ const CasesView = {
                     </div>
                   </td>
                   <td>
-                    <span class="badge badge-priority-${c.priority.toLowerCase()}">${c.priority}</span>
+                    <span class="badge badge-priority-${priorityClass}">${c.priority}</span>
                   </td>
                   <td>
-                    <span class="badge badge-${c.status.toLowerCase().replace(' ', '')}">
+                    <span class="badge badge-${statusClass}">
                       <span class="badge-dot"></span>
                       ${c.status}
                     </span>
@@ -309,13 +450,17 @@ const CasesView = {
                       <button class="btn btn-secondary btn-sm" onclick="CasesView.openCaseDetails('${c.id}')" title="View Deep Case Dossier">
                         View
                       </button>
+                      <button class="btn btn-ghost btn-sm" onclick="App.navigate('client-messages'); setTimeout(() => ClientMessagesView.handleSelectCase('${c.id}'), 100);" title="Draft Client Message with Case Generator">
+                        ✉️ Msg
+                      </button>
                       <button class="btn btn-ghost btn-sm" onclick="CasesView.quickAddTask('${c.id}')" title="Add Task to Case">
                         +Task
                       </button>
                     </div>
                   </td>
                 </tr>
-              `).join('')}
+              `;
+              }).join('')}
             </tbody>
           </table>
         </div>
@@ -323,11 +468,14 @@ const CasesView = {
 
       <!-- Mobile Phone Cards View (Optimized for Touch & Readability) -->
       <div class="mobile-cards-view">
-        ${casesList.map(c => `
+        ${casesList.map(rawC => {
+          const c = this.normalizeCase(rawC);
+          const statusClass = this.normalizeText(c.status).replace(/\s+/g, '');
+          return `
           <div class="case-card-mobile" onclick="CasesView.openCaseDetails('${c.id}')">
             <div class="case-card-mobile-header">
               <div class="case-card-mobile-title">${c.title}</div>
-              <span class="badge badge-${c.status.toLowerCase().replace(' ', '')}" style="font-size: 0.72rem; flex-shrink: 0;">
+              <span class="badge badge-${statusClass}" style="font-size: 0.72rem; flex-shrink: 0;">
                 <span class="badge-dot"></span>
                 ${c.status}
               </span>
@@ -348,16 +496,20 @@ const CasesView = {
               <button class="btn btn-secondary btn-sm" onclick="CasesView.openCaseDetails('${c.id}')">
                 Open Matter
               </button>
+              <button class="btn btn-ghost btn-sm" onclick="App.navigate('client-messages'); setTimeout(() => ClientMessagesView.handleSelectCase('${c.id}'), 100);" title="Message Client">
+                ✉️ Msg
+              </button>
               <button class="btn btn-ghost btn-sm" onclick="CasesView.quickAddTask('${c.id}')">
                 +Task
               </button>
             </div>
           </div>
-        `).join('')}
+        `;
+        }).join('')}
       </div>
 
       <div class="flex items-center justify-between" style="margin-top: 1rem; font-size: 0.8rem; color: var(--color-text-secondary); flex-wrap: wrap; gap: 8px;">
-        <div>Showing <strong>${casesList.length}</strong> of <strong>${SLCMS_STATE.cases.length}</strong> legal matters</div>
+        <div>Showing <strong>${casesList.length}</strong> of <strong>${Array.isArray(SLCMS_STATE?.cases) ? SLCMS_STATE.cases.length : 0}</strong> legal matters</div>
         <div class="flex items-center gap-1">
           <button class="btn btn-secondary btn-sm" disabled>Previous</button>
           <button class="btn btn-gold btn-sm">1</button>
@@ -368,21 +520,25 @@ const CasesView = {
   },
 
   renderCasesCards(casesList) {
-    if (casesList.length === 0) {
-      if (SLCMS_STATE.cases.length === 0 || (!this.searchQuery && this.selectedFilterStatus === 'All' && this.selectedFilterType === 'All' && this.selectedFilterPriority === 'All')) {
+    if (!Array.isArray(casesList) || casesList.length === 0) {
+      const totalCases = Array.isArray(SLCMS_STATE?.cases) ? SLCMS_STATE.cases.length : 0;
+      if (totalCases === 0 || (!this.searchQuery && this.selectedFilterStatus === 'All' && this.selectedFilterType === 'All' && this.selectedFilterPriority === 'All')) {
+        const isAdmin = SLCMS_STATE.currentUser?.role === 'Administrator';
         return `
           <div class="card empty-state" style="padding: 3.5rem 1.5rem; text-align: center; margin: 1rem 0;">
             <div class="empty-icon" style="font-size: 2.8rem; margin-bottom: 0.85rem;">⚖️</div>
-            <h3 class="empty-title" style="font-size: 1.25rem; color: var(--color-primary); font-weight: 700;">No cases yet</h3>
+            <h3 class="empty-title" style="font-size: 1.25rem; color: var(--color-primary); font-weight: 700;">No cases registered yet</h3>
             <p class="empty-desc" style="color: var(--color-text-secondary); max-width: 480px; margin: 0.5rem auto 1.5rem auto; line-height: 1.5;">
-              There are currently no legal matters registered. Begin by registering a client and adding a new case matter.
+              ${isAdmin ? 'No cases have been registered in the system yet.' : 'Add the first case to begin managing assignments and documents.'}
             </p>
+            ${!isAdmin ? `
             <button class="btn btn-gold" onclick="CasesView.openNewCaseModal()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
               <span>+ Add New Case</span>
             </button>
+            ` : ''}
           </div>
         `;
       }
@@ -397,14 +553,23 @@ const CasesView = {
 
     return `
       <div class="cases-card-grid">
-        ${casesList.map(c => `
+        ${casesList.map(rawC => {
+          const c = this.normalizeCase(rawC);
+          const priorityClass = this.normalizeText(c.priority);
+          const statusClass = this.normalizeText(c.status).replace(/\s+/g, '');
+          const leadCounselName = String(c.lawyer || '').split(',')[0].trim() || 'Unassigned';
+          const avatarLetter = c.lawyerAvatar || leadCounselName.charAt(0).toUpperCase() || 'U';
+          const descriptionText = String(c.description || '');
+          const descSnippet = descriptionText.substring(0, 105);
+
+          return `
           <div class="case-card-item" onclick="CasesView.openCaseDetails('${c.id}')">
             <div>
               <div class="flex items-center justify-between" style="margin-bottom: 0.65rem;">
                 <span style="font-family: var(--font-mono); font-weight: 700; font-size: 0.8rem; color: var(--color-gold);">
                   ${c.caseNumber}
                 </span>
-                <span class="badge badge-${c.status.toLowerCase().replace(' ', '')}">
+                <span class="badge badge-${statusClass}">
                   ${c.status}
                 </span>
               </div>
@@ -412,7 +577,7 @@ const CasesView = {
                 ${c.title}
               </h3>
               <p style="font-size: 0.8rem; color: var(--color-text-secondary); margin-bottom: 1rem; line-height: 1.4;">
-                ${c.description.substring(0, 105)}...
+                ${descSnippet}${descriptionText.length > 105 ? '...' : ''}
               </p>
             </div>
 
@@ -434,35 +599,36 @@ const CasesView = {
 
               <div class="flex items-center justify-between pt-2" style="border-top: 1px solid var(--color-border-subtle);">
                 <div class="flex items-center gap-2">
-                  <div class="avatar avatar-sm avatar-navy">${c.lawyerAvatar}</div>
-                  <span style="font-size: 0.78rem; font-weight: 600;">${c.lawyer.split(',')[0]}</span>
+                  <div class="avatar avatar-sm avatar-navy">${avatarLetter}</div>
+                  <span style="font-size: 0.78rem; font-weight: 600;">${leadCounselName}</span>
                 </div>
-                <span class="badge badge-priority-${c.priority.toLowerCase()}">${c.priority}</span>
+                <span class="badge badge-priority-${priorityClass}">${c.priority}</span>
               </div>
             </div>
           </div>
-        `).join('')}
+        `;
+        }).join('')}
       </div>
     `;
   },
 
   handleSearch(val) {
-    this.searchQuery = val;
+    this.searchQuery = String(val ?? '');
     App.refreshCurrentView();
   },
 
   handleFilterStatus(val) {
-    this.selectedFilterStatus = val;
+    this.selectedFilterStatus = String(val ?? 'All');
     App.refreshCurrentView();
   },
 
   handleFilterType(val) {
-    this.selectedFilterType = val;
+    this.selectedFilterType = String(val ?? 'All');
     App.refreshCurrentView();
   },
 
   handleFilterPriority(val) {
-    this.selectedFilterPriority = val;
+    this.selectedFilterPriority = String(val ?? 'All');
     App.refreshCurrentView();
   },
 
@@ -502,6 +668,10 @@ const CasesView = {
   },
 
   openNewCaseModal(preselectedClientId = null) {
+    if (SLCMS_STATE.currentUser?.role === 'Administrator') {
+      App.showToast('Administrators do not have access to register legal cases.', 'warning');
+      return;
+    }
     this.newCaseStep = 1;
     this.newCaseViewMode = 'stepper';
     this.newCaseDuplicateMatch = null;
@@ -562,6 +732,10 @@ const CasesView = {
   },
 
   loadTanzaniaSampleCase() {
+    if (SLCMS_STATE.currentUser?.role === 'Administrator') {
+      App.showToast('Administrators do not have access to create cases.', 'warning');
+      return;
+    }
     this.newCaseData.title = 'Abdallah Salum Muwinge v Halima Ismail';
     this.newCaseData.caseNumber = 'PC Civil Appeal No. 69 of 2018';
     this.newCaseData.caseType = 'Matrimonial';
@@ -705,7 +879,7 @@ const CasesView = {
     const statusEl = document.getElementById('review-card-status');
     if (statusEl) {
       statusEl.innerText = `Status: ${d.status || 'Active'}`;
-      statusEl.className = `badge badge-${(d.status || 'Active').toLowerCase()}`;
+      statusEl.className = `badge badge-${this.normalizeText(d.status || 'Active')}`;
     }
 
     const casenoEl = document.getElementById('review-card-caseno');
@@ -893,6 +1067,10 @@ const CasesView = {
   },
 
   saveNewCaseDraft() {
+    if (SLCMS_STATE.currentUser?.role === 'Administrator') {
+      App.showToast('Administrators do not have access to create case drafts.', 'warning');
+      return;
+    }
     this.syncNewCaseFormData();
     try {
       localStorage.setItem('slcms_case_draft', JSON.stringify(this.newCaseData));
@@ -902,6 +1080,10 @@ const CasesView = {
   },
 
   registerNewCaseAndProcessPdf(bypassDuplicateCheck = false) {
+    if (SLCMS_STATE.currentUser?.role === 'Administrator') {
+      App.showToast('Administrators do not have access to register legal cases.', 'warning');
+      return;
+    }
     const errors = this.validateNewCase();
     if (errors.length > 0) {
       const firstErr = errors[0];
@@ -1679,7 +1861,7 @@ const CasesView = {
           <h4 class="case-review-title" id="review-card-title">
             ${this.escapeHtml(d.title || 'Abdallah Salum Muwinge v Halima Ismail')}
           </h4>
-          <span class="badge badge-${(d.status || 'Active').toLowerCase()}" id="review-card-status">
+          <span class="badge badge-${this.normalizeText(d.status || 'Active')}" id="review-card-status">
             Status: ${d.status || 'Closed'}
           </span>
         </div>
@@ -1718,7 +1900,10 @@ const CasesView = {
 
     this.activeCaseId = caseId;
     this.activeCaseTab = 'overview';
-    const c = SLCMS_STATE.cases.find(item => item.id === caseId) || SLCMS_STATE.cases[0];
+    const rawCase = (Array.isArray(SLCMS_STATE.cases) ? SLCMS_STATE.cases : []).find(item => item && item.id === caseId) || SLCMS_STATE.cases?.[0] || {};
+    const c = this.normalizeCase(rawCase);
+    const statusClass = this.normalizeText(c.status).replace(/\s+/g, '');
+    const priorityClass = this.normalizeText(c.priority);
 
     App.openModal(`
       <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
@@ -1727,8 +1912,8 @@ const CasesView = {
             <span style="font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700; color: var(--color-gold);">
               ${c.caseNumber}
             </span>
-            <span class="badge badge-${c.status.toLowerCase().replace(' ', '')}">${c.status}</span>
-            <span class="badge badge-priority-${c.priority.toLowerCase()}">${c.priority} Priority</span>
+            <span class="badge badge-${statusClass}">${c.status}</span>
+            <span class="badge badge-priority-${priorityClass}">${c.priority} Priority</span>
           </div>
           <h2 style="color: #FFFFFF; font-size: 1.35rem; line-height: 1.2;">
             ${c.title}
@@ -1743,8 +1928,8 @@ const CasesView = {
       <!-- 4 Tab Navigation Bar -->
       <div class="tabs-nav" style="padding: 0 1.5rem; margin-bottom: 0; background: var(--color-surface-subtle);">
         <button class="tab-btn ${this.activeCaseTab === 'overview' ? 'active' : ''}" onclick="CasesView.switchCaseDetailTab('overview')">1. Overview</button>
-        <button class="tab-btn ${this.activeCaseTab === 'documents' ? 'active' : ''}" onclick="CasesView.switchCaseDetailTab('documents')">2. Documents (${SLCMS_STATE.documents.filter(d => d.caseId === c.id).length})</button>
-        <button class="tab-btn ${this.activeCaseTab === 'tasks' ? 'active' : ''}" onclick="CasesView.switchCaseDetailTab('tasks')">3. Tasks &amp; Deadlines (${SLCMS_STATE.tasks.filter(t => t.caseId === c.id).length})</button>
+        <button class="tab-btn ${this.activeCaseTab === 'documents' ? 'active' : ''}" onclick="CasesView.switchCaseDetailTab('documents')">2. Documents (${(Array.isArray(SLCMS_STATE.documents) ? SLCMS_STATE.documents : []).filter(d => d && d.caseId === c.id).length})</button>
+        <button class="tab-btn ${this.activeCaseTab === 'tasks' ? 'active' : ''}" onclick="CasesView.switchCaseDetailTab('tasks')">3. Tasks &amp; Deadlines (${(Array.isArray(SLCMS_STATE.tasks) ? SLCMS_STATE.tasks : []).filter(t => t && t.caseId === c.id).length})</button>
         <button class="tab-btn ${this.activeCaseTab === 'legal-research' ? 'active' : ''}" onclick="CasesView.switchCaseDetailTab('legal-research')">4. Legal Research</button>
       </div>
 
@@ -1756,6 +1941,7 @@ const CasesView = {
         <div class="flex items-center gap-2 flex-wrap">
           <button class="btn btn-secondary btn-sm" onclick="CasesView.openEditCaseModal('${c.id}')">✏️ Edit Case</button>
           <button class="btn btn-secondary btn-sm" onclick="CasesView.openAssignLawyerModal('${c.id}')">👤 Assign Lawyer</button>
+          <button class="btn btn-gold btn-sm" onclick="App.closeModal(); App.navigate('client-messages'); setTimeout(() => ClientMessagesView.handleSelectCase('${c.id}'), 100);" title="Draft client message for this case">✉️ Client Message</button>
           <button class="btn btn-secondary btn-sm" onclick="App.closeModal(); AIAssistantView.openForCase('${c.id}')">✦ Document Generator</button>
           ${c.status !== 'Closed' ? `
             <button class="btn btn-ghost btn-sm text-danger" onclick="CasesView.openCloseCaseModal('${c.id}')">🔒 Close Case</button>
@@ -1774,13 +1960,14 @@ const CasesView = {
 
   switchCaseDetailTab(tabName) {
     this.activeCaseTab = tabName;
-    const c = SLCMS_STATE.cases.find(item => item.id === this.activeCaseId);
+    const rawCase = (Array.isArray(SLCMS_STATE.cases) ? SLCMS_STATE.cases : []).find(item => item && item.id === this.activeCaseId) || {};
+    const c = this.normalizeCase(rawCase);
     const body = document.getElementById('case-tab-content-body');
     if (body && c) {
       body.innerHTML = this.renderCaseTabContent(c, tabName);
       const tabBtns = document.querySelectorAll('.tabs-nav .tab-btn');
       tabBtns.forEach(btn => {
-        if (btn.innerText.toLowerCase().includes(tabName.replace('-', ' '))) {
+        if (String(btn?.innerText ?? '').toLowerCase().includes(String(tabName || '').replace('-', ' '))) {
           btn.classList.add('active');
         } else {
           btn.classList.remove('active');
@@ -1905,6 +2092,7 @@ const CasesView = {
                 <div class="flex items-center gap-2 flex-wrap">
                   <button class="btn btn-secondary btn-sm" onclick="CasesView.openEditCaseModal('${c.id}')">✏️ Edit Case</button>
                   <button class="btn btn-secondary btn-sm" onclick="CasesView.openAssignLawyerModal('${c.id}')">👤 Reassign Lawyer</button>
+                  <button class="btn btn-gold btn-sm" onclick="App.closeModal(); App.navigate('client-messages'); setTimeout(() => ClientMessagesView.handleSelectCase('${c.id}'), 100);" title="Prepare case message for client">✉️ Message Client</button>
                   <button class="btn btn-secondary btn-sm" onclick="CasesView.quickAddDocument('${c.id}')">📄 Upload Document</button>
                   <button class="btn btn-secondary btn-sm" onclick="CasesView.quickAddTask('${c.id}')">⏱️ Add Task</button>
                   <button class="btn btn-secondary btn-sm" onclick="App.closeModal(); AIAssistantView.openForCase('${c.id}')">✦ Document Generator</button>
@@ -1921,7 +2109,7 @@ const CasesView = {
                 <div class="flex flex-col gap-2.5" style="font-size: 0.84rem;">
                   <div class="flex justify-between" style="padding-bottom: 0.4rem; border-bottom: 1px solid var(--color-border-subtle);">
                     <span style="color: var(--color-text-secondary);">Case Status:</span>
-                    <span class="badge badge-${c.status.toLowerCase().replace(' ', '')}">${c.status}</span>
+                    <span class="badge badge-${this.normalizeText(c.status).replace(/\s+/g, '')}">${c.status}</span>
                   </div>
                   <div class="flex justify-between" style="padding-bottom: 0.4rem; border-bottom: 1px solid var(--color-border-subtle);">
                     <span style="color: var(--color-text-secondary);">Date Opened:</span>
@@ -2039,8 +2227,8 @@ const CasesView = {
                       </div>
                       <div class="flex items-center gap-2">
                         ${isOverdue ? `<span class="badge badge-lost" style="font-size: 0.68rem;">OVERDUE</span>` : ''}
-                        <span class="badge badge-priority-${t.priority.toLowerCase()}">${t.priority}</span>
-                        <span class="badge badge-${t.status === 'completed' ? 'active' : 'pending'}">${t.status}</span>
+                        <span class="badge badge-priority-${this.normalizeText(t.priority)}">${t.priority || 'Medium'}</span>
+                        <span class="badge badge-${this.normalizeText(t.status) === 'completed' ? 'active' : 'pending'}">${t.status || 'Pending'}</span>
                       </div>
                     </div>
                   `;
@@ -2056,14 +2244,16 @@ const CasesView = {
         `;
 
       case 'legal-research':
-        const savedPrecedents = c.linkedPrecedents || [];
-        const caseCategory = c.caseType || c.category || 'Commercial';
-        const matchingJudgments = SLCMS_STATE.tanzaniaJudgments.filter(j => {
-          if (!j.category) return false;
-          return j.category.toLowerCase().includes(caseCategory.toLowerCase()) ||
-                 caseCategory.toLowerCase().includes(j.category.toLowerCase()) ||
-                 j.title.toLowerCase().includes('bank') ||
-                 j.year >= 2024;
+        const savedPrecedents = Array.isArray(c.linkedPrecedents) ? c.linkedPrecedents : [];
+        const caseCategory = this.normalizeText(c.caseType || c.category || 'Commercial');
+        const matchingJudgments = (Array.isArray(SLCMS_STATE.tanzaniaJudgments) ? SLCMS_STATE.tanzaniaJudgments : []).filter(j => {
+          if (!j || !j.category) return false;
+          const jCat = this.normalizeText(j.category);
+          const jTitle = this.normalizeText(j.title);
+          return jCat.includes(caseCategory) ||
+                 caseCategory.includes(jCat) ||
+                 jTitle.includes('bank') ||
+                 (j.year && j.year >= 2024);
         }).slice(0, 4);
 
         return `

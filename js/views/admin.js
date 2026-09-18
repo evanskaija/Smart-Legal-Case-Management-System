@@ -15,17 +15,20 @@
    ========================================================================== */
 
 const AdminView = {
-  activeTab: 'dashboard', // 'dashboard' | 'users' | 'roles' | 'assignments' | 'security' | 'logs' | 'caselibrary' | 'doccontrol' | 'settings' | 'backup'
+  activeTab: 'dashboard', // 'dashboard' | 'users-security' | 'settings' | 'backup'
   searchQuery: '',
   roleFilter: 'all',
   statusFilter: 'all',
-  accessFilter: 'accessed', // Default: 'accessed' (only users who accessed system) | 'all' | 'never'
+  accessFilter: 'all', // 'all' | 'accessed' | 'never'
   selectedUserId: null,
-  mobileUsersView: 'table', // 'table' (simple scrollable right & left) | 'cards' (compact scrollable chips)
+  sidePanelUserId: null,
+  selectedSidePanelTab: 'profile', // 'profile' | 'security-activity' | 'account-actions'
+  securityLogsExpanded: false,
+  mobileUsersView: 'table', // 'table' | 'cards'
   logSearchQuery: '',
   logResultFilter: 'all',
   logRoleFilter: 'all',
-  mobileLogsView: 'table', // 'table' (horizontal scroll) | 'cards' (security cards)
+  mobileLogsView: 'table', // 'table' | 'cards'
 
   // Main Render Entrypoint
   render() {
@@ -83,22 +86,19 @@ const AdminView = {
           </div>
         </div>
 
-        <!-- 4 MAIN SUB-NAVIGATION TABS (MATCHING SCREENSHOT) -->
+        <!-- MAIN SUB-NAVIGATION TABS -->
         <div class="tabs-nav adm-main-tabs" style="overflow-x: auto; white-space: nowrap; margin-bottom: 1.5rem; padding-bottom: 4px; display: flex; gap: 0.5rem; border-bottom: 1px solid var(--color-border);">
           <button class="tab-btn ${this.activeTab === 'dashboard' ? 'active' : ''}" onclick="AdminView.switchTab('dashboard')">
             <span>Admin Dashboard</span>
           </button>
-          <button class="tab-btn ${this.activeTab === 'users' || this.activeTab === 'roles' ? 'active' : ''}" onclick="AdminView.switchTab('users')">
-            <span>Users &amp; Roles (${SLCMS_STATE.users.length})</span>
-          </button>
-          <button class="tab-btn ${this.activeTab === 'logs' || this.activeTab === 'security-activity' || this.activeTab === 'security' ? 'active' : ''}" onclick="AdminView.switchTab('security-activity')">
-            <span>Security Activity (<span id="adm-tab-sec-count">${(SLCMS_STATE.activityLogs || []).length}</span>)</span>
+          <button class="tab-btn ${['users-security','users','roles','logs','security-activity','security'].includes(this.activeTab) ? 'active' : ''}" onclick="AdminView.switchTab('users-security')">
+            <span>Users &amp; Security (${SLCMS_STATE.users.length})</span>
           </button>
           <button class="tab-btn ${this.activeTab === 'settings' || this.activeTab === 'caselibrary' ? 'active' : ''}" onclick="AdminView.switchTab('settings')">
             <span>System Settings</span>
           </button>
           <button class="tab-btn ${this.activeTab === 'backup' ? 'active' : ''}" onclick="AdminView.switchTab('backup')">
-            <span>7. Backup &amp; Recovery</span>
+            <span>Backup &amp; Recovery</span>
           </button>
         </div>
 
@@ -123,8 +123,8 @@ const AdminView = {
     if (options.accessFilter) this.accessFilter = options.accessFilter;
     if (options.searchQuery !== undefined) this.searchQuery = options.searchQuery;
     
-    if (tab === 'security-activity' || tab === 'logs') {
-      this.loadSecurityActivity();
+    if (tab === 'users-security' || tab === 'users' || tab === 'security-activity' || tab === 'logs') {
+      setTimeout(() => { if (typeof AdminView.loadSecurityActivity === 'function') AdminView.loadSecurityActivity(); }, 100);
     }
 
     // Sync URL and refresh view
@@ -144,12 +144,13 @@ const AdminView = {
   renderActiveTabContent() {
     switch (this.activeTab) {
       case 'dashboard': return this.renderAdminDashboard();
-      case 'users': return this.renderUserAccountsTab();
-      case 'roles': return this.renderRolesPermissionsTab();
-      case 'assignments': return this.renderCaseAssignmentsTab();
-      case 'security': return this.renderLoginSecurityTab();
+      case 'users-security':
+      case 'users':
+      case 'roles':
+      case 'security':
       case 'logs':
-      case 'security-activity': return this.renderActivityLogsTab();
+      case 'security-activity': return this.renderUserSecurityTab();
+      case 'assignments': return this.renderCaseAssignmentsTab();
       case 'caselibrary': return this.renderCaseLibraryControlTab();
       case 'settings': return this.renderSystemSettingsTab();
       case 'backup': return this.renderBackupRestoreTab();
@@ -206,20 +207,31 @@ const AdminView = {
   // ==========================================================================
   renderAdminDashboard() {
     const dateStr = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const nowMs = Date.now();
+    const allUsers = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.users)) ? SLCMS_STATE.users : [];
     const activeAlerts = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.securityAlerts))
       ? SLCMS_STATE.securityAlerts.filter(a => !a.resolved)
       : [];
-    const lockedUsers = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.users))
-      ? SLCMS_STATE.users.filter(u => {
-          const s = (u.accountStatus || u.status || '').toUpperCase();
-          return s === 'LOCKED' || s === 'TEMPORARILY_LOCKED' || u.adminLocked === true || Boolean(u.lockedUntil);
-        })
-      : [];
-    const attentionUserIds = new Set([
-      ...activeAlerts.map(a => a.userId || a.user_id || a.staffId).filter(Boolean),
-      ...lockedUsers.map(u => u.id)
-    ]);
-    const unresolvedAlertsCount = attentionUserIds.size > 0 ? attentionUserIds.size : Math.max(activeAlerts.length, lockedUsers.length);
+
+    const attentionUsers = allUsers.filter(u => {
+      const s = (u.accountStatus || u.status || '').toUpperCase();
+      const isLocked = u.adminLocked === true || s === 'LOCKED';
+      let isTempLocked = s === 'TEMPORARILY_LOCKED';
+      if (u.lockedUntil) {
+        const lockExp = typeof u.lockedUntil === 'number' ? u.lockedUntil : new Date(u.lockedUntil).getTime();
+        if (lockExp && nowMs < lockExp) {
+          isTempLocked = true;
+        } else if (!u.adminLocked && s !== 'LOCKED') {
+          isTempLocked = false;
+        }
+      }
+      const hasAlert = activeAlerts.some(a =>
+        (a.userId && (a.userId === u.id || a.userId === u.user_id)) ||
+        (a.staffId && (a.staffId === u.staffId || a.staffId === u.employeeId))
+      );
+      return isLocked || isTempLocked || hasAlert;
+    });
+    const unresolvedAlertsCount = attentionUsers.length;
 
     const metrics = (typeof SLCMS_STATE !== 'undefined' && typeof SLCMS_STATE.getDashboardMetrics === 'function')
       ? SLCMS_STATE.getDashboardMetrics()
@@ -256,19 +268,11 @@ const AdminView = {
             </div>
           </div>
 
-          <!-- Center: 4 Stat Cards in 1 row -->
+          <!-- Center: Hero Stat Pills -->
           <div class="adm-hero-stats-pills">
             <div class="adm-hero-pill-item" onclick="AdminView.switchTab('users', { statusFilter: 'ACTIVE' })" title="Filter active staff">
               <div class="adm-hero-pill-num text-teal">${metrics.activeStaff}</div>
               <div class="adm-hero-pill-label">Active Staff</div>
-            </div>
-            <div class="adm-hero-pill-item" onclick="App.navigate('cases')" title="View live cases">
-              <div class="adm-hero-pill-num text-blue">${(SLCMS_STATE.cases || []).length}</div>
-              <div class="adm-hero-pill-label">Live Cases</div>
-            </div>
-            <div class="adm-hero-pill-item" onclick="App.navigate('caselibrary')" title="View judgments library">
-              <div class="adm-hero-pill-num text-gold">${(SLCMS_STATE.caseLibrary || []).length || 76}</div>
-              <div class="adm-hero-pill-label">Judgments</div>
             </div>
             <div class="adm-hero-pill-item ${unresolvedAlertsCount > 0 ? 'adm-pill-danger-bg' : ''}" onclick="AdminView.switchTab('users', { statusFilter: 'LOCKED', accessFilter: 'all' })" title="Needs attention accounts">
               <div id="adm-hero-attention-count" class="adm-hero-pill-num ${unresolvedAlertsCount > 0 ? 'text-red' : 'text-teal'}">${unresolvedAlertsCount}</div>
@@ -313,14 +317,14 @@ const AdminView = {
           </div>
 
           <!-- Card 2: Needs Attention (Dynamic Counter) -->
-          <div class="adm-core-metric-card ${unresolvedAlertsCount > 0 ? 'adm-border-danger' : ''}" onclick="AdminView.switchTab('users', { statusFilter: 'LOCKED', accessFilter: 'all' })">
+          <div id="adm-core-attention-card" class="adm-core-metric-card ${unresolvedAlertsCount > 0 ? 'adm-border-danger' : ''}" onclick="AdminView.switchTab('users', { statusFilter: 'LOCKED', accessFilter: 'all' })">
             <div class="adm-core-card-top">
               <span class="adm-core-card-title" style="color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#1E293B'};">Needs Attention</span>
               <span id="adm-core-attention-badge" class="adm-core-badge" style="background: ${unresolvedAlertsCount > 0 ? '#FEE2E2' : '#ECFDF5'}; color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#059669'};">${unresolvedAlertsCount > 0 ? 'LOCK' : 'OK'}</span>
             </div>
             <div id="adm-core-attention-val" class="adm-core-card-val" style="color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#059669'};">${unresolvedAlertsCount}</div>
-            <div id="adm-core-attention-sub" class="adm-core-card-sub" style="color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#64748B'};">${unresolvedAlertsCount > 0 ? 'Action Required' : 'All accounts normal'}</div>
-            <div id="adm-core-attention-tag" class="adm-core-tag" style="background: ${unresolvedAlertsCount > 0 ? '#FEE2E2' : '#ECFDF5'}; color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#059669'};">${unresolvedAlertsCount > 0 ? 'Action Required' : 'Healthy'}</div>
+            <div id="adm-core-attention-sub" class="adm-core-card-sub" style="color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#64748B'};">${unresolvedAlertsCount > 0 ? 'Action Required' : 'No action required'}</div>
+            <div id="adm-core-attention-tag" class="adm-core-tag" style="background: ${unresolvedAlertsCount > 0 ? '#FEE2E2' : '#ECFDF5'}; color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#059669'};">${unresolvedAlertsCount > 0 ? 'Action Required' : 'No Action Needed'}</div>
           </div>
 
           <!-- Card 3: System Health & Security -->
@@ -334,29 +338,7 @@ const AdminView = {
             <div class="adm-core-tag" style="background: #ECFDF5; color: #059669;">Operational</div>
           </div>
 
-          <!-- Card 4: AI-Ready Judgments -->
-          <div class="adm-core-metric-card" onclick="AdminView.switchTab('caselibrary')">
-            <div class="adm-core-card-top">
-              <span class="adm-core-card-title">AI-Ready Judgments</span>
-              <span class="adm-core-badge" style="background: #FEF3C7; color: #B45309;">LAW</span>
-            </div>
-            <div class="adm-core-card-val">76</div>
-            <div class="adm-core-card-sub">Judicial judgments recorded</div>
-            <div class="adm-core-tag" style="background: #FEF3C7; color: #B45309;">TanzLII Library</div>
-          </div>
-
-          <!-- Card 5: Active Dockets -->
-          <div class="adm-core-metric-card" onclick="App.navigate('cases')">
-            <div class="adm-core-card-top">
-              <span class="adm-core-card-title">Active Dockets</span>
-              <span class="adm-core-badge" style="background: #EFF6FF; color: #1D4ED8;">CASES</span>
-            </div>
-            <div class="adm-core-card-val" style="color: #1D4ED8;">3</div>
-            <div class="adm-core-card-sub">Live litigation matters</div>
-            <div class="adm-core-tag" style="background: #EFF6FF; color: #1D4ED8;">In Progress</div>
-          </div>
-
-          <!-- Card 6: Security Events -->
+          <!-- Card 4: Security Events -->
           <div class="adm-core-metric-card" onclick="AdminView.switchTab('security-activity')">
             <div class="adm-core-card-top">
               <span class="adm-core-card-title">Security Events</span>
@@ -696,10 +678,14 @@ const AdminView = {
             <tbody>
               ${filteredUsers.length === 0 ? `
                 <tr>
-                  <td colspan="8" style="text-align: center; padding: 3rem 1.5rem; color: #64748B;">
-                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
-                    <div style="font-weight: 700; font-size: 0.95rem; color: #1E293B; margin-bottom: 0.25rem;">No accounts match this filter criteria</div>
-                    <div style="font-size: 0.82rem; color: #64748B;">Try selecting "All Staff (Accessed &amp; Unaccessed)" in the access dropdown or resetting your filters.</div>
+                  <td colspan="8" style="text-align: center; padding: 3rem 1.5rem; color: ${this.statusFilter === 'LOCKED' ? '#15803D' : '#64748B'};">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">${this.statusFilter === 'LOCKED' ? '✅' : '🔍'}</div>
+                    <div style="font-weight: 700; font-size: 0.95rem; color: ${this.statusFilter === 'LOCKED' ? '#166534' : '#1E293B'}; margin-bottom: 0.25rem;">
+                      ${this.statusFilter === 'LOCKED' ? 'No accounts require attention' : 'No accounts match this filter criteria'}
+                    </div>
+                    <div style="font-size: 0.82rem; color: ${this.statusFilter === 'LOCKED' ? '#4B5563' : '#64748B'};">
+                      ${this.statusFilter === 'LOCKED' ? 'All staff member accounts are accessible and operating normally. No action required.' : 'Try selecting "All Staff (Accessed &amp; Unaccessed)" in the access dropdown or resetting your filters.'}
+                    </div>
                   </td>
                 </tr>
               ` : filteredUsers.map(u => {
@@ -863,6 +849,341 @@ const AdminView = {
         ` : ''}
       </div>
     `;
+  },
+
+  // ==========================================================================
+  // COMBINED: USERS & SECURITY TAB
+  // ==========================================================================
+  renderUserSecurityTab() {
+    const allUsers = SLCMS_STATE.users || [];
+    const nowMs = Date.now();
+
+    // Summary card counts
+    const totalStaff = allUsers.length;
+    const activeCount = allUsers.filter(u => (u.accountStatus || u.status || '').toUpperCase() === 'ACTIVE').length;
+    const lockedCount = allUsers.filter(u => {
+      const s = (u.accountStatus || u.status || '').toUpperCase();
+      return s === 'LOCKED' || s === 'TEMPORARILY_LOCKED' || u.adminLocked === true ||
+        Boolean(u.lockedUntil && (typeof u.lockedUntil === 'number' ? nowMs < u.lockedUntil : new Date(u.lockedUntil).getTime() > nowMs));
+    }).length;
+    const failedLoginsToday = (SLCMS_STATE.activityLogs || []).filter(l => {
+      const res = (l.result || l.status || '').toLowerCase();
+      const ts = (l.timestamp || '').toLowerCase();
+      return (res === 'failed' || res === 'locked') && ts.includes('today');
+    }).length;
+
+    // Sort users
+    const priorityOrder = ['usr-001', 'usr-011', 'usr-012', 'usr-013', 'usr-014', 'usr-015', 'usr-016'];
+    const sortedUsers = [...allUsers].sort((a, b) => {
+      const ia = priorityOrder.indexOf(a.id), ib = priorityOrder.indexOf(b.id);
+      if (ia !== -1 && ib !== -1) return ia - ib;
+      if (ia !== -1) return -1; if (ib !== -1) return 1;
+      return 0;
+    });
+
+    const activeAlerts = (typeof SLCMS_STATE.getSecurityAlerts === 'function')
+      ? SLCMS_STATE.getSecurityAlerts({ status: 'unresolved' }) : [];
+    const alertUserIds = new Set(activeAlerts.map(a => a.userId || a.user_id).filter(Boolean));
+
+    const filteredUsers = sortedUsers.filter(u => {
+      const curStatus = (u.accountStatus || u.status || 'ACTIVE').toUpperCase();
+      const isLockedOrAttn = curStatus === 'LOCKED' || curStatus === 'TEMPORARILY_LOCKED' ||
+        u.adminLocked === true ||
+        Boolean(u.lockedUntil && (typeof u.lockedUntil === 'number' ? nowMs < u.lockedUntil : new Date(u.lockedUntil).getTime() > nowMs)) ||
+        alertUserIds.has(u.id);
+      const hasAccessed = Boolean(u.lastLogin && !u.lastLogin.toLowerCase().includes('never') && u.lastLogin.trim() !== '');
+      if (this.accessFilter === 'accessed' && !hasAccessed && !(this.statusFilter === 'LOCKED' && isLockedOrAttn)) return false;
+      if (this.accessFilter === 'never' && hasAccessed) return false;
+      if (this.roleFilter !== 'all') {
+        const rf = this.roleFilter.toLowerCase(), ur = (u.role || '').toLowerCase();
+        if (rf === 'senior lawyer') { if (!ur.includes('senior')) return false; }
+        else if (rf === 'lawyer') { if (!ur.includes('associate') && !ur.includes('lawyer')) return false; }
+        else if (rf === 'legal clerk') { if (!ur.includes('clerk')) return false; }
+        else if (rf === 'administrator') { if (!ur.includes('admin')) return false; }
+        else if (ur !== rf) return false;
+      }
+      if (this.statusFilter !== 'all') {
+        if (this.statusFilter === 'FIRST_LOGIN_RESET' && curStatus !== 'FIRST_LOGIN_RESET') return false;
+        if (this.statusFilter === 'ACTIVE' && curStatus !== 'ACTIVE') return false;
+        if (this.statusFilter === 'LOCKED' && !isLockedOrAttn) return false;
+        if (this.statusFilter === 'ADMIN_LOCKED' && !(u.adminLocked === true || curStatus === 'LOCKED')) return false;
+        if (this.statusFilter === 'DEACTIVATED' && curStatus !== 'DEACTIVATED') return false;
+      }
+      if (this.searchQuery) {
+        const q = this.searchQuery.toLowerCase();
+        return (u.name || '').toLowerCase().includes(q) ||
+          (u.email || '').toLowerCase().includes(q) ||
+          (u.staffId || u.employeeId || '').toLowerCase().includes(q) ||
+          (u.phone || '').includes(q) ||
+          (u.advocateNumber || '').toLowerCase().includes(q) ||
+          (u.role || '').toLowerCase().includes(q);
+      }
+      return true;
+    });
+
+    // Security logs
+    const allLogs = SLCMS_STATE.activityLogs || [];
+    const logsToShow = allLogs.slice(0, this.securityLogsExpanded ? 20 : 5);
+
+    return `
+      <div class="animate-fade">
+
+        <!-- PAGE HEADER & ACTIONS -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem;">
+          <div>
+            <h2 style="font-size:1.15rem;font-weight:800;color:#0F172A;margin:0 0 0.2rem;font-family:var(--font-heading);">Users &amp; Security</h2>
+            <p style="font-size:0.82rem;color:#64748B;margin:0;">Manage staff accounts and monitor login security from one place.</p>
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+            <button class="btn btn-secondary btn-sm" onclick="AdminView.exportAuditLogs()" title="Export security activity to CSV">📥 Export Activity</button>
+            <button class="btn btn-secondary btn-sm" onclick="AdminView.refreshUsersSecurityTab()" title="Refresh page data">🔄 Refresh</button>
+            <button class="btn btn-gold btn-sm" onclick="AdminView.openCreateUserModal()">+ Add Staff</button>
+          </div>
+        </div>
+
+        <!-- 1. SUMMARY CARDS (4) -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:1rem;margin-bottom:1.5rem;">
+          <div onclick="AdminView.filterUsersCard('all')" title="Show all staff" style="cursor:pointer;background:#fff;border:1.5px solid #E2E8F0;border-radius:14px;padding:1.1rem 1.25rem;transition:all 0.18s;box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+            <div style="font-size:0.7rem;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.4rem;">Total Staff</div>
+            <div style="font-size:2rem;font-weight:800;color:#0F172A;line-height:1;">${totalStaff}</div>
+            <div style="font-size:0.7rem;color:#94A3B8;margin-top:0.25rem;">All accounts</div>
+          </div>
+          <div onclick="AdminView.filterUsersCard('active')" title="Filter active accounts" style="cursor:pointer;background:#fff;border:1.5px solid #E2E8F0;border-radius:14px;padding:1.1rem 1.25rem;transition:all 0.18s;box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+            <div style="font-size:0.7rem;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.4rem;">Active Accounts</div>
+            <div style="font-size:2rem;font-weight:800;color:#10B981;line-height:1;">${activeCount}</div>
+            <div style="font-size:0.7rem;color:#94A3B8;margin-top:0.25rem;">Currently active</div>
+          </div>
+          <div onclick="AdminView.filterUsersCard('locked')" title="Filter locked accounts" style="cursor:pointer;background:#fff;border:1.5px solid ${lockedCount > 0 ? '#FCA5A5' : '#E2E8F0'};border-radius:14px;padding:1.1rem 1.25rem;transition:all 0.18s;box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+            <div style="font-size:0.7rem;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.4rem;">Locked Accounts</div>
+            <div style="font-size:2rem;font-weight:800;color:${lockedCount > 0 ? '#EF4444' : '#10B981'};line-height:1;">${lockedCount}</div>
+            <div style="font-size:0.7rem;color:#94A3B8;margin-top:0.25rem;">${lockedCount > 0 ? 'Need attention' : 'None locked'}</div>
+          </div>
+          <div onclick="AdminView.scrollToSecurityActivity()" title="View failed logins in activity section below" style="cursor:pointer;background:#fff;border:1.5px solid #E2E8F0;border-radius:14px;padding:1.1rem 1.25rem;transition:all 0.18s;box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+            <div style="font-size:0.7rem;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.4rem;">Failed Logins Today</div>
+            <div style="font-size:2rem;font-weight:800;color:${failedLoginsToday > 0 ? '#F59E0B' : '#0F172A'};line-height:1;">${failedLoginsToday}</div>
+            <div style="font-size:0.7rem;color:#94A3B8;margin-top:0.25rem;">↓ View activity</div>
+          </div>
+        </div>
+
+        <!-- 2. COMPACT FILTER ROW -->
+        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:0.75rem 1rem;margin-bottom:1.25rem;">
+          <div style="display:flex;gap:0.55rem;align-items:center;flex-wrap:wrap;">
+            <div style="position:relative;flex:1;min-width:180px;max-width:300px;">
+              <span style="position:absolute;left:0.6rem;top:50%;transform:translateY(-50%);color:#94A3B8;pointer-events:none;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </span>
+              <input type="text" class="adm-search-field" style="padding-left:1.9rem;height:33px;font-size:0.81rem;width:100%;" placeholder="Search by name, Staff ID, email or phone..." value="${this.searchQuery}" oninput="AdminView.handleSearch(this.value)">
+            </div>
+            <select class="adm-filter-select" style="height:33px;font-size:0.81rem;" onchange="AdminView.handleRoleFilter(this.value)">
+              <option value="all" ${this.roleFilter === 'all' ? 'selected' : ''}>All Roles</option>
+              <option value="Administrator" ${this.roleFilter === 'Administrator' ? 'selected' : ''}>Administrator</option>
+              <option value="Senior Lawyer" ${this.roleFilter === 'Senior Lawyer' ? 'selected' : ''}>Senior Lawyer</option>
+              <option value="Lawyer" ${this.roleFilter === 'Lawyer' ? 'selected' : ''}>Lawyer</option>
+              <option value="Legal Clerk" ${this.roleFilter === 'Legal Clerk' ? 'selected' : ''}>Legal Clerk</option>
+            </select>
+            <select class="adm-filter-select" style="height:33px;font-size:0.81rem;" onchange="AdminView.handleStatusFilter(this.value)">
+              <option value="all" ${this.statusFilter === 'all' ? 'selected' : ''}>All Statuses</option>
+              <option value="ACTIVE" ${this.statusFilter === 'ACTIVE' ? 'selected' : ''}>Active</option>
+              <option value="FIRST_LOGIN_RESET" ${this.statusFilter === 'FIRST_LOGIN_RESET' ? 'selected' : ''}>First Login Pending</option>
+              <option value="LOCKED" ${this.statusFilter === 'LOCKED' ? 'selected' : ''}>Temporarily Locked</option>
+              <option value="ADMIN_LOCKED" ${this.statusFilter === 'ADMIN_LOCKED' ? 'selected' : ''}>Admin Locked</option>
+              <option value="DEACTIVATED" ${this.statusFilter === 'DEACTIVATED' ? 'selected' : ''}>Deactivated</option>
+            </select>
+            <select class="adm-filter-select" style="height:33px;font-size:0.81rem;" onchange="AdminView.handleAccessFilter(this.value)">
+              <option value="all" ${this.accessFilter === 'all' ? 'selected' : ''}>All Access</option>
+              <option value="accessed" ${this.accessFilter === 'accessed' ? 'selected' : ''}>Previously Logged In</option>
+              <option value="never" ${this.accessFilter === 'never' ? 'selected' : ''}>Never Logged In</option>
+            </select>
+            <button class="btn btn-ghost btn-sm" style="height:33px;font-size:0.8rem;white-space:nowrap;" onclick="AdminView.resetUserFilters()">Reset Filters</button>
+            <span style="font-size:0.75rem;color:#64748B;font-weight:600;white-space:nowrap;margin-left:auto;">${filteredUsers.length} of ${totalStaff}</span>
+          </div>
+        </div>
+
+        <!-- 3. STAFF TABLE -->
+        <div class="adm-users-table-container" style="margin-bottom:2rem;">
+          <table class="adm-users-table">
+            <thead>
+              <tr>
+                <th style="width:23%;">STAFF MEMBER</th>
+                <th style="width:11%;">STAFF ID</th>
+                <th style="width:12%;">ROLE</th>
+                <th style="width:18%;">STATUS</th>
+                <th style="width:14%;">LAST LOGIN</th>
+                <th style="width:7%;text-align:center;">CASES</th>
+                <th style="width:15%;text-align:right;">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredUsers.length === 0 ? `
+                <tr>
+                  <td colspan="7" style="text-align:center;padding:3rem 1.5rem;color:#64748B;">
+                    <div style="font-size:2rem;margin-bottom:0.5rem;">🔍</div>
+                    <div style="font-weight:700;font-size:0.95rem;color:#1E293B;margin-bottom:0.25rem;">No accounts match your filters</div>
+                    <div style="font-size:0.82rem;color:#64748B;">Try adjusting your filters or click <strong>Reset Filters</strong>.</div>
+                  </td>
+                </tr>
+              ` : filteredUsers.map(u => {
+                const roleBadge = this.getUserRoleBadgeHtml(u);
+                const lastLoginText = this.getUserLastLoginText(u);
+                const avatarHtml = this.getUserAvatarHtml(u);
+                const staffId = u.staffId || u.employeeId || 'ADM-0001';
+                const casesCount = (u.assignedCaseIds && u.assignedCaseIds.length) ? u.assignedCaseIds.length : (u.activeCases || 0);
+                const curStatus = (u.accountStatus || u.status || 'ACTIVE').toUpperCase();
+                const isAdminLocked = u.adminLocked === true || curStatus === 'LOCKED';
+                const isTempLocked = curStatus === 'TEMPORARILY_LOCKED' || Boolean(u.lockedUntil && (typeof u.lockedUntil === 'number' ? nowMs < u.lockedUntil : new Date(u.lockedUntil).getTime() > nowMs));
+                const isFirstLogin = curStatus === 'FIRST_LOGIN_RESET' || (u.first_login_required && !u.firstLoginStatus?.includes('Completed'));
+                const isDeactivated = curStatus === 'DEACTIVATED';
+
+                let statusBadgeHtml;
+                if (isAdminLocked) {
+                  statusBadgeHtml = `<span class="adm-status-pill-locked"><span class="adm-dot-red"></span> Admin Locked</span>`;
+                } else if (isTempLocked) {
+                  const unlockTime = u.lockedUntil ? new Date(u.lockedUntil).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
+                  statusBadgeHtml = `<span class="adm-status-pill-locked" style="background:#FEF3C7;color:#92400E;border-color:#F59E0B;font-size:0.72rem;"><span class="adm-dot-red" style="background:#F59E0B;"></span> Temp Lock${unlockTime ? ' until ' + unlockTime : ''}</span>`;
+                } else if (isFirstLogin) {
+                  statusBadgeHtml = `<span class="badge" style="background:#EFF6FF;color:#1D4ED8;border:1px solid #93C5FD;font-weight:700;font-size:0.75rem;padding:0.2rem 0.55rem;border-radius:6px;">First Login Pending</span>`;
+                } else if (isDeactivated) {
+                  statusBadgeHtml = `<span class="adm-status-pill-pending" style="background:#F1F5F9;color:#64748B;border-color:#CBD5E1;">Deactivated</span>`;
+                } else {
+                  statusBadgeHtml = this.getUserStatusBadgeHtml(u);
+                }
+
+                let actionsHtml = `<button class="adm-table-action-btn" onclick="AdminView.openUserSidePanel('${u.id}')">View</button>`;
+                if (isAdminLocked) {
+                  actionsHtml += `<button class="adm-table-action-btn" onclick="AdminView.openUnlockUserModal('${u.id}')" style="color:#059669;font-weight:700;">Unlock</button>`;
+                } else if (isFirstLogin) {
+                  actionsHtml += `<button class="adm-table-action-btn" onclick="AdminView.openIssueTempPasswordModal('${u.id}')" style="color:#2563EB;font-weight:700;">Renew</button>`;
+                }
+                actionsHtml += `<button class="adm-table-action-btn" onclick="AdminView.openRemoveUserModal('${u.id}')" title="Delete User Account" style="color:#DC2626;border-color:#FECACA;background:#FEF2F2;font-weight:700;">Delete</button>`;
+
+                return `
+                  <tr>
+                    <td>
+                      <div class="adm-staff-member-cell">
+                        ${avatarHtml}
+                        <div>
+                          <a href="javascript:void(0)" onclick="AdminView.openUserSidePanel('${u.id}')" class="adm-staff-name-link">${u.name}</a>
+                          <div class="adm-staff-job-title">${u.jobTitle || u.role}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="adm-staff-id-gold">${staffId}</span></td>
+                    <td>${roleBadge}</td>
+                    <td>${statusBadgeHtml}</td>
+                    <td><span style="font-size:0.8rem;color:#475569;">${lastLoginText}</span></td>
+                    <td style="text-align:center;font-weight:700;color:#0F172A;font-size:0.86rem;">${casesCount}</td>
+                    <td style="text-align:right;white-space:nowrap;">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:0.35rem;">${actionsHtml}</div>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 5. RECENT SECURITY ACTIVITY -->
+        <div id="adm-recent-security-section" style="margin-bottom:2rem;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.85rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <span style="display:inline-block;width:4px;height:18px;background:var(--color-gold,#C89B3C);border-radius:2px;"></span>
+              <h3 style="font-size:1rem;font-weight:800;color:#0F172A;margin:0;font-family:var(--font-heading);">Recent Security Activity</h3>
+            </div>
+          </div>
+          <div style="border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+            <table style="width:100%;border-collapse:collapse;">
+              <thead>
+                <tr style="background:#F8FAFC;border-bottom:1px solid #E2E8F0;">
+                  <th style="padding:0.65rem 1rem;font-size:0.72rem;font-weight:700;color:#475569;text-align:left;letter-spacing:0.5px;">TIME</th>
+                  <th style="padding:0.65rem 1rem;font-size:0.72rem;font-weight:700;color:#475569;text-align:left;letter-spacing:0.5px;">STAFF MEMBER</th>
+                  <th style="padding:0.65rem 1rem;font-size:0.72rem;font-weight:700;color:#475569;text-align:left;letter-spacing:0.5px;">ACTIVITY</th>
+                  <th style="padding:0.65rem 1rem;font-size:0.72rem;font-weight:700;color:#475569;text-align:left;letter-spacing:0.5px;">RESULT</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${allLogs.length === 0 ? `
+                  <tr>
+                    <td colspan="4" style="text-align:center;padding:2.5rem 1rem;color:#64748B;">
+                      <div style="font-size:1.8rem;margin-bottom:0.4rem;">🛡️</div>
+                      <div style="font-weight:700;color:#1E293B;font-size:0.9rem;">No security activity recorded yet</div>
+                      <div style="font-size:0.78rem;color:#94A3B8;margin-top:0.2rem;">Login attempts and account actions will appear here automatically.</div>
+                    </td>
+                  </tr>
+                ` : logsToShow.map(l => {
+                  const res = (l.result || l.status || '').toUpperCase();
+                  let badge;
+                  if (res === 'SUCCESS') badge = `<span style="background:#ECFDF5;color:#047857;border:1px solid #A7F3D0;display:inline-block;padding:2px 9px;border-radius:10px;font-size:0.7rem;font-weight:700;">Successful</span>`;
+                  else if (res === 'LOCKED') badge = `<span style="background:#FEF2F2;color:#B91C1C;border:1px solid #FCA5A5;display:inline-block;padding:2px 9px;border-radius:10px;font-size:0.7rem;font-weight:700;">Temporarily locked</span>`;
+                  else if (res === 'FAILED' || res === 'DENIED') badge = `<span style="background:#FFFBEB;color:#B45309;border:1px solid #FDE68A;display:inline-block;padding:2px 9px;border-radius:10px;font-size:0.7rem;font-weight:700;">Failed</span>`;
+                  else badge = `<span style="background:#F1F5F9;color:#475569;display:inline-block;padding:2px 9px;border-radius:10px;font-size:0.7rem;font-weight:700;">${res || 'N/A'}</span>`;
+                  return `
+                    <tr style="border-bottom:1px solid #F8FAFC;">
+                      <td style="padding:0.65rem 1rem;font-size:0.8rem;color:#64748B;font-family:monospace;white-space:nowrap;">${l.timestamp}</td>
+                      <td style="padding:0.65rem 1rem;font-size:0.84rem;font-weight:700;color:#0F172A;">${l.user}</td>
+                      <td style="padding:0.65rem 1rem;font-size:0.83rem;color:#334155;">${l.action}</td>
+                      <td style="padding:0.65rem 1rem;">${badge}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+            ${allLogs.length > 5 ? `
+              <div style="border-top:1px solid #F1F5F9;padding:0.65rem 1rem;background:#F8FAFC;text-align:center;">
+                <button class="btn btn-ghost btn-sm" onclick="AdminView.toggleSecurityLogs()" style="font-size:0.82rem;color:#0B1F33;font-weight:700;">
+                  ${this.securityLogsExpanded ? '▲ Show Less' : 'View More Activity (' + (allLogs.length - 5) + ' more events)'}
+                </button>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+      </div>
+    `;
+  },
+
+  filterUsersCard(type) {
+    this.searchQuery = '';
+    this.roleFilter = 'all';
+    if (type === 'all') { this.statusFilter = 'all'; this.accessFilter = 'all'; }
+    else if (type === 'active') { this.statusFilter = 'ACTIVE'; this.accessFilter = 'all'; }
+    else if (type === 'locked') { this.statusFilter = 'LOCKED'; this.accessFilter = 'all'; }
+    const container = document.getElementById('admin-tab-content');
+    if (container) container.innerHTML = this.renderActiveTabContent();
+  },
+
+  scrollToSecurityActivity() {
+    const el = document.getElementById('adm-recent-security-section');
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    this.switchTab('users-security');
+    setTimeout(() => {
+      const el2 = document.getElementById('adm-recent-security-section');
+      if (el2) el2.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 350);
+  },
+
+  toggleSecurityLogs() {
+    this.securityLogsExpanded = !this.securityLogsExpanded;
+    const container = document.getElementById('admin-tab-content');
+    if (container) {
+      container.innerHTML = this.renderActiveTabContent();
+      setTimeout(() => {
+        const el = document.getElementById('adm-recent-security-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  },
+
+  resetUserFilters() {
+    this.searchQuery = ''; this.roleFilter = 'all'; this.statusFilter = 'all'; this.accessFilter = 'all';
+    const container = document.getElementById('admin-tab-content');
+    if (container) container.innerHTML = this.renderActiveTabContent();
+  },
+
+  refreshUsersSecurityTab() {
+    setTimeout(() => { if (typeof AdminView.loadSecurityActivity === 'function') AdminView.loadSecurityActivity(); }, 50);
+    const container = document.getElementById('admin-tab-content');
+    if (container) container.innerHTML = this.renderActiveTabContent();
+    if (typeof App !== 'undefined' && typeof App.showToast === 'function') App.showToast('Users & Security refreshed.', 'success');
   },
 
   // Helper Methods for Users & Roles Model
@@ -1984,7 +2305,7 @@ const AdminView = {
   renderRolesPermissionsTab() {
     const permissions = [
       { key: 'canViewDashboard', label: 'View Operational Dashboard', admin: '✓', srLawyer: '✓', lawyer: '✓', clerk: '✓' },
-      { key: 'canCreateCase', label: 'Create & Register New Matters', admin: '✓', srLawyer: '✓', lawyer: '✓ Draft Only', clerk: '—' },
+      { key: 'canCreateCase', label: 'Create & Register New Matters', admin: '— Restricted', srLawyer: '✓', lawyer: '✓ Draft Only', clerk: '—' },
       { key: 'canAssignCase', label: 'Assign Counsel to Legal Matters', admin: '✓ Access Mgmt', srLawyer: '✓ Legal Supervision', lawyer: '—', clerk: '—' },
       { key: 'canApproveLibrary', label: 'Approve Judgments as READY_FOR_AI', admin: '— Restricted', srLawyer: '✓ Sole Legal Authority', lawyer: '—', clerk: '—' },
       { key: 'canUploadDocuments', label: 'Upload Documents & Pleadings', admin: '✓ Technical', srLawyer: '✓', lawyer: '✓', clerk: '✓' },
@@ -4542,11 +4863,228 @@ const AdminView = {
   // MODULE 12: USER PROFILE MODAL (5 TABS: Overview, Assignments, Security, Activity, Administration)
   // ==========================================================================
   viewUserDetails(userId) {
+    this.openUserSidePanel(userId);
+  },
+
+  openUserSidePanel(userId) {
     const user = SLCMS_STATE.users.find(u => u.id === userId);
     if (!user) return;
-
     this.selectedUserId = userId;
-    this.openUserProfileModalTab(user, 'overview');
+    this.sidePanelUserId = userId;
+    this.selectedSidePanelTab = 'profile';
+
+    const existing = document.getElementById('adm-user-side-panel-overlay');
+    if (existing) existing.remove();
+
+    const initials = (user.name || 'US').split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'adm-user-side-panel-overlay';
+    overlay.setAttribute('style', 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.42);z-index:1050;display:flex;align-items:stretch;justify-content:flex-end;');
+    overlay.onclick = (e) => { if (e.target === overlay) AdminView.closeSidePanel(); };
+
+    overlay.innerHTML = `
+      <style>
+        @keyframes adm-sp-slide-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        @keyframes adm-sp-fade-in { from { opacity: 0; } to { opacity: 1; } }
+        #adm-user-side-panel-overlay { animation: adm-sp-fade-in 0.15s ease; }
+        #adm-user-side-panel { animation: adm-sp-slide-in 0.22s cubic-bezier(0.25,0.46,0.45,0.94); }
+      </style>
+      <div id="adm-user-side-panel" style="width:490px;max-width:96vw;height:100%;background:#FFFFFF;display:flex;flex-direction:column;box-shadow:-8px 0 48px rgba(15,23,42,0.22);overflow:hidden;">
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg,#0B1F33 0%,#102A43 100%);padding:1.25rem 1.5rem;flex-shrink:0;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <div style="display:flex;align-items:center;gap:0.85rem;">
+              <div style="width:42px;height:42px;border-radius:50%;background:rgba(200,155,60,0.18);border:2px solid rgba(200,155,60,0.45);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.95rem;color:#C89B3C;flex-shrink:0;">${initials}</div>
+              <div>
+                <div style="font-weight:800;font-size:0.98rem;color:#FFFFFF;line-height:1.2;">${user.name}</div>
+                <div style="font-size:0.75rem;color:#94A3B8;margin-top:0.2rem;">${user.staffId || user.employeeId || ''} &bull; ${user.role}</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <button onclick="AdminView.openRemoveUserModal('${user.id}')" class="btn btn-sm" style="background:#DC2626;color:#FFFFFF;border:none;border-radius:8px;padding:0.38rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:0.35rem;" title="Delete User Account">
+                🗑️ Delete
+              </button>
+              <button onclick="AdminView.closeSidePanel()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#CBD5E1;font-size:1rem;" title="Close">✕</button>
+            </div>
+          </div>
+          <!-- 3 Tabs -->
+          <div style="display:flex;gap:0.2rem;background:rgba(0,0,0,0.2);border-radius:10px;padding:3px;">
+            <button data-sp-tab="profile" onclick="AdminView.switchSidePanelTab('${user.id}','profile')" style="flex:1;padding:0.38rem 0.4rem;border:none;border-radius:8px;font-size:0.75rem;font-weight:700;cursor:pointer;transition:all 0.15s;background:#FFFFFF;color:#0B1F33;">Profile</button>
+            <button data-sp-tab="security-activity" onclick="AdminView.switchSidePanelTab('${user.id}','security-activity')" style="flex:1;padding:0.38rem 0.4rem;border:none;border-radius:8px;font-size:0.75rem;font-weight:600;cursor:pointer;transition:all 0.15s;background:transparent;color:#94A3B8;">Security Activity</button>
+            <button data-sp-tab="account-actions" onclick="AdminView.switchSidePanelTab('${user.id}','account-actions')" style="flex:1;padding:0.38rem 0.4rem;border:none;border-radius:8px;font-size:0.75rem;font-weight:600;cursor:pointer;transition:all 0.15s;background:transparent;color:#94A3B8;">Account Actions</button>
+          </div>
+        </div>
+        <!-- Content -->
+        <div id="adm-side-panel-content" style="flex:1;overflow-y:auto;padding:1.25rem 1.5rem;">
+          ${this.renderSidePanelContent(user, 'profile')}
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+  },
+
+  closeSidePanel() {
+    const overlay = document.getElementById('adm-user-side-panel-overlay');
+    if (overlay) overlay.remove();
+  },
+
+  switchSidePanelTab(userId, tab) {
+    this.selectedSidePanelTab = tab;
+    const user = SLCMS_STATE.users.find(u => u.id === userId);
+    if (!user) return;
+    document.querySelectorAll('[data-sp-tab]').forEach(btn => {
+      const active = btn.getAttribute('data-sp-tab') === tab;
+      btn.style.background = active ? '#FFFFFF' : 'transparent';
+      btn.style.color = active ? '#0B1F33' : '#94A3B8';
+      btn.style.fontWeight = active ? '700' : '600';
+    });
+    const el = document.getElementById('adm-side-panel-content');
+    if (el) { el.innerHTML = this.renderSidePanelContent(user, tab); el.scrollTop = 0; }
+  },
+
+  renderSidePanelContent(user, tab) {
+    const status = (user.accountStatus || user.status || 'ACTIVE').toUpperCase();
+    const nowMs = Date.now();
+    const isAdminLocked = user.adminLocked === true || status === 'LOCKED';
+    const isTempLocked = status === 'TEMPORARILY_LOCKED' || Boolean(user.lockedUntil && (typeof user.lockedUntil === 'number' ? nowMs < user.lockedUntil : new Date(user.lockedUntil).getTime() > nowMs));
+    const isFirstLogin = status === 'FIRST_LOGIN_RESET' || (user.first_login_required && !user.firstLoginStatus?.includes('Completed'));
+    const isDeactivated = status === 'DEACTIVATED';
+    const casesCount = (user.assignedCaseIds && user.assignedCaseIds.length) ? user.assignedCaseIds.length : (user.activeCases || 0);
+
+    if (tab === 'profile') {
+      const rollNo = this.getUserRollNumber(user);
+      const rows = [
+        ['Full Name', user.name || '—'],
+        ['Staff ID', `<code style="font-family:monospace;color:#D97706;font-weight:700;">${user.staffId || user.employeeId || 'N/A'}</code>`],
+        ['Job Title', user.jobTitle || user.role || '—'],
+        ['Role', this.getUserRoleBadgeHtml(user)],
+        ['Email', `<a href="mailto:${user.email}" style="color:#2563EB;text-decoration:none;font-size:0.83rem;">${user.email || '—'}</a>`],
+        ['Phone', user.phone || 'N/A'],
+        ...(rollNo ? [['Advocate Roll No.', `<code style="font-family:monospace;color:#D97706;font-weight:700;">${rollNo}</code>`]] : []),
+        ['Account Status', this.getUserStatusBadgeHtml(user)],
+        ['Assigned Cases', `<strong style="color:#0F172A;">${casesCount} case${casesCount !== 1 ? 's' : ''}</strong>`],
+      ];
+      return `
+        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;">
+          ${rows.map(([label, val]) => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 1rem;border-bottom:1px solid #F1F5F9;font-size:0.84rem;gap:0.75rem;">
+              <span style="color:#64748B;font-weight:600;white-space:nowrap;flex-shrink:0;">${label}</span>
+              <span style="color:#1E293B;text-align:right;">${val}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div style="margin-top:1rem;padding:0.85rem 1rem;border-radius:10px;background:#FEF2F2;border:1px solid #FECACA;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;">
+          <div>
+            <div style="font-size:0.82rem;font-weight:700;color:#991B1B;">Delete Account</div>
+            <div style="font-size:0.72rem;color:#B91C1C;">Permanently remove this user from system directory.</div>
+          </div>
+          <button class="btn btn-sm" onclick="AdminView.openRemoveUserModal('${user.id}')" style="background:#DC2626;color:#FFFFFF;font-size:0.75rem;padding:0.35rem 0.75rem;white-space:nowrap;font-weight:700;border:none;border-radius:6px;cursor:pointer;">
+            🗑️ Delete User
+          </button>
+        </div>
+      `;
+    }
+
+    if (tab === 'security-activity') {
+      const userLogs = (SLCMS_STATE.activityLogs || []).filter(l =>
+        l.user === user.name || (l.record && l.record.includes(user.email))
+      ).slice(0, 15);
+      if (userLogs.length === 0) {
+        return `
+          <div style="text-align:center;padding:3rem 1rem;color:#64748B;">
+            <div style="font-size:2.2rem;margin-bottom:0.6rem;">🛡️</div>
+            <div style="font-weight:700;color:#1E293B;font-size:0.95rem;margin-bottom:0.3rem;">No Activity Recorded</div>
+            <div style="font-size:0.82rem;color:#94A3B8;line-height:1.5;">No security activity has been recorded for this account.</div>
+          </div>
+        `;
+      }
+      return `
+        <div>
+          <div style="font-size:0.7rem;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.75rem;">Login &amp; Security Events</div>
+          <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;">
+            <table style="width:100%;border-collapse:collapse;">
+              <thead>
+                <tr style="background:#F8FAFC;border-bottom:1px solid #E2E8F0;">
+                  <th style="padding:0.5rem 0.85rem;font-size:0.68rem;font-weight:700;color:#475569;text-align:left;letter-spacing:0.4px;">TIME</th>
+                  <th style="padding:0.5rem 0.85rem;font-size:0.68rem;font-weight:700;color:#475569;text-align:left;letter-spacing:0.4px;">ACTIVITY</th>
+                  <th style="padding:0.5rem 0.85rem;font-size:0.68rem;font-weight:700;color:#475569;text-align:left;letter-spacing:0.4px;">RESULT</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${userLogs.map(l => {
+                  const r = (l.result || l.status || '').toUpperCase();
+                  let b;
+                  if (r === 'SUCCESS') b = `<span style="background:#ECFDF5;color:#047857;border:1px solid #A7F3D0;display:inline-block;padding:1px 8px;border-radius:8px;font-size:0.68rem;font-weight:700;">Success</span>`;
+                  else if (r === 'LOCKED') b = `<span style="background:#FEF2F2;color:#B91C1C;border:1px solid #FCA5A5;display:inline-block;padding:1px 8px;border-radius:8px;font-size:0.68rem;font-weight:700;">Locked</span>`;
+                  else b = `<span style="background:#FFFBEB;color:#B45309;border:1px solid #FDE68A;display:inline-block;padding:1px 8px;border-radius:8px;font-size:0.68rem;font-weight:700;">Failed</span>`;
+                  return `<tr style="border-bottom:1px solid #F8FAFC;"><td style="padding:0.5rem 0.85rem;font-size:0.76rem;color:#64748B;font-family:monospace;white-space:nowrap;">${l.timestamp}</td><td style="padding:0.5rem 0.85rem;font-size:0.8rem;color:#334155;">${l.action}</td><td style="padding:0.5rem 0.85rem;">${b}</td></tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    if (tab === 'account-actions') {
+      let actions = [];
+      if (isAdminLocked) {
+        actions = [
+          { icon:'🔓', label:'Unlock Account', desc:'Remove the administrative lock and restore access.', btnLabel:'Unlock', fn:`AdminView.openUnlockUserModal('${user.id}')`, style:'btn-gold', note:'Requires reason' },
+          { icon:'🚫', label:'Deactivate Account', desc:'Permanently deactivate this account.', btnLabel:'Deactivate', fn:`AdminView.openDeactivateUserModal('${user.id}')`, style:'btn-secondary', note:'Requires reason', danger:true },
+        ];
+      } else if (isTempLocked) {
+        actions = [
+          { icon:'📋', label:'View Activity', desc:'View the failed login events that triggered this lock.', btnLabel:'View Activity', fn:`AdminView.switchSidePanelTab('${user.id}','security-activity')`, style:'btn-secondary' },
+          { icon:'🔒', label:'Admin Lock', desc:'Escalate to an indefinite administrative lock.', btnLabel:'Admin Lock', fn:`AdminView.openLockUserModal('${user.id}')`, style:'btn-secondary', note:'Requires reason' },
+        ];
+      } else if (isFirstLogin) {
+        actions = [
+          { icon:'🔑', label:'Renew Temporary Password', desc:'Generate a new one-time password for first login.', btnLabel:'Renew Password', fn:`AdminView.openIssueTempPasswordModal('${user.id}')`, style:'btn-gold' },
+          { icon:'🚫', label:'Deactivate Account', desc:'Deactivate before the staff member first logs in.', btnLabel:'Deactivate', fn:`AdminView.openDeactivateUserModal('${user.id}')`, style:'btn-secondary', note:'Requires reason', danger:true },
+        ];
+      } else if (isDeactivated) {
+        actions = [
+          { icon:'✅', label:'Reactivate Account', desc:'Restore this account to active status.', btnLabel:'Reactivate', fn:`AdminView.reactivateUser('${user.id}')`, style:'btn-gold' },
+        ];
+      } else {
+        actions = [
+          { icon:'✏️', label:'Edit Profile', desc:'Edit name, job title, role, email or phone number.', btnLabel:'Edit', fn:`AdminView.openEditUserModal('${user.id}')`, style:'btn-primary' },
+          { icon:'⚖️', label:'Assign Case', desc:'Assign a case matter to this staff member.', btnLabel:'Assign Case', fn:`AdminView.openAssignCaseModal('${user.id}')`, style:'btn-secondary' },
+          { icon:'🔑', label:'Reset Password', desc:'Issue a new temporary password requiring change on next login.', btnLabel:'Reset Password', fn:`AdminView.openChangePasswordModal('${user.id}')`, style:'btn-secondary' },
+          { icon:'🔒', label:'Lock Account', desc:'Immediately block access to this account.', btnLabel:'Lock', fn:`AdminView.openLockUserModal('${user.id}')`, style:'btn-secondary', note:'Requires reason', danger:true },
+        ];
+      }
+
+      // Always allow deleting user account in Account Actions tab
+      actions.push({
+        icon: '🗑️',
+        label: 'Delete User Account',
+        desc: 'Permanently remove this account from system directory, terminate active sessions, and unassign cases.',
+        btnLabel: 'Delete User',
+        fn: `AdminView.openRemoveUserModal('${user.id}')`,
+        style: 'btn-danger',
+        note: 'Permanent removal &bull; Law firm governance rules apply',
+        danger: true
+      });
+
+      return `
+        <div style="display:flex;flex-direction:column;gap:0.75rem;">
+          ${actions.map(a => `
+            <div style="background:#F8FAFC;border:1px solid ${a.danger ? '#FEE2E2' : '#E2E8F0'};border-radius:12px;padding:1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:0.86rem;font-weight:700;color:${a.danger ? '#DC2626' : '#0F172A'};margin-bottom:0.2rem;">${a.icon} ${a.label}</div>
+                <div style="font-size:0.77rem;color:#64748B;line-height:1.4;">${a.desc}</div>
+                ${a.note ? `<div style="font-size:0.7rem;color:#F59E0B;font-weight:600;margin-top:0.2rem;">⚠ ${a.note}</div>` : ''}
+              </div>
+              <button class="btn ${a.style} btn-sm" onclick="${a.fn}" style="white-space:nowrap;flex-shrink:0;font-size:0.8rem;">${a.btnLabel}</button>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+    return '';
   },
 
   openUserProfileModalTab(user, tab = 'overview') {
@@ -5249,13 +5787,8 @@ const AdminView = {
         panel.innerHTML = this.renderSecuritySystemActivityHTML(data);
       }
 
-      // Update hero attention counter
-      const heroAttention = document.getElementById('adm-hero-attention-count');
-      if (heroAttention) {
-        const cnt = data.unresolvedAlertsCount || 0;
-        heroAttention.textContent = cnt;
-        heroAttention.className = `adm-hero-pill-num ${cnt > 0 ? 'text-red' : 'text-teal'}`;
-      }
+      // Update attention indicators across dashboard
+      this.updateAttentionIndicators();
     }
   },
 
@@ -5494,19 +6027,46 @@ const AdminView = {
     this.renderSecurityAlerts(alerts);
   },
 
-  renderSecurityAlerts(alerts = []) {
-    const container = document.getElementById('adm-security-alerts-container');
-    const badge = document.getElementById('adm-alerts-count-badge');
-    const dot = document.getElementById('adm-alerts-indicator-dot');
-    const heroCount = document.getElementById('adm-hero-attention-count');
+  updateAttentionIndicators(alertsList = null) {
+    const allUsers = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.users)) ? SLCMS_STATE.users : [];
+    const activeAlerts = Array.isArray(alertsList)
+      ? alertsList
+      : ((typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.securityAlerts)) ? SLCMS_STATE.securityAlerts.filter(a => !a.resolved) : []);
+    const nowMs = Date.now();
+
+    const attentionUsers = allUsers.filter(u => {
+      const s = (u.accountStatus || u.status || '').toUpperCase();
+      const isLocked = u.adminLocked === true || s === 'LOCKED';
+      let isTempLocked = s === 'TEMPORARILY_LOCKED';
+      if (u.lockedUntil) {
+        const lockExp = typeof u.lockedUntil === 'number' ? u.lockedUntil : new Date(u.lockedUntil).getTime();
+        if (lockExp && nowMs < lockExp) {
+          isTempLocked = true;
+        } else if (!u.adminLocked && s !== 'LOCKED') {
+          isTempLocked = false;
+        }
+      }
+      const hasAlert = activeAlerts.some(a => !a.resolved && (
+        (a.userId && (a.userId === u.id || a.userId === u.user_id)) ||
+        (a.staffId && (a.staffId === u.staffId || a.staffId === u.employeeId))
+      ));
+      return isLocked || isTempLocked || hasAlert;
+    });
+
+    const count = attentionUsers.length;
+
+    const heroAttention = document.getElementById('adm-hero-attention-count');
+    const heroPillItem = heroAttention ? heroAttention.closest('.adm-hero-pill-item') : null;
+    const heroLabel = heroPillItem ? heroPillItem.querySelector('.adm-hero-pill-label') : null;
+    const coreCard = document.getElementById('adm-core-attention-card');
+    const coreTitle = coreCard ? coreCard.querySelector('.adm-core-card-title') : null;
     const coreVal = document.getElementById('adm-core-attention-val');
     const coreBadge = document.getElementById('adm-core-attention-badge');
     const coreSub = document.getElementById('adm-core-attention-sub');
     const coreTag = document.getElementById('adm-core-attention-tag');
+    const badge = document.getElementById('adm-alerts-count-badge');
+    const dot = document.getElementById('adm-alerts-indicator-dot');
 
-    const count = alerts.length;
-
-    // Update Indicators & Badges
     if (badge) {
       badge.textContent = count > 0 ? `${count} ATTENTION` : '0 requiring attention';
       badge.className = count > 0 ? 'adm-tag-danger-outline' : 'adm-tag-green-pill';
@@ -5514,9 +6074,24 @@ const AdminView = {
     if (dot) {
       dot.style.background = count > 0 ? '#EF4444' : '#10B981';
     }
-    if (heroCount) {
-      heroCount.textContent = count;
-      heroCount.className = `adm-hero-pill-num ${count > 0 ? 'text-red' : 'text-teal'}`;
+    if (heroAttention) {
+      heroAttention.textContent = count;
+      heroAttention.className = `adm-hero-pill-num ${count > 0 ? 'text-red' : 'text-teal'}`;
+    }
+    if (heroPillItem) {
+      if (count > 0) heroPillItem.classList.add('adm-pill-danger-bg');
+      else heroPillItem.classList.remove('adm-pill-danger-bg');
+    }
+    if (heroLabel) {
+      if (count > 0) heroLabel.classList.add('text-red-label');
+      else heroLabel.classList.remove('text-red-label');
+    }
+    if (coreCard) {
+      if (count > 0) coreCard.classList.add('adm-border-danger');
+      else coreCard.classList.remove('adm-border-danger');
+    }
+    if (coreTitle) {
+      coreTitle.style.color = count > 0 ? '#DC2626' : '#1E293B';
     }
     if (coreVal) {
       coreVal.textContent = count;
@@ -5528,14 +6103,28 @@ const AdminView = {
       coreBadge.style.color = count > 0 ? '#DC2626' : '#059669';
     }
     if (coreSub) {
-      coreSub.textContent = count > 0 ? 'Action Required' : 'All accounts normal';
+      coreSub.textContent = count > 0 ? 'Action Required' : 'No action required';
       coreSub.style.color = count > 0 ? '#DC2626' : '#64748B';
     }
     if (coreTag) {
-      coreTag.textContent = count > 0 ? 'Action Required' : 'Healthy';
+      coreTag.textContent = count > 0 ? 'Action Required' : 'No Action Needed';
       coreTag.style.background = count > 0 ? '#FEE2E2' : '#ECFDF5';
       coreTag.style.color = count > 0 ? '#DC2626' : '#059669';
     }
+    return count;
+  },
+
+  renderSecurityAlerts(alerts = []) {
+    const container = document.getElementById('adm-security-alerts-container');
+    const badge = document.getElementById('adm-alerts-count-badge');
+    const dot = document.getElementById('adm-alerts-indicator-dot');
+    const heroCount = document.getElementById('adm-hero-attention-count');
+    const coreVal = document.getElementById('adm-core-attention-val');
+    const coreBadge = document.getElementById('adm-core-attention-badge');
+    const coreSub = document.getElementById('adm-core-attention-sub');
+    const coreTag = document.getElementById('adm-core-attention-tag');
+
+    const count = this.updateAttentionIndicators(alerts);
 
     if (!container) return;
 
@@ -6458,9 +7047,20 @@ const AdminView = {
   submitRemoveUser(userId) {
     const res = SLCMS_STATE.deleteUser(userId);
     if (res && res.success) {
+      if (typeof AdminView.closeSidePanel === 'function') {
+        AdminView.closeSidePanel();
+      }
       App.closeModal();
       App.showToast(`User ${res.removedUser.name} permanently removed.`, 'success');
-      App.refreshCurrentView();
+      if (typeof fetch === 'function') {
+        fetch(`/api/admin/users/${userId}`, { method: 'DELETE' }).catch(() => {});
+      }
+      const container = document.getElementById('admin-tab-content');
+      if (container && typeof AdminView.renderActiveTabContent === 'function') {
+        container.innerHTML = AdminView.renderActiveTabContent();
+      } else {
+        App.refreshCurrentView();
+      }
     } else {
       App.showToast((res && res.message) || 'Failed to remove user.', 'error');
     }

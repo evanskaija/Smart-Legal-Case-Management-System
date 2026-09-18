@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    SLCMS - Module & View-Specific Styles
    ========================================================================== */
 
@@ -64,36 +64,34 @@
   66%       { transform: translateY(12px) scale(0.97); opacity: 0.65; }
 }
 
-/* ── Theme Toggle Pill — Bottom-Left Floating ─────────────────────────── */
+/* ── Theme Toggle Button — On Top of the White Form Panel ───────────────── */
 .auth-theme-toggle-pill {
-  position: fixed;
-  bottom: 1.25rem;
-  left: 1.25rem;
-  z-index: 100;
+  position: absolute;
+  top: 1.5rem;
+  right: 1.75rem;
+  z-index: 50;
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.5rem 0.85rem 0.5rem 0.65rem;
-  background: rgba(11, 31, 51, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(200, 155, 60, 0.4);
+  gap: 0.5rem;
+  padding: 0.52rem 1rem 0.52rem 0.8rem;
+  background: #FFFFFF;
+  border: 1.5px solid #CBD5E1;
   border-radius: 50px;
-  color: #E2E8F0;
-  font-size: 0.78rem;
+  color: #1E293B;
+  font-size: 0.82rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 0 0 rgba(200, 155, 60, 0);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(16, 42, 67, 0.08);
 }
 
 .auth-theme-toggle-pill:hover {
-  background: rgba(200, 155, 60, 0.18);
-  border-color: var(--color-gold);
-  color: #FCD34D;
-  transform: translateY(-2px) scale(1.03);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(200, 155, 60, 0.15);
+  background: #F8FAFC;
+  border-color: var(--color-gold, #C89B3C);
+  color: #0F172A;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(16, 42, 67, 0.12);
 }
 
 .auth-theme-toggle-pill:active {
@@ -103,28 +101,32 @@
 .auth-theme-toggle-icon {
   display: flex;
   align-items: center;
-  color: var(--color-gold);
+  color: #D97706;
 }
 
 .auth-theme-toggle-label {
   line-height: 1;
 }
 
-[data-theme="light"] .auth-theme-toggle-pill {
-  background: rgba(255, 255, 255, 0.85);
-  border-color: rgba(200, 155, 60, 0.5);
-  color: #102A43;
-  box-shadow: 0 4px 16px rgba(16, 42, 67, 0.15);
+/* Dark mode styling for theme toggle pill on the form panel */
+[data-theme="dark"] .auth-theme-toggle-pill {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(200, 155, 60, 0.45);
+  color: #F8FAFC;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
-[data-theme="light"] .auth-theme-toggle-pill:hover {
-  background: rgba(200, 155, 60, 0.12);
-  border-color: #C89B3C;
-  color: #9A721C;
+[data-theme="dark"] .auth-theme-toggle-pill:hover {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: var(--color-gold, #C89B3C);
+  color: #FCD34D;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(200, 155, 60, 0.2);
 }
 
-[data-theme="light"] .auth-theme-toggle-icon {
-  color: #C89B3C;
+[data-theme="dark"] .auth-theme-toggle-icon {
+  color: #F59E0B;
 }
 
 /* ── Trust Badge Row ───────────────────────────────────────────────────── */
@@ -348,6 +350,7 @@
 
 /* Right Section - Form Panel */
 .auth-form-panel {
+  position: relative;
   flex: 0.85;
   background: radial-gradient(circle at 50% 10%, rgba(200, 155, 60, 0.08) 0%, transparent 60%),
               linear-gradient(135deg, #F8FAFC 0%, #EEF2F6 100%);
@@ -361,6 +364,7 @@
 }
 
 [data-theme="dark"] .auth-form-panel {
+  position: relative;
   background: radial-gradient(circle at 50% 15%, rgba(200, 155, 60, 0.15) 0%, transparent 60%),
               radial-gradient(circle at 10% 85%, rgba(37, 99, 235, 0.1) 0%, transparent 45%),
               linear-gradient(145deg, #071524 0%, #0B1F33 60%, #102A43 100%) !important;
@@ -1760,48 +1764,180 @@
 .timeline-dot.dot-green { border-color: var(--color-success); }
 .timeline-dot.dot-red { border-color: var(--color-danger); }
 
-/* --- 6. TASKS & KANBAN BOARD --- */
+/* --- 6. TASKS & KANBAN BOARD (EXECUTIVE LEGAL DESIGN SYSTEM) --- */
 .kanban-board {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(260px, 1fr));
   gap: 1.25rem;
-  align-items: flex-start;
+  align-items: stretch;
+  margin-top: 1rem;
 }
 
 .kanban-col {
+  position: relative;
   background-color: var(--color-surface-subtle);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 1rem;
-  min-height: 520px;
+  border: 1px solid rgba(16, 42, 67, 0.09);
+  border-radius: 16px;
+  padding: 1.15rem 1.05rem;
+  min-height: 540px;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 4px 20px -2px rgba(16, 42, 67, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.kanban-col::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 16px 16px 0 0;
+  transition: all 0.3s ease;
+}
+
+/* Individual Column Luxury Gradients & Glow Accents */
+.kanban-col#kanban-col-todo {
+  background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+  border-color: rgba(30, 58, 138, 0.12);
+}
+.kanban-col#kanban-col-todo::before {
+  background: linear-gradient(90deg, #1E3A8A 0%, #3B82F6 100%);
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.3);
+}
+
+.kanban-col#kanban-col-in_progress {
+  background: linear-gradient(180deg, #FFFDF8 0%, #FEF9EE 100%);
+  border-color: rgba(200, 155, 60, 0.25);
+}
+.kanban-col#kanban-col-in_progress::before {
+  background: linear-gradient(90deg, #C89B3C 0%, #F59E0B 100%);
+  box-shadow: 0 2px 10px rgba(200, 155, 60, 0.35);
+}
+
+.kanban-col#kanban-col-under_review {
+  background: linear-gradient(180deg, #FAF8FF 0%, #F3EFFF 100%);
+  border-color: rgba(99, 102, 241, 0.18);
+}
+.kanban-col#kanban-col-under_review::before {
+  background: linear-gradient(90deg, #6366F1 0%, #8B5CF6 100%);
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
+}
+
+.kanban-col#kanban-col-completed {
+  background: linear-gradient(180deg, #F6FBF8 0%, #EEF9F2 100%);
+  border-color: rgba(16, 185, 129, 0.22);
+}
+.kanban-col#kanban-col-completed::before {
+  background: linear-gradient(90deg, #10B981 0%, #059669 100%);
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35);
 }
 
 .kanban-col-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1rem;
-  padding-bottom: 0.65rem;
-  border-bottom: 2px solid var(--color-border);
+  margin-bottom: 1.15rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.kanban-col-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.kanban-col-title-text {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  color: #0F172A;
+  font-size: 0.96rem;
+  letter-spacing: -0.2px;
+}
+
+.kanban-counter-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  background: #FFFFFF;
+  color: #0F172A;
+  border: 1px solid rgba(16, 42, 67, 0.12);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.kanban-quick-add-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #475569;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.kanban-quick-add-btn:hover {
+  background: #FFFFFF;
+  color: var(--color-gold);
+  border-color: var(--color-gold);
+  transform: scale(1.12);
+  box-shadow: 0 2px 8px rgba(200, 155, 60, 0.25);
 }
 
 .kanban-cards-list {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.95rem;
   flex: 1;
 }
 
+/* Stunning Empty Drop Zone Inside A Column */
+.kanban-col-empty-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  border: 1.5px dashed rgba(16, 42, 67, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.45);
+  color: #64748B;
+  font-size: 0.80rem;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-top: 0.25rem;
+}
+.kanban-col-empty-icon {
+  font-size: 1.4rem;
+  opacity: 0.55;
+  margin-bottom: 0.35rem;
+}
+
+/* --- THE KANBAN TASK CARD (BREATHTAKING BOX STYLING) --- */
 .kanban-card {
+  position: relative;
   background-color: #FFFFFF;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  padding: 1rem;
-  box-shadow: var(--shadow-xs);
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.09);
+  padding: 1.05rem 1.05rem 0.95rem 1.05rem;
+  box-shadow: 0 3px 12px -2px rgba(16, 42, 67, 0.06), 0 1px 3px rgba(0, 0, 0, 0.02);
   cursor: grab;
-  transition: all var(--transition-fast);
   border-left: 3px solid var(--color-primary);
 }
 
@@ -2580,6 +2716,7 @@
 
 @media (max-width: 420px) {
   .auth-form-panel {
+  position: relative;
     padding: 2rem 0.65rem 1.25rem 0.65rem !important;
   }
 
@@ -11082,6 +11219,7 @@
 
   /* Right / Mobile Form Panel */
   .auth-form-panel {
+  position: relative;
     flex: none !important;
     width: 100% !important;
     min-width: 0 !important;
@@ -12693,7 +12831,7 @@
 /* Core System Metrics Grid (6 Columns) */
 .adm-core-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
 }
 .adm-core-metric-card {

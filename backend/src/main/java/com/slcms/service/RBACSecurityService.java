@@ -20,6 +20,7 @@ public class RBACSecurityService {
     private final Map<String, UserAccount> userDatabase = new ConcurrentHashMap<>();
     private final List<Map<String, Object>> auditLogs = Collections.synchronizedList(new ArrayList<>());
     private final List<com.slcms.model.SecurityAlert> securityAlerts = Collections.synchronizedList(new ArrayList<>());
+    private final List<com.slcms.model.SecurityEvent> securityEvents = Collections.synchronizedList(new ArrayList<>());
 
     public RBACSecurityService() {
         seedInitialUsers();
@@ -208,10 +209,26 @@ public class RBACSecurityService {
             })
             .thenComparing(com.slcms.model.SecurityAlert::getCreatedAt, java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder()));
 
+        long now = System.currentTimeMillis();
         List<com.slcms.model.SecurityAlert> unresolved = new ArrayList<>();
         synchronized (securityAlerts) {
             for (com.slcms.model.SecurityAlert alert : securityAlerts) {
                 if (!alert.isResolved()) {
+                    // Check if temporary lock has expired
+                    UserAccount user = getUserById(alert.getUserId());
+                    if (user != null && alert.getAlertType() == com.slcms.model.AlertType.ACCOUNT_LOCKED) {
+                        if (user.getLockedUntil() != null && now >= user.getLockedUntil() && !user.isAdminLocked()) {
+                            alert.setResolved(true);
+                            alert.setResolvedAt(LocalDateTime.now());
+                            alert.setResolvedBy("SYSTEM");
+                            user.setAccountStatus(com.slcms.model.AccountStatus.ACTIVE);
+                            user.setStatus(com.slcms.model.UserStatus.ACTIVE);
+                            user.setLockedUntil(null);
+                            user.setFailedAttempts(0);
+                            user.setFailedLoginAttempts(0);
+                            continue;
+                        }
+                    }
                     unresolved.add(alert);
                 }
             }
@@ -221,9 +238,7 @@ public class RBACSecurityService {
     }
 
     public long getUnresolvedAlertsCount() {
-        synchronized (securityAlerts) {
-            return securityAlerts.stream().filter(a -> !a.isResolved()).count();
-        }
+        return getUnresolvedAlerts().size();
     }
 
     public com.slcms.model.SecurityAlert createSecurityAlert(com.slcms.model.SecurityAlert alert) {
@@ -234,7 +249,18 @@ public class RBACSecurityService {
             alert.setCreatedAt(LocalDateTime.now());
         }
         alert.setResolved(false);
-        securityAlerts.add(alert);
+
+        // Deduplicate active alert for user
+        synchronized (securityAlerts) {
+            for (com.slcms.model.SecurityAlert existing : securityAlerts) {
+                if (!existing.isResolved() && existing.getUserId() != null &&
+                    existing.getUserId().equalsIgnoreCase(alert.getUserId()) &&
+                    existing.getAlertType() == alert.getAlertType()) {
+                    return existing;
+                }
+            }
+            securityAlerts.add(alert);
+        }
         return alert;
     }
 
@@ -266,6 +292,27 @@ public class RBACSecurityService {
         }
     }
 
+    public void recordSecurityEvent(com.slcms.model.SecurityEvent event) {
+        if (event == null) return;
+        if (event.getId() == null) {
+            event.setId("evt-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 5));
+        }
+        securityEvents.add(event);
+    }
+
+    public List<com.slcms.model.SecurityEvent> getSecurityEvents(String userId) {
+        List<com.slcms.model.SecurityEvent> result = new ArrayList<>();
+        synchronized (securityEvents) {
+            for (com.slcms.model.SecurityEvent e : securityEvents) {
+                if (userId == null || userId.trim().isEmpty() || userId.equalsIgnoreCase(e.getUserId())) {
+                    result.add(e);
+                }
+            }
+        }
+        result.sort(java.util.Comparator.comparing(com.slcms.model.SecurityEvent::getEventTime, java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())));
+        return result;
+    }
+
     public UserAccount getUserById(String userId) {
         if (userId == null) return null;
         for (UserAccount u : userDatabase.values()) {
@@ -280,22 +327,32 @@ public class RBACSecurityService {
         UserAccount user = getUserById(userId);
         if (user == null) return false;
 
+        boolean isManualAdminLock = (lockedUntil == null);
+        user.setAdminLocked(isManualAdminLock);
         user.setAccountStatus(com.slcms.model.AccountStatus.LOCKED);
         user.setStatus(com.slcms.model.UserStatus.LOCKED);
         user.setLockedAt(LocalDateTime.now());
-        user.setLockedUntil(lockedUntil); // null = indefinite administrator manual lock
+        user.setLockedUntil(lockedUntil);
         user.setLockedBy(lockedBy);
         user.setLockedReason(reason);
 
         // Record security activity
         recordAudit(user.getEmail(), user.getRole().getDisplayName(), "Account Locked", "Security",
-                (lockedUntil == null ? "Administrative manual lock" : "Automatic lockout") + ": " + reason);
+                (isManualAdminLock ? "Administrative manual lock" : "Automatic lockout") + ": " + reason);
+
+        // Record security event
+        recordSecurityEvent(new com.slcms.model.SecurityEvent(
+            "evt-" + System.currentTimeMillis(), user.getId(), user.getName(),
+            com.slcms.model.EventType.ACCOUNT_MANAGEMENT,
+            isManualAdminLock ? "Locked by administrator" : "Temporarily locked for 2 minutes",
+            (isManualAdminLock ? "Account locked indefinitely by administrator: " : "Temporary login lockout: ") + reason,
+            "127.0.0.1"
+        ));
 
         // Create genuine security alert
-        boolean isAuto = (lockedUntil != null);
-        String title = isAuto ? "Account Locked Automatically" : "Account Locked by Administrator";
-        String desc = isAuto ? "The account was locked after five unsuccessful login attempts."
-                             : "Reason: " + (reason != null ? reason : "Unauthorized activity review");
+        String title = isManualAdminLock ? "Account Locked by Administrator" : "Temporary Login Lock";
+        String desc = isManualAdminLock ? "Reason: " + (reason != null ? reason : "Administrative decision")
+                                        : "Three unsuccessful login attempts";
 
         com.slcms.model.SecurityAlert alert = new com.slcms.model.SecurityAlert(
                 "alt-" + System.currentTimeMillis(),
@@ -318,6 +375,14 @@ public class RBACSecurityService {
         UserAccount user = getUserById(userId);
         if (user == null) return false;
 
+        user.setAdminLocked(false);
+        user.setFailedAttempts(0);
+        user.setFailedLoginAttempts(0);
+        user.setLockedAt(null);
+        user.setLockedUntil(null);
+        user.setLockedReason(null);
+        user.setLockedBy(null);
+
         if (forcePasswordReset) {
             user.setAccountStatus(com.slcms.model.AccountStatus.FIRST_LOGIN_RESET);
             user.setStatus(com.slcms.model.UserStatus.FIRST_LOGIN_PENDING);
@@ -329,34 +394,120 @@ public class RBACSecurityService {
             user.setStatus(com.slcms.model.UserStatus.ACTIVE);
         }
 
-        user.setFailedAttempts(0);
-        user.setFailedLoginAttempts(0);
-        user.setLockedAt(null);
-        user.setLockedUntil(null);
-        user.setLockedReason(null);
-        user.setLockedBy(null);
-
         // Resolve existing lock alert(s)
         resolveAlertsForUser(user.getId(), com.slcms.model.AlertType.ACCOUNT_LOCKED, unlockedBy);
 
-        if (forcePasswordReset) {
-            // Create FIRST_LOGIN_PENDING alert
-            com.slcms.model.SecurityAlert resetAlert = new com.slcms.model.SecurityAlert(
-                    "alt-" + System.currentTimeMillis(),
-                    user.getId(),
-                    user.getStaffId(),
-                    user.getName(),
-                    user.getRole().getDisplayName(),
-                    com.slcms.model.AlertType.FIRST_LOGIN_PENDING,
-                    "First Login Not Completed",
-                    "Temporary credentials issued following unlock. Password change required before system access.",
-                    "MEDIUM"
-            );
-            createSecurityAlert(resetAlert);
-        }
+        recordSecurityEvent(new com.slcms.model.SecurityEvent(
+            "evt-" + System.currentTimeMillis(), user.getId(), user.getName(),
+            com.slcms.model.EventType.ACCOUNT_MANAGEMENT, "Unlocked",
+            "Account unlocked by administrator " + unlockedBy, "127.0.0.1"
+        ));
 
         recordAudit(user.getEmail(), user.getRole().getDisplayName(), "Account Unlocked", "Security",
                 "Administrative unlock granted by " + unlockedBy + (reason != null ? " (" + reason + ")" : ""));
+        return true;
+    }
+
+    public boolean resetUserPassword(String userId, String newTempPass, String issuedBy) {
+        UserAccount user = getUserById(userId);
+        if (user == null) return false;
+
+        user.setPasswordPlain(newTempPass);
+        user.setPasswordHash("argon2:$2b$12$" + newTempPass.hashCode());
+        user.setMustChangePassword(true);
+        user.setFirstLoginRequired(true);
+        user.setTemporaryPasswordExpiresAt(LocalDateTime.now().plusHours(24));
+        user.setAccountStatus(com.slcms.model.AccountStatus.FIRST_LOGIN_RESET);
+        user.setStatus(com.slcms.model.UserStatus.FIRST_LOGIN_PENDING);
+
+        recordSecurityEvent(new com.slcms.model.SecurityEvent(
+            "evt-" + System.currentTimeMillis(), user.getId(), user.getName(),
+            com.slcms.model.EventType.PASSWORD_MANAGEMENT, "Temporary password issued",
+            "Temporary password issued by administrator " + issuedBy, "127.0.0.1"
+        ));
+
+        recordAudit(user.getEmail(), user.getRole().getDisplayName(), "Password Reset", "Security",
+                "Temporary credentials issued by " + issuedBy);
+        return true;
+    }
+
+    public boolean changeUserPassword(String userId, String newPassword) {
+        UserAccount user = getUserById(userId);
+        if (user == null) return false;
+
+        user.setPasswordPlain(newPassword);
+        user.setPasswordHash("argon2:$2b$12$" + newPassword.hashCode());
+        user.setMustChangePassword(false);
+        user.setFirstLoginRequired(false);
+        user.setAccountStatus(com.slcms.model.AccountStatus.ACTIVE);
+        user.setStatus(com.slcms.model.UserStatus.ACTIVE);
+
+        recordSecurityEvent(new com.slcms.model.SecurityEvent(
+            "evt-" + System.currentTimeMillis(), user.getId(), user.getName(),
+            com.slcms.model.EventType.PASSWORD_MANAGEMENT, "Successful",
+            "Password changed successfully", "127.0.0.1"
+        ));
+        return true;
+    }
+
+    public boolean createUser(UserAccount newUser) {
+        if (newUser == null || newUser.getId() == null) return false;
+        userDatabase.put(newUser.getEmail().toLowerCase(), newUser);
+
+        recordSecurityEvent(new com.slcms.model.SecurityEvent(
+            "evt-" + System.currentTimeMillis(), newUser.getId(), newUser.getName(),
+            com.slcms.model.EventType.USER_MANAGEMENT, "Created",
+            "Staff profile provisioned for " + newUser.getName(), "127.0.0.1"
+        ));
+        return true;
+    }
+
+    public boolean deactivateUser(String userId) {
+        UserAccount user = getUserById(userId);
+        if (user == null) return false;
+
+        user.setStatus(com.slcms.model.UserStatus.DEACTIVATED);
+        user.setAccountStatus(com.slcms.model.AccountStatus.DEACTIVATED);
+
+        recordSecurityEvent(new com.slcms.model.SecurityEvent(
+            "evt-" + System.currentTimeMillis(), user.getId(), user.getName(),
+            com.slcms.model.EventType.USER_MANAGEMENT, "Deactivated",
+            "Account deactivated by administrator", "127.0.0.1"
+        ));
+        return true;
+    }
+
+    public boolean updateUserRole(String userId, UserRole newRole) {
+        UserAccount user = getUserById(userId);
+        if (user == null || newRole == null) return false;
+
+        user.setRole(newRole);
+
+        recordSecurityEvent(new com.slcms.model.SecurityEvent(
+            "evt-" + System.currentTimeMillis(), user.getId(), user.getName(),
+            com.slcms.model.EventType.PERMISSION_MANAGEMENT, "Updated",
+            "Role updated to " + newRole.getDisplayName(), "127.0.0.1"
+        ));
+        return true;
+    }
+
+    public boolean deleteUser(String userId, String deletedBy) {
+        if ("usr-001".equalsIgnoreCase(userId)) return false;
+        UserAccount user = getUserById(userId);
+        if (user == null) return false;
+
+        userDatabase.values().removeIf(u -> userId.equalsIgnoreCase(u.getId()));
+        if (user.getEmail() != null) {
+            userDatabase.remove(user.getEmail().toLowerCase());
+        }
+
+        recordSecurityEvent(new com.slcms.model.SecurityEvent(
+            "evt-" + System.currentTimeMillis(), user.getId(), user.getName(),
+            com.slcms.model.EventType.USER_MANAGEMENT, "Deleted",
+            "User account permanently deleted by " + (deletedBy != null ? deletedBy : "Administrator"), "127.0.0.1"
+        ));
+        recordAudit(user.getEmail(), user.getRole() != null ? user.getRole().getDisplayName() : "Staff", "Account Deleted", "User Accounts",
+            "Account for " + user.getName() + " permanently deleted by " + (deletedBy != null ? deletedBy : "Administrator"));
         return true;
     }
 }

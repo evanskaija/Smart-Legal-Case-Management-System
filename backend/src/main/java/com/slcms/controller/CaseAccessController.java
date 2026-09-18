@@ -1,6 +1,7 @@
 package com.slcms.controller;
 
 import com.slcms.dto.AccessDeniedResponse;
+import com.slcms.dto.CaseListResponse;
 import com.slcms.model.DocumentSensitivity;
 import com.slcms.model.UserAccount;
 import com.slcms.model.UserRole;
@@ -19,16 +20,25 @@ public class CaseAccessController {
 
     private final RBACSecurityService securityService;
 
-    // Simulated case repository
+    public static String safeText(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value.trim();
+    }
+
+    // Simulated case repository with standardized and legacy-compatible fields
     private static final List<Map<String, Object>> MOCK_CASES = new ArrayList<>();
 
     static {
         Map<String, Object> c1 = new HashMap<>();
         c1.put("id", "CASE-2025-001");
         c1.put("title", "Deogratius Peter Shayo v. Republic");
+        c1.put("caseTitle", "Deogratius Peter Shayo v. Republic");
         c1.put("caseNumber", "Criminal Appeal No. 30 of 2021");
         c1.put("category", "Criminal Law / Sexual Offence");
-        c1.put("status", "Closed - Dismissed");
+        c1.put("caseType", "CRIMINAL");
+        c1.put("status", "CLOSED");
+        c1.put("clientName", "Deogratius Peter Shayo");
+        c1.put("court", "Court of Appeal of Tanzania");
+        c1.put("registry", "Dar es Salaam Appellate Registry");
         c1.put("leadCounsel", "Adv. Joyce Mercer");
         c1.put("assignedUserIds", Arrays.asList("usr-001", "usr-002", "usr-003"));
         c1.put("isSensitive", true);
@@ -37,9 +47,14 @@ public class CaseAccessController {
         Map<String, Object> c2 = new HashMap<>();
         c2.put("id", "CASE-2025-002");
         c2.put("title", "Neema Benson Shabani v. Ramadhani Juma Mpanda");
+        c2.put("caseTitle", "Neema Benson Shabani v. Ramadhani Juma Mpanda");
         c2.put("caseNumber", "Land Revision No. 31364 of 2024");
         c2.put("category", "Land Law / Limitation");
-        c2.put("status", "Closed - Struck Out");
+        c2.put("caseType", "LAND");
+        c2.put("status", "CLOSED");
+        c2.put("clientName", "Neema Benson Shabani");
+        c2.put("court", "High Court of Tanzania (Land Division)");
+        c2.put("registry", "Dar es Salaam Land Registry");
         c2.put("leadCounsel", "Adv. David Croft");
         c2.put("assignedUserIds", Arrays.asList("usr-001", "usr-003", "usr-004"));
         c2.put("isSensitive", false);
@@ -48,9 +63,14 @@ public class CaseAccessController {
         Map<String, Object> c3 = new HashMap<>();
         c3.put("id", "CASE-2025-003");
         c3.put("title", "Peter Thomas Bocco v. Republic");
+        c3.put("caseTitle", "Peter Thomas Bocco v. Republic");
         c3.put("caseNumber", "DC Criminal Revision No. 000006375 of 2025");
         c3.put("category", "Criminal Revision / Evidence");
-        c3.put("status", "Active - Remitted for Cross-Exam");
+        c3.put("caseType", "CRIMINAL");
+        c3.put("status", "ACTIVE");
+        c3.put("clientName", "Peter Thomas Bocco");
+        c3.put("court", "Resident Magistrate Court of Ilala");
+        c3.put("registry", "Ilala District Registry");
         c3.put("leadCounsel", "Adv. Joyce Mercer");
         c3.put("assignedUserIds", Arrays.asList("usr-001", "usr-002", "usr-005"));
         c3.put("isSensitive", false);
@@ -59,9 +79,14 @@ public class CaseAccessController {
         Map<String, Object> c4 = new HashMap<>();
         c4.put("id", "CASE-2025-004");
         c4.put("title", "Rogath K. Katende v. CRDB Bank PLC & Others");
+        c4.put("caseTitle", "Rogath K. Katende v. CRDB Bank PLC & Others");
         c4.put("caseNumber", "Misc. Civil Application No. 7327 of 2025");
         c4.put("category", "Commercial / Banking / Extension of Time");
-        c4.put("status", "Active - Notice Period (21 Days)");
+        c4.put("caseType", "COMMERCIAL");
+        c4.put("status", "ACTIVE");
+        c4.put("clientName", "Rogath K. Katende");
+        c4.put("court", "High Court Commercial Division");
+        c4.put("registry", "Commercial Division Registry");
         c4.put("leadCounsel", "Adv. Eleanor Vance");
         c4.put("assignedUserIds", Arrays.asList("usr-001", "usr-002", "usr-003", "usr-004", "usr-005"));
         c4.put("isSensitive", false);
@@ -143,7 +168,25 @@ public class CaseAccessController {
         String newId = "CASE-2026-00" + (MOCK_CASES.size() + 1);
         Map<String, Object> newCase = new HashMap<>(payload);
         newCase.put("id", newId);
-        newCase.put("status", "Active");
+
+        String title = safeText((String) (newCase.get("caseTitle") != null ? newCase.get("caseTitle") : newCase.get("title")), "Untitled Case");
+        String caseType = safeText((String) (newCase.get("caseType") != null ? newCase.get("caseType") : newCase.get("category")), "OTHER");
+        String status = safeText((String) newCase.get("status"), "UNASSIGNED");
+        String priority = safeText((String) newCase.get("priority"), "MEDIUM");
+        String clientName = safeText((String) (newCase.get("clientName") != null ? newCase.get("clientName") : newCase.get("client")), "No client linked");
+        String court = safeText((String) newCase.get("court"), "Not provided");
+        String registry = safeText((String) newCase.get("registry"), "");
+
+        newCase.put("title", title);
+        newCase.put("caseTitle", title);
+        newCase.put("caseType", caseType);
+        newCase.put("category", caseType);
+        newCase.put("status", status);
+        newCase.put("priority", priority);
+        newCase.put("clientName", clientName);
+        newCase.put("court", court);
+        newCase.put("registry", registry);
+
         MOCK_CASES.add(newCase);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(newCase);

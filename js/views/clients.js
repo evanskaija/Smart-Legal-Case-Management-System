@@ -173,22 +173,18 @@ const ClientsView = {
                     </div>
                     <div class="client-card-actions">
                       <div class="client-card-main-btns">
-                        <button class="btn btn-secondary btn-sm client-card-btn-profile" onclick="ClientsView.openClientProfile('${c.id}')">View Profile</button>
+                        ${!isAdmin ? `
                         <button class="btn btn-gold btn-sm client-card-btn-addcase" onclick="ClientsView.createCaseForClient('${c.name}')" title="Create Case">+ Case</button>
+                        ` : ''}
                       </div>
-                      ${isAdmin ? `
-                        <div class="client-card-sub-btns">
-                          <button class="btn btn-ghost btn-sm" onclick="ClientsView.openWhoCanAccessClientModal('${c.id}')" title="Review Who Can Access Client">👥 Access</button>
-                          <button class="btn btn-ghost btn-sm ${c.status === 'Deactivated' ? 'text-success' : 'text-danger'}" onclick="ClientsView.toggleClientStatus('${c.id}')" title="${c.status === 'Deactivated' ? 'Activate Client' : 'Deactivate Client'}">
-                            ${c.status === 'Deactivated' ? '🟢 Activate' : '🚫 Deactivate'}
-                          </button>
-                          <button class="btn btn-ghost btn-sm" onclick="ClientsView.openEditClientModal('${c.id}')" title="Edit Client Information">✏️</button>
-                        </div>
-                      ` : `
-                        <div class="client-card-sub-btns">
-                          <button class="btn btn-ghost btn-sm" onclick="ClientsView.openEditClientModal('${c.id}')" title="Edit Client Information">✏️ Edit</button>
-                        </div>
-                      `}
+                      <div class="client-card-sub-btns">
+                        <button class="btn btn-ghost btn-sm" onclick="ClientsView.openWhoCanAccessClientModal('${c.id}')" title="Review Who Can Access Client">👥 Access</button>
+                        <button class="btn btn-ghost btn-sm ${c.status === 'Deactivated' ? 'text-success' : 'text-danger'}" onclick="ClientsView.toggleClientStatus('${c.id}')" title="${c.status === 'Deactivated' ? 'Activate Client' : 'Deactivate Client'}">
+                          ${c.status === 'Deactivated' ? '🟢 Activate' : '🚫 Deactivate'}
+                        </button>
+                        <button class="btn btn-ghost btn-sm" onclick="ClientsView.openEditClientModal('${c.id}')" title="Edit Client Information">✏️</button>
+                        <button class="btn btn-ghost btn-sm text-danger" onclick="ClientsView.confirmDeleteClient('${c.id}')" title="Delete Client">🗑️</button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -218,15 +214,6 @@ const ClientsView = {
     }
   },
 
-  createCaseForClient(clientName) {
-    if (typeof CasesView !== 'undefined') {
-      CasesView.openNewCaseModal();
-      setTimeout(() => {
-        const clientSelect = document.getElementById('wz-client');
-        if (clientSelect) clientSelect.value = clientName;
-      }, 100);
-    }
-  },
 
   openClientProfile(clientId) {
     const c = SLCMS_STATE.clients.find(item => item.id === clientId);
@@ -292,7 +279,9 @@ const ClientsView = {
 
         <div class="flex items-center justify-between" style="margin-bottom: 0.75rem;">
           <h4 style="color: var(--color-primary); margin: 0;">Associated Legal Matters (${clientCases.length})</h4>
+          ${!isAdmin ? `
           <button class="btn btn-secondary btn-sm" onclick="ClientsView.createCaseForClient('${c.name}')">+ Register Case for Client</button>
+          ` : ''}
         </div>
 
         <div class="table-container">
@@ -322,7 +311,9 @@ const ClientsView = {
         <button class="btn btn-secondary" onclick="ClientsView.openEditClientModal('${c.id}')">✏️ Edit Administrative Info</button>
         <div class="flex items-center gap-2">
           <button class="btn btn-secondary" onclick="App.closeModal()">Close Dossier</button>
+          ${!isAdmin ? `
           <button class="btn btn-gold" onclick="ClientsView.createCaseForClient('${c.name}')">+ Open New Case</button>
+          ` : ''}
         </div>
       </div>
     `, 'modal-lg');
@@ -516,12 +507,17 @@ const ClientsView = {
     c.assignedLawyer = document.getElementById('ec-lawyer')?.value || c.assignedLawyer;
 
     SLCMS_STATE.addAuditLog('Client Updated', 'Clients', c.name);
+    SLCMS_STATE.persistClients();
     App.closeModal();
     App.showToast(`Client record for ${c.name} updated successfully`, 'success');
     App.refreshCurrentView();
   },
 
   createCaseForClient(clientIdentifier) {
+    if (SLCMS_STATE.currentUser?.role === 'Administrator') {
+      App.showToast('Administrators do not have permission to register legal cases.', 'warning');
+      return;
+    }
     App.closeModal();
     const c = SLCMS_STATE.clients.find(item => item.id === clientIdentifier || item.name === clientIdentifier);
     CasesView.openNewCaseModal(c ? c.id : null);
@@ -595,8 +591,48 @@ const ClientsView = {
     if (!c) return;
     const isDeactivating = (c.status !== 'Deactivated');
     c.status = isDeactivating ? 'Deactivated' : 'Active';
-    SLCMS_STATE.addAuditLog(`Client Record ${isDeactivating ? 'Deactivated' : 'Reactivated'}`, 'Clients', `${c.name} (${c.id}) by Administrator`);
+    SLCMS_STATE.addAuditLog(`Client Record ${isDeactivating ? 'Deactivated' : 'Reactivated'}`, 'Clients', `${c.name} (${c.id})`);
+    SLCMS_STATE.persistClients();
     App.showToast(`Client ${c.name} is now ${c.status}.`, isDeactivating ? 'warning' : 'success');
+    App.refreshCurrentView();
+  },
+
+  confirmDeleteClient(clientId) {
+    const c = SLCMS_STATE.clients.find(item => item.id === clientId);
+    if (!c) return;
+    App.openModal(`
+      <div class="modal-header" style="background:#FEF2F2;border-bottom:1px solid #FECACA;">
+        <h3 class="modal-title" style="color:#DC2626;">🗑️ Delete Client Record</h3>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
+      </div>
+      <div class="modal-body" style="padding:1.25rem 1.5rem;">
+        <p style="font-size:0.9rem;color:#334155;margin-bottom:0.5rem;">
+          You are about to <strong>permanently delete</strong> the client record for:
+        </p>
+        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:0.85rem 1rem;margin-bottom:1rem;">
+          <div style="font-weight:800;font-size:1rem;color:#0F172A;">${c.name}</div>
+          <div style="font-size:0.82rem;color:#64748B;margin-top:0.2rem;">${c.type} &bull; ${c.email || 'No email'} &bull; ${c.phone}</div>
+        </div>
+        <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:0.75rem 1rem;font-size:0.82rem;color:#DC2626;">
+          ⚠️ This action is <strong>irreversible</strong>. All related case links will be unlinked. Are you sure?
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+        <button class="btn" style="background:#DC2626;color:#fff;font-weight:700;" onclick="ClientsView.deleteClient('${c.id}')">Yes, Delete Permanently</button>
+      </div>
+    `);
+  },
+
+  deleteClient(clientId) {
+    const c = SLCMS_STATE.clients.find(item => item.id === clientId);
+    if (!c) return;
+    const name = c.name;
+    SLCMS_STATE.clients = SLCMS_STATE.clients.filter(item => item.id !== clientId);
+    SLCMS_STATE.addAuditLog('Client Deleted', 'Clients', `${name} (${clientId}) permanently removed`);
+    SLCMS_STATE.persistClients();
+    App.closeModal();
+    App.showToast(`Client "${name}" has been permanently deleted.`, 'warning');
     App.refreshCurrentView();
   },
 

@@ -48,6 +48,7 @@ const AIAssistantView = {
   // ── Generation & Preview State ────────────────────────────────────────────
   generationState: 'idle',   // 'idle' | 'generating' | 'done'
   generatedDoc: null,        // { id, title, content, status, caseId, ... }
+  isEditMode: false,         // Mobile toggle for viewing vs editing paper canvas
 
   // ── My Documents Archive ──────────────────────────────────────────────────
   myDocuments: [
@@ -131,6 +132,27 @@ const AIAssistantView = {
      INITIALIZATION & MAIN RENDER
      ========================================================================== */
   init() {
+    // Parse URL hash parameters if present (e.g. #ai-assistant?subPage=new-document&step=2)
+    const hash = window.location.hash || '';
+    if (hash.includes('?')) {
+      const qStr = hash.split('?')[1];
+      const qp = new URLSearchParams(qStr);
+      if (qp.has('subPage')) this.subPage = qp.get('subPage');
+      if (qp.has('step')) this.wizardStep = parseInt(qp.get('step')) || 1;
+      if (qp.has('category')) this.selectedDocCategory = qp.get('category');
+      if (qp.has('docType')) this.selectedDocType = qp.get('docType');
+      if (qp.has('tab')) this.myDocumentsTab = qp.get('tab');
+      if (qp.has('docId')) {
+        const doc = this.myDocuments.find(d => d.id === qp.get('docId'));
+        if (doc) {
+          this.generatedDoc = doc;
+          this.selectedCaseId = doc.caseId;
+          this.selectedDocType = doc.docType;
+          this.subPage = 'preview';
+        }
+      }
+    }
+
     // Initialize selectedCaseId from authorized cases
     const authCases = this.getAuthorizedCases();
     if (!this.selectedCaseId && authCases.length > 0) {
@@ -148,6 +170,9 @@ const AIAssistantView = {
     if (params.step) this.wizardStep = params.step;
     if (params.docType) { this.selectedDocType = params.docType; this.selectedDocCategory = params.category || null; }
     if (params.tab) this.myDocumentsTab = params.tab;
+    const container = document.getElementById('main-content-container');
+    if (container) container.scrollTop = 0;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     App.refreshCurrentView();
   },
 
@@ -158,14 +183,74 @@ const AIAssistantView = {
     this.docInstructions = '';
     this.generationState = 'idle';
     this.generatedDoc = null;
+    this.isEditMode = false;
     this.docOptions = { recipient: '', purpose: '', language: 'en', tone: 'formal', length: 'standard', letterhead: true, signature: true, attachments: false };
     this.subPage = 'new-document';
+    const container = document.getElementById('main-content-container');
+    if (container) container.scrollTop = 0;
     App.refreshCurrentView();
   },
 
   goToStep(step) {
     this.wizardStep = step;
+    const container = document.getElementById('main-content-container');
+    if (container) container.scrollTop = 0;
     App.refreshCurrentView();
+  },
+
+  // ── Mobile Action Helpers ────────────────────────────────────────────────
+  shareDocument() {
+    if (!this.generatedDoc) return;
+    const el = document.getElementById('dg-doc-content-inner');
+    const text = el ? el.innerText : '';
+    const title = this.generatedDoc.title || 'Legal Document';
+    if (navigator.share) {
+      navigator.share({
+        title: title,
+        text: text,
+      }).then(() => {
+        App.showToast && App.showToast('Document shared successfully', 'success');
+      }).catch((e) => {
+        if (e.name !== 'AbortError') {
+          this.copyDocumentText();
+        }
+      });
+    } else {
+      this.copyDocumentText();
+      App.showToast && App.showToast('Document text copied to clipboard for sharing', 'info');
+    }
+  },
+
+  toggleEditMode() {
+    this.isEditMode = !this.isEditMode;
+    const el = document.getElementById('dg-doc-content-inner');
+    const btn = document.getElementById('dg-edit-toggle-btn');
+    if (el) {
+      el.contentEditable = this.isEditMode ? 'true' : 'false';
+      if (this.isEditMode) el.focus();
+    }
+    if (btn) {
+      btn.innerHTML = this.isEditMode ? '👁 View Mode' : '✏ Edit Mode';
+      btn.classList.toggle('dg-appr-btn-primary', this.isEditMode);
+    }
+    App.showToast && App.showToast(this.isEditMode ? 'Edit Mode enabled — tap anywhere in the document to edit' : 'View Mode enabled', 'info');
+  },
+
+  selectAllSources(val) {
+    Object.keys(this.selectedSources).forEach(k => {
+      this.selectedSources[k] = !!val;
+    });
+    App.refreshCurrentView();
+  },
+
+  filterDocTypes(term) {
+    const q = (term || '').toLowerCase().trim();
+    const tiles = document.querySelectorAll('.dg-doctype-tile');
+    tiles.forEach(t => {
+      const label = (t.querySelector('.dg-doctype-tile-label')?.innerText || '').toLowerCase();
+      const match = !q || label.includes(q);
+      t.style.display = match ? '' : 'none';
+    });
   },
 
   // ── RBAC: Get Authorized Cases ────────────────────────────────────────────
@@ -530,41 +615,49 @@ const AIAssistantView = {
 
     return `
       <!-- Page Header -->
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1.4rem;flex-wrap:wrap;">
-        <div>
+      <div class="dg-header-row">
+        <div class="dg-header-info">
           <div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:0.35rem;">
             <span style="font-size:1.4rem;">✦</span>
-            <h1 style="font-size:1.35rem;font-weight:800;margin:0;color:var(--color-primary);">SLCMS AI Report &amp; Document Generator</h1>
+            <h1 class="dg-header-title">SLCMS AI Report &amp; Document Generator</h1>
           </div>
-          <p style="font-size:0.82rem;color:var(--color-text-secondary);margin:0;max-width:560px;">
+          <p class="dg-header-desc">
             Generate reports, letters and internal documents from your assigned cases. Documents require professional review before being filed, signed or sent.
           </p>
         </div>
-        <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+        <div class="dg-header-actions">
           <button class="dg-appr-btn" onclick="AIAssistantView.navigateTo('my-documents')" style="gap:0.35rem;">📂 My Documents <span class="dg-tab-count">${this.myDocuments.length}</span></button>
           <button class="dg-appr-btn" onclick="AIAssistantView.navigateTo('templates')">📋 Templates</button>
         </div>
       </div>
 
+      <!-- Mobile Sub-Navigation Pill Strip -->
+      <div class="dg-mobile-subnav">
+        <button class="dg-subnav-pill dg-subnav-pill-active" onclick="AIAssistantView.navigateTo('dashboard')">🏠 Hub</button>
+        <button class="dg-subnav-pill" onclick="AIAssistantView.startNewDocument()">✦ New Doc</button>
+        <button class="dg-subnav-pill" onclick="AIAssistantView.navigateTo('my-documents')">📂 My Docs (${this.myDocuments.length})</button>
+        <button class="dg-subnav-pill" onclick="AIAssistantView.navigateTo('templates')">📋 Templates</button>
+      </div>
+
       <!-- Role & Access Info -->
-      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+      <div class="dg-role-row">
         <span style="font-size:0.75rem;color:var(--color-text-secondary);">Signed in as</span>
         <span style="font-size:0.78rem;font-weight:700;color:var(--color-primary);">${this.escHtml(user.name || 'User')}</span>
         <span class="dg-case-role-chip">⚙ ${this.escHtml(user.role || '')}</span>
         <span style="font-size:0.75rem;color:var(--color-text-secondary);">&bull; ${authCases.length} case${authCases.length !== 1 ? 's' : ''} accessible</span>
       </div>
 
-      <!-- Stats Row -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1.5rem;">
+      <!-- Stats Row (Responsive 3-Column Grid) -->
+      <div class="dg-stats-grid">
         ${[
           { label: 'Drafts', count: draftCount, color: '#64748B', icon: '📝', tab: 'draft' },
           { label: 'Pending Review', count: pendingCount, color: '#B45309', icon: '⏳', tab: 'pending_review' },
           { label: 'Approved', count: approvedCount, color: '#15803D', icon: '✅', tab: 'approved' },
         ].map(s => `
-          <div class="dg-dash-card" onclick="AIAssistantView.navigateTo('my-documents',{tab:'${s.tab}'})" style="text-align:center;padding:1rem;">
-            <div style="font-size:1.4rem;margin-bottom:0.35rem;">${s.icon}</div>
-            <div style="font-size:1.5rem;font-weight:800;color:${s.color};">${s.count}</div>
-            <div style="font-size:0.73rem;color:var(--color-text-secondary);font-weight:600;">${s.label}</div>
+          <div class="dg-stat-box" onclick="AIAssistantView.navigateTo('my-documents',{tab:'${s.tab}'})">
+            <div class="dg-stat-icon">${s.icon}</div>
+            <div class="dg-stat-val" style="color:${s.color};">${s.count}</div>
+            <div class="dg-stat-label">${s.label}</div>
           </div>`).join('')}
       </div>
 
@@ -619,18 +712,50 @@ const AIAssistantView = {
         </div>`;
     }).join('');
 
+    const currentStepObj = steps[this.wizardStep - 1] || steps[0];
+    const progressPercent = Math.round((this.wizardStep / 5) * 100);
+
     return `
+      <!-- Mobile Sub-Navigation Pill Strip -->
+      <div class="dg-mobile-subnav">
+        <button class="dg-subnav-pill" onclick="AIAssistantView.navigateTo('dashboard')">🏠 Hub</button>
+        <button class="dg-subnav-pill dg-subnav-pill-active" onclick="AIAssistantView.startNewDocument()">✦ New Doc</button>
+        <button class="dg-subnav-pill" onclick="AIAssistantView.navigateTo('my-documents')">📂 My Docs (${this.myDocuments.length})</button>
+        <button class="dg-subnav-pill" onclick="AIAssistantView.navigateTo('templates')">📋 Templates</button>
+      </div>
+
       <!-- Wizard Header -->
-      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
-        <button class="dg-preview-back-btn" onclick="AIAssistantView.navigateTo('dashboard')">← Dashboard</button>
-        <div>
-          <h2 style="font-size:1.1rem;font-weight:800;margin:0;color:var(--color-primary);">Create Case Document</h2>
-          <div style="font-size:0.75rem;color:var(--color-text-secondary);margin-top:0.1rem;">Step ${this.wizardStep} of 5</div>
+      <div class="dg-header-row" style="margin-bottom:1rem;">
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <button class="dg-preview-back-btn" onclick="AIAssistantView.navigateTo('dashboard')">← Dashboard</button>
+          <div>
+            <h2 style="font-size:1.15rem;font-weight:800;margin:0;color:var(--color-primary);">Create Case Document</h2>
+            <div style="font-size:0.75rem;color:var(--color-text-secondary);margin-top:0.1rem;">Step ${this.wizardStep} of 5 &bull; ${this.escHtml(currentStepObj.label)}</div>
+          </div>
         </div>
       </div>
+
+      <!-- Mobile Stepper Progress Bar (Shown on Mobile & Tablet <= 900px) -->
+      <div class="dg-mobile-stepper">
+        <div class="dg-mobile-stepper-top">
+          <span class="dg-mobile-stepper-title">${this.escHtml(currentStepObj.label)}</span>
+          <span class="dg-mobile-stepper-count">Step ${this.wizardStep} of 5 &bull; ${progressPercent}%</span>
+        </div>
+        <div class="dg-mobile-progress-bar">
+          <div class="dg-mobile-progress-fill" style="width:${progressPercent}%;"></div>
+        </div>
+        <div class="dg-mobile-step-pills">
+          ${steps.map(s => `
+            <div class="dg-step-pill ${this.wizardStep > s.n ? 'dg-pill-done' : this.wizardStep === s.n ? 'dg-pill-active' : ''}"
+                 onclick="${s.n < this.wizardStep ? `AIAssistantView.goToStep(${s.n})` : ''}">
+              ${this.wizardStep > s.n ? '✓' : s.n}
+            </div>`).join('')}
+        </div>
+      </div>
+
       <!-- Wizard Shell -->
       <div class="dg-wizard-shell">
-        <!-- Stepper Sidebar -->
+        <!-- Stepper Sidebar (Desktop) -->
         <div class="dg-stepper-sidebar">
           <div class="dg-stepper-title">Progress</div>
           <div class="dg-stepper-list">${stepperHtml}</div>
@@ -662,7 +787,7 @@ const AIAssistantView = {
     const casePreviewHtml = selectedCase && accessResult.allowed ? `
       <div class="dg-case-preview-card">
         <div class="dg-case-preview-title">
-          📁 ${this.escHtml(selectedCase.title)}
+          <span>📁 ${this.escHtml(selectedCase.title)}</span>
           ${this.renderStatusBadge(selectedCase.status)}
         </div>
         <div class="dg-case-meta-grid">
@@ -675,7 +800,7 @@ const AIAssistantView = {
           <div class="dg-case-meta-row"><strong>Assigned Lawyer:</strong> <span class="dg-meta-val">${this.escHtml(selectedCase.lawyer || '')}</span></div>
           <div class="dg-case-meta-row"><strong>Opposing Party:</strong> <span class="dg-meta-val">${this.escHtml(selectedCase.opposingParty || '')}</span></div>
         </div>
-        <div class="dg-case-role-chip">✓ Case Assigned — You are authorized to generate documents</div>
+        <div class="dg-case-role-chip" style="margin-top:0.75rem;">✓ Case Assigned — You are authorized to generate documents</div>
       </div>` : '';
 
     const noAccess = !accessResult.allowed;
@@ -779,9 +904,6 @@ const AIAssistantView = {
       }
     ];
 
-    // Filter: Legal Clerk cannot do legal opinions
-    const tier = this.getRoleTier();
-
     const groupsHtml = groups.map(g => `
       <div class="dg-doctype-section">
         <div class="dg-doctype-section-title">${g.title}</div>
@@ -804,7 +926,15 @@ const AIAssistantView = {
             <div class="dg-step-header-required">Required — select what the AI should generate</div>
           </div>
         </div>
-        <div class="dg-step-body" style="max-height:520px;overflow-y:auto;">${groupsHtml}</div>
+        <div class="dg-step-body" style="max-height:540px;overflow-y:auto;">
+          <!-- Mobile Quick Search -->
+          <div style="margin-bottom:1rem;">
+            <input type="text" class="dg-doctype-search" placeholder="🔍 Search document type or report..."
+              oninput="AIAssistantView.filterDocTypes(this.value)"
+              style="width:100%;box-sizing:border-box;padding:0.65rem 0.9rem;border-radius:10px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-main);font-size:0.84rem;outline:none;" />
+          </div>
+          ${groupsHtml}
+        </div>
         <div class="dg-step-footer">
           <button class="dg-btn-prev" onclick="AIAssistantView.goToStep(1)">← Back</button>
           <button class="dg-btn-next" onclick="AIAssistantView.proceedStep2()" ${!this.selectedDocType ? 'disabled' : ''}>
@@ -854,7 +984,7 @@ const AIAssistantView = {
           <textarea class="dg-instr-textarea" id="dg-instr-textarea" placeholder="${placeholder}"
             oninput="AIAssistantView.docInstructions = this.value">${this.escHtml(this.docInstructions)}</textarea>
 
-          <!-- Options Grid -->
+          <!-- Options Grid (Responsive 2-col to 1-col on mobile) -->
           <div class="dg-opts-grid">
             <div class="dg-opts-field">
               <label class="dg-opts-label">Recipient</label>
@@ -886,7 +1016,7 @@ const AIAssistantView = {
                 <option value="internal" ${this.docOptions.tone === 'internal' ? 'selected' : ''}>Internal Confidential</option>
               </select>
             </div>
-            <div class="dg-opts-field">
+            <div class="dg-opts-field" style="grid-column:1 / -1;">
               <label class="dg-opts-label">Length</label>
               <select class="dg-opts-select" id="dg-opt-length" onchange="AIAssistantView.docOptions.length = this.value">
                 <option value="brief" ${this.docOptions.length === 'brief' ? 'selected' : ''}>Brief</option>
@@ -953,10 +1083,18 @@ const AIAssistantView = {
           </div>
         </div>
         <div class="dg-step-body">
-          <div class="dg-source-counter">
-            <span>📊</span>
-            <span id="dg-source-counter-text">Sources selected: <strong>${count} case record${count !== 1 ? 's' : ''}</strong> and authorized documents</span>
+          <!-- Mobile Controls Row: Counter + Select All / Clear -->
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+            <div class="dg-source-counter" style="margin-bottom:0;">
+              <span>📊</span>
+              <span id="dg-source-counter-text">Sources selected: <strong>${count} case record${count !== 1 ? 's' : ''}</strong></span>
+            </div>
+            <div style="display:flex;gap:0.4rem;">
+              <button type="button" class="dg-appr-btn" style="padding:0.35rem 0.65rem;font-size:0.74rem;" onclick="AIAssistantView.selectAllSources(true)">✓ Select All</button>
+              <button type="button" class="dg-appr-btn" style="padding:0.35rem 0.65rem;font-size:0.74rem;" onclick="AIAssistantView.selectAllSources(false)">✕ Clear</button>
+            </div>
           </div>
+
           <div class="dg-source-grid">
             ${sources.map(s => {
               const isChecked = !!this.selectedSources[s.key];
@@ -1035,6 +1173,14 @@ const AIAssistantView = {
 
     return `
       <div class="dg-preview-shell">
+        <!-- Mobile Sub-Navigation Pill Strip -->
+        <div class="dg-mobile-subnav">
+          <button class="dg-subnav-pill" onclick="AIAssistantView.navigateTo('dashboard')">🏠 Hub</button>
+          <button class="dg-subnav-pill" onclick="AIAssistantView.startNewDocument()">✦ New Doc</button>
+          <button class="dg-subnav-pill" onclick="AIAssistantView.navigateTo('my-documents')">📂 My Docs (${this.myDocuments.length})</button>
+          <button class="dg-subnav-pill" onclick="AIAssistantView.navigateTo('templates')">📋 Templates</button>
+        </div>
+
         <!-- Top Bar -->
         <div class="dg-preview-topbar">
           <div class="dg-preview-topbar-left">
@@ -1068,6 +1214,9 @@ const AIAssistantView = {
             <span style="font-size:0.78rem;color:var(--color-text-secondary);">Attached to: ${this.escHtml(doc.caseTitle || '')}</span>
           </div>
           <div class="dg-approval-bar-actions">
+            <!-- Mobile Edit Mode Toggle & Native Share -->
+            <button id="dg-edit-toggle-btn" class="dg-appr-btn ${this.isEditMode ? 'dg-appr-btn-primary' : ''}" onclick="AIAssistantView.toggleEditMode()" title="Toggle View/Edit mode">${this.isEditMode ? '👁 View Mode' : '✏ Edit Mode'}</button>
+            <button class="dg-appr-btn" onclick="AIAssistantView.shareDocument()" title="Share document via WhatsApp, Email or other apps">📲 Share</button>
             <button class="dg-appr-btn" onclick="AIAssistantView.copyDocumentText()" title="Copy text">📋 Copy</button>
             <button class="dg-appr-btn" onclick="AIAssistantView.saveDocumentDraft()" title="Save draft">💾 Save Draft</button>
             ${isDraft ? `<button class="dg-appr-btn dg-appr-btn-primary" onclick="AIAssistantView.submitForReview()">📤 Submit for Review</button>` : ''}
@@ -1084,9 +1233,9 @@ const AIAssistantView = {
           </div>
         </div>
 
-        <!-- Document Canvas -->
-        <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:14px;overflow:hidden;">
-          <div id="dg-doc-content-inner" contenteditable="${isDraft || isPending ? 'true' : 'false'}" style="padding:2.5rem 3rem;outline:none;min-height:600px;font-family:'Times New Roman',serif;font-size:0.95rem;line-height:1.8;color:var(--color-text-main);">
+        <!-- Document Paper Canvas -->
+        <div class="dg-canvas-card">
+          <div id="dg-doc-content-inner" class="dg-doc-paper" contenteditable="${this.isEditMode ? 'true' : 'false'}">
             ${doc.content || ''}
           </div>
         </div>
@@ -1145,13 +1294,22 @@ const AIAssistantView = {
           </div>`).join('');
 
     return `
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+      <!-- Mobile Sub-Navigation Pill Strip -->
+      <div class="dg-mobile-subnav">
+        <button class="dg-subnav-pill" onclick="AIAssistantView.navigateTo('dashboard')">🏠 Hub</button>
+        <button class="dg-subnav-pill" onclick="AIAssistantView.startNewDocument()">✦ New Doc</button>
+        <button class="dg-subnav-pill dg-subnav-pill-active" onclick="AIAssistantView.navigateTo('my-documents')">📂 My Docs (${this.myDocuments.length})</button>
+        <button class="dg-subnav-pill" onclick="AIAssistantView.navigateTo('templates')">📋 Templates</button>
+      </div>
+
+      <div class="dg-header-row" style="margin-bottom:1rem;">
         <div style="display:flex;align-items:center;gap:0.75rem;">
           <button class="dg-preview-back-btn" onclick="AIAssistantView.navigateTo('dashboard')">← Dashboard</button>
-          <h2 style="font-size:1.1rem;font-weight:800;margin:0;color:var(--color-primary);">My Documents</h2>
+          <h2 style="font-size:1.15rem;font-weight:800;margin:0;color:var(--color-primary);">My Documents</h2>
         </div>
         <button class="dg-btn-next" onclick="AIAssistantView.startNewDocument()" style="padding:0.5rem 1rem;font-size:0.8rem;">+ New Document</button>
       </div>
+
       <div class="dg-tabs-row">
         ${tabs.map(t => `
           <button class="dg-tab${this.myDocumentsTab === t.key ? ' dg-tab-active' : ''}"
@@ -1174,9 +1332,19 @@ const AIAssistantView = {
       { icon: '📑', title: 'Internal Documents', desc: 'Memos, handover notes, briefings and research requests', key: 'internal' },
     ];
     return `
-      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
-        <button class="dg-preview-back-btn" onclick="AIAssistantView.navigateTo('dashboard')">← Dashboard</button>
-        <h2 style="font-size:1.1rem;font-weight:800;margin:0;color:var(--color-primary);">Document Templates</h2>
+      <!-- Mobile Sub-Navigation Pill Strip -->
+      <div class="dg-mobile-subnav">
+        <button class="dg-subnav-pill" onclick="AIAssistantView.navigateTo('dashboard')">🏠 Hub</button>
+        <button class="dg-subnav-pill" onclick="AIAssistantView.startNewDocument()">✦ New Doc</button>
+        <button class="dg-subnav-pill" onclick="AIAssistantView.navigateTo('my-documents')">📂 My Docs (${this.myDocuments.length})</button>
+        <button class="dg-subnav-pill dg-subnav-pill-active" onclick="AIAssistantView.navigateTo('templates')">📋 Templates</button>
+      </div>
+
+      <div class="dg-header-row" style="margin-bottom:1rem;">
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <button class="dg-preview-back-btn" onclick="AIAssistantView.navigateTo('dashboard')">← Dashboard</button>
+          <h2 style="font-size:1.15rem;font-weight:800;margin:0;color:var(--color-primary);">Document Templates</h2>
+        </div>
       </div>
       <p style="font-size:0.83rem;color:var(--color-text-secondary);margin-bottom:1.25rem;">Select a category to start generating from a pre-structured template. All templates pull from your assigned case data.</p>
       <div class="dg-dash-grid">
@@ -1308,13 +1476,15 @@ const AIAssistantView = {
     return `
       ${letterhead}
       <h2 style="font-size:1rem;font-weight:800;border-bottom:2px solid #C89B3C;padding-bottom:0.5rem;margin-bottom:1rem;">CASE PROGRESS REPORT</h2>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:0.88rem;">
-        ${[
-          ['Report Date', dateStr], ['Case Number', caseNum], ['Case Title', this.escHtml(c.title || '')],
-          ['Client', clientName], ['Court', court], ['Status', this.escHtml(c.status || '')],
-          ['Assigned Lawyer', this.escHtml(c.lawyer || '')], ['Next Hearing', hearingDate],
-        ].map(([k,v]) => `<tr><td style="padding:0.35rem 0.6rem;font-weight:700;width:35%;border:1px solid #E2E8F0;">${k}</td><td style="padding:0.35rem 0.6rem;border:1px solid #E2E8F0;">${v}</td></tr>`).join('')}
-      </table>
+      <div class="dg-table-wrap">
+        <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:0.88rem;">
+          ${[
+            ['Report Date', dateStr], ['Case Number', caseNum], ['Case Title', this.escHtml(c.title || '')],
+            ['Client', clientName], ['Court', court], ['Status', this.escHtml(c.status || '')],
+            ['Assigned Lawyer', this.escHtml(c.lawyer || '')], ['Next Hearing', hearingDate],
+          ].map(([k,v]) => `<tr><td style="padding:0.35rem 0.6rem;font-weight:700;width:35%;border:1px solid #E2E8F0;">${k}</td><td style="padding:0.35rem 0.6rem;border:1px solid #E2E8F0;">${v}</td></tr>`).join('')}
+        </table>
+      </div>
       <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;color:#0A1B2D;">1. Case Background</h3>
       <p>${this.escHtml(c.description || '')}${!c.description ? `<span class="dg-placeholder">[Case background required]</span>` : ''}</p>
       <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;color:#0A1B2D;">2. Recent Activity</h3>
@@ -1333,9 +1503,11 @@ const AIAssistantView = {
     return `
       ${letterhead}
       <h2 style="font-size:1rem;font-weight:800;border-bottom:2px solid #C89B3C;padding-bottom:0.5rem;margin-bottom:1rem;">CASE SUMMARY REPORT</h2>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:0.88rem;">
-        ${[['Case Number',caseNum],['Case Title',this.escHtml(c.title||'')],['Client',clientName],['Opposing Party',this.escHtml(c.opposingParty||'')],['Court',court],['Status',this.escHtml(c.status||'')]].map(([k,v])=>`<tr><td style="padding:0.35rem 0.6rem;font-weight:700;width:35%;border:1px solid #E2E8F0;">${k}</td><td style="padding:0.35rem 0.6rem;border:1px solid #E2E8F0;">${v}</td></tr>`).join('')}
-      </table>
+      <div class="dg-table-wrap">
+        <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:0.88rem;">
+          ${[['Case Number',caseNum],['Case Title',this.escHtml(c.title||'')],['Client',clientName],['Opposing Party',this.escHtml(c.opposingParty||'')],['Court',court],['Status',this.escHtml(c.status||'')]].map(([k,v])=>`<tr><td style="padding:0.35rem 0.6rem;font-weight:700;width:35%;border:1px solid #E2E8F0;">${k}</td><td style="padding:0.35rem 0.6rem;border:1px solid #E2E8F0;">${v}</td></tr>`).join('')}
+        </table>
+      </div>
       <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">1. Background Facts</h3>
       <p>${this.escHtml(c.facts||'') || `<span class="dg-placeholder">[Material facts required]</span>`}</p>
       <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">2. Client's Position</h3>
@@ -1353,16 +1525,18 @@ const AIAssistantView = {
     return `
       ${letterhead}
       <h2 style="font-size:1rem;font-weight:800;border-bottom:2px solid #C89B3C;padding-bottom:0.5rem;margin-bottom:1rem;">COURT ATTENDANCE REPORT</h2>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:0.88rem;">
-        ${[
-          ['Court',court],['Case Number',caseNum],['Case Title',this.escHtml(c.title||'')],
-          ['Attendance Date',`<span class="dg-placeholder">[Date of court appearance required]</span>`],
-          ['Judicial Officer',`<span class="dg-placeholder">[Judge/Magistrate name required]</span>`],
-          ['Advocate Present',this.escHtml(user.name||'')],
-          ['Client Present',`<span class="dg-placeholder">[Yes/No]</span>`],
-          ['Next Hearing',hearingDate],
-        ].map(([k,v])=>`<tr><td style="padding:0.35rem 0.6rem;font-weight:700;width:35%;border:1px solid #E2E8F0;">${k}</td><td style="padding:0.35rem 0.6rem;border:1px solid #E2E8F0;">${v}</td></tr>`).join('')}
-      </table>
+      <div class="dg-table-wrap">
+        <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:0.88rem;">
+          ${[
+            ['Court',court],['Case Number',caseNum],['Case Title',this.escHtml(c.title||'')],
+            ['Attendance Date',`<span class="dg-placeholder">[Date of court appearance required]</span>`],
+            ['Judicial Officer',`<span class="dg-placeholder">[Judge/Magistrate name required]</span>`],
+            ['Advocate Present',this.escHtml(user.name||'')],
+            ['Client Present',`<span class="dg-placeholder">[Yes/No]</span>`],
+            ['Next Hearing',hearingDate],
+          ].map(([k,v])=>`<tr><td style="padding:0.35rem 0.6rem;font-weight:700;width:35%;border:1px solid #E2E8F0;">${k}</td><td style="padding:0.35rem 0.6rem;border:1px solid #E2E8F0;">${v}</td></tr>`).join('')}
+        </table>
+      </div>
       <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">What Happened in Court</h3>
       <p>${instructions || `<span class="dg-placeholder">[Summary of what happened in court required from your instructions]</span>`}</p>
       <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">Court Directions</h3>
@@ -1378,9 +1552,11 @@ const AIAssistantView = {
     return `
       ${letterhead}
       <h2 style="font-size:1rem;font-weight:800;border-bottom:2px solid #C89B3C;padding-bottom:0.5rem;margin-bottom:1rem;">INTERNAL MEMORANDUM — CONFIDENTIAL</h2>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:0.88rem;">
-        ${[['To',`<span class="dg-placeholder">[Recipient required]</span>`],['From',this.escHtml(user.name||'')],['Date',dateStr],['Re',`${caseNum} — ${this.escHtml(c.title||'')}`],['Classification','INTERNAL — CONFIDENTIAL']].map(([k,v])=>`<tr><td style="padding:0.35rem 0.6rem;font-weight:700;width:25%;border:1px solid #E2E8F0;">${k}</td><td style="padding:0.35rem 0.6rem;border:1px solid #E2E8F0;">${v}</td></tr>`).join('')}
-      </table>
+      <div class="dg-table-wrap">
+        <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:0.88rem;">
+          ${[['To',`<span class="dg-placeholder">[Recipient required]</span>`],['From',this.escHtml(user.name||'')],['Date',dateStr],['Re',`${caseNum} — ${this.escHtml(c.title||'')}`],['Classification','INTERNAL — CONFIDENTIAL']].map(([k,v])=>`<tr><td style="padding:0.35rem 0.6rem;font-weight:700;width:25%;border:1px solid #E2E8F0;">${k}</td><td style="padding:0.35rem 0.6rem;border:1px solid #E2E8F0;">${v}</td></tr>`).join('')}
+        </table>
+      </div>
       <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">Purpose</h3>
       <p>${instructions || `<span class="dg-placeholder">[Memo purpose and content required from your instructions]</span>`}</p>
       <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">Case Background</h3>
@@ -1412,9 +1588,11 @@ const AIAssistantView = {
     return `
       ${letterhead}
       <h2 style="font-size:1rem;font-weight:800;border-bottom:2px solid #C89B3C;padding-bottom:0.5rem;margin-bottom:1rem;">CASE CLOSING REPORT</h2>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:0.88rem;">
-        ${[['Case Number',caseNum],['Client',clientName],['Court',court],['Closing Date',dateStr],['Prepared By',this.escHtml(user.name||'')]].map(([k,v])=>`<tr><td style="padding:0.35rem 0.6rem;font-weight:700;width:35%;border:1px solid #E2E8F0;">${k}</td><td style="padding:0.35rem 0.6rem;border:1px solid #E2E8F0;">${v}</td></tr>`).join('')}
-      </table>
+      <div class="dg-table-wrap">
+        <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:0.88rem;">
+          ${[['Case Number',caseNum],['Client',clientName],['Court',court],['Closing Date',dateStr],['Prepared By',this.escHtml(user.name||'')]].map(([k,v])=>`<tr><td style="padding:0.35rem 0.6rem;font-weight:700;width:35%;border:1px solid #E2E8F0;">${k}</td><td style="padding:0.35rem 0.6rem;border:1px solid #E2E8F0;">${v}</td></tr>`).join('')}
+        </table>
+      </div>
       <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">Final Outcome</h3>
       <p>${instructions || `<span class="dg-placeholder">[Final outcome required from your instructions]</span>`}</p>
       <h3 style="font-size:0.88rem;font-weight:800;margin-top:1rem;">Documents Completed</h3>

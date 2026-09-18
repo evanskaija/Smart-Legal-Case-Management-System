@@ -34,6 +34,7 @@ const AuthView = {
     }
 
     const isLoginTab = (this.currentTab === 'login');
+    const isDark = (document.documentElement.getAttribute('data-theme') === 'dark' || (typeof App !== 'undefined' && App.theme === 'dark'));
 
     return `
       <div class="auth-page-container animate-fade" style="position: relative;">
@@ -41,17 +42,6 @@ const AuthView = {
         <div class="auth-bg-orb auth-bg-orb-1"></div>
         <div class="auth-bg-orb auth-bg-orb-2"></div>
         <div class="auth-bg-orb auth-bg-orb-3"></div>
-
-        <!-- Theme Toggle: Bottom-Left Floating Pill (Best UX Position) -->
-        <button class="auth-theme-toggle-pill" id="auth-theme-toggle-btn" onclick="App.toggleTheme()" title="Toggle Dark / Light Mode (Ctrl+Shift+D)" aria-label="Toggle theme">
-          <span class="auth-theme-toggle-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-            </svg>
-          </span>
-          <span class="auth-theme-toggle-label">Dark Mode</span>
-        </button>
-
 
         <div class="auth-split-layout">
           <!-- 1. Left Legal Hero Branding Section -->
@@ -114,6 +104,30 @@ const AuthView = {
             </div>
           </div>          <!-- 2. Right Form Section - Premium Redesigned Auth Card -->
           <div class="auth-form-panel">
+
+            <!-- Dark / Light Mode Button: Positioned on Top of the White Part Side -->
+            <button class="auth-theme-toggle-pill" id="auth-theme-toggle-btn" onclick="App.toggleTheme()" title="Toggle Dark / Light Mode (Ctrl+Shift+D)" aria-label="Toggle theme">
+              <span class="auth-theme-toggle-icon">
+                ${isDark ? `
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/>
+                    <line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/>
+                    <line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                  </svg>
+                ` : `
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                  </svg>
+                `}
+              </span>
+              <span class="auth-theme-toggle-label">${isDark ? 'Light Mode' : 'Dark Mode'}</span>
+            </button>
 
             <!-- Mobile-Only Premium Header (hidden on desktop) -->
             <div class="auth-mobile-brand-header">
@@ -1137,17 +1151,32 @@ const AuthView = {
       btn.disabled = true;
     }
 
-    // Server-Side Verification
-    setTimeout(() => {
-      const authResult = SLCMS_STATE.serverAuthenticate(emailVal, passwordVal, rememberMeCheck?.checked);
+    // Backend-backed authentication with offline fallback
+    (async () => {
+      let authResult = null;
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: emailVal, email: emailVal, password: passwordVal })
+        });
+        authResult = await response.json();
+      } catch (err) {
+        // Fallback to client state engine
+        authResult = SLCMS_STATE.serverAuthenticate(emailVal, passwordVal, rememberMeCheck?.checked);
+      }
 
       if (!authResult.success) {
         if (btn) { btn.innerHTML = 'Login'; btn.disabled = false; }
-        this.showServerAlert(authResult.message);
+        if (authResult.errorType === 'TEMPORARILY_LOCKED' && authResult.lockedUntil) {
+          this.startLockCountdown(authResult.lockedUntil, authResult.message);
+        } else {
+          this.showServerAlert(authResult.message);
+        }
         return;
       }
 
-      // Handle First-Login Password Change Intercept (Section 5)
+      // Handle First-Login Password Change Intercept
       if (authResult.requiresFirstLoginChange) {
         this.tempAuthUser = authResult.user;
         this.currentViewMode = 'first_login_password_change';
@@ -1157,9 +1186,9 @@ const AuthView = {
         return;
       }
 
-      // Complete Login: Store session and redirect to role dashboard (Section 11)
+      // Complete Login: Store session and redirect to role dashboard
       sessionStorage.setItem('slcms_auth', 'true');
-      sessionStorage.setItem('slcms_token', authResult.token);
+      sessionStorage.setItem('slcms_token', authResult.token || ('slcms_jwt_' + Date.now()));
       if (authResult.user) {
         sessionStorage.setItem('slcms_current_user', JSON.stringify(authResult.user));
         sessionStorage.setItem('slcms_current_user_id', authResult.user.id);
@@ -1172,7 +1201,6 @@ const AuthView = {
       App.isLoggedIn = true;
       App.renderAuthenticatedApp();
 
-      // Derive destination from role — never fall back blindly to admin dashboard
       const rawDestination = authResult.destination ||
         (typeof SLCMS_STATE !== 'undefined' && typeof SLCMS_STATE.getPermittedDestination === 'function'
           ? SLCMS_STATE.getPermittedDestination(authResult.user?.role)
@@ -1180,9 +1208,8 @@ const AuthView = {
       const destination = rawDestination.replace(/^\/+/, '');
       App.navigate(destination);
 
-      const firstName = authResult.user.name.split(' ')[0] || 'Counsel';
-      App.showToast(`Welcome back, ${firstName}.`, 'success');
-    }, 450);
+      App.showToast(authResult.message || 'Login successful. Welcome to SLCMS.', 'success');
+    })();
   },
 
   // First Login Password Update Handler (Section 6)
@@ -1334,16 +1361,54 @@ const AuthView = {
     }
   },
 
+  lockTimerInterval: null,
+
+  startLockCountdown(lockedUntil, initialMsg) {
+    if (this.lockTimerInterval) {
+      clearInterval(this.lockTimerInterval);
+      this.lockTimerInterval = null;
+    }
+
+    const updateCountdown = () => {
+      const now = Date.now();
+      const diffMs = lockedUntil - now;
+      if (diffMs <= 0) {
+        if (this.lockTimerInterval) {
+          clearInterval(this.lockTimerInterval);
+          this.lockTimerInterval = null;
+        }
+        this.showServerAlert('Lock period expired. You may now attempt login again.');
+        return;
+      }
+      const totalSecs = Math.max(1, Math.floor(diffMs / 1000));
+      const mins = Math.floor(totalSecs / 60);
+      const secs = totalSecs % 60;
+      const timeStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+      this.showServerAlert(`Account temporarily locked. Try again in ${timeStr}.`);
+    };
+
+    if (initialMsg) {
+      this.showServerAlert(initialMsg);
+    } else {
+      updateCountdown();
+    }
+    this.lockTimerInterval = setInterval(updateCountdown, 1000);
+  },
+
   showServerAlert(msg) {
     const alertEl = document.getElementById('auth-server-alert');
     const textEl = document.getElementById('auth-server-alert-text');
     if (alertEl && textEl) {
-      textEl.innerHTML = `<div><strong>Authentication Notice:</strong> ${msg}</div>`;
+      textEl.innerHTML = `<div style="line-height: 1.45; font-weight: 500;">${msg}</div>`;
       alertEl.classList.remove('hidden');
     }
   },
 
   hideServerAlert() {
+    if (this.lockTimerInterval) {
+      clearInterval(this.lockTimerInterval);
+      this.lockTimerInterval = null;
+    }
     const alertEl = document.getElementById('auth-server-alert');
     if (alertEl) alertEl.classList.add('hidden');
   },

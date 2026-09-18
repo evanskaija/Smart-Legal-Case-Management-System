@@ -48,10 +48,12 @@ const DashboardView = {
           </div>
           
           <div class="qa-button-group">
+            ${SLCMS_STATE.currentUser?.role === 'Administrator' ? '' : `
             <button class="qa-btn-op" onclick="CasesView.openNewCaseModal()" title="Register a new legal case file">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
               <span>Add Case</span>
             </button>
+            `}
             <button class="qa-btn-op" onclick="ClientsView.openNewClientModal()" title="Register an individual or corporate client">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
               <span>Add Client</span>
@@ -353,7 +355,9 @@ const DashboardView = {
                 <div style="font-size: 1.8rem; margin-bottom: 0.4rem;">📁</div>
                 <div style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary);">No cases yet</div>
                 <p style="font-size: 0.78rem; margin: 0.25rem 0 1rem 0; color: var(--color-text-secondary);">No active legal matters registered in the repository.</p>
+                ${SLCMS_STATE.currentUser?.role === 'Administrator' ? '' : `
                 <button class="btn btn-gold btn-sm" onclick="CasesView.openNewCaseModal()">+ Add New Case</button>
+                `}
               </div>
             ` : SLCMS_STATE.cases.slice(0, 3).map(c => `
               <div class="dash-case-dossier-card" onclick="CasesView.openCaseDetails('${c.id}')">

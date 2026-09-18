@@ -140,6 +140,106 @@ public class AdminSecurityAlertController {
         ));
     }
 
+    /**
+     * Administrator resets user password, issues temporary password, and requires change on next login.
+     */
+    @PostMapping("/users/{userId}/reset-password")
+    public ResponseEntity<?> resetPassword(
+            @PathVariable("userId") String userId,
+            @RequestBody(required = false) Map<String, String> body) {
+        String issuedBy = (body != null && body.containsKey("issuedBy")) ? body.get("issuedBy") : "ADM-0001";
+        String tempPass = "TempPass" + (int)(1000 + Math.random() * 9000) + "!";
+
+        boolean success = rbacSecurityService.resetUserPassword(userId, tempPass, issuedBy);
+        if (!success) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("success", false, "message", "User account not found."));
+        }
+
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "message", "Temporary password issued. User must change password upon next login.",
+            "temporaryPassword", tempPass,
+            "mustChangePassword", true,
+            "userId", userId
+        ));
+    }
+
+    /**
+     * Administrator permanently deletes a user account.
+     */
+    @DeleteMapping("/users/{userId}")
+    public ResponseEntity<?> deleteUser(
+            @PathVariable("userId") String userId,
+            @RequestBody(required = false) Map<String, String> body) {
+        if ("usr-001".equalsIgnoreCase(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("success", false, "message", "Protected Account: Root System Administrator cannot be deleted."));
+        }
+        String deletedBy = (body != null && body.containsKey("deletedBy")) ? body.get("deletedBy") : "ADM-0001";
+        boolean success = rbacSecurityService.deleteUser(userId, deletedBy);
+        if (!success) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("success", false, "message", "User account not found."));
+        }
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "message", "User account permanently removed from system directory.",
+            "userId", userId
+        ));
+    }
+
+    @PostMapping("/users/{userId}/delete")
+    public ResponseEntity<?> deleteUserViaPost(
+            @PathVariable("userId") String userId,
+            @RequestBody(required = false) Map<String, String> body) {
+        return deleteUser(userId, body);
+    }
+
+    /**
+     * Dashboard recent security events endpoint.
+     * Returns the N most recent security events across all users, newest first.
+     * Corresponds to:
+     * SELECT * FROM security_events ORDER BY event_time DESC LIMIT :limit;
+     *
+     * The frontend must call this endpoint (not generate data itself).
+     * The table on the administrator dashboard requests the five latest records.
+     * Refreshing the page retrieves the same records from the database.
+     */
+    @GetMapping("/security-events")
+    public ResponseEntity<?> getRecentSecurityEvents(
+            @RequestParam(value = "limit", defaultValue = "5") int limit) {
+
+        List<com.slcms.model.SecurityEvent> events = rbacSecurityService.getSecurityEvents(null);
+        List<Map<String, Object>> response = new ArrayList<>();
+
+        int count = 0;
+        for (com.slcms.model.SecurityEvent e : events) {
+            if (count++ >= limit) break;
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id",          e.getId());
+            item.put("userId",      e.getUserId());
+            item.put("userName",    e.getUserName());
+            item.put("eventType",   e.getEventType() != null ? e.getEventType().getDisplayName() : null);
+            item.put("result",      e.getResult());
+            item.put("description", e.getDescription());
+            item.put("eventTime",   e.getEventTime() != null ? e.getEventTime().toString() : null);
+            item.put("ipAddress",   maskIp(e.getIpAddress()));
+            response.add(item);
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Administrator reviews a specific user's security activity history.
+     */
+    @GetMapping("/users/{userId}/activity")
+    public ResponseEntity<?> getUserActivity(@PathVariable("userId") String userId) {
+        List<com.slcms.model.SecurityEvent> events = rbacSecurityService.getSecurityEvents(userId);
+        return ResponseEntity.ok(events);
+    }
+
     private String maskIp(String ip) {
         if (ip == null || ip.trim().isEmpty()) return "197.250.xxx.12";
         String[] parts = ip.split("\\.");

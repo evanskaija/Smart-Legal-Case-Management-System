@@ -40,6 +40,9 @@ public class UserAccount {
     private Long lockedUntil;
     private String lockedBy;
     private String lockedReason;
+    private boolean adminLocked;
+    private LocalDateTime lastSuccessfulLogin;
+    private LocalDateTime lastFailedLogin;
     private LocalDateTime lastLoginAt;
     private LocalDateTime passwordChangedAt;
     private String lastLogin;
@@ -191,4 +194,16 @@ public class UserAccount {
 
     public List<String> getAssignedCaseIds() { return assignedCaseIds; }
     public void setAssignedCaseIds(List<String> assignedCaseIds) { this.assignedCaseIds = assignedCaseIds; }
+
+    public boolean isAdminLocked() { return adminLocked; }
+    public void setAdminLocked(boolean adminLocked) { this.adminLocked = adminLocked; }
+
+    public LocalDateTime getLastSuccessfulLogin() { return lastSuccessfulLogin; }
+    public void setLastSuccessfulLogin(LocalDateTime lastSuccessfulLogin) { 
+        this.lastSuccessfulLogin = lastSuccessfulLogin; 
+        this.lastLoginAt = lastSuccessfulLogin;
+    }
+
+    public LocalDateTime getLastFailedLogin() { return lastFailedLogin; }
+    public void setLastFailedLogin(LocalDateTime lastFailedLogin) { this.lastFailedLogin = lastFailedLogin; }
 }

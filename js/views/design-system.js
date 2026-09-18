@@ -951,6 +951,10 @@ const DesignSystemView = {
 
   executeStageAction(actionRoute) {
     if (actionRoute === 'cases-new') {
+      if (SLCMS_STATE.currentUser?.role === 'Administrator') {
+        App.showToast('Administrators do not have access to register legal cases.', 'warning');
+        return;
+      }
       App.navigate('cases');
       setTimeout(() => {
         if (typeof CasesView.openNewCaseModal === 'function') {

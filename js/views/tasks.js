@@ -4,40 +4,56 @@
 
 const TasksView = {
   activeView: 'kanban', // 'kanban' | 'list' | 'calendar'
-  filterPriority: 'All', // 'All' | 'High' | 'Medium' | 'Low'
+  filterPriority: 'All', // 'All' | 'Urgent' | 'High' | 'Medium' | 'Low'
+  filterAssignedMe: false, // My Assigned Tasks toggle
   adminFilter: 'all', // 'all' | 'unassigned' | 'technical' | 'overdue'
   searchQuery: '',
 
   render() {
     const urlParams = new URLSearchParams(window.location.search);
-    const requestedView = urlParams.get('taskView');
-    if (requestedView && ['kanban', 'list', 'calendar'].includes(requestedView)) {
-      this.activeView = requestedView;
+    const queryView = urlParams.get('taskView') || urlParams.get('view');
+    if (queryView && ['kanban', 'list', 'calendar'].includes(queryView)) {
+      this.activeView = queryView;
+    } else {
+      try {
+        const savedView = localStorage.getItem('slcms_active_task_view');
+        if (savedView && ['kanban', 'list', 'calendar'].includes(savedView)) {
+          this.activeView = savedView;
+        }
+      } catch (e) {}
     }
+
     const isAdmin = (SLCMS_STATE.currentUser?.role === 'Administrator');
-    const unassignedCount = (SLCMS_STATE.tasks || []).filter(t => !t.assignedTo || t.assignedTo === 'Unassigned').length;
-    const techCount = (SLCMS_STATE.tasks || []).filter(t => t.isTechnical || t.category === 'technical').length;
-    const overdueCount = (SLCMS_STATE.tasks || []).filter(t => t.status !== 'completed' && new Date(t.dueDate) < new Date('2026-09-08')).length;
+    const tasks = SLCMS_STATE.tasks || [];
+    const unassignedCount = tasks.filter(t => !t.assignedTo || t.assignedTo === 'Unassigned').length;
+    const techCount = tasks.filter(t => t.isTechnical || t.category === 'technical').length;
+    const overdueCount = tasks.filter(t => t.status !== 'completed' && t.dueDate && new Date(t.dueDate) < new Date()).length;
 
     return `
       <div class="animate-fade">
-        <!-- 1. VIEW HEADER -->
-        <div class="view-header" style="overflow: hidden;">
+        <!-- 1. LUXURY VIEW HEADER -->
+        <div class="view-header" style="overflow: hidden; margin-bottom: 1.15rem;">
           <div style="width: 100%; min-width: 0;">
-            <div class="flex items-center gap-2 flex-wrap" style="margin-bottom: 0.25rem;">
-              <h1 class="page-title" style="font-size: 1.15rem; margin-bottom: 0; line-height: 1.25;">Tasks &amp; Statutory Deadlines</h1>
-              <span class="badge badge-confidential" style="font-size: 0.65rem; white-space: nowrap;">
-                Statutory Docket Rules Active
+            <div class="flex items-center gap-2.5 flex-wrap" style="margin-bottom: 0.35rem;">
+              <h1 class="page-title" style="font-size: 1.35rem; margin-bottom: 0; line-height: 1.25; font-weight: 800; font-family: var(--font-heading); color: #0F172A;">
+                Tasks &amp; Statutory Deadlines
+              </h1>
+              <span class="tasks-monitoring-badge">
+                <span class="tasks-pulse-dot"></span>
+                <span>Deadline Monitoring Active</span>
+              </span>
+              <span class="tasks-statutory-notice-chip">
+                ⚖️ Tanzanian Civil &amp; Commercial Docket Rules
               </span>
             </div>
-            <p style="color: var(--color-text-secondary); font-size: 0.82rem; line-height: 1.35; margin-top: 0.2rem;">
-              Track litigation milestones, motion filing schedules, discovery depositions and reminders
+            <p style="color: var(--color-text-secondary); font-size: 0.85rem; line-height: 1.4; margin-top: 0.15rem; margin-bottom: 0;">
+              Track assigned work, court dates, filing deadlines and reminders.
             </p>
           </div>
 
           <div class="tasks-header-actions flex items-center gap-3">
             <div class="view-toggle">
-              <button class="view-toggle-btn ${this.activeView === 'kanban' ? 'active' : ''}" onclick="TasksView.switchView('kanban')">
+              <button class="view-toggle-btn ${this.activeView === 'kanban' ? 'active' : ''}" onclick="TasksView.switchView('kanban')" title="Kanban Workflow Columns">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect width="18" height="18" x="3" y="3" rx="2"/>
                   <path d="M9 3v18"/>
@@ -45,7 +61,7 @@ const TasksView = {
                 </svg>
                 <span class="tasks-tab-full">Kanban Board</span><span class="tasks-tab-short">Kanban</span>
               </button>
-              <button class="view-toggle-btn ${this.activeView === 'list' ? 'active' : ''}" onclick="TasksView.switchView('list')">
+              <button class="view-toggle-btn ${this.activeView === 'list' ? 'active' : ''}" onclick="TasksView.switchView('list')" title="Tabular Docket Schedule">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="8" y1="6" x2="21" y2="6"/>
                   <line x1="8" y1="12" x2="21" y2="12"/>
@@ -56,7 +72,7 @@ const TasksView = {
                 </svg>
                 <span class="tasks-tab-full">List View</span><span class="tasks-tab-short">List</span>
               </button>
-              <button class="view-toggle-btn ${this.activeView === 'calendar' ? 'active' : ''}" onclick="TasksView.switchView('calendar')">
+              <button class="view-toggle-btn ${this.activeView === 'calendar' ? 'active' : ''}" onclick="TasksView.switchView('calendar')" title="Court Docket Calendar">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
                   <line x1="16" y1="2" x2="16" y2="6"/>
@@ -67,7 +83,14 @@ const TasksView = {
               </button>
             </div>
 
-            <button class="btn btn-gold tasks-create-btn" onclick="TasksView.openNewTaskModal()">
+            <button class="btn btn-secondary tasks-deadline-btn" onclick="TasksView.openAddDeadlineModal()" style="font-weight: 700; font-size: 0.82rem; padding: 0.45rem 0.85rem; border-color: rgba(16, 42, 67, 0.2);">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+              <span>Add Deadline</span>
+            </button>
+
+            <button class="btn btn-gold tasks-create-btn" onclick="TasksView.openNewTaskModal()" style="font-weight: 700; font-size: 0.84rem; padding: 0.45rem 1rem; box-shadow: 0 4px 14px rgba(200, 155, 60, 0.35);">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
@@ -78,69 +101,71 @@ const TasksView = {
 
         ${isAdmin ? `
           <!-- ADMINISTRATOR TASK OVERSIGHT & GOVERNANCE BAR -->
-          <div class="card animate-fade adm-oversight-card" style="margin-bottom: 0.85rem; padding: 0.85rem 1rem; border-left: 4px solid var(--color-gold); background: linear-gradient(135deg, rgba(16,42,67,0.03) 0%, rgba(200,155,60,0.08) 100%);">
+          <div class="card animate-fade adm-oversight-card" style="margin-bottom: 1rem; padding: 0.95rem 1.15rem; border-left: 4px solid var(--color-gold); background: linear-gradient(135deg, rgba(16,42,67,0.03) 0%, rgba(200,155,60,0.08) 100%); border-radius: 14px;">
             <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
-              <div class="flex items-center gap-2 flex-wrap" style="min-width: 0;">
-                <span style="font-size: 1.1rem; flex-shrink: 0;">👑</span>
+              <div class="flex items-center gap-2.5 flex-wrap" style="min-width: 0;">
+                <span style="font-size: 1.2rem; flex-shrink: 0;">👑</span>
                 <div class="flex items-center gap-2 flex-wrap" style="min-width: 0;">
-                  <strong style="color: var(--color-primary); font-size: 0.90rem;">Administrator Task Oversight</strong>
+                  <strong style="color: var(--color-primary); font-size: 0.94rem; font-family: var(--font-heading);">Administrator Task Oversight</strong>
                   <span class="badge badge-confidential" style="font-size: 0.65rem; white-space: nowrap;">Technical Governance</span>
                 </div>
               </div>
-              <div class="flex items-center gap-1.5 flex-wrap adm-oversight-action-btns">
-                <button class="btn btn-gold btn-sm" style="font-size: 0.76rem; padding: 0.35rem 0.65rem;" onclick="TasksView.openCreateTechnicalTaskModal()">
-                  Create Technical Task
+              <div class="flex items-center gap-2 flex-wrap adm-oversight-action-btns">
+                <button class="btn btn-gold btn-sm" style="font-size: 0.76rem; padding: 0.35rem 0.75rem; font-weight: 700;" onclick="TasksView.openCreateTechnicalTaskModal()">
+                  + Create Technical Task
                 </button>
-                <button class="btn btn-secondary btn-sm" style="font-size: 0.76rem; padding: 0.35rem 0.65rem;" onclick="TasksView.notifyResponsibleUsers()">
+                <button class="btn btn-secondary btn-sm" style="font-size: 0.76rem; padding: 0.35rem 0.75rem; font-weight: 600;" onclick="TasksView.notifyResponsibleUsers()">
                   🔔 Notify Users
                 </button>
               </div>
             </div>
 
-            <!-- Administrative Views Filters (Smooth Touch Strip on Mobile) -->
-            <div style="padding-top: 0.4rem; border-top: 1px solid rgba(0,0,0,0.06);">
-              <div class="flex items-center gap-1.5 flex-wrap adm-filter-pills-row" style="overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 2px;">
+            <!-- Administrative Filter Pills -->
+            <div style="padding-top: 0.45rem; border-top: 1px solid rgba(0,0,0,0.06);">
+              <div class="flex items-center gap-2 flex-wrap adm-filter-pills-row">
                 <span style="color: var(--color-text-secondary); font-weight: 700; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px; flex-shrink: 0;">Views:</span>
-                <button class="btn ${this.adminFilter === 'all' ? 'btn-primary' : 'btn-ghost'} btn-sm" style="font-size: 0.74rem; padding: 0.25rem 0.55rem; white-space: nowrap; flex-shrink: 0; border-radius: 16px;" onclick="TasksView.setAdminFilter('all')">
-                  All (${SLCMS_STATE.tasks.length})
+                <button class="btn ${this.adminFilter === 'all' ? 'btn-primary' : 'btn-ghost'} btn-sm" style="font-size: 0.74rem; padding: 0.25rem 0.6rem; border-radius: 16px;" onclick="TasksView.setAdminFilter('all')">
+                  All (${tasks.length})
                 </button>
-                <button class="btn ${this.adminFilter === 'unassigned' ? 'btn-danger' : 'btn-ghost'} btn-sm" style="font-size: 0.74rem; padding: 0.25rem 0.55rem; white-space: nowrap; flex-shrink: 0; border-radius: 16px;" onclick="TasksView.setAdminFilter('unassigned')">
+                <button class="btn ${this.adminFilter === 'unassigned' ? 'btn-danger' : 'btn-ghost'} btn-sm" style="font-size: 0.74rem; padding: 0.25rem 0.6rem; border-radius: 16px;" onclick="TasksView.setAdminFilter('unassigned')">
                   ⚠️ Unassigned (${unassignedCount})
                 </button>
-                <button class="btn ${this.adminFilter === 'technical' ? 'btn-gold' : 'btn-ghost'} btn-sm" style="font-size: 0.74rem; padding: 0.25rem 0.55rem; white-space: nowrap; flex-shrink: 0; border-radius: 16px;" onclick="TasksView.setAdminFilter('technical')">
+                <button class="btn ${this.adminFilter === 'technical' ? 'btn-gold' : 'btn-ghost'} btn-sm" style="font-size: 0.74rem; padding: 0.25rem 0.6rem; border-radius: 16px;" onclick="TasksView.setAdminFilter('technical')">
                   ⚙️ Tech (${techCount})
                 </button>
-                <button class="btn ${this.adminFilter === 'overdue' ? 'btn-danger' : 'btn-ghost'} btn-sm" style="font-size: 0.74rem; padding: 0.25rem 0.55rem; white-space: nowrap; flex-shrink: 0; border-radius: 16px;" onclick="TasksView.setAdminFilter('overdue')">
+                <button class="btn ${this.adminFilter === 'overdue' ? 'btn-danger' : 'btn-ghost'} btn-sm" style="font-size: 0.74rem; padding: 0.25rem 0.6rem; border-radius: 16px;" onclick="TasksView.setAdminFilter('overdue')">
                   ⏰ Overdue (${overdueCount})
                 </button>
               </div>
             </div>
 
-            <div style="font-size: 0.70rem; color: var(--color-text-muted); line-height: 1.3; margin-top: 0.35rem;">
-              ⚖️ <strong>Legal Practice Restriction:</strong> Administrator cannot approve lawyer work, alter court statutory deadlines, or complete filings on behalf of counsel.
+            <div style="font-size: 0.75rem; color: #475569; line-height: 1.4; margin-top: 0.45rem; background: rgba(255,255,255,0.7); padding: 0.45rem 0.75rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05);">
+              ⚖️ <strong>Administrator Oversight:</strong> The administrator may view tasks, manage assignments and correct administrative information but cannot approve legal work or confirm court filing on behalf of counsel.
             </div>
           </div>
         ` : ''}
 
-        <!-- 2. FILTER & SEARCH TOOLBAR -->
-        <div class="filter-bar">
-          <div class="input-with-icon" style="flex: 1; min-width: 260px;">
-            <span class="input-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"/>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
-            </span>
-            <input type="text" class="form-control" placeholder="Search tasks by title, case number, or assignee..."
+        <!-- 2. LUXURY FLOATING FILTER & SEARCH TOOLBAR -->
+        <div class="tasks-filter-floating-card">
+          <div class="tasks-search-input-box">
+            <svg class="tasks-search-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" placeholder="Search tasks by title, case number, or assignee..."
                    value="${this.searchQuery}" oninput="TasksView.handleSearch(this.value)">
           </div>
 
-          <div class="flex items-center gap-2">
-            <span style="font-size: 0.8rem; color: var(--color-text-secondary); font-weight: 600;">Priority Filter:</span>
-            <button class="btn ${this.filterPriority === 'All' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="TasksView.setPriorityFilter('All')">All</button>
-            <button class="btn ${this.filterPriority === 'High' ? 'btn-danger' : 'btn-secondary'} btn-sm" onclick="TasksView.setPriorityFilter('High')">High Priority</button>
-            <button class="btn ${this.filterPriority === 'Medium' ? 'btn-gold' : 'btn-secondary'} btn-sm" onclick="TasksView.setPriorityFilter('Medium')">Medium</button>
-            <button class="btn ${this.filterPriority === 'Low' ? 'btn-secondary' : 'btn-secondary'} btn-sm" onclick="TasksView.setPriorityFilter('Low')">Low</button>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button class="btn ${this.filterAssignedMe ? 'btn-gold' : 'btn-secondary'} btn-sm" style="font-weight: 600; border-radius: 10px;" onclick="TasksView.toggleAssignedMe()" title="Show only tasks assigned to current user">
+              👤 My Assigned Tasks ${this.filterAssignedMe ? '✓' : ''}
+            </button>
+            <span style="font-size: 0.78rem; color: var(--color-text-secondary); font-weight: 700; margin-left: 0.25rem;">Priority:</span>
+            <button class="btn ${this.filterPriority === 'All' ? 'btn-primary' : 'btn-secondary'} btn-sm" style="border-radius: 8px;" onclick="TasksView.setPriorityFilter('All')">All</button>
+            <button class="btn ${this.filterPriority === 'Urgent' ? 'btn-danger' : 'btn-secondary'} btn-sm" style="border-radius: 8px; ${this.filterPriority === 'Urgent' ? 'background: #DC2626; color: white;' : ''}" onclick="TasksView.setPriorityFilter('Urgent')">🚨 Urgent</button>
+            <button class="btn ${this.filterPriority === 'High' ? 'btn-danger' : 'btn-secondary'} btn-sm" style="border-radius: 8px;" onclick="TasksView.setPriorityFilter('High')">⚠️ High</button>
+            <button class="btn ${this.filterPriority === 'Medium' ? 'btn-gold' : 'btn-secondary'} btn-sm" style="border-radius: 8px;" onclick="TasksView.setPriorityFilter('Medium')">⚡ Medium</button>
+            <button class="btn ${this.filterPriority === 'Low' ? 'btn-secondary' : 'btn-secondary'} btn-sm" style="border-radius: 8px;" onclick="TasksView.setPriorityFilter('Low')">Low</button>
           </div>
         </div>
 
@@ -152,6 +177,14 @@ const TasksView = {
 
   switchView(viewName) {
     this.activeView = viewName;
+    try {
+      localStorage.setItem('slcms_active_task_view', viewName);
+    } catch (e) {}
+    App.refreshCurrentView();
+  },
+
+  toggleAssignedMe() {
+    this.filterAssignedMe = !this.filterAssignedMe;
     App.refreshCurrentView();
   },
 
@@ -171,13 +204,22 @@ const TasksView = {
   },
 
   getFilteredTasks() {
-    return SLCMS_STATE.tasks.filter(t => {
+    const currentUserName = (SLCMS_STATE.currentUser?.name || '').toLowerCase();
+    const currentUserId = SLCMS_STATE.currentUser?.id || '';
+
+    return (SLCMS_STATE.tasks || []).filter(t => {
       const matchP = this.filterPriority === 'All' || t.priority === this.filterPriority;
       const matchQ = !this.searchQuery ||
-        t.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        t.caseNumber.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        t.caseTitle.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+        (t.title && t.title.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+        (t.caseNumber && t.caseNumber.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+        (t.caseTitle && t.caseTitle.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
         (t.assignedTo && t.assignedTo.toLowerCase().includes(this.searchQuery.toLowerCase()));
+
+      let matchAssigned = true;
+      if (this.filterAssignedMe) {
+        matchAssigned = (t.assignedTo && t.assignedTo.toLowerCase().includes(currentUserName)) ||
+                        (t.assignedToId && t.assignedToId === currentUserId);
+      }
 
       let matchAdmin = true;
       if (this.adminFilter === 'unassigned') {
@@ -185,10 +227,10 @@ const TasksView = {
       } else if (this.adminFilter === 'technical') {
         matchAdmin = t.isTechnical || t.category === 'technical';
       } else if (this.adminFilter === 'overdue') {
-        matchAdmin = t.status !== 'completed' && new Date(t.dueDate) < new Date('2026-09-08');
+        matchAdmin = t.status !== 'completed' && t.dueDate && new Date(t.dueDate) < new Date();
       }
 
-      return matchP && matchQ && matchAdmin;
+      return matchP && matchQ && matchAssigned && matchAdmin;
     });
   },
 
@@ -201,136 +243,278 @@ const TasksView = {
 
   renderKanban() {
     const columns = [
-      { id: 'todo', title: 'To Do', border: 'var(--color-primary)', accent: '#102A43' },
-      { id: 'in_progress', title: 'In Progress', border: 'var(--color-gold)', accent: '#C89B3C' },
-      { id: 'under_review', title: 'Under Partner Review', border: 'var(--color-info)', accent: '#2563EB' },
-      { id: 'completed', title: 'Completed / Filed', border: 'var(--color-success)', accent: '#16A34A' }
+      { id: 'todo', title: 'To Do', icon: '📋', accent: '#1E3A8A' },
+      { id: 'in_progress', title: 'In Progress', icon: '⚡', accent: '#C89B3C' },
+      { id: 'under_review', title: 'Under Review', icon: '🔍', accent: '#6366F1' },
+      { id: 'completed', title: 'Completed', icon: '✓', accent: '#10B981' }
     ];
 
-    const tasks = this.getFilteredTasks();
+    const allTasks = SLCMS_STATE.tasks || [];
+    const filteredTasks = this.getFilteredTasks();
 
-    if (tasks.length === 0) {
-      return `
-        <div class="card empty-state" style="padding: 3.5rem 1.5rem; text-align: center; margin-top: 1rem;">
-          <div class="empty-icon" style="font-size: 2.8rem; margin-bottom: 0.85rem;">📋</div>
-          <h3 class="empty-title" style="font-size: 1.25rem; color: var(--color-primary); font-weight: 700;">No tasks assigned</h3>
-          <p class="empty-desc" style="color: var(--color-text-secondary); max-width: 480px; margin: 0.5rem auto 1.5rem auto; line-height: 1.5;">
-            There are currently no tasks assigned to legal or administrative personnel. Create an actionable task linked to a legal matter.
-          </p>
-          <button class="btn btn-gold" onclick="TasksView.openNewTaskModal()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 5v14M5 12h14"/>
-            </svg>
-            <span>+ Create Task</span>
-          </button>
-        </div>
-      `;
-    }
+    // If completely empty in database (0 tasks created yet)
+    const isTotallyEmpty = allTasks.length === 0;
 
     return `
+      ${isTotallyEmpty ? `
+        <!-- GRAND EMPTY STATE SHOWCASE BOX -->
+        <div class="tasks-empty-showcase-box animate-fade">
+          <div class="tasks-empty-emblem-ring">⚖️</div>
+          <h3 class="tasks-empty-headline">No tasks or deadlines yet</h3>
+          <p class="tasks-empty-lead">
+            Tasks assigned to registered cases will appear here.
+          </p>
+          <div class="tasks-empty-actions-row">
+            <button class="btn btn-gold" style="font-weight: 700; padding: 0.6rem 1.4rem; font-size: 0.88rem; box-shadow: 0 4px 14px rgba(200, 155, 60, 0.35);" onclick="TasksView.openNewTaskModal()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              <span>Create Task</span>
+            </button>
+            <button class="btn btn-secondary" style="font-weight: 700; padding: 0.6rem 1.4rem; font-size: 0.88rem; border-color: rgba(16, 42, 67, 0.2);" onclick="TasksView.openAddDeadlineModal()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+              <span>Add Deadline</span>
+            </button>
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Mobile Column Navigation Tabs -->
       <div class="kanban-mobile-tabs">
         ${columns.map(col => {
-          const colTasks = tasks.filter(t => t.status === col.id);
+          const count = filteredTasks.filter(t => t.status === col.id).length;
           return `
             <button class="kanban-mobile-tab-btn" onclick="TasksView.scrollToColumn('${col.id}')">
               <span>${col.title}</span>
-              <span class="badge" style="font-size: 0.68rem; padding: 2px 6px;">${colTasks.length}</span>
+              <span class="kanban-counter-pill">${count}</span>
             </button>
           `;
         }).join('')}
       </div>
 
+      <!-- THE 4 KANBAN COLUMNS (STATE-OF-THE-ART BOX ARCHITECTURE) -->
       <div class="kanban-board">
         ${columns.map(col => {
-          const colTasks = tasks.filter(t => t.status === col.id);
+          const colTasks = filteredTasks.filter(t => t.status === col.id);
+          const totalColCount = allTasks.filter(t => t.status === col.id).length;
+
           return `
             <div class="kanban-col" id="kanban-col-${col.id}">
               
-              <!-- Column Header -->
-              <div class="kanban-col-header" style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 0.85rem; margin-bottom: 1rem; border-bottom: 2.5px solid ${col.accent};">
-                <div class="flex items-center gap-2">
-                  <span style="font-weight: 700; color: var(--color-primary); font-size: 0.98rem; font-family: var(--font-heading);">${col.title}</span>
-                  <span class="badge" style="border: 1px solid var(--color-border); font-size: 0.72rem; font-weight: 700;">
+              <!-- Column Header Box -->
+              <div class="kanban-col-header">
+                <div class="kanban-col-title-wrap">
+                  <span style="font-size: 1.05rem;">${col.icon}</span>
+                  <span class="kanban-col-title-text">${col.title}</span>
+                  <span class="kanban-counter-pill" title="${colTasks.length} visible of ${totalColCount} total">
                     ${colTasks.length}
                   </span>
                 </div>
-                <button class="btn btn-ghost btn-sm" style="padding: 0.2rem 0.5rem; font-weight: 700;" onclick="TasksView.openNewTaskModal(null, '${col.id}')" title="Add task to ${col.title}">
+                <button class="kanban-quick-add-btn" onclick="TasksView.openNewTaskModal(null, '${col.id}')" title="Create task in ${col.title}">
                   +
                 </button>
               </div>
 
-              <!-- Column Cards List -->
-              <div class="kanban-cards-list flex flex-col gap-3 flex-1">
+              <!-- Column Cards List / Drop Zone -->
+              <div class="kanban-cards-list">
                 ${colTasks.length === 0 ? `
-                  <div style="padding: 2rem 1rem; text-align: center; color: var(--color-text-muted); font-size: 0.8rem; border: 1px dashed var(--color-border); border-radius: var(--radius-md);">
-                    No tasks in ${col.title}
+                  <div class="kanban-col-empty-zone">
+                    <span class="kanban-col-empty-icon">${col.icon}</span>
+                    <div>No tasks in ${col.title}</div>
+                    <div style="font-size: 0.72rem; color: #94A3B8; margin-top: 0.2rem;">Click + to create</div>
                   </div>
-                ` : colTasks.map(t => `
-                  <div class="card card-hover kanban-card">
-                    
-                    <!-- Card Top: Priority & Due Date -->
-                    <div class="flex items-center justify-between" style="margin-bottom: 0.55rem;">
-                      <span class="badge badge-priority-${t.priority.toLowerCase()}" style="font-size: 0.68rem; padding: 0.12rem 0.5rem;">
-                        ${t.priority === 'High' ? '🚨 ' : (t.priority === 'Medium' ? '⚡ ' : '🔹 ')}${t.priority}
-                      </span>
-                      <span style="font-size: 0.74rem; font-weight: 700; color: ${t.priority === 'High' && col.id !== 'completed' ? 'var(--color-danger)' : 'var(--color-text-secondary)'}; font-family: var(--font-mono); display: flex; align-items: center; gap: 0.25rem;">
-                        📅 ${t.dueDate}
-                      </span>
-                    </div>
-
-                    <!-- Task Title -->
-                    <h4 style="font-size: 0.92rem; color: var(--color-primary); margin-bottom: 0.45rem; line-height: 1.4; font-weight: 700;">
-                      ${t.title}
-                    </h4>
-
-                    <!-- Case Association Tag -->
-                    <div style="font-size: 0.74rem; margin-bottom: 0.75rem; background: rgba(200,155,60,0.08); padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); border: 1px solid rgba(200,155,60,0.25); display: flex; align-items: center; gap: 0.35rem; overflow: hidden;">
-                      <span style="font-family: var(--font-mono); font-weight: 800; color: var(--color-gold); font-size: 0.72rem; flex-shrink: 0;">${t.caseNumber}</span>
-                      <span style="color: var(--color-text-muted);">&bull;</span>
-                      <span style="color: var(--color-primary); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${t.caseTitle}">${t.caseTitle}</span>
-                    </div>
-
-                    <!-- Assignee & Move Action Buttons -->
-                    <div class="flex items-center justify-between pt-2.5" style="border-top: 1px solid var(--color-border-subtle); margin-top: 0.35rem;">
-                      <div class="flex items-center gap-2">
-                        <div class="avatar avatar-sm ${t.assignedAvatar === 'EV' ? 'avatar-gold' : t.assignedAvatar === 'JM' ? 'avatar-navy' : t.assignedAvatar === 'MB' ? 'avatar-teal' : 'avatar-purple'}" style="font-size: 10px; font-weight: 700;">
-                          ${t.assignedAvatar || 'US'}
-                        </div>
-                        <span style="font-size: 0.78rem; font-weight: 600; color: var(--color-text-main);">
-                          ${t.assignedTo.split(' ')[0]}
-                        </span>
-                      </div>
-                      
-                      <!-- Intuitive Workflow Advancement Buttons -->
-                      <div class="flex items-center gap-1.5">
-                        ${col.id !== 'todo' ? `
-                          <button class="kanban-action-btn-prev" onclick="TasksView.moveTaskStatus('${t.id}', 'prev')" title="Move back to previous stage">
-                            ←
-                          </button>
-                        ` : ''}
-                        ${col.id === 'todo' ? `
-                          <button class="kanban-action-btn-next" onclick="TasksView.moveTaskStatus('${t.id}', 'next')" title="Start task">
-                            <span>Start</span> →
-                          </button>
-                        ` : col.id === 'in_progress' ? `
-                          <button class="kanban-action-btn-next" onclick="TasksView.moveTaskStatus('${t.id}', 'next')" title="Submit for partner review">
-                            <span>Review</span> →
-                          </button>
-                        ` : col.id === 'under_review' ? `
-                          <button class="kanban-action-btn-next" onclick="TasksView.moveTaskStatus('${t.id}', 'next')" title="Mark as filed / completed">
-                            <span>File</span> →
-                          </button>
-                        ` : `
-                          <span class="badge badge-active" style="font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.5rem;">✓ Filed</span>
-                        `}
-                      </div>
-                    </div>
-                  </div>
-                `).join('')}
+                ` : colTasks.map(t => this.renderTaskCard(t, col.id)).join('')}
               </div>
             </div>
           `;
         }).join('')}
+      </div>
+    `;
+  },
+
+  renderTaskCard(t, colId) {
+    const today = new Date();
+    const isOverdue = t.status !== 'completed' && t.dueDate && new Date(t.dueDate) < today;
+    const priority = t.priority || 'Medium';
+    const priorityClass = priority.toLowerCase();
+    const priorityIcon = priority === 'Urgent' ? '🚨' : priority === 'High' ? '⚠️' : priority === 'Medium' ? '⚡' : '🔹';
+
+    const currentUser = SLCMS_STATE.currentUser || {};
+    const currentUserName = (currentUser.name || '').toLowerCase();
+    const currentUserId = currentUser.id || '';
+    const userRole = currentUser.role || '';
+
+    const isAdmin = (userRole === 'Administrator');
+    const isSeniorLawyer = (userRole === 'Senior Lawyer' || userRole === 'Senior Counsel' || userRole === 'Partner');
+    const isAssignee = (t.assignedTo && t.assignedTo.toLowerCase().includes(currentUserName)) ||
+                       (t.assignedToId && t.assignedToId === currentUserId);
+    const isSupervisor = isSeniorLawyer || (t.supervisorId && t.supervisorId === currentUserId);
+
+    // Formatted Date
+    let formattedDate = t.dueDate || 'No Date';
+    try {
+      if (t.dueDate) {
+        const d = new Date(t.dueDate);
+        formattedDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      }
+    } catch(e){}
+
+    // Role-specific action buttons
+    let actionButtonsHtml = '';
+    if (isAdmin) {
+      // Administrator: cannot see Start, Review, Approve, Filed!
+      actionButtonsHtml = `
+        <button class="btn-task-role-action reassign-btn" onclick="TasksView.openReassignModal('${t.id}')" title="Reassign staff member">
+          Reassign
+        </button>
+      `;
+    } else if (isSupervisor) {
+      // Supervisor: Reassign/Edit in To Do, Review in In Progress, Approve/Return in Under Review, Reopen in Completed
+      if (colId === 'todo') {
+        actionButtonsHtml = `
+          <button class="btn-task-role-action reassign-btn" onclick="TasksView.openReassignModal('${t.id}')">
+            Reassign/Edit
+          </button>
+        `;
+      } else if (colId === 'in_progress') {
+        actionButtonsHtml = `
+          <button class="btn-task-role-action review-submit" onclick="TasksView.openReviewModal('${t.id}')" title="Review in-progress work">
+            Review →
+          </button>
+        `;
+      } else if (colId === 'under_review') {
+        actionButtonsHtml = `
+          <button class="btn-task-role-action return-btn" onclick="TasksView.returnTaskPrompt('${t.id}')" title="Return to assignee with feedback">
+            Return ↺
+          </button>
+          <button class="btn-task-role-action approve-btn" onclick="TasksView.approveTask('${t.id}')" title="Approve and mark completed">
+            Approve ✓
+          </button>
+        `;
+      } else if (colId === 'completed') {
+        actionButtonsHtml = `
+          <button class="btn-task-role-action reassign-btn" onclick="TasksView.reopenTask('${t.id}')" title="Reopen task to In Progress">
+            Reopen ↺
+          </button>
+        `;
+      }
+    } else if (isAssignee) {
+      // Assignee: Start in To Do, Submit for Review in In Progress, View feedback in Under Review, View in Completed
+      if (colId === 'todo') {
+        actionButtonsHtml = `
+          <button class="btn-task-role-action primary-start" onclick="TasksView.startTask('${t.id}')" title="Start working on this task">
+            Start →
+          </button>
+        `;
+      } else if (colId === 'in_progress') {
+        actionButtonsHtml = `
+          <button class="btn-task-role-action review-submit" onclick="TasksView.submitTaskForReview('${t.id}')" title="Submit to supervising lawyer for review">
+            Submit for Review →
+          </button>
+        `;
+      } else if (colId === 'under_review') {
+        actionButtonsHtml = `
+          <button class="btn-task-role-action reassign-btn" onclick="TasksView.openTaskDetailsModal('${t.id}')" title="View partner review status & feedback">
+            View Feedback
+          </button>
+        `;
+      } else if (colId === 'completed') {
+        actionButtonsHtml = `
+          <span style="font-size: 0.74rem; font-weight: 700; color: #10B981; display: inline-flex; align-items: center; gap: 0.2rem;">
+            ✓ Completed
+          </span>
+        `;
+      }
+    } else {
+      // Other firm members
+      actionButtonsHtml = ``;
+    }
+
+    const statusDisplayLabel = colId === 'todo' ? 'To Do' :
+                               colId === 'in_progress' ? 'In Progress' :
+                               colId === 'under_review' ? 'Under Review' : 'Completed';
+    const statusColor = colId === 'todo' ? '#1E3A8A' :
+                        colId === 'in_progress' ? '#C89B3C' :
+                        colId === 'under_review' ? '#6366F1' : '#10B981';
+
+    return `
+      <div class="card kanban-card priority-${priorityClass}" id="card-${t.id}">
+        
+        <!-- 1. Top Row: [PRIORITY] · Due [Date] with ⚠️ OVERDUE warning -->
+        <div class="task-card-top-row">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="task-priority-tag ${priorityClass}">
+              ${priorityIcon} ${priority}
+            </span>
+            ${t.isStatutoryDeadline ? `
+              <span class="task-statutory-verified-tag">
+                ⚖️ Statutory Deadline
+              </span>
+            ` : ''}
+          </div>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            ${isOverdue ? `
+              <span class="task-overdue-warning-tag">
+                ⚠️ OVERDUE
+              </span>
+            ` : ''}
+            <span class="task-card-due-tag">
+              📅 Due ${formattedDate}
+            </span>
+          </div>
+        </div>
+
+        <!-- 2. Task Title -->
+        <h4 class="task-card-heading">
+          ${t.title}
+        </h4>
+
+        <!-- 3. Case Matter Box: [CaseNumber] · [CaseTitle] -->
+        <div class="task-matter-card-box" title="${t.caseTitle || 'Case Matter'}">
+          <span class="task-matter-card-num">${t.caseNumber || 'CIVIL-GEN'}</span>
+          <span style="color: var(--color-text-muted); font-size: 0.7rem;">&bull;</span>
+          <span class="task-matter-card-title">${t.caseTitle || 'General Legal Practice'}</span>
+        </div>
+
+        <!-- 4. Assignee & Status -->
+        <div class="task-meta-info-row">
+          <div class="task-assignee-info">
+            <div class="task-assignee-avatar-ring">
+              ${t.assignedAvatar || (t.assignedTo ? t.assignedTo.substring(0, 2).toUpperCase() : 'US')}
+            </div>
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 135px;" title="${t.assignedTo || 'Unassigned'}">
+              Assigned to: <strong>${t.assignedTo || 'Unassigned'}</strong>
+            </span>
+          </div>
+          <span class="task-status-pill-badge">
+            <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background: ${statusColor};"></span>
+            ${statusDisplayLabel}
+          </span>
+        </div>
+
+        <!-- Dedicated Filed tag with date & receipt reference on completed filing tasks -->
+        ${(t.filingStatus === 'FILED' || t.filingReference) ? `
+          <div class="task-filed-seal-box">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+            <span>Filed: <strong>${t.filingDate || t.dueDate || '18 Sep 2026'}</strong></span>
+            <span>&bull;</span>
+            <span style="font-family: var(--font-mono); font-size: 0.70rem;">Ref: <strong>${t.filingReference || 'HC/REC/2026/089'}</strong></span>
+          </div>
+        ` : ''}
+
+        <!-- 5. Card Footer: View Details · [Action Button] -->
+        <div class="task-card-action-footer">
+          <button class="btn-task-details-link" onclick="TasksView.openTaskDetailsModal('${t.id}')">
+            View Details
+          </button>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            ${actionButtonsHtml}
+          </div>
+        </div>
       </div>
     `;
   },
@@ -433,18 +617,126 @@ const TasksView = {
     try {
       const saved = localStorage.getItem('slcms_persisted_court_events');
       if (saved) {
+        // Immediate clean of test/junk entries
+        if (saved.includes('bvfcjk') || saved.includes('hhoiuyfthjk') || saved.includes('knjhgfgxhj')) {
+          localStorage.removeItem('slcms_persisted_court_events');
+          return [];
+        }
         const parsed = JSON.parse(saved);
         const DEMO_EVT_IDS = ['evt-01', 'evt-02', 'evt-03', 'evt-04', 'evt-05', 'evt-06'];
-        if (Array.isArray(parsed)) return parsed.filter(e => !DEMO_EVT_IDS.includes(e.id));
+        if (Array.isArray(parsed)) {
+          const valid = parsed.filter(e => e && e.id && !DEMO_EVT_IDS.includes(e.id) && !e.title?.includes('bvfcjk') && !e.court?.includes('hhoiuyfthjk'));
+          if (valid.length === 0) {
+            localStorage.removeItem('slcms_persisted_court_events');
+          }
+          return valid;
+        }
       }
     } catch(e){}
     return [];
   })(),
 
+  mapDeadlineToCourtEvent(dln) {
+    const dVal = dln.deadlineDate || dln.date || '2026-09-29';
+    const dateObj = new Date(dVal);
+    const dayNum = dVal.split('-')[2] || String(dateObj.getDate()).padStart(2, '0');
+    const monthShort = isNaN(dateObj.getTime()) ? 'SEP' : dateObj.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+    const weekday = isNaN(dateObj.getTime()) ? 'Tuesday' : dateObj.toLocaleString('en-US', { weekday: 'long' });
+    const assigned = dln.responsibleLawyerName || dln.advocate || dln.assignedTo || 'Advocate In-Charge';
+    const category = (dln.type || '').toLowerCase().includes('hearing') ? 'hearings' :
+                     (dln.type || '').toLowerCase().includes('motion') ? 'motions' : 'briefs';
+
+    return {
+      id: dln.id,
+      date: dVal,
+      time: dln.deadlineTime || dln.time || '09:30 AM EAT',
+      monthShort: monthShort,
+      dayNum: dayNum,
+      weekday: weekday,
+      title: dln.title,
+      caseId: dln.caseId || 'case-gen',
+      caseNumber: dln.caseNumber || 'MATTER-GEN',
+      caseTitle: dln.caseTitle || 'General Legal Matter',
+      category: category,
+      type: dln.type || 'Statutory Deadline',
+      court: dln.court || 'High Court of Tanzania',
+      presiding: dln.presiding || 'Presiding Judge',
+      assignedTo: assigned,
+      assignedAvatar: (assigned.split(' ').map(w => w[0]).join('').substring(0, 2) || 'LC').toUpperCase(),
+      priority: dln.priority || 'High',
+      status: dln.status || 'Confirmed',
+      statute: dln.statutoryReference || 'Judiciary Rules',
+      location: dln.court || 'High Court of Tanzania',
+      description: dln.instructions || dln.description || dln.supportingDocument || 'Mandatory appearance / filing deadline.',
+      exhibits: dln.exhibits || 'Pleadings & Affidavits'
+    };
+  },
+
+  syncCourtEvents() {
+    // Purge any stale junk or test entries from storage
+    try {
+      const saved = localStorage.getItem('slcms_persisted_court_events');
+      if (saved && (saved.includes('bvfcjk') || saved.includes('hhoiuyfthjk') || saved.includes('knjhgfgxhj'))) {
+        localStorage.removeItem('slcms_persisted_court_events');
+      }
+    } catch(e){}
+
+    // If genuine deadlines are registered in SLCMS_STATE.deadlines, map them
+    if (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.deadlines) && SLCMS_STATE.deadlines.length > 0) {
+      this.courtEvents = SLCMS_STATE.deadlines.map(d => this.mapDeadlineToCourtEvent(d));
+      return;
+    }
+
+    // Otherwise, check local storage for legitimately scheduled appearances
+    try {
+      const saved = localStorage.getItem('slcms_persisted_court_events');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const DEMO_EVT_IDS = ['evt-01', 'evt-02', 'evt-03', 'evt-04', 'evt-05', 'evt-06'];
+        if (Array.isArray(parsed)) {
+          const valid = parsed.filter(e => e && e.id && !DEMO_EVT_IDS.includes(e.id) && !e.title?.includes('bvfcjk') && !e.court?.includes('hhoiuyfthjk'));
+          if (valid.length === 0) {
+            localStorage.removeItem('slcms_persisted_court_events');
+          }
+          this.courtEvents = valid;
+          return;
+        }
+      }
+    } catch(e){}
+
+    this.courtEvents = [];
+  },
+
   persistCourtEvents() {
     try {
-      localStorage.setItem('slcms_persisted_court_events', JSON.stringify(this.courtEvents || []));
+      if (!this.courtEvents || this.courtEvents.length === 0) {
+        localStorage.removeItem('slcms_persisted_court_events');
+      } else {
+        localStorage.setItem('slcms_persisted_court_events', JSON.stringify(this.courtEvents));
+      }
     } catch(e){}
+  },
+
+  async deleteCourtEvent(eventId) {
+    if (!confirm('Are you sure you want to remove this statutory docket entry?')) return;
+    
+    const removedEvt = (this.courtEvents || []).find(e => e.id === eventId);
+    this.courtEvents = (this.courtEvents || []).filter(e => e.id !== eventId);
+    this.persistCourtEvents();
+
+    if (typeof SLCMS_STATE !== 'undefined') {
+      if (typeof SLCMS_STATE.deleteDeadline === 'function') {
+        await SLCMS_STATE.deleteDeadline(eventId);
+      } else if (Array.isArray(SLCMS_STATE.deadlines)) {
+        SLCMS_STATE.deadlines = SLCMS_STATE.deadlines.filter(d => d.id !== eventId);
+        try { localStorage.setItem('slcms_persisted_deadlines', JSON.stringify(SLCMS_STATE.deadlines)); } catch(e){}
+      }
+      SLCMS_STATE.addAuditLog('Court Appearance Deleted', 'Tasks & Deadlines', removedEvt ? `${removedEvt.title} (${removedEvt.caseNumber})` : eventId, 'Warning');
+    }
+
+    App.closeModal();
+    App.showToast('Docket entry removed successfully.', 'success');
+    App.refreshCurrentView();
   },
 
   openScheduleDeadlineModal(caseContext = null) {
@@ -470,20 +762,18 @@ const TasksView = {
       this.calendarMonth = 11;
       this.calendarYear--;
     }
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    App.showToast(`Navigated to ${monthNames[this.calendarMonth]} ${this.calendarYear}`, 'info');
     App.refreshCurrentView();
   },
 
   resetCalendarToToday() {
     this.calendarMonth = 8; // September 2026
     this.calendarYear = 2026;
-    App.showToast('Calendar docket synced to Current Session (September 2026)', 'success');
     App.refreshCurrentView();
   },
 
   getFilteredEvents() {
-    return this.courtEvents.filter(evt => {
+    this.syncCourtEvents();
+    return (this.courtEvents || []).filter(evt => {
       if (this.calendarFilter === 'all') return true;
       if (this.calendarFilter === 'hearings') return evt.category === 'hearings';
       if (this.calendarFilter === 'motions') return evt.category === 'motions';
@@ -743,12 +1033,15 @@ const TasksView = {
                   </div>
                 </div>
 
-                <div class="court-action-btns">
+                <div class="court-action-btns flex items-center gap-1.5">
                   <button class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;" onclick="TasksView.openEventDetails('${evt.id}')">
                     Inspect Docket
                   </button>
                   <button class="btn btn-gold btn-sm" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;" onclick="App.showToast('Courtroom video portal launched for ${evt.caseNumber}', 'success')">
                     🏛️ Court Portal
+                  </button>
+                  <button class="btn btn-ghost btn-sm" style="font-size: 0.75rem; padding: 0.35rem 0.5rem; color: #DC2626; border: 1px solid rgba(220,38,38,0.25);" onclick="TasksView.deleteCourtEvent('${evt.id}')" title="Remove from Docket">
+                    🗑️ Remove
                   </button>
                 </div>
               </div>
@@ -903,9 +1196,14 @@ const TasksView = {
                     </div>
                   </td>
                   <td style="text-align: right;">
-                    <button class="btn btn-secondary btn-sm" onclick="TasksView.openEventDetails('${evt.id}')">
-                      View Docket
-                    </button>
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button class="btn btn-secondary btn-sm" onclick="TasksView.openEventDetails('${evt.id}')">
+                        View Docket
+                      </button>
+                      <button class="btn btn-ghost btn-sm" style="color: #DC2626; padding: 0.25rem 0.45rem;" onclick="TasksView.deleteCourtEvent('${evt.id}')" title="Delete Entry">
+                        🗑️
+                      </button>
+                    </div>
                   </td>
                 </tr>
               `).join('')}
@@ -983,7 +1281,12 @@ const TasksView = {
       </div>
 
       <div class="modal-footer flex items-center justify-between">
-        <button class="btn btn-secondary" onclick="App.closeModal()">Close</button>
+        <div class="flex items-center gap-2">
+          <button class="btn btn-danger btn-sm" style="background: #DC2626; color: #FFFFFF;" onclick="TasksView.deleteCourtEvent('${evt.id}')">
+            🗑️ Remove from Docket
+          </button>
+          <button class="btn btn-secondary" onclick="App.closeModal()">Close</button>
+        </div>
         <div class="flex gap-2">
           <button class="btn btn-secondary" onclick="App.showToast('iCal/Outlook sync token generated.', 'success'); App.closeModal();">
             📥 Add to Calendar
@@ -1108,6 +1411,25 @@ const TasksView = {
 
     this.courtEvents.unshift(newEvt);
     this.persistCourtEvents();
+
+    if (typeof SLCMS_STATE !== 'undefined' && typeof SLCMS_STATE.createDeadlineOnBackend === 'function') {
+      SLCMS_STATE.createDeadlineOnBackend({
+        id: newEvt.id,
+        title: newEvt.title,
+        caseId: newEvt.caseId,
+        caseNumber: newEvt.caseNumber,
+        caseTitle: newEvt.caseTitle,
+        type: newEvt.category === 'hearings' ? 'Hearing' : (newEvt.category === 'motions' ? 'Motion' : 'Brief'),
+        deadlineDate: newEvt.date,
+        deadlineTime: newEvt.time,
+        court: newEvt.court,
+        responsibleLawyerName: newEvt.assignedTo,
+        source: 'Court Order',
+        statutoryReference: newEvt.statute,
+        supportingDocument: newEvt.description
+      });
+    }
+
     SLCMS_STATE.addAuditLog('Court Appearance Scheduled', 'Tasks & Deadlines', `${newEvt.title} (${newEvt.caseNumber})`);
     App.closeModal();
     App.showToast('Deadline scheduled successfully on docket.', 'success');
@@ -1216,17 +1538,28 @@ const TasksView = {
   },
 
   openReassignModal(taskId) {
+    const userRole = SLCMS_STATE.currentUser?.role || '';
+    const isSeniorLawyer = userRole === 'Senior Counsel' || userRole === 'Partner' || userRole === 'Senior Lawyer';
+    const isAdmin = userRole === 'Administrator' || userRole === 'System Administrator';
+
+    if (!isAdmin && !isSeniorLawyer) {
+      App.showToast('Restricted: Only Senior Lawyers and System Administrators are authorized to reassign tasks.', 'error');
+      return;
+    }
+
     const t = SLCMS_STATE.tasks.find(item => item.id === taskId);
     if (!t) return;
 
+    const activeStaff = SLCMS_STATE.getActiveStaffUsers();
+
     App.openModal(`
       <div class="modal-header">
-        <h3 class="modal-title">👤 Correct Task Assignment (Administrator)</h3>
+        <h3 class="modal-title">👤 Reassign Task (Senior Lawyer / Admin)</h3>
         <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
       </div>
       <div class="modal-body">
         <div class="alert alert-info" style="font-size: 0.82rem; margin-bottom: 1rem;">
-          Reassign administrative or case tasks to rectify unassigned or misallocated workload across firm personnel.
+          Official Policy: Task reassignment is restricted to Senior Lawyers and Administrators to maintain docket accountability.
         </div>
         <div style="background: var(--color-surface-subtle); padding: 0.75rem 1rem; border-radius: 6px; font-size: 0.84rem; margin-bottom: 1rem;">
           <div><strong>Task:</strong> ${t.title}</div>
@@ -1236,17 +1569,17 @@ const TasksView = {
         <div class="form-group mb-3">
           <label class="form-label required">Select Responsible Staff Member</label>
           <select id="reassign-select" class="form-control">
-            <option value="Eleanor Vance, Esq.">Eleanor Vance, Esq. (Senior Partner / Senior Lawyer)</option>
-            <option value="Julian Mercer, Esq.">Julian Mercer, Esq. (Partner / Senior Lawyer)</option>
-            <option value="Sophia Chen">Sophia Chen (Associate Lawyer)</option>
-            <option value="Marcus Bell">Marcus Bell (Legal Clerk)</option>
-            <option value="Neema Joseph">Neema Joseph (System Administrator)</option>
+            ${activeStaff.map(s => `
+              <option value="${s.name}" ${t.assignedTo === s.name ? 'selected' : ''}>
+                ${s.name} (${s.role || 'Staff'})
+              </option>
+            `).join('')}
           </select>
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
-        <button class="btn btn-gold" onclick="TasksView.saveTaskReassignment('${t.id}')">Save Assignment</button>
+        <button class="btn btn-gold" onclick="TasksView.saveTaskReassignment('${t.id}')">Confirm Reassignment</button>
       </div>
     `, 'modal-md');
   },
@@ -1258,9 +1591,10 @@ const TasksView = {
 
     const oldAssigned = t.assignedTo;
     t.assignedTo = newAssigned;
-    t.assignedAvatar = newAssigned.includes('Eleanor') ? 'EV' : newAssigned.includes('Julian') ? 'JM' : newAssigned.includes('Sophia') ? 'SC' : newAssigned.includes('Neema') ? 'NJ' : 'MB';
+    t.assignedAvatar = newAssigned.substring(0, 2).toUpperCase();
 
-    SLCMS_STATE.addAuditLog('Case Assignment Changed', 'Tasks & Deadlines', `Reassigned "${t.title}" from "${oldAssigned}" to "${newAssigned}"`, 'Success');
+    SLCMS_STATE.persistTasks();
+    SLCMS_STATE.addAuditLog('Task Reassigned', 'Tasks & Deadlines', `Reassigned "${t.title}" from "${oldAssigned}" to "${newAssigned}" by ${SLCMS_STATE.currentUser?.name}`, 'Success');
     App.closeModal();
     App.showToast(`Task successfully reassigned to ${newAssigned}.`, 'success');
     App.refreshCurrentView();
@@ -1392,10 +1726,21 @@ const TasksView = {
 
   _taskCreationCallback: null,
 
+  setStatutoryDueDate(days, ruleName) {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    const dueEl = document.getElementById('nt-due');
+    const chkEl = document.getElementById('nt-is-statutory');
+    if (dueEl) dueEl.value = d.toISOString().split('T')[0];
+    if (chkEl) chkEl.checked = true;
+    App.showToast(`Statutory deadline applied: ${days} days for ${ruleName}`, 'info');
+  },
+
   openNewTaskModal(caseContext = null, defaultCol = 'todo', callback = null) {
     this._taskCreationCallback = callback;
     const activeStaff = SLCMS_STATE.getActiveStaffUsers();
     const cases = SLCMS_STATE.cases || [];
+    const today = new Date().toISOString().split('T')[0];
 
     App.openModal(`
       <div class="modal-header">
@@ -1403,15 +1748,16 @@ const TasksView = {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
             <path d="M12 5v14M5 12h14"/>
           </svg>
-          Create Legal Task
+          Create Legal Task (Objective 3)
         </h3>
         <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
           <label class="form-label required">Task Title / Action Item</label>
-          <input type="text" id="nt-title" class="form-control" placeholder="e.g. Request filing fees, Draft response, Interview client" required>
+          <input type="text" id="nt-title" class="form-control" placeholder="e.g. File Written Submissions pursuant to High Court order" required>
         </div>
+
         <div class="grid grid-cols-2 gap-4">
           <div class="form-group">
             <label class="form-label required">Associated Legal Matter</label>
@@ -1420,26 +1766,75 @@ const TasksView = {
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label required">Assigned Staff</label>
-            <select id="nt-assigned" class="form-control">
-              ${activeStaff.length === 0 ? `<option value="Unassigned">Unassigned</option>` : activeStaff.map(s => `<option value="${s.name}">${s.name} (${s.role})</option>`).join('')}
+            <label class="form-label required">Task Category (Official Scope)</label>
+            <select id="nt-category" class="form-control">
+              <option value="Pleadings">Pleadings</option>
+              <option value="Evidence Gathering">Evidence Gathering</option>
+              <option value="Filing">Filing</option>
+              <option value="Client Conference">Client Conference</option>
+              <option value="Compliance">Compliance</option>
+              <option value="Legal Research">Legal Research</option>
+              <option value="Billing">Billing</option>
+              <option value="Administrative">Administrative</option>
             </select>
           </div>
         </div>
+
         <div class="grid grid-cols-2 gap-4">
           <div class="form-group">
-            <label class="form-label required">Due Date</label>
-            <input type="date" id="nt-due" class="form-control" value="2026-09-20" required>
+            <label class="form-label required">Assigned Legal Personnel</label>
+            <select id="nt-assigned" class="form-control">
+              ${activeStaff.length === 0 ? `<option value="Unassigned">Unassigned</option>` : activeStaff.map(s => `<option value="${s.name}">${s.name} (${s.role || 'Staff'})</option>`).join('')}
+            </select>
           </div>
           <div class="form-group">
             <label class="form-label required">Priority Level</label>
             <select id="nt-priority" class="form-control">
-              <option value="High">High Priority (Urgent Action)</option>
+              <option value="Urgent">🚨 Urgent (Court Direct Order / Emergency)</option>
+              <option value="High">High Priority (Time Sensitive)</option>
               <option value="Medium" selected>Medium (Standard Preparation)</option>
               <option value="Low">Low (Routine Follow-up)</option>
             </select>
           </div>
         </div>
+
+        <!-- Statutory Deadline Calculator Preset Strip -->
+        <div style="background: rgba(200, 155, 60, 0.08); border: 1px solid rgba(200, 155, 60, 0.25); border-radius: var(--radius-sm); padding: 0.65rem 0.85rem; margin-bottom: 1rem;">
+          <div class="flex items-center justify-between flex-wrap gap-2 mb-1.5">
+            <span style="font-size: 0.78rem; font-weight: 700; color: var(--color-gold); text-transform: uppercase;">
+              ⚖️ Court Rules Deadline Presets:
+            </span>
+            <span style="font-size: 0.74rem; color: var(--color-text-muted);">Click to auto-compute statutory date</span>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.74rem; padding: 0.2rem 0.6rem;" onclick="TasksView.setStatutoryDueDate(14, 'Written Submissions')">
+              +14 Days (Submissions)
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.74rem; padding: 0.2rem 0.6rem;" onclick="TasksView.setStatutoryDueDate(21, 'Statement of Defence')">
+              +21 Days (Defence)
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.74rem; padding: 0.2rem 0.6rem;" onclick="TasksView.setStatutoryDueDate(30, 'Notice of Appeal')">
+              +30 Days (Appeal)
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="form-group">
+            <label class="form-label required">Due Date</label>
+            <input type="date" id="nt-due" class="form-control" value="${today}" required>
+          </div>
+          <div class="form-group flex flex-col justify-end" style="padding-bottom: 0.5rem;">
+            <label class="flex items-center gap-2" style="font-size: 0.82rem; cursor: pointer; color: var(--color-primary); font-weight: 600;">
+              <input type="checkbox" id="nt-is-statutory" checked>
+              <span>Statutory Docket Deadline</span>
+            </label>
+            <span style="font-size: 0.72rem; color: var(--color-text-muted); margin-top: 0.2rem;">
+              Unchecks if this is an internal reminder rather than a court-ordered deadline.
+            </span>
+          </div>
+        </div>
+
         <div class="form-group">
           <label class="form-label">Detailed Instructions &amp; Action Notes</label>
           <textarea id="nt-desc" class="form-control" rows="3" placeholder="Specify instructions, client deliverables, or court filing requirements..."></textarea>
@@ -1452,7 +1847,7 @@ const TasksView = {
     `);
   },
 
-  saveNewTask(col = 'todo') {
+  async saveNewTask(col = 'todo') {
     const title = document.getElementById('nt-title')?.value?.trim();
     if (!title) {
       App.showToast('Please enter a task title.', 'error');
@@ -1464,30 +1859,378 @@ const TasksView = {
     const assigned = document.getElementById('nt-assigned')?.value || 'Adv. Asha Mrema';
 
     const newTask = {
-      id: 'tsk-' + Date.now(),
       title: title,
       caseId: relatedCase.id,
       caseTitle: relatedCase.title,
       caseNumber: relatedCase.caseNumber,
+      category: document.getElementById('nt-category')?.value || 'Pleadings',
       assignedTo: assigned,
       assignedAvatar: assigned.substring(0, 2).toUpperCase(),
       priority: document.getElementById('nt-priority')?.value || 'Medium',
       dueDate: document.getElementById('nt-due')?.value || new Date().toISOString().substring(0, 10),
+      isStatutoryDeadline: document.getElementById('nt-is-statutory')?.checked ?? true,
       status: col,
-      progressPct: 0,
-      description: document.getElementById('nt-desc')?.value || ''
+      instructions: document.getElementById('nt-desc')?.value || ''
     };
 
-    SLCMS_STATE.addTask(newTask);
+    const saved = await SLCMS_STATE.createTaskOnBackend(newTask);
     App.closeModal();
     App.showToast('Task successfully added to docket.', 'success');
 
     if (typeof this._taskCreationCallback === 'function') {
       const cb = this._taskCreationCallback;
       this._taskCreationCallback = null;
-      cb(newTask);
+      cb(saved);
     } else {
       App.refreshCurrentView();
     }
+  },
+
+  /* --------------------------------------------------------------------------
+     WORKFLOW TRANSITIONS & RBAC SEPARATION ACTIONS
+     -------------------------------------------------------------------------- */
+  async startTask(taskId) {
+    const res = await SLCMS_STATE.transitionTaskOnBackend(taskId, 'start');
+    if (res.success) {
+      App.showToast('Task moved to In Progress.', 'info');
+      App.refreshCurrentView();
+    } else {
+      App.showToast(res.message || 'Could not update task.', 'error');
+    }
+  },
+
+  async submitTaskForReview(taskId) {
+    const res = await SLCMS_STATE.transitionTaskOnBackend(taskId, 'submit_review');
+    if (res.success) {
+      App.showToast('Task submitted to supervising partner for review.', 'success');
+      App.refreshCurrentView();
+    } else {
+      App.showToast(res.message || 'Could not submit task.', 'error');
+    }
+  },
+
+  openReviewModal(taskId) {
+    const t = (SLCMS_STATE.tasks || []).find(item => item.id === taskId);
+    if (!t) return;
+
+    App.openModal(`
+      <div class="modal-header">
+        <h3 class="modal-title">🔍 Partner Review: ${t.title}</h3>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="background: var(--color-surface-subtle); padding: 0.85rem 1.1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.84rem; line-height: 1.55;">
+          <div><strong>Case:</strong> ${t.caseNumber} - ${t.caseTitle}</div>
+          <div><strong>Assigned Counsel:</strong> ${t.assignedTo}</div>
+          <div><strong>Statutory Due Date:</strong> ${t.dueDate || 'N/A'}</div>
+          <div><strong>Instructions:</strong> ${t.instructions || t.description || 'Standard matter drafting'}</div>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label">Review Feedback / Supervisor Instructions</label>
+          <textarea id="review-feedback-input" class="form-control" rows="3" placeholder="Provide substantive revisions, approval remarks, or filing directions..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+        <div class="flex items-center gap-2">
+          <button class="btn btn-danger btn-sm" onclick="TasksView.executeReturnFromModal('${t.id}')">
+            Return with Notes ↺
+          </button>
+          <button class="btn btn-gold btn-sm" onclick="TasksView.executeApproveFromModal('${t.id}')">
+            Approve &amp; Mark Completed ✓
+          </button>
+        </div>
+      </div>
+    `, 'modal-md');
+  },
+
+  async executeApproveFromModal(taskId) {
+    const feedback = document.getElementById('review-feedback-input')?.value || 'Approved by supervising partner.';
+    await SLCMS_STATE.transitionTaskOnBackend(taskId, 'approve', feedback);
+    App.closeModal();
+    App.showToast('Legal work approved and marked Completed.', 'success');
+    App.refreshCurrentView();
+  },
+
+  async executeReturnFromModal(taskId) {
+    const feedback = document.getElementById('review-feedback-input')?.value;
+    if (!feedback) {
+      App.showToast('Please provide feedback notes explaining what revisions are required.', 'error');
+      return;
+    }
+    await SLCMS_STATE.transitionTaskOnBackend(taskId, 'return', feedback);
+    App.closeModal();
+    App.showToast('Task returned to assignee for revision.', 'info');
+    App.refreshCurrentView();
+  },
+
+  async returnTaskPrompt(taskId) {
+    const feedback = prompt('Enter revision instructions for the assigned counsel:');
+    if (feedback !== null && feedback.trim() !== '') {
+      await SLCMS_STATE.transitionTaskOnBackend(taskId, 'return', feedback.trim());
+      App.showToast('Task returned for revision.', 'info');
+      App.refreshCurrentView();
+    }
+  },
+
+  async approveTask(taskId) {
+    await SLCMS_STATE.transitionTaskOnBackend(taskId, 'approve', 'Approved by supervising partner.');
+    App.showToast('Work approved and marked Completed.', 'success');
+    App.refreshCurrentView();
+  },
+
+  async reopenTask(taskId) {
+    await SLCMS_STATE.transitionTaskOnBackend(taskId, 'reopen');
+    App.showToast('Task reopened to In Progress.', 'info');
+    App.refreshCurrentView();
+  },
+
+  /* --------------------------------------------------------------------------
+     TASK DOSSIER / DETAILS MODAL WITH AUDIT HISTORY
+     -------------------------------------------------------------------------- */
+  openTaskDetailsModal(taskId) {
+    const t = (SLCMS_STATE.tasks || []).find(item => item.id === taskId);
+    if (!t) return;
+
+    const currentUser = SLCMS_STATE.currentUser || {};
+    const isAdmin = (currentUser.role === 'Administrator');
+    const isSenior = (currentUser.role === 'Senior Lawyer' || currentUser.role === 'Senior Counsel' || currentUser.role === 'Partner');
+    const isAssignee = (t.assignedTo && t.assignedTo.toLowerCase().includes((currentUser.name || '').toLowerCase()));
+
+    App.openModal(`
+      <div class="modal-header">
+        <div class="flex items-center gap-2">
+          <span class="task-priority-tag ${t.priority ? t.priority.toLowerCase() : 'medium'}">${t.priority || 'Medium'}</span>
+          <h3 class="modal-title" style="margin-left: 0.35rem; font-size: 1.1rem; font-family: var(--font-heading);">${t.title}</h3>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Matter Header -->
+        <div class="task-matter-card-box mb-3">
+          <span class="task-matter-card-num">${t.caseNumber || 'CIVIL-GEN'}</span>
+          <span style="color: var(--color-text-muted);">&bull;</span>
+          <span class="task-matter-card-title">${t.caseTitle || 'General Legal Practice'}</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div style="background: var(--color-surface-subtle); padding: 0.75rem 1rem; border-radius: 8px;">
+            <div style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700;">Assigned Counsel</div>
+            <div style="font-size: 0.90rem; font-weight: 700; color: #0F172A; margin-top: 0.15rem;">${t.assignedTo || 'Unassigned'}</div>
+          </div>
+          <div style="background: var(--color-surface-subtle); padding: 0.75rem 1rem; border-radius: 8px;">
+            <div style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700;">Due Date &amp; Docket Status</div>
+            <div style="font-size: 0.90rem; font-weight: 700; color: ${t.status === 'completed' ? '#10B981' : '#0F172A'}; margin-top: 0.15rem;">
+              📅 ${t.dueDate || 'No date specified'} &bull; <span style="text-transform: capitalize;">${(t.status || 'todo').replace('_', ' ')}</span>
+            </div>
+          </div>
+        </div>
+
+        ${t.isStatutoryDeadline ? `
+          <div style="background: rgba(200, 155, 60, 0.08); border: 1px solid rgba(200, 155, 60, 0.25); border-radius: 8px; padding: 0.65rem 0.85rem; margin-bottom: 0.85rem; font-size: 0.80rem; color: #92400E;">
+            ⚖️ <strong>Verified Statutory Rule:</strong> ${t.statutoryReference || 'Tanzanian Civil & Commercial Docket Regulation'}
+          </div>
+        ` : ''}
+
+        ${t.reviewFeedback ? `
+          <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 0.65rem 0.85rem; margin-bottom: 0.85rem; font-size: 0.82rem; color: #1E40AF;">
+            💬 <strong>Supervising Partner Feedback:</strong> ${t.reviewFeedback}
+          </div>
+        ` : ''}
+
+        ${(t.filingStatus === 'FILED' || t.filingReference) ? `
+          <div class="task-filed-seal-box mb-3">
+            ✓ Court Filing Confirmed: <strong>${t.filingDate || t.dueDate}</strong> &bull; Filing Receipt: <strong>${t.filingReference || 'HC-REC/2026/089'}</strong>
+          </div>
+        ` : ''}
+
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-weight: 700;">Instructions &amp; Matter Deliverables</label>
+          <div style="background: #FFFFFF; border: 1px solid rgba(0,0,0,0.09); border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.84rem; line-height: 1.5; color: #334155; min-height: 60px;">
+            ${t.instructions || t.description || 'No detailed instructions provided.'}
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <button class="btn btn-secondary" onclick="App.closeModal()">Close</button>
+        <div class="flex items-center gap-2">
+          ${(isAdmin || isSenior) ? `
+            <button class="btn btn-secondary btn-sm" onclick="App.closeModal(); TasksView.openReassignModal('${t.id}');">
+              Reassign Staff
+            </button>
+          ` : ''}
+          ${(!isAdmin && isAssignee && t.status === 'todo') ? `
+            <button class="btn btn-gold btn-sm" onclick="App.closeModal(); TasksView.startTask('${t.id}');">
+              Start Task →
+            </button>
+          ` : (!isAdmin && isAssignee && t.status === 'in_progress') ? `
+            <button class="btn btn-gold btn-sm" onclick="App.closeModal(); TasksView.submitTaskForReview('${t.id}');">
+              Submit for Review →
+            </button>
+          ` : (!isAdmin && isSenior && t.status === 'under_review') ? `
+            <button class="btn btn-gold btn-sm" onclick="App.closeModal(); TasksView.openReviewModal('${t.id}');">
+              Review Work →
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `, 'modal-md');
+  },
+
+  /* --------------------------------------------------------------------------
+     ADD STATUTORY COURT DEADLINE MODAL
+     -------------------------------------------------------------------------- */
+  openAddDeadlineModal(caseContext = null) {
+    const cases = SLCMS_STATE.cases || [];
+    const activeStaff = SLCMS_STATE.getActiveStaffUsers();
+    const today = new Date().toISOString().split('T')[0];
+
+    App.openModal(`
+      <div class="modal-header">
+        <h3 class="modal-title" style="display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-heading);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+          Register Statutory Court Deadline
+        </h3>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="background: rgba(200, 155, 60, 0.08); border: 1px solid rgba(200, 155, 60, 0.25); border-radius: var(--radius-sm); padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.82rem; color: #78350F; line-height: 1.45;">
+          ⚖️ <strong>Statutory Docket Rule:</strong> A statutory deadline is monitored against specific Tanzanian civil/commercial court orders and statutory limitation rules (e.g. Civil Procedure Code Cap 33, Law of Limitation Act Cap 89).
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label required">Deadline / Hearing Title</label>
+          <input type="text" id="dln-title" class="form-control" placeholder="e.g. Hearing of Chamber Summons for Interim Injunction" required>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label required">Associated Legal Matter</label>
+            <select id="dln-case" class="form-control">
+              ${cases.length === 0 ? `<option value="">-- No registered cases yet (General Docket) --</option>` : cases.map(c => `
+                <option value="${c.id}" ${(caseContext && (caseContext.id === c.id || caseContext === c.id)) ? 'selected' : ''}>
+                  ${c.caseNumber} - ${c.title}
+                </option>
+              `).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Deadline Type</label>
+            <select id="dln-type" class="form-control">
+              <option value="Hearing">Court Hearing / Trial</option>
+              <option value="Mention">Mention / Case Management</option>
+              <option value="Filing">Pleadings / Document Filing</option>
+              <option value="Submission">Written Submissions</option>
+              <option value="Appeal">Notice of Appeal / Record of Appeal</option>
+              <option value="Other">Other Statutory Cutoff</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label required">Deadline Date</label>
+            <input type="date" id="dln-date" class="form-control" value="${today}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Hearing Time / Filing Cutoff</label>
+            <input type="time" id="dln-time" class="form-control" value="09:00">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label required">Court &amp; Registry</label>
+            <input type="text" id="dln-court" class="form-control" value="High Court Commercial Division, Dar es Salaam" placeholder="e.g. Resident Magistrate Court of Kisutu">
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Responsible Counsel</label>
+            <select id="dln-lawyer" class="form-control">
+              ${activeStaff.map(s => `
+                <option value="${s.name}">${s.name} (${s.role || 'Advocate'})</option>
+              `).join('')}
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label required">Authority Source</label>
+            <select id="dln-source" class="form-control">
+              <option value="Court Order">Formal Court Order / Summons</option>
+              <option value="Legislation">Statutory Enactment / Rule of Court</option>
+              <option value="Manually Entered">Manual Entry / Client Directive</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Statutory Reference / Court Rule</label>
+            <input type="text" id="dln-statutory-ref" class="form-control" placeholder="e.g. High Court (Commercial Div.) Rules 2012, R.24">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Supporting Court Document / Order Reference</label>
+          <input type="text" id="dln-doc" class="form-control" placeholder="e.g. Chamber Summons Order dated 12 Sep 2026 / Notice of Mention">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+        <button class="btn btn-gold" onclick="TasksView.saveNewDeadline()">Register Deadline</button>
+      </div>
+    `, 'modal-md');
+  },
+
+  async saveNewDeadline() {
+    const title = document.getElementById('dln-title')?.value?.trim();
+    if (!title) {
+      App.showToast('Please enter a deadline title.', 'error');
+      return;
+    }
+
+    const caseId = document.getElementById('dln-case')?.value;
+    const relatedCase = (SLCMS_STATE.cases || []).find(c => c.id === caseId) || { id: 'case-gen', caseNumber: 'MATTER-GEN', title: 'General Practice' };
+    const dateVal = document.getElementById('dln-date')?.value || new Date().toISOString().split('T')[0];
+    const timeVal = document.getElementById('dln-time')?.value || '09:00';
+    const lawyer = document.getElementById('dln-lawyer')?.value || 'Adv. Asha Mrema';
+
+    const deadlineData = {
+      title: title,
+      caseId: relatedCase.id,
+      caseNumber: relatedCase.caseNumber,
+      caseTitle: relatedCase.title,
+      type: document.getElementById('dln-type')?.value || 'Hearing',
+      deadlineDate: dateVal,
+      deadlineTime: timeVal,
+      court: document.getElementById('dln-court')?.value || 'High Court Commercial Division',
+      responsibleLawyerName: lawyer,
+      source: document.getElementById('dln-source')?.value || 'Court Order',
+      statutoryReference: document.getElementById('dln-statutory-ref')?.value || '',
+      supportingDocument: document.getElementById('dln-doc')?.value || ''
+    };
+
+    await SLCMS_STATE.createDeadlineOnBackend(deadlineData);
+
+    // Also automatically create corresponding Task under To Do column to track the deadline
+    await SLCMS_STATE.createTaskOnBackend({
+      title: `${deadlineData.type}: ${title}`,
+      caseId: relatedCase.id,
+      caseNumber: relatedCase.caseNumber,
+      caseTitle: relatedCase.title,
+      assignedTo: lawyer,
+      priority: 'Urgent',
+      dueDate: dateVal,
+      dueTime: timeVal,
+      isStatutoryDeadline: true,
+      statutoryReference: deadlineData.statutoryReference || 'Court Order',
+      instructions: `Court Appearance / Deadline obligation set for ${dateVal} at ${timeVal} before ${deadlineData.court}. Source: ${deadlineData.source}.`
+    });
+
+    App.closeModal();
+    App.showToast('Court deadline registered to docket.', 'success');
+    App.refreshCurrentView();
   }
 };
+

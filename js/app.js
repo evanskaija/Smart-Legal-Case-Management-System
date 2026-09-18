@@ -51,6 +51,14 @@ const App = {
     this.bindGlobalEvents();
     this.bindInactivityTracker();
 
+    // Sanitize any stale or unregistered test docket entries from storage
+    try {
+      const savedEvts = localStorage.getItem('slcms_persisted_court_events');
+      if (savedEvts && (savedEvts.includes('bvfcjk') || savedEvts.includes('hhoiuyfthjk') || savedEvts.includes('knjhgfgxhj'))) {
+        localStorage.removeItem('slcms_persisted_court_events');
+      }
+    } catch(e){}
+
     // Ensure the hanging AI Copilot FAB is initialized and visible across the entire platform
     if (typeof AICopilot !== 'undefined') {
       AICopilot.init();
@@ -249,12 +257,14 @@ const App = {
           <!-- Topbar Right Actions -->
           <div class="topbar-right">
             <!-- Quick "Add New" Button (Desktop Only) -->
+            ${SLCMS_STATE.currentUser?.role === 'Administrator' ? '' : `
             <button class="btn btn-gold btn-sm topbar-add-new-btn topbar-btn-hide-mobile" onclick="CasesView.openNewCaseModal()" title="New Legal Case">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
               <span>Add New</span>
             </button>
+            `}
 
             <!-- Mobile Search Icon (visible on mobile) -->
             <button class="topbar-icon-btn mobile-search-btn" onclick="App.openGlobalSearch()" title="Search (Ctrl+K)">
@@ -443,7 +453,7 @@ const App = {
       }, 250);
     } else if (openModalParam === 'newCase') {
       setTimeout(() => {
-        if (typeof CasesView !== 'undefined' && CasesView.openNewCaseModal) {
+        if (SLCMS_STATE.currentUser?.role !== 'Administrator' && typeof CasesView !== 'undefined' && CasesView.openNewCaseModal) {
           CasesView.openNewCaseModal();
         }
       }, 250);
@@ -746,6 +756,8 @@ const App = {
       'ai-assistant': 'legal-ai',
       'case-tracking': 'communications',
       'communications': 'communications',
+      'client-messages': 'client-messages',
+      'message-generator': 'client-messages',
       'documents': 'documents',
       'cases': 'cases',
       'clients': 'clients',
@@ -781,18 +793,20 @@ const App = {
       'senior-lawyer/dashboard': 'Senior Lawyer Dashboard',
       'lawyer/dashboard': 'Lawyer Dashboard',
       'clerk/dashboard': 'Legal Clerk Dashboard',
-      'admin-users': 'Users and Roles',
+      'admin-users': 'Users & Security',
       'case-assignments': 'Case Assignments',
-      'activity-logs': 'Activity Logs',
-      'admin-security-activity': 'Activity Logs',
+      'activity-logs': 'Users & Security',
+      'admin-security-activity': 'Users & Security',
       'admin-settings': 'System Settings',
       'admin-backup': 'Backup',
       'backup': 'Backup',
-      'user-management': 'Users and Roles',
+      'user-management': 'Users & Security',
       'settings': 'System Settings',
       'dashboard': (role === 'Administrator' || role === 'Managing Partner') ? 'Admin Dashboard' : 'Dashboard',
       'cases': 'Cases and Matters',
       'clients': 'Clients Directory',
+      'client-messages': 'Client Message Generator',
+      'message-generator': 'Client Message Generator',
       'documents': 'Document Vault',
       'tasks': 'Tasks and Deadlines',
       'communications': 'Communications and Tracking',
@@ -927,6 +941,21 @@ const App = {
         case 'case-tracking':
           container.innerHTML = typeof CommunicationsView !== 'undefined' ? CommunicationsView.render() : '<div class="card p-6">Communications and Tracking module loading...</div>';
           break;
+        case 'client-messages':
+        case 'message-generator':
+          if (params && typeof ClientMessagesView !== 'undefined') {
+            if (params.caseId) ClientMessagesView.selectedCaseId = params.caseId;
+            if (params.messageType) ClientMessagesView.selectedMessageType = params.messageType;
+            if (params.language) ClientMessagesView.selectedLanguage = params.language;
+            if (params.channel) ClientMessagesView.selectedChannel = params.channel;
+            ClientMessagesView.syncSelectedCaseDetails();
+            ClientMessagesView.generateDraft(false);
+            if (params.openConfirm) {
+              setTimeout(() => ClientMessagesView.promptSendConfirmation(), 250);
+            }
+          }
+          container.innerHTML = typeof ClientMessagesView !== 'undefined' ? ClientMessagesView.render() : '<div class="card p-6">Client Message Generator loading...</div>';
+          break;
         case 'ai-drafting':
         case 'ai-draft-assistant':
           container.innerHTML = typeof AIDraftAssistantView !== 'undefined' ? AIDraftAssistantView.render() : '<div class="card p-6">AI Drafting Studio loading...</div>';
@@ -995,7 +1024,7 @@ const App = {
       const qp = new URLSearchParams(window.location.search);
       if (qp.get('action') === 'addcase' || qp.get('modal') === 'addcase') {
         setTimeout(() => {
-          if (typeof CasesView !== 'undefined' && typeof CasesView.openNewCaseModal === 'function') {
+          if (SLCMS_STATE.currentUser?.role !== 'Administrator' && typeof CasesView !== 'undefined' && typeof CasesView.openNewCaseModal === 'function') {
             CasesView.openNewCaseModal();
             if (qp.get('sample') === 'true' || qp.get('autofill') === 'sample') {
               CasesView.loadTanzaniaSampleCase();
@@ -1649,6 +1678,7 @@ const App = {
       documents: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`,
       tasks: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`,
       communications: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+      clientMessages: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="12" y1="7" x2="12" y2="13"/></svg>`,
       aiDrafting: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`,
       legalAi: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
       library: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 7h8M8 11h6"/></svg>`,
@@ -1667,6 +1697,7 @@ const App = {
       ${navItem('dashboard', icons.dashboard, 'Dashboard')}
       ${navItem('clients', icons.clients, 'Clients')}
       ${!isAdmin ? navItem('cases', icons.cases, 'Cases and Matters', casesAttentionCount, "App.navigate('cases', { filter: 'attention' })", 'danger') : ''}
+      ${navItem('client-messages', icons.clientMessages, 'Client Messages')}
       ${navItem('tasks', icons.tasks, 'Tasks and Deadlines')}
 
       ${sectionLabel('LEGAL ASSISTANCE')}
@@ -1679,17 +1710,15 @@ const App = {
     if (role === 'Administrator') {
       html += `
         ${sectionLabel('ADMINISTRATION')}
-        ${navItem('admin-users', icons.users, 'Users and Roles')}
-        ${navItem('activity-logs', icons.activityLogs, 'Activity Logs')}
+        ${navItem('admin-users', icons.users, 'Users & Security')}
         ${navItem('admin-settings', icons.settings, 'System Settings')}
         ${navItem('admin-backup', icons.backup, 'Backup')}
       `;
     } else if (role === 'Managing Partner') {
       html += `
         ${sectionLabel('ADMINISTRATION')}
-        ${navItem('admin-users', icons.users, 'Users and Roles')}
+        ${navItem('admin-users', icons.users, 'Users & Security')}
         ${navItem('case-assignments', icons.assignments, 'Case Assignments')}
-        ${navItem('activity-logs', icons.activityLogs, 'Activity Logs')}
         ${navItem('admin-settings', icons.settings, 'System Settings')}
         ${navItem('admin-backup', icons.backup, 'Backup')}
       `;
@@ -2163,6 +2192,18 @@ const App = {
       </div>
     `;
 
+    // Limit stacked toasts to max 3 to prevent screen obstruction
+    while (container.children.length >= 3) {
+      container.removeChild(container.firstChild);
+    }
+
+    toast.style.cursor = 'pointer';
+    toast.title = 'Click to dismiss';
+    toast.onclick = () => {
+      toast.style.opacity = '0';
+      setTimeout(() => toast.remove(), 200);
+    };
+
     container.appendChild(toast);
 
     setTimeout(() => {
@@ -2170,7 +2211,7 @@ const App = {
       toast.style.transform = 'translateY(10px)';
       toast.style.transition = 'all 0.3s ease';
       setTimeout(() => toast.remove(), 300);
-    }, 3800);
+    }, 3200);
   }
 };
 
