@@ -3199,27 +3199,30 @@ const SLCMS_STATE = {
   createAdminUser(userData) {
     // 1. Uniqueness check for email, staff ID, username
     const cleanEmail = (userData.email || '').trim().toLowerCase();
-    const cleanStaffId = (userData.staffId || userData.employeeId || '').trim().toUpperCase();
-    const cleanUsername = (userData.username || this.generateUsernameFromName(userData.name) || cleanEmail.split('@')[0] || '').trim().toLowerCase();
+    let cleanStaffId = (userData.staffId || userData.employeeId || '').trim().toUpperCase();
+    if (!cleanStaffId) {
+      cleanStaffId = this.generateStaffId ? this.generateStaffId(userData.role) : ('USR-' + Date.now());
+    }
+    const cleanUsername = (userData.username || (this.generateUsernameFromName ? this.generateUsernameFromName(userData.name) : '') || cleanEmail.split('@')[0] || 'user').trim().toLowerCase();
 
-    const duplicateEmail = this.users.find(u => (u.email || '').toLowerCase() === cleanEmail);
+    const duplicateEmail = cleanEmail ? this.users.find(u => (u.email || '').toLowerCase() === cleanEmail) : null;
     if (duplicateEmail) {
       return { success: false, message: 'An account with this email address already exists in the system.' };
     }
 
-    const duplicateStaffId = this.users.find(u => (u.staffId || u.employeeId || '').toUpperCase() === cleanStaffId);
+    const duplicateStaffId = cleanStaffId ? this.users.find(u => (u.staffId || u.employeeId || '').toUpperCase() === cleanStaffId) : null;
     if (duplicateStaffId) {
       return { success: false, message: 'An account with this unique Staff ID already exists.' };
     }
 
-    const duplicateUsername = this.users.find(u => (u.username || '').toLowerCase() === cleanUsername);
+    const duplicateUsername = cleanUsername ? this.users.find(u => (u.username || '').toLowerCase() === cleanUsername) : null;
     if (duplicateUsername) {
       return { success: false, message: 'This username is already taken. Please choose another.' };
     }
 
     // 2. Generate secure temporary password
     const tempPass = userData.temporaryPassword || this.generateTemporaryPassword();
-    const newId = 'usr-0' + (this.users.length + 1);
+    const newId = 'usr-' + Date.now();
     const passHash = this.hashPassword(tempPass);
 
     const newUser = {
@@ -3227,7 +3230,7 @@ const SLCMS_STATE = {
       employeeId: cleanStaffId,
       staffId: cleanStaffId,
       username: cleanUsername,
-      name: userData.name.trim(),
+      name: (userData.name || userData.fullName || 'Staff Member').trim(),
       email: cleanEmail,
       phone: userData.phone || '+255 754 000 000',
       altPhone: userData.altPhone || '',

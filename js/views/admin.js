@@ -1983,55 +1983,92 @@ const AdminView = {
       payload.accessLevel = document.getElementById('cu-case-access')?.value || 'View and Edit';
     }
 
-    // Persist through backend API to the permanent online database
+    // Persist through backend API to the permanent online database if available,
+    // or fall back seamlessly to local state engine (e.g. static Vercel hosting)
     let createdUser = null;
     let createdTempPass = tempPass;
 
     try {
       const fetchFn = (typeof window.slcmsFetch === 'function') ? window.slcmsFetch : fetch;
-      const response = await fetchFn('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      let backendSuccess = false;
+      let resData = null;
 
-      const resData = await response.json();
-      if (!response.ok || !resData.success) {
-        App.showToast(resData.message || 'Error provisioning account on backend.', 'error');
-        return;
+      try {
+        const response = await fetchFn('/api/admin/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          try {
+            resData = await response.json();
+            if (resData && resData.success !== false) {
+              backendSuccess = true;
+            }
+          } catch (e) {
+            console.warn('[SLCMS Admin] Failed to parse backend JSON response:', e);
+          }
+        } else if (response.status === 409) {
+          // Explicit conflict (e.g. duplicate email/staff ID) from active backend
+          try {
+            const conflictData = await response.json();
+            if (conflictData && conflictData.message) {
+              App.showToast(conflictData.message, 'error');
+              return;
+            }
+          } catch (e) {}
+        }
+      } catch (networkErr) {
+        console.warn('[SLCMS Admin] Online backend unreachable or offline:', networkErr);
       }
 
-      createdUser = resData.user || {
-        id: resData.staffId || ('usr-' + Date.now()),
-        staffId: resData.staffId || staffId,
-        name: name,
-        email: email,
-        role: role
-      };
-      createdTempPass = resData.temporaryPassword || tempPass;
+      if (backendSuccess && resData) {
+        createdUser = resData.user || {
+          id: resData.staffId || ('usr-' + Date.now()),
+          staffId: resData.staffId || staffId,
+          name: name,
+          email: email,
+          role: role
+        };
+        createdTempPass = resData.temporaryPassword || tempPass;
 
-      // Update local memory copy for instant responsive UI rendering
-      if (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.users)) {
-        const localUser = Object.assign({}, payload, createdUser, {
-          temporaryPassword: createdTempPass,
-          passwordPlain: createdTempPass,
-          status: 'First-Login Setup Required',
-          accountStatus: 'FIRST_LOGIN_RESET',
-          mustChangePassword: true,
-          firstLoginRequired: true
-        });
-        const existingIdx = SLCMS_STATE.users.findIndex(u => u.email && u.email.toLowerCase() === email.toLowerCase());
-        if (existingIdx >= 0) {
-          SLCMS_STATE.users[existingIdx] = localUser;
-        } else {
-          SLCMS_STATE.users.unshift(localUser);
+        // Update local memory copy for instant responsive UI rendering
+        if (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.users)) {
+          const localUser = Object.assign({}, payload, createdUser, {
+            temporaryPassword: createdTempPass,
+            passwordPlain: createdTempPass,
+            status: 'First-Login Setup Required',
+            accountStatus: 'FIRST_LOGIN_RESET',
+            mustChangePassword: true,
+            firstLoginRequired: true
+          });
+          const existingIdx = SLCMS_STATE.users.findIndex(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+          if (existingIdx >= 0) {
+            SLCMS_STATE.users[existingIdx] = localUser;
+          } else {
+            SLCMS_STATE.users.unshift(localUser);
+          }
+          if (typeof SLCMS_STATE.persistUsers === 'function') {
+            SLCMS_STATE.persistUsers();
+          }
         }
+      } else {
+        // Fallback to client state engine (e.g. Vercel deployment without live Spring Boot backend)
+        console.log('[SLCMS Admin] Provisioning user via local state engine...');
+        const res = SLCMS_STATE.createAdminUser(payload);
+        if (!res || !res.success) {
+          App.showToast((res && res.message) || 'Unable to create user account.', 'error');
+          return;
+        }
+        createdUser = res.user;
+        createdTempPass = res.temporaryPassword;
       }
     } catch (err) {
       console.warn('[SLCMS Admin] Online user creation failed, attempting local fallback:', err);
       const res = SLCMS_STATE.createAdminUser(payload);
-      if (!res.success) {
-        App.showToast(res.message, 'error');
+      if (!res || !res.success) {
+        App.showToast((res && res.message) || 'Error provisioning account.', 'error');
         return;
       }
       createdUser = res.user;
@@ -2291,7 +2328,7 @@ const AdminView = {
         <h3 class="modal-title" style="color: #FFFFFF; display: flex; align-items: center; gap: 0.5rem;">
           <span>✉️</span> Temporary Login Details Issued
         </h3>
-        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #FFFFFF;">✕</button>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal(); AdminView.switchTab('users');" style="color: #FFFFFF;">✕</button>
       </div>
 
       <div class="modal-body" style="padding: 1.5rem; text-align: left;">
@@ -2328,7 +2365,7 @@ const AdminView = {
           <button class="btn btn-secondary btn-sm" onclick="AdminView.copyTemporaryCredentials('${user.email}', '${tempPassword}', '${user.staffId}')">
             📋 Copy Welcome &amp; Login Message
           </button>
-          <button class="btn btn-primary" onclick="App.closeModal()">
+          <button class="btn btn-primary" onclick="App.closeModal(); AdminView.switchTab('users');">
             Done &amp; Acknowledge Delivery
           </button>
         </div>
