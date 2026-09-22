@@ -43,3 +43,6 @@ Desktop.ini
 # Scratch and test artifacts
 scratch/
 
+# Local runtime data
+backend/data/
+

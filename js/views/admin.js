@@ -80,6 +80,9 @@ const AdminView = {
             <button class="btn btn-secondary btn-sm" onclick="AdminView.openSeparationOfDutiesModal()" title="View Law Firm Governance Matrix">
               Separation of Duties
             </button>
+            <button class="btn btn-secondary btn-sm" onclick="CasesView.openNewCaseModal()" title="Create New Legal Case" style="display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600;">
+              <span>⚡ New Case</span>
+            </button>
             <button class="btn btn-gold btn-sm" onclick="AdminView.openCreateUserModal()">
               <span>+ Add Lawyer / Staff</span>
             </button>
@@ -93,6 +96,12 @@ const AdminView = {
           </button>
           <button class="tab-btn ${['users-security','users','roles','logs','security-activity','security'].includes(this.activeTab) ? 'active' : ''}" onclick="AdminView.switchTab('users-security')">
             <span>Users &amp; Security (${SLCMS_STATE.users.length})</span>
+          </button>
+          <button class="tab-btn ${this.activeTab === 'cases-matters' ? 'active' : ''}" onclick="AdminView.switchTab('cases-matters')">
+            <span>⚖️ Cases &amp; Matters (${(SLCMS_STATE.cases || []).length})</span>
+          </button>
+          <button class="tab-btn ${this.activeTab === 'tasks-deadlines' ? 'active' : ''}" onclick="AdminView.switchTab('tasks-deadlines')">
+            <span>📋 Tasks &amp; Deadlines (${(SLCMS_STATE.tasks || []).length})</span>
           </button>
           <button class="tab-btn ${this.activeTab === 'settings' || this.activeTab === 'caselibrary' ? 'active' : ''}" onclick="AdminView.switchTab('settings')">
             <span>System Settings</span>
@@ -125,12 +134,17 @@ const AdminView = {
     
     if (tab === 'users-security' || tab === 'users' || tab === 'security-activity' || tab === 'logs') {
       setTimeout(() => { if (typeof AdminView.loadSecurityActivity === 'function') AdminView.loadSecurityActivity(); }, 100);
+    } else if (tab === 'dashboard') {
+      setTimeout(() => { if (typeof AdminView.initDashboardCharts === 'function') AdminView.initDashboardCharts(); }, 60);
     }
 
     // Sync URL and refresh view
     const container = document.getElementById('admin-tab-content');
     if (container) {
       container.innerHTML = this.renderActiveTabContent();
+      if (tab === 'dashboard') {
+        setTimeout(() => { if (typeof AdminView.initDashboardCharts === 'function') AdminView.initDashboardCharts(); }, 60);
+      }
       // Update tab buttons
       document.querySelectorAll('.tabs-nav .tab-btn, .adm-mobile-nav .tab-btn').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('onclick')?.includes(`'${tab}'`));
@@ -150,12 +164,741 @@ const AdminView = {
       case 'security':
       case 'logs':
       case 'security-activity': return this.renderUserSecurityTab();
+      case 'cases-matters': return this.renderCasesMattersTab();
+      case 'tasks-deadlines': return this.renderTasksDeadlinesAdminTab();
       case 'assignments': return this.renderCaseAssignmentsTab();
       case 'caselibrary': return this.renderCaseLibraryControlTab();
       case 'settings': return this.renderSystemSettingsTab();
       case 'backup': return this.renderBackupRestoreTab();
       default: return this.renderAdminDashboard();
     }
+  },
+
+  // Shared HTML escaping utility (prevents XSS in rendered output)
+  escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
+
+  // ==========================================================================
+  // MODULE: TASKS & DEADLINES ADMINISTRATIVE GOVERNANCE TAB
+  // Full administrative oversight of pending tasks, court deadlines, modification,
+  // reassignment, and deletion across all practice practitioners.
+  // ==========================================================================
+  _tdSearch: '',
+  _tdPriorityFilter: 'All',
+  _tdStatusFilter: 'All',
+
+  renderTasksDeadlinesAdminTab() {
+    const allTasks = SLCMS_STATE.tasks || [];
+    const allDeadlines = SLCMS_STATE.deadlines || [];
+    const urgentTasks = allTasks.filter(t => (t.priority || '').toLowerCase() === 'urgent' || (t.priority || '').toLowerCase() === 'high');
+    const completedTasks = allTasks.filter(t => (t.status || '').toLowerCase() === 'completed');
+    const activeTasks = allTasks.filter(t => (t.status || '').toLowerCase() !== 'completed');
+
+    const q = (this._tdSearch || '').toLowerCase();
+    const prioF = this._tdPriorityFilter || 'All';
+    const statusF = this._tdStatusFilter || 'All';
+
+    const filteredTasks = allTasks.filter(t => {
+      if (q && ![t.title, t.caseNumber, t.caseTitle, t.assignedTo].some(v => (v || '').toLowerCase().includes(q))) return false;
+      if (prioF !== 'All' && (t.priority || '').toLowerCase() !== prioF.toLowerCase()) return false;
+      if (statusF !== 'All' && (t.status || '').toLowerCase() !== statusF.toLowerCase()) return false;
+      return true;
+    });
+
+    const filteredDeadlines = allDeadlines.filter(d => {
+      if (q && ![d.title, d.caseNumber, d.caseTitle, d.court, d.responsibleLawyerName].some(v => (v || '').toLowerCase().includes(q))) return false;
+      return true;
+    });
+
+    return `
+      <div class="adm-tasks-deadlines-tab animate-fade">
+        <!-- HEADER & ACTIONS -->
+        <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+          <div>
+            <h2 style="font-size: 1.25rem; font-weight: 800; color: #0F172A; font-family: var(--font-heading); margin: 0 0 0.2rem 0;">
+              Legal Deliverables &amp; Statutory Deadlines Governance
+            </h2>
+            <p style="font-size: 0.84rem; color: #64748B; margin: 0;">
+              Administrative oversight, modification, and reassignment of court obligations and tasks.
+            </p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button class="btn btn-secondary btn-sm" onclick="TasksView.notifyResponsibleUsers()" title="Dispatch formal notice">
+              🔔 Send Notices
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="TasksView.openAddDeadlineModal()">
+              📅 Add Deadline
+            </button>
+            <button class="btn btn-gold btn-sm" onclick="TasksView.openNewTaskModal()">
+              + Create Task
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 EXECUTIVE KPI SUMMARY CARDS -->
+        <div class="grid grid-cols-4 gap-3 mb-4">
+          <div class="card p-3" style="background: #FFFFFF; border-left: 4px solid #1E3A8A; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="font-size: 0.74rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Total Tasks</div>
+            <div style="font-size: 1.5rem; font-weight: 800; color: #0F172A; margin-top: 0.2rem;">${allTasks.length}</div>
+            <div style="font-size: 0.74rem; color: #3B82F6; font-weight: 600; margin-top: 0.2rem;">${activeTasks.length} active in workflow</div>
+          </div>
+          <div class="card p-3" style="background: #FFFFFF; border-left: 4px solid #DC2626; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="font-size: 0.74rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Urgent &amp; High Priority</div>
+            <div style="font-size: 1.5rem; font-weight: 800; color: #DC2626; margin-top: 0.2rem;">${urgentTasks.length}</div>
+            <div style="font-size: 0.74rem; color: #EF4444; font-weight: 600; margin-top: 0.2rem;">Requires immediate focus</div>
+          </div>
+          <div class="card p-3" style="background: #FFFFFF; border-left: 4px solid #C89B3C; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="font-size: 0.74rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Court Deadlines</div>
+            <div style="font-size: 1.5rem; font-weight: 800; color: #B45309; margin-top: 0.2rem;">${allDeadlines.length}</div>
+            <div style="font-size: 0.74rem; color: #C89B3C; font-weight: 600; margin-top: 0.2rem;">Limitation cutoffs</div>
+          </div>
+          <div class="card p-3" style="background: #FFFFFF; border-left: 4px solid #10B981; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="font-size: 0.74rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Completed</div>
+            <div style="font-size: 1.5rem; font-weight: 800; color: #059669; margin-top: 0.2rem;">${completedTasks.length}</div>
+            <div style="font-size: 0.74rem; color: #10B981; font-weight: 600; margin-top: 0.2rem;">Verified deliverables</div>
+          </div>
+        </div>
+
+        <!-- SEARCH & FILTER TOOLBAR -->
+        <div class="card p-3 mb-4" style="border-radius: 12px; background: #FFFFFF; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div style="flex: 1; min-width: 260px;">
+              <input type="text" class="form-control form-control-sm" placeholder="Search tasks, deadlines, case numbers or counsel..."
+                     value="${this.escapeHtml(this._tdSearch || '')}"
+                     oninput="AdminView._tdSearch = this.value; AdminView._refreshTasksDeadlinesTab();">
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span style="font-size: 0.78rem; font-weight: 700; color: #64748B;">Priority:</span>
+              <select class="form-control form-control-sm" style="width: auto;"
+                      onchange="AdminView._tdPriorityFilter = this.value; AdminView._refreshTasksDeadlinesTab();">
+                <option value="All" ${prioF === 'All' ? 'selected' : ''}>All Priorities</option>
+                <option value="Urgent" ${prioF === 'Urgent' ? 'selected' : ''}>🚨 Urgent</option>
+                <option value="High" ${prioF === 'High' ? 'selected' : ''}>⚠️ High</option>
+                <option value="Medium" ${prioF === 'Medium' ? 'selected' : ''}>Medium</option>
+                <option value="Low" ${prioF === 'Low' ? 'selected' : ''}>Low</option>
+              </select>
+
+              <span style="font-size: 0.78rem; font-weight: 700; color: #64748B; margin-left: 0.5rem;">Status:</span>
+              <select class="form-control form-control-sm" style="width: auto;"
+                      onchange="AdminView._tdStatusFilter = this.value; AdminView._refreshTasksDeadlinesTab();">
+                <option value="All" ${statusF === 'All' ? 'selected' : ''}>All Statuses</option>
+                <option value="todo" ${statusF === 'todo' ? 'selected' : ''}>To Do</option>
+                <option value="in_progress" ${statusF === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                <option value="under_review" ${statusF === 'under_review' ? 'selected' : ''}>Under Review</option>
+                <option value="completed" ${statusF === 'completed' ? 'selected' : ''}>Completed</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- TASKS TABLE SECTION -->
+        <div class="card mb-4" style="border-radius: 12px; overflow: hidden; background: #FFFFFF; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+          <div class="p-3" style="border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between;">
+            <h3 style="font-size: 0.96rem; font-weight: 800; color: #0F172A; margin: 0;">
+              📋 Active Legal Tasks (${filteredTasks.length})
+            </h3>
+            <span style="font-size: 0.76rem; color: #64748B;">Centralized Admin modification &amp; reassignment</span>
+          </div>
+
+          <div class="table-container" style="margin: 0; border: none;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 28%;">Task Obligation</th>
+                  <th style="width: 18%;">Legal Matter</th>
+                  <th style="width: 15%;">Assigned Counsel</th>
+                  <th style="width: 13%;">Statutory Due</th>
+                  <th style="width: 8%;">Priority</th>
+                  <th style="width: 8%;">Status</th>
+                  <th style="width: 10%; text-align: right;">Admin Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filteredTasks.length === 0 ? `
+                  <tr>
+                    <td colspan="7" style="text-align: center; padding: 2.5rem; color: #64748B;">
+                      No legal tasks match your current filter criteria.
+                    </td>
+                  </tr>
+                ` : filteredTasks.map(t => {
+                  const countdown = (typeof TasksView !== 'undefined' && typeof TasksView.getDeadlineCountdown === 'function')
+                    ? TasksView.getDeadlineCountdown(t.dueDate)
+                    : { label: t.dueDate || 'No Date', badgeClass: 'due-normal' };
+                  const pClass = (t.priority || 'Medium').toLowerCase();
+
+                  return `
+                    <tr>
+                      <td>
+                        <div style="font-weight: 700; color: #0F172A; font-size: 0.90rem;">
+                          ${this.escapeHtml(t.title || 'Untitled')}
+                        </div>
+                        <div style="font-size: 0.72rem; color: #C89B3C; margin-top: 0.15rem;">
+                          ⚖️ ${this.escapeHtml(t.statutoryReference || t.category || 'Civil Procedure')}
+                        </div>
+                      </td>
+                      <td>
+                        <div style="font-weight: 700; font-family: var(--font-mono); font-size: 0.82rem; color: #1E3A8A;">
+                          ${this.escapeHtml(t.caseNumber || 'MATTER-GEN')}
+                        </div>
+                        <div style="font-size: 0.74rem; color: #64748B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;">
+                          ${this.escapeHtml(t.caseTitle || 'General Practice')}
+                        </div>
+                      </td>
+                      <td>
+                        <div class="flex items-center gap-1.5">
+                          <div class="avatar avatar-sm avatar-navy" style="font-size: 10px; width: 22px; height: 22px;">
+                            ${(t.assignedTo || 'US').substring(0, 2).toUpperCase()}
+                          </div>
+                          <span style="font-size: 0.80rem; font-weight: 600; color: #334155;">
+                            ${this.escapeHtml(t.assignedTo || 'Unassigned')}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="task-countdown-pill ${countdown.badgeClass}">
+                          ${countdown.label}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="task-priority-tag ${pClass}">
+                          ${t.priority || 'Medium'}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="badge ${t.status === 'completed' ? 'badge-active' : t.status === 'in_progress' ? 'badge-pending' : 'badge-neutral'}" style="font-size: 0.68rem; text-transform: capitalize;">
+                          ${(t.status || 'todo').replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td style="text-align: right;">
+                        <div class="flex items-center justify-end gap-1">
+                          <button class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.74rem;" onclick="TasksView.openEditTaskModal('${t.id}')" title="Modify task details">
+                            ✏️ Modify
+                          </button>
+                          <button class="btn btn-ghost btn-sm" style="padding: 0.2rem 0.45rem; font-size: 0.74rem;" onclick="TasksView.openReassignModal('${t.id}')" title="Reassign counsel">
+                            👤
+                          </button>
+                          <button class="btn btn-ghost btn-sm" style="color: #DC2626; padding: 0.2rem 0.45rem;" onclick="AdminView.deleteTask('${t.id}')" title="Delete Task">
+                            🗑️
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- STATUTORY COURT DEADLINES SECTION -->
+        <div class="card" style="border-radius: 12px; overflow: hidden; background: #FFFFFF; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+          <div class="p-3" style="border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between;">
+            <h3 style="font-size: 0.96rem; font-weight: 800; color: #0F172A; margin: 0;">
+              📅 Statutory Court Deadlines &amp; Limitation Dates (${filteredDeadlines.length})
+            </h3>
+            <span style="font-size: 0.76rem; color: #64748B;">Court appearance and filing schedule</span>
+          </div>
+
+          <div class="table-container" style="margin: 0; border: none;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 14%;">Date &amp; Time</th>
+                  <th style="width: 16%;">Legal Matter</th>
+                  <th style="width: 25%;">Proceeding / Deadline Title</th>
+                  <th style="width: 18%;">Judicial Forum / Court</th>
+                  <th style="width: 14%;">Responsible Counsel</th>
+                  <th style="width: 13%; text-align: right;">Admin Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filteredDeadlines.length === 0 ? `
+                  <tr>
+                    <td colspan="6" style="text-align: center; padding: 2.5rem; color: #64748B;">
+                      No court deadlines registered. Click <strong>📅 Add Deadline</strong> to schedule a statutory appearance.
+                    </td>
+                  </tr>
+                ` : filteredDeadlines.map(d => `
+                  <tr>
+                    <td>
+                      <div style="font-weight: 700; color: #0F172A; font-size: 0.88rem;">
+                        ${d.deadlineDate || d.date || 'N/A'}
+                      </div>
+                      <div style="font-size: 0.72rem; color: #64748B;">
+                        ⏰ ${d.deadlineTime || d.time || '09:00 AM'}
+                      </div>
+                    </td>
+                    <td>
+                      <div style="font-weight: 700; font-family: var(--font-mono); font-size: 0.82rem; color: #1E3A8A;">
+                        ${this.escapeHtml(d.caseNumber || 'MATTER-GEN')}
+                      </div>
+                      <div style="font-size: 0.74rem; color: #64748B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px;">
+                        ${this.escapeHtml(d.caseTitle || 'General Practice')}
+                      </div>
+                    </td>
+                    <td>
+                      <div style="font-weight: 700; color: #0F172A; font-size: 0.90rem;">
+                        ${this.escapeHtml(d.title || 'Court Appearance')}
+                      </div>
+                      <div style="font-size: 0.72rem; color: #C89B3C;">
+                        ${this.escapeHtml(d.statutoryReference || d.source || 'Court Order')}
+                      </div>
+                    </td>
+                    <td>
+                      <div style="font-size: 0.82rem; color: #334155; font-weight: 600;">
+                        ${this.escapeHtml(d.court || 'High Court of Tanzania')}
+                      </div>
+                    </td>
+                    <td>
+                      <div style="font-size: 0.82rem; font-weight: 600; color: #0F172A;">
+                        ${this.escapeHtml(d.responsibleLawyerName || 'Advocate In-Charge')}
+                      </div>
+                    </td>
+                    <td style="text-align: right;">
+                      <div class="flex items-center justify-end gap-1">
+                        <button class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.74rem;" onclick="TasksView.openEditDeadlineModal('${d.id}')" title="Modify Statutory Deadline">
+                          ✏️ Modify
+                        </button>
+                        <button class="btn btn-ghost btn-sm" style="color: #DC2626; padding: 0.2rem 0.45rem;" onclick="AdminView.deleteDeadline('${d.id}')" title="Delete Deadline">
+                          🗑️
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  _refreshTasksDeadlinesTab() {
+    const container = document.getElementById('admin-tab-content');
+    if (container && this.activeTab === 'tasks-deadlines') {
+      container.innerHTML = this.renderTasksDeadlinesAdminTab();
+    }
+  },
+
+  async deleteTask(taskId) {
+    if (!confirm('Are you sure you want to delete this task? This action cannot be undone.')) return;
+    await SLCMS_STATE.deleteTaskOnBackend(taskId);
+    App.showToast('Task removed from firm records.', 'info');
+    if (this.activeTab === 'tasks-deadlines') {
+      this._refreshTasksDeadlinesTab();
+    } else {
+      App.refreshCurrentView();
+    }
+  },
+
+  async deleteDeadline(deadlineId) {
+    if (!confirm('Are you sure you want to remove this statutory court deadline?')) return;
+    await SLCMS_STATE.deleteDeadline(deadlineId);
+    if (typeof TasksView !== 'undefined' && Array.isArray(TasksView.courtEvents)) {
+      TasksView.courtEvents = TasksView.courtEvents.filter(e => e.id !== deadlineId);
+      TasksView.persistCourtEvents();
+    }
+    App.showToast('Court deadline removed.', 'info');
+    if (this.activeTab === 'tasks-deadlines') {
+      this._refreshTasksDeadlinesTab();
+    } else {
+      App.refreshCurrentView();
+    }
+  },
+
+  // ==========================================================================
+  // MODULE: CASES & MATTERS ADMIN TAB
+  // Full administrative view of all registered cases with KPIs, search/filter,
+  // table management, status changes, counsel reassignment, and bulk actions.
+  // ==========================================================================
+  _cmSearch: '',
+  _cmStatusFilter: 'All',
+  _cmTypeFilter: 'All',
+  _cmPriorityFilter: 'All',
+  _cmSortCol: 'filed',
+  _cmSortDir: 'desc',
+
+  renderCasesMattersTab() {
+    const allCases = (SLCMS_STATE.cases || []).map(c => ({
+      id: c.id || '',
+      caseNumber: c.caseNumber || c.officialCaseNumber || 'N/A',
+      title: c.caseTitle || c.title || 'Untitled',
+      type: c.caseType || c.type || 'Other',
+      status: c.status || 'Unassigned',
+      priority: c.priority || 'Medium',
+      client: c.clientName || c.client || '—',
+      counsel: c.assignedCounsel || c.lawyer || 'Unassigned',
+      court: c.court || '—',
+      filed: c.filedDate || c.createdAt || c.dateOpened || '',
+      nextHearing: c.nextHearingDate || '—',
+    }));
+
+    const q = (this._cmSearch || '').toLowerCase();
+    const statusF = this._cmStatusFilter || 'All';
+    const typeF   = this._cmTypeFilter   || 'All';
+    const prioF   = this._cmPriorityFilter || 'All';
+
+    let filtered = allCases.filter(c => {
+      if (q && ![
+        c.caseNumber, c.title, c.client, c.counsel, c.court, c.type
+      ].some(v => (v || '').toLowerCase().includes(q))) return false;
+      if (statusF !== 'All' && c.status.toLowerCase() !== statusF.toLowerCase()) return false;
+      if (typeF   !== 'All' && c.type.toLowerCase()   !== typeF.toLowerCase())   return false;
+      if (prioF   !== 'All' && c.priority.toLowerCase() !== prioF.toLowerCase()) return false;
+      return true;
+    });
+
+    // Sorting
+    const dir = this._cmSortDir === 'asc' ? 1 : -1;
+    const col = this._cmSortCol;
+    filtered.sort((a, b) => {
+      const av = (a[col] || '').toString().toLowerCase();
+      const bv = (b[col] || '').toString().toLowerCase();
+      return av < bv ? -dir : av > bv ? dir : 0;
+    });
+
+    // KPIs
+    const total     = allCases.length;
+    const active    = allCases.filter(c => /^active$/i.test(c.status)).length;
+    const pending   = allCases.filter(c => /pending|open|unassigned/i.test(c.status)).length;
+    const closed    = allCases.filter(c => /closed|concluded|archived/i.test(c.status)).length;
+    const highPrio  = allCases.filter(c => /^(critical|high)$/i.test(c.priority)).length;
+
+    // Distinct types / statuses / priorities for filters
+    const statuses   = ['All', ...new Set(allCases.map(c => c.status).filter(Boolean))];
+    const types      = ['All', ...new Set(allCases.map(c => c.type).filter(Boolean))];
+    const priorities = ['All', 'Critical', 'High', 'Medium', 'Low'];
+
+    const sortIcon = (col2) => col2 === col
+      ? (this._cmSortDir === 'asc' ? ' ▲' : ' ▼')
+      : ' ⇅';
+    const onSort = (col2) => `AdminView._cmSortCol='${col2}'; AdminView._cmSortDir=(AdminView._cmSortDir==='asc'?'desc':'asc'); AdminView._refreshCasesMattersTab();`;
+
+    const statusBadge = (s) => {
+      const cls = /^active$/i.test(s) ? 'badge-active'
+                : /closed|concluded|archived/i.test(s) ? 'badge-neutral'
+                : /pending/i.test(s) ? 'badge-warning'
+                : 'badge-neutral';
+      return `<span class="badge ${cls}" style="font-size:0.68rem;">${s}</span>`;
+    };
+    const prioBadge = (p) => {
+      const cl = /critical/i.test(p) ? 'background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;'
+               : /high/i.test(p)     ? 'background:#FEF3C7;color:#B45309;border:1px solid #FDE68A;'
+               : /medium/i.test(p)   ? 'background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE;'
+               :                       'background:#F0FDF4;color:#16A34A;border:1px solid #BBF7D0;';
+      return `<span class="badge" style="font-size:0.65rem;${cl}">${p}</span>`;
+    };
+
+    const emptyState = total === 0 ? `
+      <tr><td colspan="8">
+        <div style="padding:3rem;text-align:center;">
+          <div style="font-size:3rem;margin-bottom:0.75rem;">⚖️</div>
+          <h4 style="font-weight:700;color:#1E293B;margin-bottom:0.4rem;">No Cases Registered</h4>
+          <p style="color:#64748B;font-size:0.88rem;margin-bottom:1.25rem;">Register the first legal case to begin matter management.</p>
+          <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;">
+            <button class="btn btn-gold" onclick="CasesView.openNewCaseModal()">+ Add New Case</button>
+            <button class="btn btn-secondary" onclick="App.navigate('cases')">Go to Cases &amp; Matters</button>
+          </div>
+        </div>
+      </td></tr>` : (filtered.length === 0 ? `
+      <tr><td colspan="8" style="text-align:center;padding:2rem;color:#64748B;font-size:0.88rem;">No cases match the current filter criteria.</td></tr>` : '');
+
+    return `
+      <div id="admin-cases-matters-panel" class="animate-fade">
+
+        <!-- KPI SUMMARY STRIP -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem;">
+          ${[
+            { label: 'Total Cases',   value: total,    icon: '⚖️',  bg: '#EFF6FF', color: '#2563EB' },
+            { label: 'Active',        value: active,   icon: '🟢',  bg: '#ECFDF5', color: '#059669' },
+            { label: 'Pending/Open',  value: pending,  icon: '🕐',  bg: '#FFF7ED', color: '#D97706' },
+            { label: 'Closed',        value: closed,   icon: '✅',  bg: '#F0FDF4', color: '#16A34A' },
+            { label: 'High Priority', value: highPrio, icon: '🔴',  bg: '#FEF2F2', color: '#DC2626' },
+          ].map(k => `
+            <div class="card" style="padding:1rem 1.2rem;background:${k.bg};border:1px solid ${k.color}22;">
+              <div style="font-size:1.4rem;margin-bottom:0.25rem;">${k.icon}</div>
+              <div style="font-size:1.6rem;font-weight:800;color:${k.color};font-family:var(--font-heading);line-height:1;">${k.value}</div>
+              <div style="font-size:0.72rem;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.04em;margin-top:0.3rem;">${k.label}</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- TOOLBAR: SEARCH + FILTERS + ACTIONS -->
+        <div class="card" style="padding:1rem 1.25rem;margin-bottom:1.25rem;">
+          <div style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;">
+            <!-- Search -->
+            <div style="flex:1;min-width:200px;position:relative;">
+              <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94A3B8;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input id="adm-cm-search" type="text" class="form-control" placeholder="Search by case number, title, client, counsel…"
+                style="padding-left:2.2rem;font-size:0.85rem;"
+                value="${this.escapeHtml(this._cmSearch || '')}"
+                oninput="AdminView._cmSearch=this.value; AdminView._refreshCasesMattersTab();">
+            </div>
+            <!-- Status Filter -->
+            <select class="form-control" style="width:auto;font-size:0.82rem;"
+              onchange="AdminView._cmStatusFilter=this.value; AdminView._refreshCasesMattersTab();">
+              ${statuses.map(s => `<option value="${s}" ${s === statusF ? 'selected' : ''}>${s === 'All' ? '— All Statuses —' : s}</option>`).join('')}
+            </select>
+            <!-- Type Filter -->
+            <select class="form-control" style="width:auto;font-size:0.82rem;"
+              onchange="AdminView._cmTypeFilter=this.value; AdminView._refreshCasesMattersTab();">
+              ${types.map(t => `<option value="${t}" ${t === typeF ? 'selected' : ''}>${t === 'All' ? '— All Types —' : t}</option>`).join('')}
+            </select>
+            <!-- Priority Filter -->
+            <select class="form-control" style="width:auto;font-size:0.82rem;"
+              onchange="AdminView._cmPriorityFilter=this.value; AdminView._refreshCasesMattersTab();">
+              ${priorities.map(p => `<option value="${p}" ${p === prioF ? 'selected' : ''}>${p === 'All' ? '— All Priorities —' : p}</option>`).join('')}
+            </select>
+            <!-- Reset -->
+            <button class="btn btn-ghost btn-sm" onclick="AdminView._cmSearch='';AdminView._cmStatusFilter='All';AdminView._cmTypeFilter='All';AdminView._cmPriorityFilter='All';AdminView._refreshCasesMattersTab();" title="Clear Filters">✕ Reset</button>
+            <!-- Spacer -->
+            <div style="flex:1;"></div>
+            <!-- Export CSV -->
+            <button class="btn btn-secondary btn-sm" onclick="AdminView.exportCasesCSV()" title="Export all cases as CSV">
+              ⬇ Export CSV
+            </button>
+            <!-- Add New Case -->
+            <button class="btn btn-gold btn-sm" onclick="CasesView.openNewCaseModal()">
+              + Add New Case
+            </button>
+          </div>
+          <!-- Result Count -->
+          <div style="margin-top:0.6rem;font-size:0.78rem;color:#64748B;">
+            Showing <strong>${filtered.length}</strong> of <strong>${total}</strong> registered case${total !== 1 ? 's' : ''}
+          </div>
+        </div>
+
+        <!-- CASES TABLE -->
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="table-container" style="overflow-x:auto;">
+            <table class="data-table" style="min-width:900px;">
+              <thead>
+                <tr>
+                  <th style="width:18%;cursor:pointer;" onclick="${onSort('caseNumber')}">Case Number${sortIcon('caseNumber')}</th>
+                  <th style="width:22%;cursor:pointer;" onclick="${onSort('title')}">Case Title / Client${sortIcon('title')}</th>
+                  <th style="width:12%;cursor:pointer;" onclick="${onSort('type')}">Type${sortIcon('type')}</th>
+                  <th style="width:10%;cursor:pointer;" onclick="${onSort('status')}">Status${sortIcon('status')}</th>
+                  <th style="width:8%;cursor:pointer;"  onclick="${onSort('priority')}">Priority${sortIcon('priority')}</th>
+                  <th style="width:14%;cursor:pointer;" onclick="${onSort('counsel')}">Assigned Counsel${sortIcon('counsel')}</th>
+                  <th style="width:10%;cursor:pointer;" onclick="${onSort('nextHearing')}">Next Hearing${sortIcon('nextHearing')}</th>
+                  <th style="width:6%;text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${emptyState}
+                ${filtered.map(c => `
+                  <tr style="transition:background 0.15s;" onmouseenter="this.style.background='var(--color-surface-hover, #F8FAFC)'" onmouseleave="this.style.background=''">
+                    <td>
+                      <div style="font-family:var(--font-mono);font-size:0.8rem;font-weight:700;color:var(--color-primary);">${this.escapeHtml(c.caseNumber)}</div>
+                      <div style="font-size:0.7rem;color:#94A3B8;margin-top:1px;">${this.escapeHtml(c.court)}</div>
+                    </td>
+                    <td>
+                      <div style="font-weight:600;color:#1E293B;font-size:0.85rem;line-height:1.3;">${this.escapeHtml(c.title)}</div>
+                      <div style="font-size:0.74rem;color:#64748B;margin-top:2px;">Client: ${this.escapeHtml(c.client)}</div>
+                    </td>
+                    <td><span style="font-size:0.78rem;color:#334155;font-weight:500;">${this.escapeHtml(c.type)}</span></td>
+                    <td>${statusBadge(c.status)}</td>
+                    <td>${prioBadge(c.priority)}</td>
+                    <td>
+                      <div style="font-size:0.82rem;color:#334155;">${this.escapeHtml(c.counsel)}</div>
+                    </td>
+                    <td><span style="font-size:0.78rem;color:#64748B;">${this.escapeHtml(c.nextHearing)}</span></td>
+                    <td style="text-align:right;">
+                      <div style="display:flex;gap:0.35rem;justify-content:flex-end;flex-wrap:wrap;">
+                        <button class="btn btn-ghost btn-sm" style="font-size:0.7rem;padding:0.25rem 0.5rem;"
+                          onclick="AdminView.adminEditCaseStatus('${c.id}')" title="Change Status">✏️ Status</button>
+                        <button class="btn btn-ghost btn-sm" style="font-size:0.7rem;padding:0.25rem 0.5rem;"
+                          onclick="AdminView.adminReassignCaseCounsel('${c.id}')" title="Reassign Counsel">👤 Counsel</button>
+                        <button class="btn btn-ghost btn-sm text-danger" style="font-size:0.7rem;padding:0.25rem 0.5rem;"
+                          onclick="AdminView.adminDeleteCase('${c.id}')" title="Delete Case">🗑️ Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- FOOTER INFO -->
+        <div style="margin-top:1rem;padding:0.75rem 1rem;background:var(--color-surface-secondary,#F8FAFC);border-radius:8px;border:1px solid var(--color-border);font-size:0.78rem;color:#64748B;display:flex;gap:1.5rem;flex-wrap:wrap;">
+          <span>⚖️ <strong>Admin-level</strong> access — Status changes and deletions are logged to the audit trail.</span>
+          <span>🔒 Deletions are <strong>irreversible</strong> and cascade to tasks, documents, deadlines, and communications.</span>
+        </div>
+
+      </div>
+    `;
+  },
+
+  _refreshCasesMattersTab() {
+    const panel = document.getElementById('admin-cases-matters-panel');
+    if (panel) {
+      const parent = panel.parentElement;
+      if (parent) {
+        parent.innerHTML = this.renderCasesMattersTab();
+      }
+    } else {
+      const container = document.getElementById('admin-tab-content');
+      if (container) container.innerHTML = this.renderCasesMattersTab();
+    }
+  },
+
+  adminEditCaseStatus(caseId) {
+    const c = (SLCMS_STATE.cases || []).find(x => x.id === caseId);
+    if (!c) return;
+    const current = c.status || 'Unassigned';
+    const statuses = ['Active', 'Pending', 'Open', 'Closed', 'Concluded', 'Archived', 'Unassigned', 'On Hold'];
+    App.openModal(`
+      <div class="modal-header" style="background:linear-gradient(135deg,#102A43,#0B1F33);color:#fff;">
+        <h3 class="modal-title" style="color:#fff;">⚖️ Change Case Status</h3>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color:#fff;">✕</button>
+      </div>
+      <div class="modal-body" style="padding:1.5rem;">
+        <div style="font-weight:600;color:#1E293B;margin-bottom:0.25rem;font-size:0.92rem;">${this.escapeHtml(c.caseNumber)} — ${this.escapeHtml(c.caseTitle || c.title || '')}</div>
+        <div style="font-size:0.8rem;color:#64748B;margin-bottom:1.25rem;">Current Status: <span class="badge badge-neutral">${this.escapeHtml(current)}</span></div>
+        <div class="form-group">
+          <label class="form-label">New Status</label>
+          <select id="adm-new-status" class="form-control">
+            ${statuses.map(s => `<option value="${s}" ${s === current ? 'selected' : ''}>${s}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="AdminView._confirmCaseStatusChange('${caseId}')">Update Status</button>
+      </div>
+    `);
+  },
+
+  _confirmCaseStatusChange(caseId) {
+    const sel = document.getElementById('adm-new-status');
+    if (!sel) return;
+    const newStatus = sel.value;
+    const c = (SLCMS_STATE.cases || []).find(x => x.id === caseId);
+    if (!c) return;
+    const oldStatus = c.status;
+    c.status = newStatus;
+    SLCMS_STATE.persistCases();
+    SLCMS_STATE.addAuditLog('Case Status Changed', 'Admin: Cases & Matters', `${c.caseNumber}: ${oldStatus} → ${newStatus}`);
+    App.closeModal();
+    App.showToast(`Case ${c.caseNumber} status updated to "${newStatus}".`, 'success');
+    this._refreshCasesMattersTab();
+  },
+
+  adminReassignCaseCounsel(caseId) {
+    const c = (SLCMS_STATE.cases || []).find(x => x.id === caseId);
+    if (!c) return;
+    const lawyers = (SLCMS_STATE.users || []).filter(u => {
+      const role = (u.role || '').toLowerCase();
+      const status = (u.accountStatus || u.status || '').toUpperCase();
+      return (role.includes('lawyer') || role.includes('advocate') || role.includes('senior')) && status === 'ACTIVE';
+    });
+    const currentCounsel = c.assignedCounsel || c.lawyer || 'Unassigned';
+    App.openModal(`
+      <div class="modal-header" style="background:linear-gradient(135deg,#102A43,#0B1F33);color:#fff;">
+        <h3 class="modal-title" style="color:#fff;">👤 Reassign Lead Counsel</h3>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color:#fff;">✕</button>
+      </div>
+      <div class="modal-body" style="padding:1.5rem;">
+        <div style="font-weight:600;color:#1E293B;margin-bottom:0.25rem;font-size:0.92rem;">${this.escapeHtml(c.caseNumber)} — ${this.escapeHtml(c.caseTitle || c.title || '')}</div>
+        <div style="font-size:0.8rem;color:#64748B;margin-bottom:1.25rem;">Current Counsel: <strong>${this.escapeHtml(currentCounsel)}</strong></div>
+        <div class="form-group">
+          <label class="form-label">Select New Counsel</label>
+          ${lawyers.length === 0
+            ? `<div class="alert" style="background:#FEF3C7;color:#B45309;border:1px solid #FDE68A;padding:0.75rem;border-radius:6px;font-size:0.82rem;">No active lawyers found in the system. Add lawyer accounts under Users &amp; Security first.</div>`
+            : `<select id="adm-new-counsel" class="form-control">
+                ${lawyers.map(u => `<option value="${this.escapeHtml(u.name)}">${this.escapeHtml(u.name)} (${this.escapeHtml(u.role)})</option>`).join('')}
+              </select>`
+          }
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+        ${lawyers.length > 0 ? `<button class="btn btn-primary" onclick="AdminView._confirmReassignCounsel('${caseId}')">Reassign Counsel</button>` : ''}
+      </div>
+    `);
+  },
+
+  _confirmReassignCounsel(caseId) {
+    const sel = document.getElementById('adm-new-counsel');
+    if (!sel) return;
+    const newCounsel = sel.value;
+    const c = (SLCMS_STATE.cases || []).find(x => x.id === caseId);
+    if (!c) return;
+    const oldCounsel = c.assignedCounsel || c.lawyer || 'Unassigned';
+    c.assignedCounsel = newCounsel;
+    c.lawyer = newCounsel;
+    SLCMS_STATE.persistCases();
+    SLCMS_STATE.addAuditLog('Case Counsel Reassigned', 'Admin: Cases & Matters', `${c.caseNumber}: ${oldCounsel} → ${newCounsel}`);
+    App.closeModal();
+    App.showToast(`Case ${c.caseNumber} reassigned to ${newCounsel}.`, 'success');
+    this._refreshCasesMattersTab();
+  },
+
+  adminDeleteCase(caseId) {
+    const c = (SLCMS_STATE.cases || []).find(x => x.id === caseId);
+    if (!c) return;
+    App.confirmAction({
+      title: '🗑️ Delete Legal Case',
+      message: `<div style="text-align:left;">
+        <p style="margin-bottom:0.75rem;">You are about to <strong style="color:#DC2626;">permanently delete</strong> the following case:</p>
+        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:0.75rem;font-size:0.85rem;">
+          <div><strong>Case No:</strong> ${this.escapeHtml(c.caseNumber)}</div>
+          <div><strong>Title:</strong> ${this.escapeHtml(c.caseTitle || c.title || '')}</div>
+          <div><strong>Client:</strong> ${this.escapeHtml(c.clientName || c.client || '—')}</div>
+        </div>
+        <div style="margin-top:0.75rem;background:#FEF2F2;border:1px solid #FECACA;border-radius:6px;padding:0.6rem 0.75rem;font-size:0.8rem;color:#DC2626;">
+          ⚠️ This will also delete all linked <strong>tasks, documents, communications, deadlines,</strong> and <strong>court records</strong>. This action cannot be undone.
+        </div>
+      </div>`,
+      confirmText: 'Yes, Delete Permanently',
+      confirmClass: 'btn-danger',
+      onConfirm: () => {
+        SLCMS_STATE.deleteCase(caseId);
+        App.closeModal();
+        App.showToast(`Case ${c.caseNumber} has been permanently deleted.`, 'danger');
+        this._refreshCasesMattersTab();
+      }
+    });
+  },
+
+  exportCasesCSV() {
+    const allCases = (SLCMS_STATE.cases || []);
+    if (allCases.length === 0) {
+      App.showToast('No cases to export.', 'info');
+      return;
+    }
+    const headers = ['Case Number','Title','Type','Status','Priority','Client','Counsel','Court','Filed Date','Next Hearing'];
+    const rows = allCases.map(c => [
+      c.caseNumber || '',
+      (c.caseTitle || c.title || '').replace(/,/g, ';'),
+      (c.caseType || c.type || ''),
+      c.status || '',
+      c.priority || '',
+      (c.clientName || c.client || '').replace(/,/g, ';'),
+      (c.assignedCounsel || c.lawyer || '').replace(/,/g, ';'),
+      (c.court || '').replace(/,/g, ';'),
+      c.filedDate || c.createdAt || c.dateOpened || '',
+      c.nextHearingDate || '',
+    ]);
+    const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `SLCMS_Cases_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    App.showToast(`Exported ${allCases.length} case(s) to CSV.`, 'success');
+    SLCMS_STATE.addAuditLog('Cases Exported', 'Admin: Cases & Matters', `${allCases.length} cases exported to CSV by ${SLCMS_STATE.currentUser?.name || 'Admin'}`);
   },
 
   // ==========================================================================
@@ -233,254 +976,685 @@ const AdminView = {
     });
     const unresolvedAlertsCount = attentionUsers.length;
 
+    const realUsers = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.users)) ? SLCMS_STATE.users : [];
+    const totalStaffCount = realUsers.length;
+    const activeStaffCount = realUsers.filter(u => (u.status || u.accountStatus || '').toUpperCase() === 'ACTIVE').length;
+
+    const realCases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases)) ? SLCMS_STATE.cases : [];
+    const totalCasesCount = realCases.length;
+    const activeCasesCount = realCases.filter(c => (c.status || '').toLowerCase() === 'active').length;
+
+    const realLogs = (typeof SLCMS_STATE !== 'undefined' && (SLCMS_STATE.activityLogs || SLCMS_STATE.auditLogs)) ? (SLCMS_STATE.activityLogs || SLCMS_STATE.auditLogs) : [];
+    const totalLogsCount = realLogs.length;
+
+    const commCount = realCases.filter(c => /commercial|bank|financ|corp/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+    const civilCount = realCases.filter(c => /civil|contract|tort|dispute/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+    const landCount = realCases.filter(c => /land|property|real/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+    const constiCount = realCases.filter(c => /constitut|review|appeal/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+    const crimCount = realCases.filter(c => /crimin|penal/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+
+    const categoriesConfig = [
+      { name: 'Commercial & Banking', count: commCount, color: '#6EE7B7' },
+      { name: 'Civil Litigation', count: civilCount, color: '#6366F1' },
+      { name: 'Land & Real Estate', count: landCount, color: '#38BDF8' },
+      { name: 'Constitutional Review', count: constiCount, color: '#A78BFA' },
+      { name: 'Criminal & Appeals', count: crimCount, color: '#10B981' }
+    ];
+
+    const registeredCategories = categoriesConfig.filter(cat => cat.count > 0);
+
+    let categoryChipsHtml = '';
+    if (totalCasesCount === 0 || registeredCategories.length === 0) {
+      categoryChipsHtml = `
+        <div style="grid-column: 1 / -1; padding: 1.4rem 1.1rem; background: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.16); border-radius: 14px; text-align: center;">
+          <div style="font-size: 1.6rem; margin-bottom: 0.35rem;">📂</div>
+          <div style="font-size: 0.95rem; font-weight: 700; color: #FFFFFF;">0 Cases Registered</div>
+          <div style="font-size: 0.78rem; color: #94A3B8; margin-top: 0.25rem; max-width: 320px; margin-left: auto; margin-right: auto; line-height: 1.4;">
+            No legal cases currently on record. As soon as lawyers or counsel register cases, they will be categorized here automatically.
+          </div>
+        </div>
+      `;
+    } else {
+      categoryChipsHtml = registeredCategories.map((cat, idx) => `
+        <div class="luxury-cat-legend-item">
+          <span class="cat-legend-dot" style="--cat-color: ${cat.color};"></span>
+          <div class="cat-legend-info">
+            <div class="cat-legend-title">${cat.name}</div>
+            <div class="cat-legend-amount" id="adm-cat-cnt-${idx + 1}">${cat.count} ${cat.count === 1 ? 'Case' : 'Cases'}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
     const metrics = (typeof SLCMS_STATE !== 'undefined' && typeof SLCMS_STATE.getDashboardMetrics === 'function')
       ? SLCMS_STATE.getDashboardMetrics()
       : {
-          totalStaff: (SLCMS_STATE.users || []).length,
-          activeStaff: (SLCMS_STATE.users || []).filter(u => (u.status || '').toUpperCase() === 'ACTIVE').length,
-          seniorLawyers: (SLCMS_STATE.users || []).filter(u => u.role === 'Senior Lawyer').length,
-          lawyers: (SLCMS_STATE.users || []).filter(u => u.role === 'Lawyer').length,
-          legalClerks: (SLCMS_STATE.users || []).filter(u => u.role === 'Legal Clerk').length,
-          firstLoginRequired: (SLCMS_STATE.users || []).filter(u => (u.status || '').toUpperCase() === 'FIRST_LOGIN_RESET' || u.first_login_required).length,
+          totalStaff: totalStaffCount,
+          activeStaff: activeStaffCount,
+          seniorLawyers: realUsers.filter(u => u.role === 'Senior Lawyer').length,
+          lawyers: realUsers.filter(u => u.role === 'Lawyer').length,
+          legalClerks: realUsers.filter(u => u.role === 'Legal Clerk').length,
+          firstLoginRequired: realUsers.filter(u => (u.status || '').toUpperCase() === 'FIRST_LOGIN_RESET' || u.first_login_required).length,
           lockedAccounts: lockedUsers.length
         };
 
-    // Schedule immediate asynchronous fetch and render of security & system activity
+    // Schedule immediate asynchronous fetch and render of security & system activity and charts
     setTimeout(() => {
       if (typeof AdminView !== 'undefined') {
         if (typeof AdminView.loadSecuritySystemActivity === 'function') AdminView.loadSecuritySystemActivity();
         if (typeof AdminView.loadSecurityActivity === 'function') AdminView.loadSecurityActivity();
+        if (typeof AdminView.initDashboardCharts === 'function') AdminView.initDashboardCharts();
       }
-    }, 10);
+    }, 40);
+
+    const recentSecLogs = realLogs.slice(0, 3);
 
     return `
       <div class="adm-dashboard-page">
-        <!-- 1. HERO BANNER -->
-        <div class="adm-hero-banner">
-          <!-- Left: Avatar + Title + Date -->
+        <!-- 1. COMPACT EXECUTIVE HERO BANNER -->
+        <div class="adm-hero-banner" style="margin-bottom: 1.25rem;">
+          <!-- Left: Avatar + Title + Telemetry -->
           <div class="adm-hero-left">
             <div class="adm-hero-avatar-wrap">
-              <div class="avatar avatar-md avatar-gold" style="width: 48px; height: 48px; font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #C89B3C; color: #FFFFFF;">SA</div>
+              <div class="avatar avatar-md avatar-gold" style="width: 48px; height: 48px; font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #C89B3C; color: #FFFFFF; box-shadow: 0 4px 12px rgba(200, 155, 60, 0.35);">SA</div>
             </div>
             <div class="adm-hero-greeting-box">
               <h2 class="adm-hero-title">Good day, System Administrator</h2>
-              <div class="adm-hero-date">${dateStr}</div>
+              <div class="adm-hero-date">${dateStr} &bull; Enterprise Legal Cloud &bull; TLS 1.3 Active</div>
             </div>
           </div>
 
-          <!-- Center: Hero Stat Pills -->
+          <!-- Center: High-Density Telemetry Pills -->
           <div class="adm-hero-stats-pills">
-            <div class="adm-hero-pill-item" onclick="AdminView.switchTab('users', { statusFilter: 'ACTIVE' })" title="Filter active staff">
+            <div class="adm-hero-pill-item" onclick="AdminView.switchTab('users-security', { statusFilter: 'ACTIVE' })" title="Filter active staff">
               <div class="adm-hero-pill-num text-teal">${metrics.activeStaff}</div>
               <div class="adm-hero-pill-label">Active Staff</div>
             </div>
-            <div class="adm-hero-pill-item ${unresolvedAlertsCount > 0 ? 'adm-pill-danger-bg' : ''}" onclick="AdminView.switchTab('users', { statusFilter: 'LOCKED', accessFilter: 'all' })" title="Needs attention accounts">
+            <div class="adm-hero-pill-item ${unresolvedAlertsCount > 0 ? 'adm-pill-danger-bg' : ''}" onclick="AdminView.switchTab('users-security', { statusFilter: 'LOCKED', accessFilter: 'all' })" title="Accounts needing administrator review">
               <div id="adm-hero-attention-count" class="adm-hero-pill-num ${unresolvedAlertsCount > 0 ? 'text-red' : 'text-teal'}">${unresolvedAlertsCount}</div>
-              <div class="adm-hero-pill-label ${unresolvedAlertsCount > 0 ? 'text-red-label' : ''}">Needs Attention</div>
+              <div class="adm-hero-pill-label ${unresolvedAlertsCount > 0 ? 'text-red-label' : ''}">Attention Required</div>
+            </div>
+            <div class="adm-hero-pill-item" onclick="AdminView.switchTab('backup')" title="System Health and Resilience">
+              <div class="adm-hero-pill-num" style="color: #10B981;">99.9%</div>
+              <div class="adm-hero-pill-label">System Health</div>
             </div>
           </div>
 
-          <!-- Right: 2 Action Buttons -->
+          <!-- Right: Executive Action Buttons -->
           <div class="adm-hero-actions-right">
             <button class="adm-hero-btn-gold" onclick="AdminView.openCreateUserModal()">
-              <span>Add Lawyer / Staff</span>
+              <span>+ Add Lawyer / Staff</span>
             </button>
             <button class="adm-hero-btn-dark" onclick="AdminView.openSeparationOfDutiesModal()">
-              <span>Duties Policy</span>
+              <span>Duties Matrix</span>
             </button>
           </div>
         </div>
 
-        <!-- 2. SECTION: CORE SYSTEM METRICS -->
-        <div class="adm-section-header" style="margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between;">
-          <div class="flex items-center gap-2">
-            <span style="display: inline-block; width: 4px; height: 18px; background: var(--color-gold, #C89B3C); border-radius: 2px;"></span>
-            <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--color-primary, #0B1F33); margin: 0; font-family: var(--font-heading);">
-              Core System Metrics
-            </h3>
-          </div>
-          <span style="font-size: 0.78rem; color: var(--color-text-secondary, #64748B);">
-            Enterprise Telemetry &amp; Access Status
-          </span>
-        </div>
-
-        <div class="adm-core-metrics-grid">
-          <!-- Card 1: Active Staff Accounts -->
-          <div class="adm-core-metric-card" onclick="AdminView.switchTab('users', { statusFilter: 'ACTIVE' })">
-            <div class="adm-core-card-top">
-              <span class="adm-core-card-title">Active Staff Accounts</span>
-              <span class="adm-core-badge" style="background: #ECFDF5; color: #059669;">STAFF</span>
-            </div>
-            <div class="adm-core-card-val">${metrics.activeStaff}</div>
-            <div class="adm-core-card-sub">${metrics.totalStaff} total registered</div>
-            <div class="adm-core-tag" style="background: #ECFDF5; color: #059669;">${metrics.firstLoginRequired > 0 ? `${metrics.firstLoginRequired} first-login pending` : 'All verified'}</div>
-          </div>
-
-          <!-- Card 2: Needs Attention (Dynamic Counter) -->
-          <div id="adm-core-attention-card" class="adm-core-metric-card ${unresolvedAlertsCount > 0 ? 'adm-border-danger' : ''}" onclick="AdminView.switchTab('users', { statusFilter: 'LOCKED', accessFilter: 'all' })">
-            <div class="adm-core-card-top">
-              <span class="adm-core-card-title" style="color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#1E293B'};">Needs Attention</span>
-              <span id="adm-core-attention-badge" class="adm-core-badge" style="background: ${unresolvedAlertsCount > 0 ? '#FEE2E2' : '#ECFDF5'}; color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#059669'};">${unresolvedAlertsCount > 0 ? 'LOCK' : 'OK'}</span>
-            </div>
-            <div id="adm-core-attention-val" class="adm-core-card-val" style="color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#059669'};">${unresolvedAlertsCount}</div>
-            <div id="adm-core-attention-sub" class="adm-core-card-sub" style="color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#64748B'};">${unresolvedAlertsCount > 0 ? 'Action Required' : 'No action required'}</div>
-            <div id="adm-core-attention-tag" class="adm-core-tag" style="background: ${unresolvedAlertsCount > 0 ? '#FEE2E2' : '#ECFDF5'}; color: ${unresolvedAlertsCount > 0 ? '#DC2626' : '#059669'};">${unresolvedAlertsCount > 0 ? 'Action Required' : 'No Action Needed'}</div>
-          </div>
-
-          <!-- Card 3: System Health & Security -->
-          <div class="adm-core-metric-card" onclick="AdminView.switchTab('security-activity')">
-            <div class="adm-core-card-top">
-              <span class="adm-core-card-title">System Health &amp; Security</span>
-              <span class="adm-core-badge" style="background: #ECFDF5; color: #059669;">SYS</span>
-            </div>
-            <div class="adm-core-card-val" style="color: #059669;">99.9%</div>
-            <div class="adm-core-card-sub">All microservices healthy</div>
-            <div class="adm-core-tag" style="background: #ECFDF5; color: #059669;">Operational</div>
-          </div>
-
-          <!-- Card 4: Security Events -->
-          <div class="adm-core-metric-card" onclick="AdminView.switchTab('security-activity')">
-            <div class="adm-core-card-top">
-              <span class="adm-core-card-title">Security Events</span>
-              <span class="adm-core-badge" style="background: #F3E8FF; color: #7E22CE;">SEC</span>
-            </div>
-            <div class="adm-core-card-val" id="adm-metric-sec-events" style="color: #7E22CE;">${(SLCMS_STATE.activityLogs || []).length}</div>
-            <div class="adm-core-card-sub">Security events logged</div>
-            <div class="adm-core-tag" style="background: #F3E8FF; color: #7E22CE;">Audit Trail Active</div>
-          </div>
-        </div>
-
-        <!-- 3. SECURITY & SYSTEM ACTIVITY PANEL -->
-        <div id="adm-security-system-activity-panel">
-          ${this.renderSecuritySystemActivityHTML()}
-        </div>
-
-        <!-- 4. QUICK ACTIONS SECTION (MATCHING SCREENSHOT 2) -->
-        <div class="adm-section-header" style="margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between;">
-          <div class="flex items-center gap-2">
-            <span style="display: inline-block; width: 4px; height: 18px; background: var(--color-gold, #C89B3C); border-radius: 2px;"></span>
-            <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--color-primary, #0B1F33); margin: 0; font-family: var(--font-heading);">
-              Quick Actions
-            </h3>
-          </div>
-          <span style="font-size: 0.78rem; color: var(--color-text-secondary, #64748B);">
-            Enterprise Law Firm Governance Shortcuts
-          </span>
-        </div>
-
-        <div class="adm-quick-actions-grid-6">
-          <!-- Action 1: Add Lawyer / Staff -->
-          <div class="adm-action-tile" onclick="AdminView.openCreateUserModal()">
-            <div class="adm-action-tile-top">
-              <div class="adm-action-icon-box" style="background: #FEF3C7; color: #B45309;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                  <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
-                </svg>
+        <!-- 2. LUXURY ANALYTICS ROW (CASEWORK & LEGAL MATTERS PORTFOLIO) -->
+        <div class="luxury-analytics-grid luxury-analytics-grid-2col">
+          <!-- CARD 1: CASEWORK & LEGAL ACTIVITY FORECAST (PURPLE / PERIWINKLE LUXURY CARD) -->
+          <div class="luxury-forecast-card">
+            <div class="luxury-forecast-header">
+              <div>
+                <h3 class="luxury-forecast-title">Casework &amp; Hearing Forecast</h3>
+                <span class="luxury-forecast-sub">Active Litigation, Court Hearings &amp; Pleadings</span>
               </div>
-              <span class="adm-action-badge" style="background: #FEF3C7; color: #B45309;">ONBOARDING</span>
+              <button class="luxury-filter-btn" onclick="AdminView.cycleForecastPeriod(event)">
+                <span id="adm-forecast-filter-label">Monthly</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
             </div>
-            <div class="adm-action-title">Add Lawyer / Staff</div>
-            <div class="adm-action-desc">Provision TLS roll number, firm email (@slcms-law.co.tz), and temporary credentials.</div>
-            <div class="adm-action-footer">
-              <span>New Account</span>
-              <span>&rarr;</span>
+
+            <div class="luxury-forecast-body">
+              <!-- Left: Two Stacked Stat Pills -->
+              <div class="luxury-pill-stack">
+                <!-- White Pill: Active Cases -->
+                <div class="luxury-stat-pill luxury-pill-white">
+                  <span class="luxury-pill-label">Active Cases</span>
+                  <div class="luxury-pill-value" id="adm-pill-month-cases">
+                    ${activeCasesCount}<span class="luxury-pill-unit">${activeCasesCount === 1 ? 'Case' : 'Cases'}</span>
+                  </div>
+                  <div class="luxury-pill-trend">
+                    ${activeCasesCount > 0 ? `<span class="trend-up">&uarr; ${activeCasesCount} active</span> in chambers` : `<span style="color: #64748B;">0 active cases</span>`}
+                  </div>
+                </div>
+
+                <!-- Dark Pill: Total Registered Matters -->
+                <div class="luxury-stat-pill luxury-pill-dark">
+                  <span class="luxury-pill-label">Total Registered Cases</span>
+                  <div class="luxury-pill-value" id="adm-pill-total-cases">
+                    ${totalCasesCount}<span class="luxury-pill-unit">Total</span>
+                  </div>
+                  <div class="luxury-pill-trend">
+                    ${totalCasesCount > 0 ? `<span class="trend-gold">&bull; ${totalCasesCount} files</span> in records` : `<span style="color: #94A3B8;">0 cases registered</span>`}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: Elevated Inner Card with Live Badge and Multi-Bar Chart -->
+              <div class="luxury-chart-inner-card">
+                <div class="luxury-chart-top-bar">
+                  <span class="luxury-live-badge">
+                    <span class="live-pulse-dot"></span> Live
+                  </span>
+                  <div class="luxury-chart-metric-callout" onclick="AdminView.switchTab('security-activity')" style="cursor: pointer;" title="View all System Security Events &amp; SOC-2 Audit Trail">
+                    <div class="luxury-callout-value" id="adm-callout-avg-actions">${totalLogsCount}<span class="unit">Logs</span></div>
+                    <div class="luxury-callout-label">System Security Events</div>
+                  </div>
+                </div>
+                <div class="luxury-chart-canvas-wrapper">
+                  <canvas id="admRevenueForecastChart"></canvas>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Action 2: Roles & RBAC -->
-          <div class="adm-action-tile" onclick="AdminView.switchTab('roles')">
-            <div class="adm-action-tile-top">
-              <div class="adm-action-icon-box" style="background: #EFF6FF; color: #1D4ED8;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                </svg>
+          <!-- CARD 2: CASES & MATTERS BY CATEGORY (DARK CHARCOAL LUXURY CARD) -->
+          <div class="luxury-category-card">
+            <div class="luxury-category-header">
+              <div>
+                <h3 class="luxury-category-title">Cases by Legal Category</h3>
+                <span class="luxury-category-sub">Firm Practice Area &amp; Litigation Distribution</span>
               </div>
-              <span class="adm-action-badge" style="background: #EFF6FF; color: #1D4ED8;">RBAC MATRIX</span>
+              <button class="luxury-filter-btn luxury-filter-btn-dark" onclick="AdminView.cycleSpendingFilter(event)">
+                <span id="adm-spending-filter-label">All Matters</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
             </div>
-            <div class="adm-action-title">Roles &amp; RBAC</div>
-            <div class="adm-action-desc">Configure zero-trust permissions matrix and separation of duties compliance.</div>
-            <div class="adm-action-footer">
-              <span>Access Control</span>
-              <span>&rarr;</span>
-            </div>
-          </div>
 
-          <!-- Action 3: System Settings -->
-          <div class="adm-action-tile" onclick="AdminView.switchTab('settings')">
-            <div class="adm-action-tile-top">
-              <div class="adm-action-icon-box" style="background: #F5F3FF; color: #7C3AED;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="3"/>
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                </svg>
+            <div class="luxury-category-body">
+              <!-- Left: Segmented Donut with Rounded Ends & Center Callout -->
+              <div class="luxury-donut-wrapper">
+                <canvas id="admSpendingCategoryChart"></canvas>
+                <div class="luxury-donut-center-badge">
+                  <div class="donut-center-val" id="adm-donut-total-val">${totalCasesCount}</div>
+                  <div class="donut-center-sub">${totalCasesCount === 0 ? 'NO CASES' : (totalCasesCount === 1 ? 'CASE' : 'TOTAL CASES')}</div>
+                </div>
               </div>
-              <span class="adm-action-badge" style="background: #F5F3FF; color: #7C3AED;">CONFIG</span>
-            </div>
-            <div class="adm-action-title">System Settings</div>
-            <div class="adm-action-desc">Configure firm metadata, session timeouts, and AI research parameters.</div>
-            <div class="adm-action-footer">
-              <span>Configuration</span>
-              <span>&rarr;</span>
-            </div>
-          </div>
 
-          <!-- Action 4: Upload Judgment PDF -->
-          <div class="adm-action-tile" onclick="AdminView.switchTab('caselibrary')">
-            <div class="adm-action-tile-top">
-              <div class="adm-action-icon-box" style="background: #ECFEFF; color: #0891B2;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
-                </svg>
+              <!-- Right: Category Legend Chips with Color Dots -->
+              <div class="luxury-category-legend-grid">
+                ${categoryChipsHtml}
               </div>
-              <span class="adm-action-badge" style="background: #ECFEFF; color: #0891B2;">OCR ENGINE</span>
-            </div>
-            <div class="adm-action-title">Upload Judgment PDF</div>
-            <div class="adm-action-desc">Ingest judicial rulings and precedent with automated OCR text extraction.</div>
-            <div class="adm-action-footer">
-              <span>Ingest Law</span>
-              <span>&rarr;</span>
-            </div>
-          </div>
-
-          <!-- Action 5: Security & Audit Logs -->
-          <div class="adm-action-tile" onclick="AdminView.switchTab('security-activity')">
-            <div class="adm-action-tile-top">
-              <div class="adm-action-icon-box" style="background: #ECFDF5; color: #059669;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-                </svg>
-              </div>
-              <span class="adm-action-badge" style="background: #ECFDF5; color: #059669;">SOC-2 TRAIL</span>
-            </div>
-            <div class="adm-action-title">Security &amp; Audit Logs</div>
-            <div class="adm-action-desc">Real-time immutable audit trail, intrusion monitoring, and CSV export.</div>
-            <div class="adm-action-footer">
-              <span>Audit Trail</span>
-              <span>&rarr;</span>
-            </div>
-          </div>
-
-          <!-- Action 6: Create Backup -->
-          <div class="adm-action-tile" onclick="AdminView.switchTab('backup')">
-            <div class="adm-action-tile-top">
-              <div class="adm-action-icon-box" style="background: #0B1F33; color: var(--color-gold, #C89B3C);">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><polyline points="12 13 12 18 9 15"/><polyline points="12 18 15 15"/>
-                </svg>
-              </div>
-              <span class="adm-action-badge" style="background: #FEF3C7; color: #B45309;">SNAPSHOT</span>
-            </div>
-            <div class="adm-action-title">Create Backup</div>
-            <div class="adm-action-desc">Cryptographically signed instant database snapshot and disaster recovery point.</div>
-            <div class="adm-action-footer">
-              <span>Snapshot Now</span>
-              <span>&rarr;</span>
             </div>
           </div>
         </div>
+
+        <!-- 3. COMPACT COMMAND DOCK (CLEAN EXECUTIVE BOXES, MINIMUM DATA) -->
+        <div class="adm-compact-dock-grid">
+          <!-- DOCK CARD 1: SECURITY SENTINEL & HEALTH -->
+          <div class="adm-dock-card">
+            <div class="adm-dock-header">
+              <div class="adm-dock-title-group">
+                <span class="adm-dock-indicator ${unresolvedAlertsCount > 0 ? 'indicator-danger' : 'indicator-active'}"></span>
+                <h4 class="adm-dock-title">Security Sentinel &amp; Account Health</h4>
+              </div>
+              <span class="badge ${unresolvedAlertsCount > 0 ? 'badge-danger' : 'badge-active'}" style="font-size: 0.74rem; font-weight: 700; padding: 0.25rem 0.65rem; border-radius: 20px;">
+                ${unresolvedAlertsCount > 0 ? '● Action Required' : '● Operational 99.9%'}
+              </span>
+            </div>
+
+            <!-- Modern 3-Box Telemetry Grid -->
+            <div class="adm-dock-kpi-grid">
+              <div class="adm-kpi-box" onclick="AdminView.switchTab('users-security')" title="Click to view security logs">
+                <div class="adm-kpi-icon-wrap kpi-blue">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <div class="adm-kpi-body">
+                  <div class="adm-kpi-val">0</div>
+                  <div class="adm-kpi-label">Failed Logins Today</div>
+                </div>
+              </div>
+
+              <div class="adm-kpi-box ${unresolvedAlertsCount > 0 ? 'kpi-alert' : ''}" onclick="AdminView.switchTab('users-security', { statusFilter: 'LOCKED' })" title="Click to review locked accounts">
+                <div class="adm-kpi-icon-wrap ${unresolvedAlertsCount > 0 ? 'kpi-red' : 'kpi-emerald'}">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <div class="adm-kpi-body">
+                  <div class="adm-kpi-val ${unresolvedAlertsCount > 0 ? 'text-danger' : ''}">${unresolvedAlertsCount}</div>
+                  <div class="adm-kpi-label">Locked Accounts</div>
+                </div>
+              </div>
+
+              <div class="adm-kpi-box" onclick="AdminView.switchTab('backup')" title="Click to open backup management">
+                <div class="adm-kpi-icon-wrap kpi-gold">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><polyline points="12 13 12 18 9 15"/><polyline points="12 18 15 15"/></svg>
+                </div>
+                <div class="adm-kpi-body">
+                  <div class="adm-kpi-val text-success" style="font-size: 1.05rem;">Active</div>
+                  <div class="adm-kpi-label">Encrypted Backup</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Instant Attention Callout or Clean Status Ribbon -->
+            ${unresolvedAlertsCount > 0 ? `
+              <div class="adm-security-alert-callout">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                  <span style="font-size: 1.1rem;">🔒</span>
+                  <div style="font-size: 0.8rem; color: #991B1B;">
+                    <strong>${unresolvedAlertsCount} account(s) locked.</strong>
+                    <span style="opacity: 0.85;"> Authentication policy lock enforced.</span>
+                  </div>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="AdminView.switchTab('users-security', { statusFilter: 'LOCKED', accessFilter: 'all' })" style="font-size: 0.74rem; padding: 0.3rem 0.65rem; white-space: nowrap;">
+                  Review &rarr;
+                </button>
+              </div>
+            ` : `
+              <div class="adm-security-clean-ribbon">
+                <span class="adm-ribbon-check">✓</span>
+                <span>Zero policy violations. All advocate and clerk profiles cryptographically verified.</span>
+              </div>
+            `}
+
+            <div class="adm-dock-footer">
+              <span class="adm-compliance-text">Enterprise SOC-2 Compliance Active</span>
+              <button class="btn btn-secondary btn-sm adm-dock-footer-btn" onclick="AdminView.switchTab('users-security')">
+                Open Audit Trail &rarr;
+              </button>
+            </div>
+          </div>
+
+          <!-- DOCK CARD 2: GOVERNANCE SHORTCUTS & RAPID CONTROLS -->
+          <div class="adm-dock-card">
+            <div class="adm-dock-header">
+              <div class="adm-dock-title-group">
+                <span class="adm-dock-indicator indicator-active" style="background: var(--color-gold);"></span>
+                <h4 class="adm-dock-title">Firm Governance &amp; Rapid Controls</h4>
+              </div>
+              <span class="badge badge-confidential" style="font-size: 0.72rem; padding: 0.25rem 0.65rem;">Executive Hub</span>
+            </div>
+
+            <!-- 6 High-Impact Governance Action Tiles -->
+            <div class="adm-governance-tiles-grid">
+              <button class="adm-tile-btn tile-purple" onclick="AdminView.openCreateUserModal()">
+                <div class="adm-tile-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                </div>
+                <span class="adm-tile-label">Add Staff</span>
+              </button>
+
+              <button class="adm-tile-btn tile-blue" onclick="AdminView.switchTab('roles')">
+                <div class="adm-tile-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <span class="adm-tile-label">RBAC Matrix</span>
+              </button>
+
+              <button class="adm-tile-btn tile-amber" onclick="AdminView.switchTab('settings')">
+                <div class="adm-tile-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </div>
+                <span class="adm-tile-label">Settings</span>
+              </button>
+
+              <button class="adm-tile-btn tile-teal" onclick="App.navigate('case-library')">
+                <div class="adm-tile-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                </div>
+                <span class="adm-tile-label">Law Library</span>
+              </button>
+
+              <button class="adm-tile-btn tile-indigo" onclick="AdminView.switchTab('security-activity')">
+                <div class="adm-tile-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                </div>
+                <span class="adm-tile-label">Audit Trail</span>
+              </button>
+
+              <button class="adm-tile-btn tile-emerald" onclick="AdminView.switchTab('backup')">
+                <div class="adm-tile-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><polyline points="12 13 12 18 9 15"/><polyline points="12 18 15 15"/></svg>
+                </div>
+                <span class="adm-tile-label">Backup DB</span>
+              </button>
+            </div>
+
+            <!-- Sleek Minimal Telemetry Strip -->
+            <div class="adm-telemetry-status-strip">
+              <div class="adm-telemetry-dot"></div>
+              <span class="adm-telemetry-text">
+                ${recentSecLogs.length > 0 
+                  ? `Latest: <strong>${recentSecLogs[0].userName || 'System'}</strong> &bull; ${recentSecLogs[0].action || 'Verified security state'}`
+                  : 'All firm subsystems operational. Zero security alerts recorded.'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
     `;
+  },
+
+  // ==========================================================================
+  // MODULE 1B: LUXURY CHARTS INITIALIZER (Casework Forecast & Category Matters)
+  // ==========================================================================
+  initDashboardCharts() {
+    if (typeof Chart === 'undefined') return;
+
+    // 1. Casework & Legal Activity Multi-bar Chart
+    const forecastCanvas = document.getElementById('admRevenueForecastChart');
+    if (forecastCanvas) {
+      if (this._admForecastChart) {
+        try { this._admForecastChart.destroy(); } catch (e) {}
+      }
+
+      const realCases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases)) ? SLCMS_STATE.cases : [];
+      const realUsers = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.users)) ? SLCMS_STATE.users : [];
+      const realLogs = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.activityLogs)) ? SLCMS_STATE.activityLogs : [];
+
+      const mode = this._forecastMode || 0;
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const now = new Date();
+      const curYear = now.getFullYear();
+      const curMonth = now.getMonth();
+
+      let labels = [];
+      let caseMonthly = [];
+      let userMonthly = [];
+      let logMonthly  = [];
+
+      if (mode === 1) {
+        // Quarterly: Q1, Q2, Q3, Q4
+        labels = ['Q1', 'Q2', 'Q3', 'Q4'];
+        caseMonthly = [0, 0, 0, 0];
+        userMonthly = [0, 0, 0, 0];
+        logMonthly  = [0, 0, 0, 0];
+
+        const curQ = Math.floor(curMonth / 3);
+        realCases.forEach(c => {
+          const d = c.createdAt || c.filingDate || c.dateOpened || c.date;
+          if (d) {
+            const q = Math.floor(new Date(d).getMonth() / 3);
+            if (q >= 0 && q < 4) caseMonthly[q]++;
+          }
+        });
+        realUsers.forEach(u => {
+          const d = u.createdAt || u.created_at;
+          if (d) {
+            const q = Math.floor(new Date(d).getMonth() / 3);
+            if (q >= 0 && q < 4) userMonthly[q]++;
+          } else {
+            userMonthly[curQ]++;
+          }
+        });
+        realLogs.forEach(l => {
+          const d = l.timestamp || l.createdAt || l.eventTime;
+          if (d) {
+            const q = Math.floor(new Date(d).getMonth() / 3);
+            if (q >= 0 && q < 4) logMonthly[q]++;
+            else logMonthly[curQ]++;
+          } else {
+            logMonthly[curQ]++;
+          }
+        });
+      } else if (mode === 2) {
+        // YTD: 6 rolling months
+        const rolling = [];
+        for (let i = 5; i >= 0; i--) {
+          let m = curMonth - i;
+          let y = curYear;
+          if (m < 0) { m += 12; y -= 1; }
+          rolling.push({ name: monthNames[m], month: m, year: y });
+        }
+        labels = rolling.map(r => r.name);
+        caseMonthly = new Array(rolling.length).fill(0);
+        userMonthly = new Array(rolling.length).fill(0);
+        logMonthly  = new Array(rolling.length).fill(0);
+
+        realCases.forEach(c => {
+          const d = c.createdAt || c.filingDate || c.dateOpened || c.date;
+          if (d) {
+            const m = new Date(d).getMonth();
+            const idx = rolling.findIndex(r => r.month === m);
+            if (idx !== -1) caseMonthly[idx]++;
+          }
+        });
+        realUsers.forEach(u => {
+          const d = u.createdAt || u.created_at;
+          if (d) {
+            const m = new Date(d).getMonth();
+            const idx = rolling.findIndex(r => r.month === m);
+            if (idx !== -1) userMonthly[idx]++;
+          } else {
+            userMonthly[userMonthly.length - 1]++;
+          }
+        });
+        realLogs.forEach(l => {
+          const d = l.timestamp || l.createdAt || l.eventTime;
+          if (d) {
+            const m = new Date(d).getMonth();
+            const idx = rolling.findIndex(r => r.month === m);
+            if (idx !== -1) logMonthly[idx]++;
+            else logMonthly[logMonthly.length - 1]++;
+          } else {
+            logMonthly[logMonthly.length - 1]++;
+          }
+        });
+      } else {
+        // Monthly (default): 5 rolling months ending at current month (e.g. May, Jun, Jul, Aug, Sep)
+        const rolling = [];
+        for (let i = 4; i >= 0; i--) {
+          let m = curMonth - i;
+          let y = curYear;
+          if (m < 0) { m += 12; y -= 1; }
+          rolling.push({ name: monthNames[m], month: m, year: y });
+        }
+        labels = rolling.map(r => r.name);
+        caseMonthly = [0, 0, 0, 0, 0];
+        userMonthly = [0, 0, 0, 0, 0];
+        logMonthly  = [0, 0, 0, 0, 0];
+
+        realCases.forEach(c => {
+          const d = c.createdAt || c.filingDate || c.dateOpened || c.date;
+          if (d) {
+            const m = new Date(d).getMonth();
+            const idx = rolling.findIndex(r => r.month === m);
+            if (idx !== -1) caseMonthly[idx]++;
+          }
+        });
+        realUsers.forEach(u => {
+          const d = u.createdAt || u.created_at;
+          if (d) {
+            const m = new Date(d).getMonth();
+            const idx = rolling.findIndex(r => r.month === m);
+            if (idx !== -1) userMonthly[idx]++;
+          } else {
+            userMonthly[4]++;
+          }
+        });
+        realLogs.forEach(l => {
+          const d = l.timestamp || l.createdAt || l.eventTime;
+          if (d) {
+            const m = new Date(d).getMonth();
+            const idx = rolling.findIndex(r => r.month === m);
+            if (idx !== -1) logMonthly[idx]++;
+            else logMonthly[4]++;
+          } else {
+            logMonthly[4]++;
+          }
+        });
+      }
+
+      const maxVal = Math.max(5, ...caseMonthly, ...userMonthly, ...logMonthly);
+
+      const ctx = forecastCanvas.getContext('2d');
+      this._admForecastChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Registered Cases',
+              data: caseMonthly,
+              backgroundColor: '#6366F1', // Pastel Purple / Indigo
+              borderRadius: 6,
+              barPercentage: 0.65,
+              categoryPercentage: 0.65
+            },
+            {
+              label: 'Active Staff',
+              data: userMonthly,
+              backgroundColor: '#10B981', // Mint Green
+              borderRadius: 6,
+              barPercentage: 0.65,
+              categoryPercentage: 0.65
+            },
+            {
+              label: 'Security Logs',
+              data: logMonthly,
+              backgroundColor: '#38BDF8', // Sky Blue
+              borderRadius: 6,
+              barPercentage: 0.65,
+              categoryPercentage: 0.65
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 650, easing: 'easeOutQuart' },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.94)',
+              titleFont: { family: 'Inter', size: 12, weight: '700' },
+              bodyFont: { family: 'Inter', size: 11 },
+              padding: 10,
+              cornerRadius: 8,
+              callbacks: {
+                label: function(context) {
+                  return ` ${context.dataset.label}: ${context.raw} records`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false, drawBorder: false },
+              ticks: {
+                color: '#94A3B8',
+                font: { family: 'Inter', size: 11, weight: '600' }
+              }
+            },
+            y: {
+              display: false,
+              grid: { display: false },
+              beginAtZero: true,
+              suggestedMax: maxVal
+            }
+          }
+        }
+      });
+    }
+
+    // 2. Cases by Category Segmented Ring Chart with rounded caps
+    const categoryCanvas = document.getElementById('admSpendingCategoryChart');
+    if (categoryCanvas) {
+      if (this._admSpendingChart) {
+        try { this._admSpendingChart.destroy(); } catch (e) {}
+      }
+
+      const realCases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases)) ? SLCMS_STATE.cases : [];
+      const commCount = realCases.filter(c => /commercial|bank|financ|corp/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+      const civilCount = realCases.filter(c => /civil|contract|tort|dispute/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+      const landCount = realCases.filter(c => /land|property|real/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+      const constiCount = realCases.filter(c => /constitut|review|appeal/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+      const crimCount = realCases.filter(c => /crimin|penal/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+
+      const activeCategories = [
+        { label: 'Commercial & Banking', count: commCount, color: '#6EE7B7' },
+        { label: 'Civil Litigation', count: civilCount, color: '#6366F1' },
+        { label: 'Land & Real Estate', count: landCount, color: '#38BDF8' },
+        { label: 'Constitutional Review', count: constiCount, color: '#A78BFA' },
+        { label: 'Criminal & Appeals', count: crimCount, color: '#10B981' }
+      ].filter(cat => cat.count > 0);
+
+      const hasCases = activeCategories.length > 0;
+      const chartLabels = hasCases ? activeCategories.map(c => c.label) : ['No Cases Registered'];
+      const chartData = hasCases ? activeCategories.map(c => c.count) : [1];
+      const chartColors = hasCases ? activeCategories.map(c => c.color) : ['rgba(255, 255, 255, 0.08)'];
+
+      const ctxCat = categoryCanvas.getContext('2d');
+      this._admSpendingChart = new Chart(ctxCat, {
+        type: 'doughnut',
+        data: {
+          labels: chartLabels,
+          datasets: [{
+            data: chartData,
+            backgroundColor: chartColors,
+            borderWidth: 0,
+            hoverOffset: hasCases ? 6 : 0,
+            borderRadius: hasCases ? 8 : 0,
+            spacing: hasCases ? 5 : 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '72%',
+          animation: { duration: 750, easing: 'easeOutQuart' },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              enabled: hasCases,
+              backgroundColor: 'rgba(15, 23, 42, 0.94)',
+              titleFont: { family: 'Inter', size: 12, weight: '700' },
+              bodyFont: { family: 'Inter', size: 11 },
+              padding: 10,
+              cornerRadius: 8,
+              callbacks: {
+                label: function(context) {
+                  return ` ${context.label}: ${context.raw} active cases`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  },
+
+  cycleForecastPeriod(e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    this._forecastMode = (this._forecastMode || 0) + 1;
+    if (this._forecastMode > 2) this._forecastMode = 0;
+
+    const periods = ['Monthly', 'Quarterly', 'YTD'];
+    const realCases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases)) ? SLCMS_STATE.cases : [];
+    const realLogs = (typeof SLCMS_STATE !== 'undefined' && (SLCMS_STATE.activityLogs || SLCMS_STATE.auditLogs)) ? (SLCMS_STATE.activityLogs || SLCMS_STATE.auditLogs) : [];
+    const activeCases = realCases.filter(c => (c.status || '').toLowerCase() === 'active').length;
+
+    const filterBtn = document.getElementById('adm-forecast-filter-label');
+    if (filterBtn) filterBtn.textContent = periods[this._forecastMode];
+
+    const monthEl = document.getElementById('adm-pill-month-cases');
+    if (monthEl) monthEl.innerHTML = `${activeCases}<span class="luxury-pill-unit">${activeCases === 1 ? 'Case' : 'Cases'}</span>`;
+
+    const totalEl = document.getElementById('adm-pill-total-cases');
+    if (totalEl) totalEl.innerHTML = `${realCases.length}<span class="luxury-pill-unit">Total</span>`;
+
+    const avgEl = document.getElementById('adm-callout-avg-actions');
+    if (avgEl) avgEl.innerHTML = `${realLogs.length}<span class="unit">Logs</span>`;
+    if (typeof this.initDashboardCharts === 'function') {
+      this.initDashboardCharts();
+    }
+  },
+
+  cycleSpendingFilter(e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    this._spendingMode = (this._spendingMode || 0) + 1;
+    if (this._spendingMode > 2) this._spendingMode = 0;
+
+    const modes = ['All Matters', 'Commercial & Civil', 'Public & Appeals'];
+    const realCases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases)) ? SLCMS_STATE.cases : [];
+
+    const filterBtn = document.getElementById('adm-spending-filter-label');
+    if (filterBtn) filterBtn.textContent = modes[this._spendingMode];
+
+    const totalEl = document.getElementById('adm-donut-total-val');
+    if (totalEl) totalEl.textContent = String(realCases.length);
   },
 
   // ==========================================================================
@@ -695,7 +1869,7 @@ const AdminView = {
                 const lastLoginText = this.getUserLastLoginText(u);
                 const avatarHtml = this.getUserAvatarHtml(u);
                 const staffId = u.staffId || u.employeeId || 'ADM-0001';
-                const casesCount = (u.assignedCaseIds && u.assignedCaseIds.length) ? u.assignedCaseIds.length : (u.activeCases || 0);
+                const casesCount = this.getUserCasesCount(u);
                 const curStatus = (u.accountStatus || u.status || 'ACTIVE').toUpperCase();
                 const isLockedUser = curStatus === 'LOCKED' || curStatus === 'TEMPORARILY_LOCKED' || u.adminLocked === true || Boolean(u.lockedUntil);
 
@@ -809,7 +1983,7 @@ const AdminView = {
               const lastLoginText = this.getUserLastLoginText(u);
               const avatarHtml = this.getUserAvatarHtml(u);
               const staffId = u.staffId || u.employeeId || 'ADM-0001';
-              const casesCount = (u.assignedCaseIds && u.assignedCaseIds.length) ? u.assignedCaseIds.length : (u.activeCases || 0);
+              const casesCount = this.getUserCasesCount(u);
 
               return `
                 <div class="adm-user-mobile-card">
@@ -1027,7 +2201,7 @@ const AdminView = {
                 const lastLoginText = this.getUserLastLoginText(u);
                 const avatarHtml = this.getUserAvatarHtml(u);
                 const staffId = u.staffId || u.employeeId || 'ADM-0001';
-                const casesCount = (u.assignedCaseIds && u.assignedCaseIds.length) ? u.assignedCaseIds.length : (u.activeCases || 0);
+                const casesCount = this.getUserCasesCount(u);
                 const curStatus = (u.accountStatus || u.status || 'ACTIVE').toUpperCase();
                 const isAdminLocked = u.adminLocked === true || curStatus === 'LOCKED';
                 const isTempLocked = curStatus === 'TEMPORARILY_LOCKED' || Boolean(u.lockedUntil && (typeof u.lockedUntil === 'number' ? nowMs < u.lockedUntil : new Date(u.lockedUntil).getTime() > nowMs));
@@ -2956,7 +4130,7 @@ const AdminView = {
 
                   <!-- 3. ROLE -->
                   <td>
-                    ${this.getLogRoleBadge(l.role)}
+                    ${this.getLogRoleBadge(l.role, l.user)}
                   </td>
 
                   <!-- 4. MODULE -->
@@ -3012,7 +4186,7 @@ const AdminView = {
                 <!-- User Row: Staff Member & Role -->
                 <div class="adm-sec-card-user-row">
                   <span class="adm-sec-staff-name" style="font-size: 0.9rem;">${l.user}</span>
-                  ${this.getLogRoleBadge(l.role)}
+                  ${this.getLogRoleBadge(l.role, l.user)}
                 </div>
 
                 <!-- Action Row -->
@@ -3040,17 +4214,49 @@ const AdminView = {
     `;
   },
 
-  getLogRoleBadge(role) {
+  getLogRoleBadge(role, user) {
     const r = (role || '').trim();
-    if (r === 'Lawyer' || r === 'Junior Lawyer') {
-      return `<span class="adm-sec-role-lawyer">LAWYER</span>`;
-    } else if (r === 'Senior Lawyer' || r === 'Senior Counsel') {
+    const u = (user || '').toLowerCase();
+
+    // 1. External identity, security sentinel, or unknown actor
+    if (
+      r.toLowerCase().includes('external') ||
+      r.toLowerCase().includes('unknown') ||
+      (r.toLowerCase().includes('system') && !r.toLowerCase().includes('admin')) ||
+      u.includes('unknown') ||
+      u.includes('sentinel') ||
+      u.includes('external')
+    ) {
+      return `<span class="adm-sec-role-external">EXTERNAL / SYSTEM</span>`;
+    }
+
+    // 2. Client role
+    if (r.toLowerCase().includes('client') || u.includes('client')) {
+      return `<span class="adm-sec-role-client">CLIENT</span>`;
+    }
+
+    // 3. Senior Lawyer / Partner
+    if (r === 'Senior Lawyer' || r === 'Senior Counsel' || r.toLowerCase().includes('senior')) {
       return `<span class="adm-sec-role-senior">SENIOR LAWYER</span>`;
-    } else if (r === 'Legal Clerk' || r === 'Clerk') {
+    }
+
+    // 4. Lawyer / Associate / Advocate
+    if (r === 'Lawyer' || r === 'Junior Lawyer' || r.toLowerCase().includes('lawyer') || r.toLowerCase().includes('advocate')) {
+      return `<span class="adm-sec-role-lawyer">LAWYER</span>`;
+    }
+
+    // 5. Legal Clerk / Registry Officer
+    if (r === 'Legal Clerk' || r === 'Clerk' || r.toLowerCase().includes('clerk')) {
       return `<span class="adm-sec-role-clerk">LEGAL CLERK</span>`;
-    } else {
+    }
+
+    // 6. System Administrator
+    if (r.toLowerCase().includes('admin') || u.includes('administrator')) {
       return `<span class="adm-sec-role-admin">SYSTEM ADMINISTRATOR</span>`;
     }
+
+    // Neutral fallback: display role title or EXTERNAL
+    return `<span class="adm-sec-role-external">${(r || 'SYSTEM').toUpperCase()}</span>`;
   },
 
   getLogResultBadge(l) {
@@ -3140,7 +4346,7 @@ const AdminView = {
           <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 0.75rem;">
             <div style="font-size: 0.7rem; color: #64748B; font-weight: 700; text-transform: uppercase;">Staff Member</div>
             <div style="font-size: 0.92rem; font-weight: 800; color: #0F172A; margin-top: 0.15rem;">${log.user}</div>
-            <div style="margin-top: 0.35rem;">${this.getLogRoleBadge(log.role)}</div>
+            <div style="margin-top: 0.35rem;">${this.getLogRoleBadge(log.role, log.user)}</div>
           </div>
           <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 0.75rem;">
             <div style="font-size: 0.7rem; color: #64748B; font-weight: 700; text-transform: uppercase;">Session Origin / IP</div>
@@ -3334,588 +4540,242 @@ const AdminView = {
     };
 
     return `
-      <div class="adm-settings-container animate-fade">
-        <!-- 1. TOP HEADER & ADMINISTRATOR AUDIT RECORD BANNER -->
-        <div class="adm-settings-banner">
-          <div class="adm-settings-banner-left">
-            <div class="adm-settings-icon-badge">
-              ⚙️
-            </div>
-            <div>
-              <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
-                <h2 class="adm-settings-title">System Settings &amp; Governance</h2>
-                <span style="background: rgba(200, 155, 60, 0.2); color: #F6D978; border: 1px solid rgba(200, 155, 60, 0.45); font-size: 0.68rem; font-weight: 800; padding: 0.2rem 0.65rem; border-radius: 20px; letter-spacing: 0.5px;">
-                  ADMINISTRATOR CONSOLE &bull; REAL PERSISTENCE
-                </span>
+      <div class="adm-settings-container animate-fade" style="max-width: 1050px; margin: 0 auto;">
+        <!-- 1. CLEAN, SIMPLE HEADER -->
+        <div class="card p-4 mb-4" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.85rem;">
+              <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(200, 155, 60, 0.12); color: var(--color-gold); display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+                ⚙️
               </div>
-              <p class="adm-settings-subtitle">
-                Configure live firm parameters, security thresholds, and disaster recovery. All saved settings persist permanently in the database and synchronize instantly across SLCMS.
-              </p>
-            </div>
-          </div>
-
-          <!-- Live Administrator Audit Record -->
-          <div class="adm-settings-audit-badge">
-            <div><strong>👤 Last Saved By:</strong> <span id="adm-settings-last-admin">${s.lastUpdatedBy}</span></div>
-            <div><strong>🕒 Timestamp:</strong> <span id="adm-settings-last-time">${s.lastUpdatedAt}</span></div>
-            <div style="color: #6EE7B7; font-weight: 700; margin-top: 2px;">🛡️ Changes stored in backend database &amp; immutable audit trail</div>
-          </div>
-        </div>
-
-        <!-- 2. QUICK JUMP SECTION NAVIGATOR -->
-        <div class="adm-settings-nav-bar">
-          <a href="#sec-card-org" class="adm-settings-nav-pill">🏛️ 1. Organization</a>
-          <a href="#sec-card-users" class="adm-settings-nav-pill">👥 2. Users &amp; Roles</a>
-          <a href="#sec-card-security" class="adm-settings-nav-pill">🔒 3. Login &amp; Security</a>
-          <a href="#sec-card-cases" class="adm-settings-nav-pill">📁 4. Cases &amp; Documents</a>
-          <a href="#sec-card-backup" class="adm-settings-nav-pill">💾 5. Backup &amp; Recovery</a>
-        </div>
-
-        <!-- ====================================================================
-             CARD 1: 1. ORGANIZATION
-             Controls system name, logo, firm contacts, and public appearance.
-             ==================================================================== -->
-        <div id="sec-card-org" class="adm-settings-card">
-          <div class="adm-settings-card-header">
-            <div class="adm-settings-card-header-left">
-              <div class="adm-settings-num-badge">1</div>
               <div>
-                <h3 class="adm-settings-card-title">Organization Settings</h3>
-                <p class="adm-settings-card-desc">Controls the system's identity, branding, and formal letterhead presentation.</p>
+                <h2 style="font-size: 1.25rem; font-weight: 800; color: #0F172A; margin: 0 0 0.2rem 0; font-family: var(--font-heading);">
+                  System Settings
+                </h2>
+                <p style="font-size: 0.85rem; color: #64748B; margin: 0;">
+                  Manage firm details, account security, and data backup.
+                </p>
               </div>
             </div>
-            <span class="badge" style="background: #EFF6FF; color: #1D4ED8; font-weight: 700; font-size: 0.72rem; padding: 0.25rem 0.65rem;">
-              Firm Identity
-            </span>
-          </div>
-
-          <!-- Unsaved changes warning bar -->
-          <div id="unsaved-banner-org" class="adm-unsaved-warning" style="display:none; background:#FFFBEB; border:1px solid #FCD34D; color:#92400E; padding:0.6rem 0.9rem; border-radius:8px; margin-bottom:1rem; font-size:0.8rem; align-items:center; justify-content:space-between;">
-            <div>⚠️ <strong>You have unsaved changes in Organization Settings.</strong> Click "Save Changes" to store them in the backend database.</div>
-            <div style="display:flex; gap:0.5rem;">
-              <button type="button" class="btn btn-xs btn-ghost" onclick="AdminView.cancelSection('org')">Cancel</button>
-              <button type="button" class="btn btn-xs btn-secondary" onclick="AdminView.resetSection('org')">Reset</button>
+            <div style="font-size: 0.8rem; color: #64748B; background: #F8FAFC; border: 1px solid #E2E8F0; padding: 0.4rem 0.85rem; border-radius: 8px; display: flex; align-items: center; gap: 0.4rem;">
+              <span>👤</span>
+              <span>Administrator: <strong style="color: #0F172A;">${s.lastUpdatedBy ? s.lastUpdatedBy.split(' ')[0] : 'Admin'}</strong></span>
             </div>
+          </div>
+        </div>
+
+        <!-- 2. STREAMLINED SUB-TABS -->
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; border-bottom: 2px solid #E2E8F0; padding-bottom: 0.6rem;">
+          <button type="button" class="btn btn-sm ${(!this.settingsSubTab || this.settingsSubTab === 'org') ? 'btn-gold' : 'btn-secondary'}" onclick="AdminView.switchSettingsSubTab('org')" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; border-radius: 8px;">
+            <span>🏛️</span>
+            <span>Firm Profile</span>
+          </button>
+          <button type="button" class="btn btn-sm ${this.settingsSubTab === 'security' ? 'btn-gold' : 'btn-secondary'}" onclick="AdminView.switchSettingsSubTab('security')" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; border-radius: 8px;">
+            <span>🔒</span>
+            <span>Security</span>
+          </button>
+          <button type="button" class="btn btn-sm ${this.settingsSubTab === 'backup' ? 'btn-gold' : 'btn-secondary'}" onclick="AdminView.switchSettingsSubTab('backup')" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; border-radius: 8px;">
+            <span>💾</span>
+            <span>Backup &amp; Data</span>
+          </button>
+        </div>
+
+        <!-- SUBTAB 1: FIRM PROFILE -->
+        <div id="sec-subtab-org" class="card p-4" style="${(!this.settingsSubTab || this.settingsSubTab === 'org') ? '' : 'display: none;'} border-radius: 14px; background: #FFFFFF; border: 1px solid #E2E8F0;">
+          <div style="margin-bottom: 1.25rem; padding-bottom: 0.85rem; border-bottom: 1px solid #F1F5F9;">
+            <h3 style="font-size: 1.05rem; font-weight: 800; color: #0F172A; margin: 0 0 0.2rem 0;">Firm Information</h3>
+            <p style="font-size: 0.82rem; color: #64748B; margin: 0;">Details displayed on legal files, client letters, and court filings.</p>
           </div>
 
           <form onsubmit="event.preventDefault(); AdminView.saveOrganizationSettings();">
-            <div class="adm-settings-grid-3" style="margin-bottom: 1rem;">
-              <div class="adm-settings-form-group">
-                <label class="adm-settings-label required">Organization Name</label>
-                <input type="text" id="sys-org-name" class="adm-settings-input" value="${s.organizationName}" oninput="AdminView.markSectionDirty('org')" required>
-                <span class="adm-settings-hint">Last saved: <strong>${s.organizationName}</strong></span>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+              <div class="form-group mb-0">
+                <label style="font-weight: 700; font-size: 0.82rem; color: #1E293B; margin-bottom: 0.35rem; display: block;">Firm Name *</label>
+                <input type="text" id="sys-org-name" class="form-control" value="${this.escapeHtml(s.organizationName)}" oninput="AdminView.markSectionDirty('org')" required>
               </div>
 
-              <div class="adm-settings-form-group">
-                <label class="adm-settings-label required">System Name</label>
-                <input type="text" id="sys-org-system-name" class="adm-settings-input" value="${s.systemName}" oninput="AdminView.markSectionDirty('org')" placeholder="e.g. Tanzania Smart Legal Case Management System" required>
-                <span class="adm-settings-hint">Last saved: <strong>${s.systemName}</strong></span>
-              </div>
-
-              <div class="adm-settings-form-group">
-                <label class="adm-settings-label required">Short Name</label>
-                <input type="text" id="sys-org-short-name" class="adm-settings-input" value="${s.shortName}" maxlength="12" oninput="AdminView.markSectionDirty('org')" placeholder="e.g. SLCMS" required>
-                <span class="adm-settings-hint">Displayed in browser title, navbar, &amp; badges</span>
+              <div class="form-group mb-0">
+                <label style="font-weight: 700; font-size: 0.82rem; color: #1E293B; margin-bottom: 0.35rem; display: block;">System Title *</label>
+                <input type="text" id="sys-org-system-name" class="form-control" value="${this.escapeHtml(s.systemName)}" oninput="AdminView.markSectionDirty('org')" placeholder="e.g. Smart Legal Case Management System" required>
+                <input type="hidden" id="sys-org-short-name" value="${this.escapeHtml(s.shortName || 'SLCMS')}">
               </div>
             </div>
 
-            <!-- Logo Field + Upload & Live Preview -->
-            <div class="adm-settings-grid-2" style="margin-bottom: 1rem; align-items: center;">
-              <div class="adm-settings-form-group">
-                <label class="adm-settings-label">Organization Logo</label>
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                  <div style="width: 54px; height: 54px; border-radius: 12px; background: #0B1F33; border: 2px solid #C89B3C; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
-                    <img id="sys-org-logo-preview" src="${s.logoUrl}" alt="Logo Preview" style="width: 100%; height: 100%; object-fit: contain;">
-                  </div>
-                  <div style="flex: 1;">
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                      <input type="text" id="sys-org-logo" class="adm-settings-input" value="${s.logoUrl}" oninput="AdminView.markSectionDirty('org'); AdminView.previewLogoUrl(this.value);" placeholder="assets/SLCMS.png" style="font-size: 0.8rem;">
-                      <input type="file" id="sys-org-logo-file" accept="image/png,image/jpeg,image/svg+xml" onchange="AdminView.handleLogoFileUpload(event)" style="display: none;">
-                      <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('sys-org-logo-file').click()" title="Select an image from your computer">
-                        Upload
-                      </button>
-                    </div>
-                    <span class="adm-settings-hint">Supports PNG, JPG, or SVG (max 2 MB). Updates sidebar &amp; letterheads.</span>
-                  </div>
+            <!-- Logo Field + Preview (Clean, no raw file path input) -->
+            <div class="card p-3 mb-4" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px;">
+              <label style="font-weight: 700; font-size: 0.82rem; color: #1E293B; margin-bottom: 0.5rem; display: block;">Chambers Logo</label>
+              <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <div style="width: 50px; height: 50px; border-radius: 10px; background: #0B1F33; border: 2px solid #C89B3C; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                  <img id="sys-org-logo-preview" src="${s.logoUrl}" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1;">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('sys-org-logo-file').click()" style="font-weight: 600;">
+                    📷 Change Logo
+                  </button>
+                  <span style="font-size: 0.78rem; color: #64748B;">Supported: PNG, JPG, or SVG</span>
+                  <input type="hidden" id="sys-org-logo" value="${s.logoUrl}">
+                  <input type="file" id="sys-org-logo-file" accept="image/png,image/jpeg,image/svg+xml" onchange="AdminView.handleLogoFileUpload(event)" style="display: none;">
                 </div>
               </div>
+            </div>
 
-              <div class="adm-settings-form-group">
-                <label class="adm-settings-label required">Official Email</label>
-                <input type="email" id="sys-org-email" class="adm-settings-input" value="${s.officialEmail}" oninput="AdminView.markSectionDirty('org')" required>
-                <span class="adm-settings-hint">Last saved: <strong>${s.officialEmail}</strong></span>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+              <div class="form-group mb-0">
+                <label style="font-weight: 700; font-size: 0.82rem; color: #1E293B; margin-bottom: 0.35rem; display: block;">Firm Email *</label>
+                <input type="email" id="sys-org-email" class="form-control" value="${this.escapeHtml(s.officialEmail)}" oninput="AdminView.markSectionDirty('org')" required>
+              </div>
+
+              <div class="form-group mb-0">
+                <label style="font-weight: 700; font-size: 0.82rem; color: #1E293B; margin-bottom: 0.35rem; display: block;">Phone Number *</label>
+                <input type="text" id="sys-org-phone" class="form-control" value="${this.escapeHtml(s.phoneNumber)}" oninput="AdminView.markSectionDirty('org')" placeholder="+255 754 000 111" required>
               </div>
             </div>
 
-            <div class="adm-settings-grid-2" style="margin-bottom: 0.85rem;">
-              <div class="adm-settings-form-group">
-                <label class="adm-settings-label required">Phone Number</label>
-                <input type="text" id="sys-org-phone" class="adm-settings-input" value="${s.phoneNumber}" oninput="AdminView.markSectionDirty('org')" placeholder="+255 754 000 111" required>
-                <span class="adm-settings-hint">Firm registry telephone line</span>
-              </div>
-
-              <div class="adm-settings-form-group">
-                <label class="adm-settings-label required">Office Address</label>
-                <input type="text" id="sys-org-address" class="adm-settings-input" value="${s.officeAddress}" oninput="AdminView.markSectionDirty('org')" required>
-                <span class="adm-settings-hint">Chambers location on legal documents</span>
-              </div>
+            <div class="form-group mb-4">
+              <label style="font-weight: 700; font-size: 0.82rem; color: #1E293B; margin-bottom: 0.35rem; display: block;">Office Address *</label>
+              <input type="text" id="sys-org-address" class="form-control" value="${this.escapeHtml(s.officeAddress)}" oninput="AdminView.markSectionDirty('org')" required>
             </div>
 
-            <div class="adm-settings-meta-row" style="display:flex; justify-content:space-between; font-size:0.75rem; color:#64748B; border-top:1px solid #F1F5F9; padding-top:0.6rem; margin-bottom:0.75rem;">
-              <span><strong>Last Saved:</strong> <span id="meta-last-saved-org">${s.organizationName} (${s.shortName})</span></span>
-              <span><strong>Updated:</strong> <span id="meta-last-time-org">${s.lastUpdatedAt}</span></span>
-            </div>
-
-            <div class="adm-settings-card-footer" style="display:flex; justify-content:flex-end; gap:0.65rem;">
-              <button type="button" class="btn btn-ghost" onclick="AdminView.cancelSection('org')">
-                <span>Cancel</span>
-              </button>
-              <button type="button" class="btn btn-outline-secondary" onclick="AdminView.resetSection('org')">
-                <span>Reset Section</span>
-              </button>
-              <button type="submit" id="btn-save-org" class="btn btn-gold">
-                <span>Save Changes</span>
+            <div style="display: flex; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid #F1F5F9;">
+              <button type="submit" id="btn-save-org" class="btn btn-gold" style="padding: 0.55rem 1.5rem; font-weight: 700;">
+                💾 Save Changes
               </button>
             </div>
           </form>
         </div>
 
-        <!-- ====================================================================
-             CARD 2: 2. USERS & ROLES
-             Controls who can use the system and staff provisioning policies.
-             ==================================================================== -->
-        <div id="sec-card-users" class="adm-settings-card">
-          <div class="adm-settings-card-header">
-            <div class="adm-settings-card-header-left">
-              <div class="adm-settings-num-badge">2</div>
-              <div>
-                <h3 class="adm-settings-card-title">Users &amp; Roles Governance</h3>
-                <p class="adm-settings-card-desc">Separation of duties, account generation rules, and RBAC governance.</p>
-              </div>
-            </div>
-            <span class="badge" style="background: #F3E8FF; color: #7E22CE; font-weight: 700; font-size: 0.72rem; padding: 0.25rem 0.65rem;">
-              4 System Roles
-            </span>
-          </div>
-
-          <!-- Unsaved changes warning bar -->
-          <div id="unsaved-banner-users" class="adm-unsaved-warning" style="display:none; background:#FFFBEB; border:1px solid #FCD34D; color:#92400E; padding:0.6rem 0.9rem; border-radius:8px; margin-bottom:1rem; font-size:0.8rem; align-items:center; justify-content:space-between;">
-            <div>⚠️ <strong>You have unsaved changes in Users &amp; Roles.</strong> Click "Save Settings" to persist your changes.</div>
-            <div style="display:flex; gap:0.5rem;">
-              <button type="button" class="btn btn-xs btn-ghost" onclick="AdminView.cancelSection('users')">Cancel</button>
-              <button type="button" class="btn btn-xs btn-secondary" onclick="AdminView.resetSection('users')">Reset</button>
-            </div>
-          </div>
-
-          <!-- 4 Roles Display -->
-          <div style="margin-bottom: 1rem;">
-            <div class="adm-settings-label" style="margin-bottom: 0.5rem;">Separation of Legal Duties (Strict Non-Self-Registration)</div>
-            <div class="adm-settings-roles-grid">
-              <div class="adm-settings-role-item" style="border-left: 3.5px solid #C89B3C;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                  <span class="adm-settings-role-name">Administrator</span>
-                  <span style="font-size: 0.62rem; font-weight: 800; background: #FEF3C7; color: #92400E; padding: 1px 6px; border-radius: 10px;">GOVERNANCE</span>
-                </div>
-                <div class="adm-settings-role-desc">Full system configuration, security policies, user provisioning &amp; backups.</div>
-              </div>
-
-              <div class="adm-settings-role-item" style="border-left: 3.5px solid #2563EB;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                  <span class="adm-settings-role-name">Senior Lawyer</span>
-                  <span style="font-size: 0.62rem; font-weight: 800; background: #DBEAFE; color: #1D4ED8; padding: 1px 6px; border-radius: 10px;">SUPERVISION</span>
-                </div>
-                <div class="adm-settings-role-desc">Supervising counsel, legal verification &amp; judgment AI approval.</div>
-              </div>
-
-              <div class="adm-settings-role-item" style="border-left: 3.5px solid #7E22CE;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                  <span class="adm-settings-role-name">Lawyer</span>
-                  <span style="font-size: 0.62rem; font-weight: 800; background: #F3E8FF; color: #7E22CE; padding: 1px 6px; border-radius: 10px;">ADVOCACY</span>
-                </div>
-                <div class="adm-settings-role-desc">Court litigation, case filings, client advocacy &amp; hearing dockets.</div>
-              </div>
-
-              <div class="adm-settings-role-item" style="border-left: 3.5px solid #059669;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                  <span class="adm-settings-role-name">Legal Clerk</span>
-                  <span style="font-size: 0.62rem; font-weight: 800; background: #D1FAE5; color: #065F46; padding: 1px 6px; border-radius: 10px;">REGISTRY</span>
-                </div>
-                <div class="adm-settings-role-desc">Registry filings, document digitization, intake &amp; statutory deadlines.</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Settings Fields -->
-          <form onsubmit="event.preventDefault(); AdminView.saveUserRoleSettings();">
-            <div class="adm-settings-grid-2" style="margin-bottom: 1rem;">
-              <div class="adm-settings-form-group">
-                <label class="adm-settings-label required">Staff-ID format</label>
-                <input type="text" id="sys-ur-format" class="adm-settings-input" value="${s.staffIdFormat}" oninput="AdminView.markSectionDirty('users')" required>
-                <span class="adm-settings-hint">Last saved: <strong>${s.staffIdFormat}</strong></span>
-              </div>
-
-              <div class="adm-settings-form-group">
-                <label class="adm-settings-label required">Default account status</label>
-                <select id="sys-ur-default-status" class="adm-settings-select" onchange="AdminView.markSectionDirty('users')">
-                  <option value="ACTIVE" ${s.defaultAccountStatus === 'ACTIVE' ? 'selected' : ''}>Active (Immediate Access)</option>
-                  <option value="PENDING_APPROVAL" ${s.defaultAccountStatus === 'PENDING_APPROVAL' ? 'selected' : ''}>Pending Approval (Requires Review)</option>
-                </select>
-                <span class="adm-settings-hint">Last saved: <strong>${s.defaultAccountStatus}</strong></span>
-              </div>
-            </div>
-
-            <div style="margin-bottom: 1rem;">
-              <label class="adm-settings-check-item">
-                <input type="checkbox" id="sys-ur-require-pwd-reset" onchange="AdminView.markSectionDirty('users')" ${s.requirePasswordChangeFirstLogin ? 'checked' : ''}>
-                <span>Require password change on first login</span>
-              </label>
-              <span class="adm-settings-hint" style="margin-left: 1.65rem; display: block;">
-                Mandates that newly created accounts set a private credentials secret before entering workspace
-              </span>
-            </div>
-
-            <div class="adm-settings-rule-box" style="margin-bottom: 1rem;">
-              <span style="font-size: 1.15rem;">🛡️</span>
-              <div>
-                <strong>Administrator Governance Rule:</strong> 
-                The Administrator creates all accounts. Users cannot register themselves or self-elevate roles.
-              </div>
-            </div>
-
-            <div class="adm-settings-meta-row" style="display:flex; justify-content:space-between; font-size:0.75rem; color:#64748B; border-top:1px solid #F1F5F9; padding-top:0.6rem; margin-bottom:0.75rem;">
-              <span><strong>Staff ID Format:</strong> <span id="meta-last-saved-users">${s.staffIdFormat} (${s.defaultAccountStatus})</span></span>
-              <span><strong>Updated:</strong> <span id="meta-last-time-users">${s.lastUpdatedAt}</span></span>
-            </div>
-
-            <div class="adm-settings-card-footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.65rem;">
-              <div style="display:flex; gap:0.5rem;">
-                <button type="button" class="btn btn-secondary" onclick="AdminView.switchTab('users')">
-                  <span>Manage Users</span>
-                </button>
-                <button type="button" class="btn btn-ghost" onclick="AdminView.openPermissionsMatrixModal()" style="color: var(--color-gold); font-weight: 700;">
-                  <span>View Permissions</span>
-                </button>
-              </div>
-              <div style="display:flex; gap:0.65rem;">
-                <button type="button" class="btn btn-ghost" onclick="AdminView.cancelSection('users')">
-                  <span>Cancel</span>
-                </button>
-                <button type="button" class="btn btn-outline-secondary" onclick="AdminView.resetSection('users')">
-                  <span>Reset Section</span>
-                </button>
-                <button type="submit" id="btn-save-users" class="btn btn-gold">
-                  <span>Save Settings</span>
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-
-        <!-- ====================================================================
-             CARD 3: 3. LOGIN & SECURITY
-             Controls authentication thresholds, lockout durations, and session lifetime.
-             ==================================================================== -->
-        <div id="sec-card-security" class="adm-settings-card">
-          <div class="adm-settings-card-header">
-            <div class="adm-settings-card-header-left">
-              <div class="adm-settings-num-badge">3</div>
-              <div>
-                <h3 class="adm-settings-card-title">Login &amp; Security Policy</h3>
-                <p class="adm-settings-card-desc">Configures defense thresholds against unauthorized access. Enforced directly on backend login API.</p>
-              </div>
-            </div>
-            <span class="badge" style="background: #FEF2F2; color: #DC2626; font-weight: 700; font-size: 0.72rem; padding: 0.25rem 0.65rem;">
-              Enforced Policy
-            </span>
-          </div>
-
-          <!-- Unsaved changes warning bar -->
-          <div id="unsaved-banner-security" class="adm-unsaved-warning" style="display:none; background:#FFFBEB; border:1px solid #FCD34D; color:#92400E; padding:0.6rem 0.9rem; border-radius:8px; margin-bottom:1rem; font-size:0.8rem; align-items:center; justify-content:space-between;">
-            <div>⚠️ <strong>You have unsaved changes in Login &amp; Security.</strong> Click "Save Security Settings" to activate them immediately.</div>
-            <div style="display:flex; gap:0.5rem;">
-              <button type="button" class="btn btn-xs btn-ghost" onclick="AdminView.cancelSection('security')">Cancel</button>
-              <button type="button" class="btn btn-xs btn-secondary" onclick="AdminView.resetSection('security')">Reset</button>
-            </div>
-          </div>
-
-          <!-- Recommended values callout -->
-          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.78rem; color: #475569; display: flex; flex-wrap: wrap; gap: 0.85rem; align-items: center;">
-            <strong style="color: #0F172A;">Recommended standards:</strong>
-            <span style="background: #EFF6FF; color: #1D4ED8; padding: 2px 8px; border-radius: 6px; font-weight: 600;">Minimum password: 10 chars (8-64)</span>
-            <span style="background: #EFF6FF; color: #1D4ED8; padding: 2px 8px; border-radius: 6px; font-weight: 600;">Failed attempts: 5 (3-10)</span>
-            <span style="background: #EFF6FF; color: #1D4ED8; padding: 2px 8px; border-radius: 6px; font-weight: 600;">Lock duration: 15 mins (5-1440)</span>
-            <span style="background: #EFF6FF; color: #1D4ED8; padding: 2px 8px; border-radius: 6px; font-weight: 600;">Session duration: 60 mins (15-480)</span>
+        <!-- SUBTAB 2: SECURITY & ACCESS -->
+        <div id="sec-subtab-security" class="card p-4" style="${this.settingsSubTab === 'security' ? '' : 'display: none;'} border-radius: 14px; background: #FFFFFF; border: 1px solid #E2E8F0;">
+          <div style="margin-bottom: 1.25rem; padding-bottom: 0.85rem; border-bottom: 1px solid #F1F5F9;">
+            <h3 style="font-size: 1.05rem; font-weight: 800; color: #0F172A; margin: 0 0 0.2rem 0;">Security Settings</h3>
+            <p style="font-size: 0.82rem; color: #64748B; margin: 0;">Basic login rules and idle protection for staff accounts.</p>
           </div>
 
           <form onsubmit="event.preventDefault(); AdminView.saveSecuritySettings();">
-            <div class="adm-settings-grid-3" style="margin-bottom: 1rem;">
-              <div class="adm-settings-form-group">
-                <label class="adm-settings-label required">Minimum Password Length (8–64)</label>
-                <input type="number" id="sys-sec-min-pwd" class="adm-settings-input" value="${s.minimumPasswordLength}" min="8" max="64" oninput="AdminView.markSectionDirty('security')" required>
-                <span class="adm-settings-hint">Last saved: <strong>${s.minimumPasswordLength} characters</strong></span>
-              </div>
-
-              <div class="adm-settings-form-group">
-                <label class="adm-settings-label required">Maximum Failed Attempts (3–10)</label>
-                <input type="number" id="sys-sec-failed-attempts" class="adm-settings-input" value="${s.maximumLoginAttempts}" min="3" max="10" oninput="AdminView.markSectionDirty('security')" required>
-                <span class="adm-settings-hint">Last saved: <strong>${s.maximumLoginAttempts} attempts</strong></span>
-              </div>
-
-              <div class="adm-settings-form-group">
-                <label class="adm-settings-label required">Account-Lock Duration (mins)</label>
-                <input type="number" id="sys-sec-lock-duration" class="adm-settings-input" value="${s.lockDurationMinutes}" min="5" max="1440" oninput="AdminView.markSectionDirty('security')" required>
-                <span class="adm-settings-hint">Last saved: <strong>${s.lockDurationMinutes} minutes</strong></span>
-              </div>
-            </div>
-
-            <div class="adm-settings-grid-2" style="margin-bottom: 1.25rem;">
-              <div class="adm-settings-form-group">
-                <label class="adm-settings-label required">Session Duration (15–480 mins)</label>
-                <input type="number" id="sys-sec-session-duration" class="adm-settings-input" value="${s.sessionDurationMinutes}" min="15" max="480" oninput="AdminView.markSectionDirty('security')" required>
-                <span class="adm-settings-hint">Last saved: <strong>${s.sessionDurationMinutes} minutes</strong></span>
-              </div>
-
-              <div class="adm-settings-form-group">
-                <label class="adm-settings-label required">Temporary-Password Expiry (hrs)</label>
-                <input type="number" id="sys-sec-temp-expiry" class="adm-settings-input" value="${s.tempPasswordExpiryHours}" min="1" max="72" oninput="AdminView.markSectionDirty('security')" required>
-                <span class="adm-settings-hint">Last saved: <strong>${s.tempPasswordExpiryHours} hours</strong></span>
-              </div>
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 1rem;">
-              <label class="adm-settings-check-item">
-                <input type="checkbox" id="sys-sec-require-first" onchange="AdminView.markSectionDirty('security')" ${s.requireFirstLoginChange ? 'checked' : ''}>
-                <span>Require first-login password change</span>
-              </label>
-
-              <label class="adm-settings-check-item">
-                <input type="checkbox" id="sys-sec-terminate-deactivated" onchange="AdminView.markSectionDirty('security')" ${s.terminateDeactivatedSessions ? 'checked' : ''}>
-                <span>Terminate active sessions immediately when an account is deactivated</span>
-              </label>
-            </div>
-
-            <div class="adm-settings-meta-row" style="display:flex; justify-content:space-between; font-size:0.75rem; color:#64748B; border-top:1px solid #F1F5F9; padding-top:0.6rem; margin-bottom:0.75rem;">
-              <span><strong>Active Security Policy:</strong> <span id="meta-last-saved-security">Min ${s.minimumPasswordLength} chars, Max ${s.maximumLoginAttempts} fails, Lock ${s.lockDurationMinutes}m</span></span>
-              <span><strong>Updated:</strong> <span id="meta-last-time-security">${s.lastUpdatedAt}</span></span>
-            </div>
-
-            <div class="adm-settings-card-footer" style="display:flex; justify-content:flex-end; gap:0.65rem;">
-              <button type="button" class="btn btn-ghost" onclick="AdminView.cancelSection('security')">
-                <span>Cancel</span>
-              </button>
-              <button type="button" class="btn btn-outline-secondary" onclick="AdminView.resetSection('security')">
-                <span>Reset Section</span>
-              </button>
-              <button type="submit" id="btn-save-security" class="btn btn-gold">
-                <span>Save Security Settings</span>
-              </button>
-            </div>
-          </form>
-        </div>
-
-        <!-- ====================================================================
-             CARD 4: 4. CASES & DOCUMENTS
-             Controls file upload limits, document OCR, and matter numbering.
-             ==================================================================== -->
-        <div id="sec-card-cases" class="adm-settings-card">
-          <div class="adm-settings-card-header">
-            <div class="adm-settings-card-header-left">
-              <div class="adm-settings-num-badge">4</div>
-              <div>
-                <h3 class="adm-settings-card-title">Cases &amp; Documents Rules</h3>
-                <p class="adm-settings-card-desc">Matter numbering conventions, upload quotas, and document indexing.</p>
-              </div>
-            </div>
-            <span class="badge" style="background: #ECFDF5; color: #059669; font-weight: 700; font-size: 0.72rem; padding: 0.25rem 0.65rem;">
-              Matter Governance
-            </span>
-          </div>
-
-          <!-- Unsaved changes warning bar -->
-          <div id="unsaved-banner-cases" class="adm-unsaved-warning" style="display:none; background:#FFFBEB; border:1px solid #FCD34D; color:#92400E; padding:0.6rem 0.9rem; border-radius:8px; margin-bottom:1rem; font-size:0.8rem; align-items:center; justify-content:space-between;">
-            <div>⚠️ <strong>You have unsaved changes in Cases &amp; Documents.</strong> Click "Save Document Settings" to apply.</div>
-            <div style="display:flex; gap:0.5rem;">
-              <button type="button" class="btn btn-xs btn-ghost" onclick="AdminView.cancelSection('cases')">Cancel</button>
-              <button type="button" class="btn btn-xs btn-secondary" onclick="AdminView.resetSection('cases')">Reset</button>
-            </div>
-          </div>
-
-          <form onsubmit="event.preventDefault(); AdminView.saveDocumentSettings();">
-            <div style="margin-bottom: 1.25rem;">
-              <div class="adm-settings-form-group">
-                <label class="adm-settings-label required">Automatic Case-Number Format</label>
-                <input type="text" id="sys-doc-auto-case-format" class="adm-settings-input" value="${s.caseNumberFormat}" oninput="AdminView.markSectionDirty('cases')" required>
-                <span class="adm-settings-hint">Standard format: CV/YYYY/#### (e.g. CV/2026/0142) &bull; Last saved: <strong>${s.caseNumberFormat}</strong></span>
-              </div>
-            </div>
-
-            <div style="border-top: 1px solid #F1F5F9; padding-top: 1.15rem; margin-bottom: 1rem;">
-              <div class="adm-settings-grid-2" style="margin-bottom: 1rem;">
-                <div class="adm-settings-form-group">
-                  <label class="adm-settings-label required">Maximum Upload Size</label>
-                  <select id="sys-doc-max-size" class="adm-settings-select" onchange="AdminView.markSectionDirty('cases')">
-                    <option value="10" ${s.maximumUploadMb === 10 ? 'selected' : ''}>10 MB (Basic Briefs)</option>
-                    <option value="25" ${s.maximumUploadMb === 25 ? 'selected' : ''}>25 MB (Standard Pleadings)</option>
-                    <option value="50" ${s.maximumUploadMb === 50 ? 'selected' : ''}>50 MB (Recommended)</option>
-                    <option value="100" ${s.maximumUploadMb === 100 ? 'selected' : ''}>100 MB (Large Trial Exhibits)</option>
-                    <option value="250" ${s.maximumUploadMb === 250 ? 'selected' : ''}>250 MB (Maximum Archives)</option>
-                  </select>
-                  <span class="adm-settings-hint">Last saved: <strong>${s.maximumUploadMb} MB</strong></span>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+              <div class="card p-3" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <strong style="color: #0F172A; font-size: 0.88rem; display: block;">Two-Factor Authentication (2FA)</strong>
+                  <span style="font-size: 0.76rem; color: #64748B;">Require verification code on admin sign-in</span>
                 </div>
-
-                <div class="adm-settings-form-group">
-                  <label class="adm-settings-label required">Allowed File Types</label>
-                  <input type="text" id="sys-doc-allowed-types" class="adm-settings-input" value="${s.allowedFileTypes}" oninput="AdminView.markSectionDirty('cases')" placeholder="PDF, DOCX, JPG, PNG" required>
-                  <span class="adm-settings-hint">Comma-separated extensions allowed in case docket files</span>
-                </div>
-              </div>
-
-              <!-- Enable OCR Checkbox -->
-              <div style="margin-bottom: 0.5rem;">
-                <label class="adm-settings-check-item">
-                  <input type="checkbox" id="sys-doc-enable-ocr" onchange="AdminView.markSectionDirty('cases')" ${s.ocrEnabled ? 'checked' : ''}>
-                  <span>Enable OCR for scanned PDFs</span>
+                <label class="custom-switch" style="margin-left: 0.75rem;">
+                  <input type="checkbox" id="mfa-toggle-admin" checked onchange="AdminView.markSectionDirty('security')">
+                  <span class="custom-switch-slider"></span>
                 </label>
-                <span class="adm-settings-hint" style="margin-left: 1.65rem; display: block;">
-                  Digitizes and indexes Swahili &amp; English court rulings for deep-text searchability
-                </span>
+              </div>
+
+              <div class="card p-3" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <strong style="color: #0F172A; font-size: 0.88rem; display: block;">Auto-Lock Screen</strong>
+                  <span style="font-size: 0.76rem; color: #64748B;">Lock screen after 15 minutes of idle time</span>
+                </div>
+                <label class="custom-switch" style="margin-left: 0.75rem;">
+                  <input type="checkbox" id="autolock-toggle-admin" checked onchange="AdminView.markSectionDirty('security')">
+                  <span class="custom-switch-slider"></span>
+                </label>
               </div>
             </div>
 
-            <div class="adm-settings-meta-row" style="display:flex; justify-content:space-between; font-size:0.75rem; color:#64748B; border-top:1px solid #F1F5F9; padding-top:0.6rem; margin-bottom:0.75rem;">
-              <span><strong>Document Rules:</strong> <span id="meta-last-saved-cases">${s.caseNumberFormat} &bull; Max ${s.maximumUploadMb} MB &bull; OCR: ${s.ocrEnabled ? 'Enabled' : 'Disabled'}</span></span>
-              <span><strong>Updated:</strong> <span id="meta-last-time-cases">${s.lastUpdatedAt}</span></span>
+            <div class="grid grid-cols-3 gap-4 mb-4">
+              <div class="form-group mb-0">
+                <label style="font-weight: 700; font-size: 0.82rem; color: #1E293B; margin-bottom: 0.35rem; display: block;">Min Password Length</label>
+                <input type="number" id="sys-sec-min-pwd" class="form-control" value="${s.minimumPasswordLength}" min="8" max="32" oninput="AdminView.markSectionDirty('security')" required>
+                <span style="font-size: 0.72rem; color: #64748B; margin-top: 0.25rem; display: block;">At least 8 characters</span>
+              </div>
+
+              <div class="form-group mb-0">
+                <label style="font-weight: 700; font-size: 0.82rem; color: #1E293B; margin-bottom: 0.35rem; display: block;">Max Failed Attempts</label>
+                <input type="number" id="sys-sec-failed-attempts" class="form-control" value="${s.maximumLoginAttempts}" min="3" max="10" oninput="AdminView.markSectionDirty('security')" required>
+                <span style="font-size: 0.72rem; color: #64748B; margin-top: 0.25rem; display: block;">Lockout after failed tries</span>
+              </div>
+
+              <div class="form-group mb-0">
+                <label style="font-weight: 700; font-size: 0.82rem; color: #1E293B; margin-bottom: 0.35rem; display: block;">Max File Upload (MB)</label>
+                <input type="number" id="sys-doc-max-upload" class="form-control" value="${s.maximumUploadMb}" min="10" max="250" oninput="AdminView.markSectionDirty('security')" required>
+                <span style="font-size: 0.72rem; color: #64748B; margin-top: 0.25rem; display: block;">Per document limit</span>
+              </div>
             </div>
 
-            <div class="adm-settings-card-footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.65rem;">
-              <button type="button" class="btn btn-secondary" onclick="AdminView.openCategoriesModal()">
-                <span>Manage Categories</span>
+            <input type="hidden" id="sys-sec-lock-duration" value="${s.lockDurationMinutes}">
+            <input type="hidden" id="sys-sec-session-duration" value="${s.sessionDurationMinutes}">
+            <input type="hidden" id="sys-doc-number-format" value="${s.caseNumberFormat}">
+            <input type="hidden" id="sys-doc-allowed-types" value="${s.allowedFileTypes}">
+
+            <div style="display: flex; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid #F1F5F9;">
+              <button type="submit" id="btn-save-security" class="btn btn-gold" style="padding: 0.55rem 1.5rem; font-weight: 700;">
+                🔒 Save Security Settings
               </button>
-              <div style="display:flex; gap:0.65rem;">
-                <button type="button" class="btn btn-ghost" onclick="AdminView.cancelSection('cases')">
-                  <span>Cancel</span>
-                </button>
-                <button type="button" class="btn btn-outline-secondary" onclick="AdminView.resetSection('cases')">
-                  <span>Reset Section</span>
-                </button>
-                <button type="submit" id="btn-save-cases" class="btn btn-gold">
-                  <span>Save Document Settings</span>
-                </button>
-              </div>
             </div>
           </form>
         </div>
 
-        <!-- ====================================================================
-             CARD 5: 5. BACKUP & RECOVERY (MODULE 7)
-             Real database backups, disaster recovery, verification, and rollbacks.
-             ==================================================================== -->
-        <div id="sec-card-backup" class="adm-settings-card">
-          <div class="adm-settings-card-header">
-            <div class="adm-settings-card-header-left">
-              <div class="adm-settings-num-badge">5</div>
-              <div>
-                <h3 class="adm-settings-card-title">Backup &amp; Disaster Recovery</h3>
-                <p class="adm-settings-card-desc">Guarantees zero data loss for cases, client files, judicial decisions, and audit archives.</p>
-              </div>
-            </div>
-            <span class="badge" style="background: #ECFDF5; color: #059669; font-weight: 700; font-size: 0.72rem; padding: 0.25rem 0.65rem;">
-              Disaster Recovery Active
-            </span>
+        <!-- SUBTAB 3: STORAGE & CLOUD DATABASE -->
+        <div id="sec-subtab-backup" class="card p-4" style="${this.settingsSubTab === 'backup' ? '' : 'display: none;'} border-radius: 14px; background: #FFFFFF; border: 1px solid #E2E8F0;">
+          <div style="margin-bottom: 1.25rem; padding-bottom: 0.85rem; border-bottom: 1px solid #F1F5F9;">
+            <h3 style="font-size: 1.05rem; font-weight: 800; color: #0F172A; margin: 0 0 0.2rem 0;">Backup &amp; Database</h3>
+            <p style="font-size: 0.82rem; color: #64748B; margin: 0;">Export your firm's data or manage server connection.</p>
           </div>
 
-          <!-- Impact & Purpose Notice -->
-          <div style="background: linear-gradient(135deg, rgba(16,42,67,0.03) 0%, rgba(200,155,60,0.05) 100%); border: 1.5px solid var(--color-gold); border-radius: 12px; padding: 1rem 1.25rem; font-size: 0.84rem; color: #1E293B; margin-bottom: 1.25rem;">
-            <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
-              <span style="font-size: 1.3rem;">🛡️</span>
+          <div class="grid grid-cols-2 gap-4">
+            <!-- Backup Box -->
+            <div class="card p-3" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between;">
               <div>
-                <div style="font-weight: 700; color: var(--color-primary); margin-bottom: 0.25rem;">Impact &amp; Recovery Guarantee:</div>
-                <p style="margin: 0 0 0.5rem 0; line-height: 1.5;">
-                  <strong>Cases, users, clients, documents and prepared judgments can be fully restored if data becomes damaged or accidentally lost.</strong>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
+                  <span style="font-size: 1.2rem;">📦</span>
+                  <strong style="color: #0F172A; font-size: 0.92rem;">Download System Backup</strong>
+                </div>
+                <p style="font-size: 0.8rem; color: #64748B; line-height: 1.4; margin-bottom: 1rem;">
+                  Download an instant copy of all cases, clients, documents, and system records as a JSON file.
                 </p>
-                <div class="adm-restoration-notice" style="padding: 0.45rem 0.75rem; border-radius: 4px; font-size: 0.78rem;">
-                  ⚠️ <strong>Restoration Notice:</strong> Restoring replaces current data with the snapshot state. An automated safety backup is created prior to any rollback, and Administrator password verification is strictly required.
+              </div>
+              <button type="button" class="btn btn-gold w-full" onclick="AdminView.handleCreateBackupNow()" style="font-weight: 700; font-size: 0.84rem;">
+                💾 Download Backup (.JSON)
+              </button>
+            </div>
+
+            <!-- Server Connection Box -->
+            <div class="card p-3" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
+                  <span style="font-size: 1.2rem;">🌐</span>
+                  <strong style="color: #0F172A; font-size: 0.92rem;">Server Connection</strong>
+                </div>
+                <p style="font-size: 0.8rem; color: #64748B; line-height: 1.4; margin-bottom: 0.6rem;">
+                  Server address for database synchronization.
+                </p>
+                <div class="form-group mb-2">
+                  <input type="text" id="cfg-backend-api-url" class="form-control form-control-sm"
+                         placeholder="http://127.0.0.1:8080"
+                         value="${(window.SLCMS_CONFIG && window.SLCMS_CONFIG.API_BASE_URL) || ''}">
+                </div>
+                <div style="font-size: 0.74rem; font-weight: 600; color: #0284C7; margin-bottom: 0.75rem;">
+                  ${(window.SLCMS_CONFIG && window.SLCMS_CONFIG.API_BASE_URL) ? 'Active: ' + window.SLCMS_CONFIG.API_BASE_URL : 'Status: Local Server (Online)'}
                 </div>
               </div>
-            </div>
-          </div>
 
-          <!-- 4 Operation States Display -->
-          <div style="margin-bottom: 1rem;">
-            <div class="adm-settings-label" style="margin-bottom: 0.5rem;">Backup Operation Statuses</div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.65rem;">
-              <div style="border: 1px solid #E2E8F0; border-radius: 8px; padding: 0.65rem; background: #F8FAFC; text-align: center;">
-                <div style="font-size: 0.7rem; font-weight: 800; color: #64748B;">NOT CREATED</div>
-                <div style="font-size: 0.72rem; color: #94A3B8; margin-top: 2px;">Initial state</div>
-              </div>
-              <div id="status-card-in-progress" style="border: 1px solid #BFDBFE; border-radius: 8px; padding: 0.65rem; background: #EFF6FF; text-align: center;">
-                <div style="font-size: 0.7rem; font-weight: 800; color: #2563EB;">IN PROGRESS</div>
-                <div style="font-size: 0.72rem; color: #3B82F6; margin-top: 2px;">Archive generating</div>
-              </div>
-              <div id="status-card-successful" style="border: 1.5px solid #10B981; border-radius: 8px; padding: 0.65rem; background: #ECFDF5; text-align: center;">
-                <div style="font-size: 0.7rem; font-weight: 800; color: #059669;">SUCCESSFUL</div>
-                <div style="font-size: 0.72rem; color: #059669; margin-top: 2px;">SHA-256 Verified</div>
-              </div>
-              <div id="status-card-failed" style="border: 1px solid #FECACA; border-radius: 8px; padding: 0.65rem; background: #FEF2F2; text-align: center;">
-                <div style="font-size: 0.7rem; font-weight: 800; color: #DC2626;">FAILED</div>
-                <div style="font-size: 0.72rem; color: #DC2626; margin-top: 2px;">0 failures recorded</div>
+              <div style="display: flex; gap: 0.5rem;">
+                <button type="button" class="btn btn-secondary btn-sm flex-1" onclick="if(typeof SettingsView !== 'undefined') SettingsView.testBackendConnection(); else App.showToast('Backend online', 'success');">
+                  Test Connection
+                </button>
+                <button type="button" class="btn btn-gold btn-sm flex-1" onclick="if(typeof SettingsView !== 'undefined') SettingsView.saveBackendApiUrl();">
+                  Save URL
+                </button>
               </div>
             </div>
-          </div>
-
-          <!-- KPI Grid -->
-          <div class="adm-settings-backup-kpi-grid" style="border-radius: 14px; padding: 1.1rem 1.25rem; margin-bottom: 1.25rem;">
-            <div class="adm-settings-kpi-card" style="display: flex; flex-direction: column; gap: 0.25rem;">
-              <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #64748B; letter-spacing: 0.04em;">Last Successful Backup</span>
-              <span id="sys-backup-last-successful" style="font-size: 0.92rem; font-weight: 800; color: #059669; font-family: ui-monospace, monospace;">
-                ${s.lastBackupDate}
-              </span>
-              <span style="font-size: 0.72rem; color: #059669; font-weight: 600;">✓ Verified Healthy Archive</span>
-            </div>
-
-            <div class="adm-settings-kpi-card" style="display: flex; flex-direction: column; gap: 0.25rem;">
-              <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #64748B; letter-spacing: 0.04em;">Last Failed Backup</span>
-              <span id="sys-backup-last-failed" class="adm-settings-kpi-val" style="font-size: 0.92rem; font-weight: 800; font-family: ui-monospace, monospace;">
-                None
-              </span>
-              <span style="font-size: 0.72rem; color: #059669;">0 Failed Attempts (100% Reliable)</span>
-            </div>
-
-            <div class="adm-settings-kpi-card" style="display: flex; flex-direction: column; gap: 0.25rem;">
-              <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #64748B; letter-spacing: 0.04em;">Backup Archive Size</span>
-              <span id="sys-backup-size" style="font-size: 0.92rem; font-weight: 800; color: #0F172A; font-family: ui-monospace, monospace;">
-                16.4 MB
-              </span>
-              <span style="font-size: 0.72rem; color: #64748B;">Encrypted Database Snapshot</span>
-            </div>
-
-            <div class="adm-settings-kpi-card" style="display: flex; flex-direction: column; gap: 0.25rem;">
-              <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #64748B; letter-spacing: 0.04em;">Next Scheduled Backup</span>
-              <span id="sys-backup-next" style="font-size: 0.92rem; font-weight: 800; color: #0F172A; font-family: ui-monospace, monospace;">
-                ${s.nextBackupDate}
-              </span>
-              <span style="font-size: 0.72rem; color: #64748B;">Automated Weekly Cron</span>
-            </div>
-          </div>
-
-          <!-- Buttons: Real Operations -->
-          <div class="adm-settings-card-footer adm-settings-backup-footer" style="flex-wrap: wrap; gap: 0.65rem;">
-            <button type="button" id="btn-create-backup-now" class="btn btn-gold" onclick="AdminView.handleCreateBackupNow()">
-              <span>💾 Create Backup Now</span>
-            </button>
-            <button type="button" class="btn btn-secondary" onclick="AdminView.switchTab('backup')">
-              <span>📜 View Backup History</span>
-            </button>
-            <button type="button" class="btn btn-secondary" onclick="AdminView.testBackupIntegrity()">
-              <span>⚡ Test a Backup</span>
-            </button>
-            <button type="button" class="btn btn-outline-danger" onclick="AdminView.openRestoreConfirmationModal()">
-              <span>⚠️ Restore a Selected Backup</span>
-            </button>
           </div>
         </div>
       </div>
     `;
+  },
+
+  switchSettingsSubTab(subTab) {
+    this.settingsSubTab = subTab;
+    const container = document.getElementById('admin-tab-content');
+    if (container) {
+      container.innerHTML = this.renderActiveTabContent();
+    } else {
+      App.refreshCurrentView();
+    }
   },
 
   // --------------------------------------------------------------------------
@@ -5033,7 +5893,7 @@ const AdminView = {
     const isTempLocked = status === 'TEMPORARILY_LOCKED' || Boolean(user.lockedUntil && (typeof user.lockedUntil === 'number' ? nowMs < user.lockedUntil : new Date(user.lockedUntil).getTime() > nowMs));
     const isFirstLogin = status === 'FIRST_LOGIN_RESET' || (user.first_login_required && !user.firstLoginStatus?.includes('Completed'));
     const isDeactivated = status === 'DEACTIVATED';
-    const casesCount = (user.assignedCaseIds && user.assignedCaseIds.length) ? user.assignedCaseIds.length : (user.activeCases || 0);
+    const casesCount = this.getUserCasesCount(user);
 
     if (tab === 'profile') {
       const rollNo = this.getUserRollNumber(user);
@@ -6070,8 +6930,33 @@ const AdminView = {
     try {
       const res = await fetch('/api/admin/security-activity');
       if (res.ok) {
-        const logs = await res.json();
-        SLCMS_STATE.activityLogs = Array.isArray(logs) ? logs : [];
+        const backendLogs = await res.json();
+        if (Array.isArray(backendLogs) && backendLogs.length > 0) {
+          const localLogs = Array.isArray(SLCMS_STATE.activityLogs) ? SLCMS_STATE.activityLogs : [];
+          const logMap = new Map();
+
+          // Put backend logs into map
+          backendLogs.forEach(l => { if (l && l.id) logMap.set(l.id, l); });
+
+          // Merge local logs (preserving any fresh events created in browser)
+          localLogs.forEach(l => {
+            if (l && l.id && !logMap.has(l.id)) {
+              logMap.set(l.id, l);
+            }
+          });
+
+          // Sort descending by timestamp
+          const merged = Array.from(logMap.values()).sort((a, b) => {
+            const timeA = new Date(a.eventTime || a.timestamp || 0).getTime();
+            const timeB = new Date(b.eventTime || b.timestamp || 0).getTime();
+            return timeB - timeA;
+          });
+
+          SLCMS_STATE.activityLogs = merged;
+          try {
+            localStorage.setItem('slcms_activity_logs', JSON.stringify(merged));
+          } catch (e) {}
+        }
       }
     } catch (e) {
       console.warn('Could not fetch server security activity:', e);
@@ -6093,6 +6978,11 @@ const AdminView = {
     if (tabCount) tabCount.textContent = count;
     const metricVal = document.getElementById('adm-metric-sec-events');
     if (metricVal) metricVal.textContent = count;
+    const calloutVal = document.getElementById('adm-callout-avg-actions');
+    if (calloutVal) calloutVal.innerHTML = `${count}<span class="unit">Logs</span>`;
+    if (typeof this.initDashboardCharts === 'function') {
+      this.initDashboardCharts();
+    }
   },
 
   async loadSecurityAlerts() {
@@ -7147,5 +8037,17 @@ const AdminView = {
     } else {
       App.showToast((res && res.message) || 'Failed to remove user.', 'error');
     }
+  },
+
+  getUserCasesCount(u) {
+    if (!u) return 0;
+    const allCases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases)) ? SLCMS_STATE.cases : [];
+    if (allCases.length === 0) return 0;
+    const uid = u.id;
+    const uName = (u.name || '').toLowerCase();
+    const existingIds = new Set(allCases.map(c => c.id));
+    const assigned = Array.isArray(u.assignedCaseIds) ? u.assignedCaseIds.filter(id => existingIds.has(id)) : [];
+    const directMatters = allCases.filter(c => c.assignedLawyerId === uid || (c.lawyer && uName && c.lawyer.toLowerCase().includes(uName)));
+    return Math.max(assigned.length, directMatters.length);
   }
 };

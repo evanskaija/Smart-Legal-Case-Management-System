@@ -8,6 +8,8 @@ const CasesView = {
   selectedFilterType: 'All',
   selectedFilterPriority: 'All',
   searchQuery: '',
+  selectedClientFilter: null,
+  selectedClientName: null,
   newCaseStep: 1,
   newCaseViewMode: 'stepper',
   newCaseData: null,
@@ -105,7 +107,16 @@ const CasesView = {
       const status = this.normalizeText(item.status ?? 'UNASSIGNED');
       const priority = this.normalizeText(item.priority ?? 'MEDIUM');
 
-      const matchesSearch = !query || [
+      // Client-specific filter
+      if (this.selectedClientFilter || this.selectedClientName) {
+        const targetId = this.selectedClientFilter;
+        const targetName = this.normalizeText(this.selectedClientName);
+        const matchesClient = (targetId && item.clientId === targetId) ||
+          (targetName && (client === targetName || client.includes(targetName) || title.includes(targetName)));
+        if (!matchesClient) return false;
+      }
+
+      const matchesSearch = (!query || (this.selectedClientName && query === this.selectedClientName.toLowerCase())) ? true : [
         title,
         number,
         type,
@@ -130,6 +141,16 @@ const CasesView = {
 
       return matchesSearch && matchesStatus && matchesType && matchesPriority;
     });
+  },
+
+  clearClientFilter() {
+    this.selectedClientFilter = null;
+    this.selectedClientName = null;
+    this.searchQuery = '';
+    this.selectedFilterStatus = 'All';
+    this.selectedFilterType = 'All';
+    this.selectedFilterPriority = 'All';
+    App.refreshCurrentView();
   },
 
   getFilteredCases(sourceCases) {
@@ -188,16 +209,30 @@ const CasesView = {
               </svg>
               <span>Export Case List</span>
             </button>
-            ${SLCMS_STATE.currentUser?.role !== 'Administrator' ? `
             <button class="btn btn-gold cases-header-btn" onclick="CasesView.openNewCaseModal()">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
               <span>Add New Case</span>
             </button>
-            ` : ''}
           </div>
         </div>
+
+        <!-- CLIENT MATTERS FILTER ACTIVE BANNER -->
+        ${(this.selectedClientFilter || this.selectedClientName) ? `
+          <div class="alert alert-info animate-fade" style="margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; background: rgba(14, 165, 233, 0.08); border: 1.5px solid rgba(14, 165, 233, 0.35); border-radius: 12px; padding: 0.85rem 1.25rem; box-shadow: 0 2px 10px rgba(14, 165, 233, 0.08);">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span style="font-size: 1.35rem;">🏢</span>
+              <div>
+                <strong style="color: #0369A1; font-size: 0.95rem;">Filtered by Client: ${this.selectedClientName || 'Selected Client'}</strong>
+                <div style="font-size: 0.8rem; color: var(--color-text-secondary); margin-top: 0.15rem;">Showing active proceedings, litigation filings, and commercial matters connected to this client profile.</div>
+              </div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="CasesView.clearClientFilter()" style="font-size: 0.78rem; padding: 0.35rem 0.85rem; font-weight: 700; white-space: nowrap;">
+              ✕ Show All Cases
+            </button>
+          </div>
+        ` : ''}
 
         <!-- Filter & Search Toolbar -->
         <div class="filter-bar cases-filter-bar">
@@ -216,7 +251,7 @@ const CasesView = {
             <div class="filter-group cases-filter-cell">
               <select class="form-control" onchange="CasesView.handleFilterStatus(this.value)">
                 <option value="All" ${this.selectedFilterStatus === 'All' ? 'selected' : ''}>All Statuses</option>
-                <option value="Attention" ${this.selectedFilterStatus === 'Attention' ? 'selected' : ''}>⚠️ Attention (3 Matters)</option>
+                <option value="Attention" ${this.selectedFilterStatus === 'Attention' ? 'selected' : ''}>⚠️ Attention (${(typeof SLCMS_STATE !== 'undefined' && SLCMS_STATE.getCasesRequiringAttentionCount) ? SLCMS_STATE.getCasesRequiringAttentionCount() : 0} Matters)</option>
                 <option value="Active" ${this.selectedFilterStatus === 'Active' ? 'selected' : ''}>Active</option>
                 <option value="Pending" ${this.selectedFilterStatus === 'Pending' ? 'selected' : ''}>Pending</option>
                 <option value="On Hold" ${this.selectedFilterStatus === 'On Hold' ? 'selected' : ''}>On Hold</option>
@@ -269,16 +304,14 @@ const CasesView = {
         </div>
 
         <!-- ATTENTION PANEL: RENDERED WHEN FILTERED TO ATTENTION -->
-        ${this.selectedFilterStatus === 'Attention' ? `
+        ${(this.selectedFilterStatus === 'Attention' && (typeof SLCMS_STATE !== 'undefined' && SLCMS_STATE.getCasesRequiringAttentionCount && SLCMS_STATE.getCasesRequiringAttentionCount() > 0)) ? `
           <div class="alert alert-warning animate-fade" style="margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #D97706; background: #FFFBEB; border: 1px solid #FDE68A; padding: 1rem 1.25rem; border-radius: 8px;">
             <div class="flex items-start gap-3">
               <span style="font-size: 1.35rem; line-height: 1;">⚠️</span>
               <div>
-                <strong style="color: #92400E; font-size: 0.95rem;">3 Cases Requiring Administrative Attention</strong>
+                <strong style="color: #92400E; font-size: 0.95rem;">${SLCMS_STATE.getCasesRequiringAttentionCount()} Case${SLCMS_STATE.getCasesRequiringAttentionCount() === 1 ? '' : 's'} Requiring Administrative Attention</strong>
                 <p style="font-size: 0.82rem; color: #78350F; margin: 0.25rem 0 0 0; line-height: 1.5;">
-                  <strong>1. Greenfield Estate (MZB-2026-0155):</strong> Unassigned Staff &middot;
-                  <strong>2. State vs. Jonathan Vance Jr. (FDC-2026-0098):</strong> Sensitive Matter Access Lock &middot;
-                  <strong>3. Helios Energy (FTT-2025-0812):</strong> Metadata Verification &amp; Archive
+                  Matters flagged for staff assignment, sensitive seals, or procedural verification.
                 </p>
               </div>
             </div>
@@ -350,16 +383,14 @@ const CasesView = {
             <div class="empty-icon" style="font-size: 2.8rem; margin-bottom: 0.85rem;">⚖️</div>
             <h3 class="empty-title" style="font-size: 1.25rem; color: var(--color-primary); font-weight: 700;">No cases registered yet</h3>
             <p class="empty-desc" style="color: var(--color-text-secondary); max-width: 480px; margin: 0.5rem auto 1.5rem auto; line-height: 1.5;">
-              ${isAdmin ? 'No cases have been registered in the system yet.' : 'Add the first case to begin managing assignments and documents.'}
+              ${isAdmin ? 'Register the first case to begin managing assignments and documents.' : 'Add the first case to begin managing assignments and documents.'}
             </p>
-            ${!isAdmin ? `
             <button class="btn btn-gold" onclick="CasesView.openNewCaseModal()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
               <span>+ Add New Case</span>
             </button>
-            ` : ''}
           </div>
         `;
       }
@@ -456,6 +487,9 @@ const CasesView = {
                       <button class="btn btn-ghost btn-sm" onclick="CasesView.quickAddTask('${c.id}')" title="Add Task to Case">
                         +Task
                       </button>
+                      <button class="btn btn-ghost btn-sm text-danger" onclick="CasesView.confirmRemoveCase('${c.id}')" title="Permanently Remove Case">
+                        🗑️
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -529,16 +563,14 @@ const CasesView = {
             <div class="empty-icon" style="font-size: 2.8rem; margin-bottom: 0.85rem;">⚖️</div>
             <h3 class="empty-title" style="font-size: 1.25rem; color: var(--color-primary); font-weight: 700;">No cases registered yet</h3>
             <p class="empty-desc" style="color: var(--color-text-secondary); max-width: 480px; margin: 0.5rem auto 1.5rem auto; line-height: 1.5;">
-              ${isAdmin ? 'No cases have been registered in the system yet.' : 'Add the first case to begin managing assignments and documents.'}
+              ${isAdmin ? 'Register the first case to begin managing assignments and documents.' : 'Add the first case to begin managing assignments and documents.'}
             </p>
-            ${!isAdmin ? `
             <button class="btn btn-gold" onclick="CasesView.openNewCaseModal()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
               <span>+ Add New Case</span>
             </button>
-            ` : ''}
           </div>
         `;
       }
@@ -668,10 +700,6 @@ const CasesView = {
   },
 
   openNewCaseModal(preselectedClientId = null) {
-    if (SLCMS_STATE.currentUser?.role === 'Administrator') {
-      App.showToast('Administrators do not have access to register legal cases.', 'warning');
-      return;
-    }
     this.newCaseStep = 1;
     this.newCaseViewMode = 'stepper';
     this.newCaseDuplicateMatch = null;
@@ -732,10 +760,6 @@ const CasesView = {
   },
 
   loadTanzaniaSampleCase() {
-    if (SLCMS_STATE.currentUser?.role === 'Administrator') {
-      App.showToast('Administrators do not have access to create cases.', 'warning');
-      return;
-    }
     this.newCaseData.title = 'Abdallah Salum Muwinge v Halima Ismail';
     this.newCaseData.caseNumber = 'PC Civil Appeal No. 69 of 2018';
     this.newCaseData.caseType = 'Matrimonial';
@@ -1067,10 +1091,6 @@ const CasesView = {
   },
 
   saveNewCaseDraft() {
-    if (SLCMS_STATE.currentUser?.role === 'Administrator') {
-      App.showToast('Administrators do not have access to create case drafts.', 'warning');
-      return;
-    }
     this.syncNewCaseFormData();
     try {
       localStorage.setItem('slcms_case_draft', JSON.stringify(this.newCaseData));
@@ -1080,10 +1100,6 @@ const CasesView = {
   },
 
   registerNewCaseAndProcessPdf(bypassDuplicateCheck = false) {
-    if (SLCMS_STATE.currentUser?.role === 'Administrator') {
-      App.showToast('Administrators do not have access to register legal cases.', 'warning');
-      return;
-    }
     const errors = this.validateNewCase();
     if (errors.length > 0) {
       const firstErr = errors[0];

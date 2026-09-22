@@ -126,16 +126,15 @@ const AuthView = {
                   </svg>
                 `}
               </span>
-              <span class="auth-theme-toggle-label">${isDark ? 'Light Mode' : 'Dark Mode'}</span>
             </button>
 
-            <!-- Mobile-Only Premium Header (hidden on desktop) -->
+            <!-- Mobile-Only Brand Header -->
             <div class="auth-mobile-brand-header">
               <div class="auth-mobile-logo-ring">
-                <img src="assets/SLCMS.png" alt="SLCMS" style="width: 40px; height: 40px; border-radius: 50%; display: block; object-fit: contain;">
+                <img data-setting-image="logoUrl" src="${typeof AppSettings !== 'undefined' ? AppSettings.get('logoUrl', 'assets/SLCMS.png') : 'assets/SLCMS.png'}" alt="Emblem">
               </div>
               <div class="auth-mobile-brand-text">
-                <span class="auth-mobile-brand-title">SLCMS</span>
+                <span class="auth-mobile-brand-title" data-setting="shortName">${typeof AppSettings !== 'undefined' ? AppSettings.get('shortName', 'SLCMS') : 'SLCMS'}</span>
                 <span class="auth-mobile-brand-subtitle">Enterprise Law Firm Portal</span>
               </div>
             </div>
@@ -151,7 +150,7 @@ const AuthView = {
               </div>
 
               <!-- Card Header -->
-              <h2 class="auth-card-title">Welcome Back</h2>
+              <h2 class="auth-card-title">Welcome</h2>
               <p class="auth-card-subtitle">Sign in to your secure workspace</p>
 
               <!-- Trust Badges Row -->
@@ -185,7 +184,7 @@ const AuthView = {
                 <!-- Staff ID / Username / Email Field -->
                 <div class="auth-input-group">
                   <label for="login-email-input">Staff ID, username or email</label>
-                  <div style="position: relative;">
+                  <div class="auth-input-wrapper" style="position: relative;">
                     <span class="auth-input-icon">
                       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="8" r="4"/>
@@ -202,11 +201,13 @@ const AuthView = {
                       oninput="AuthView.clearFieldError('login-email-input', 'login-email-error')"
                     >
                   </div>
+                  <div id="login-email-error" class="form-error-msg hidden"></div>
+                </div>
 
                 <!-- Password Field -->
                 <div class="auth-input-group">
                   <label for="login-password-input">Password</label>
-                  <div style="position: relative;">
+                  <div class="auth-input-wrapper" style="position: relative;">
                     <span class="auth-input-icon">
                       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
@@ -227,7 +228,6 @@ const AuthView = {
                       type="button" 
                       onclick="AuthView.togglePasswordEye('login-password-input', 'auth-eye-svg')" 
                       class="auth-password-eye-btn"
-                      style="position: absolute; right: 0.85rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #94A3B8; display: flex; align-items: center;"
                       title="Show / Hide Password"
                     >
                       <svg id="auth-eye-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -236,11 +236,13 @@ const AuthView = {
                       </svg>
                     </button>
                   </div>
+                  <div id="login-password-error" class="form-error-msg hidden"></div>
+                </div>
 
                 <!-- Remember + Forgot Row -->
-                <div class="auth-remember-row flex items-center justify-between" style="margin-bottom: 1.25rem; font-size: 0.85rem;">
-                  <label class="checkbox-label" style="font-size: 0.82rem; color: #475569;" title="Only use on trusted firm workstations">
-                    <input type="checkbox" id="auth-remember-check" checked style="display: none;">
+                <div class="auth-remember-row">
+                  <label class="checkbox-label" title="Only use on trusted firm workstations">
+                    <input type="checkbox" id="auth-remember-check" checked>
                     <span class="checkbox-custom">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                         <path d="M20 6 9 17l-5-5"/>
@@ -248,7 +250,7 @@ const AuthView = {
                     </span>
                     <span>Remember Staff ID</span>
                   </label>
-                  <a href="javascript:void(0)" onclick="AuthView.showForgotPasswordModal()" class="auth-forgot-link" style="font-size: 0.82rem; color: var(--color-gold); font-weight: 600; text-decoration: none;">Forgot Password?</a>
+                  <a href="javascript:void(0)" onclick="AuthView.showForgotPasswordModal()" class="auth-forgot-link">Forgot Password?</a>
                 </div>
 
                 <!-- Premium Login Button -->
@@ -258,18 +260,18 @@ const AuthView = {
                     <polyline points="10 17 15 12 10 7"/>
                     <line x1="15" y1="12" x2="3" y2="12"/>
                   </svg>
-                  Sign In to Workspace
+                  <span>Sign In to Workspace</span>
                 </button>
 
-                <div class="auth-card-need-access" style="margin-top: 0.9rem; font-size: 0.79rem; color: #64748B; line-height: 1.4; text-align: center;">
+                <div class="auth-card-need-access">
                   Need access?
-                  <a href="javascript:void(0)" onclick="AuthView.showContactAdminModal()" style="color: var(--color-gold); font-weight: 700; text-decoration: none;">Contact Administrator</a>
+                  <a href="javascript:void(0)" onclick="AuthView.showContactAdminModal()">Contact Administrator</a>
                 </div>
               </form>
 
               <!-- Bottom Security Badge -->
-              <div class="auth-security-footer-note" style="margin-top: 1.25rem;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold); flex-shrink: 0;">
+              <div class="auth-security-footer-note">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
                   <path d="m9 12 2 2 4-4"/>
                 </svg>

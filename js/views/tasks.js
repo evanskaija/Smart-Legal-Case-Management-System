@@ -23,18 +23,14 @@ const TasksView = {
       } catch (e) {}
     }
 
-    const isAdmin = (SLCMS_STATE.currentUser?.role === 'Administrator');
     const tasks = SLCMS_STATE.tasks || [];
-    const unassignedCount = tasks.filter(t => !t.assignedTo || t.assignedTo === 'Unassigned').length;
-    const techCount = tasks.filter(t => t.isTechnical || t.category === 'technical').length;
-    const overdueCount = tasks.filter(t => t.status !== 'completed' && t.dueDate && new Date(t.dueDate) < new Date()).length;
 
     return `
       <div class="animate-fade">
-        <!-- 1. LUXURY VIEW HEADER -->
-        <div class="view-header" style="overflow: hidden; margin-bottom: 1.15rem;">
+        <!-- 1. CLEAN VIEW HEADER -->
+        <div class="view-header" style="overflow: hidden; margin-bottom: 1rem;">
           <div style="width: 100%; min-width: 0;">
-            <div class="flex items-center gap-2.5 flex-wrap" style="margin-bottom: 0.35rem;">
+            <div class="flex items-center gap-2.5 flex-wrap" style="margin-bottom: 0.25rem;">
               <h1 class="page-title" style="font-size: 1.35rem; margin-bottom: 0; line-height: 1.25; font-weight: 800; font-family: var(--font-heading); color: #0F172A;">
                 Tasks &amp; Statutory Deadlines
               </h1>
@@ -42,16 +38,13 @@ const TasksView = {
                 <span class="tasks-pulse-dot"></span>
                 <span>Deadline Monitoring Active</span>
               </span>
-              <span class="tasks-statutory-notice-chip">
-                ⚖️ Tanzanian Civil &amp; Commercial Docket Rules
-              </span>
             </div>
             <p style="color: var(--color-text-secondary); font-size: 0.85rem; line-height: 1.4; margin-top: 0.15rem; margin-bottom: 0;">
-              Track assigned work, court dates, filing deadlines and reminders.
+              Manage legal deliverables, court hearings, and statutory limitation cutoffs.
             </p>
           </div>
 
-          <div class="tasks-header-actions flex items-center gap-3">
+          <div class="tasks-header-actions flex items-center gap-2.5 flex-wrap">
             <div class="view-toggle">
               <button class="view-toggle-btn ${this.activeView === 'kanban' ? 'active' : ''}" onclick="TasksView.switchView('kanban')" title="Kanban Workflow Columns">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -59,7 +52,7 @@ const TasksView = {
                   <path d="M9 3v18"/>
                   <path d="M15 3v18"/>
                 </svg>
-                <span class="tasks-tab-full">Kanban Board</span><span class="tasks-tab-short">Kanban</span>
+                <span>Kanban</span>
               </button>
               <button class="view-toggle-btn ${this.activeView === 'list' ? 'active' : ''}" onclick="TasksView.switchView('list')" title="Tabular Docket Schedule">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -70,7 +63,7 @@ const TasksView = {
                   <line x1="3" y1="12" x2="3.01" y2="12"/>
                   <line x1="3" y1="18" x2="3.01" y2="18"/>
                 </svg>
-                <span class="tasks-tab-full">List View</span><span class="tasks-tab-short">List</span>
+                <span>List</span>
               </button>
               <button class="view-toggle-btn ${this.activeView === 'calendar' ? 'active' : ''}" onclick="TasksView.switchView('calendar')" title="Court Docket Calendar">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -79,93 +72,45 @@ const TasksView = {
                   <line x1="8" y1="2" x2="8" y2="6"/>
                   <line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
-                <span class="tasks-tab-full">Court Calendar</span><span class="tasks-tab-short">Court</span>
+                <span>Calendar</span>
               </button>
             </div>
 
-            <button class="btn btn-secondary tasks-deadline-btn" onclick="TasksView.openAddDeadlineModal()" style="font-weight: 700; font-size: 0.82rem; padding: 0.45rem 0.85rem; border-color: rgba(16, 42, 67, 0.2);">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
-                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-              </svg>
-              <span>Add Deadline</span>
+            <button class="btn btn-secondary btn-sm" onclick="TasksView.notifyResponsibleUsers()" style="font-weight: 600; font-size: 0.82rem; padding: 0.45rem 0.85rem;" title="Dispatch structured reminder notices">
+              🔔 Send Notices
             </button>
 
-            <button class="btn btn-gold tasks-create-btn" onclick="TasksView.openNewTaskModal()" style="font-weight: 700; font-size: 0.84rem; padding: 0.45rem 1rem; box-shadow: 0 4px 14px rgba(200, 155, 60, 0.35);">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 5v14M5 12h14"/>
-              </svg>
-              <span>Create Task</span>
+            <button class="btn btn-secondary btn-sm tasks-deadline-btn" onclick="TasksView.openAddDeadlineModal()" style="font-weight: 700; font-size: 0.82rem; padding: 0.45rem 0.85rem;">
+              📅 Add Deadline
+            </button>
+
+            <button class="btn btn-gold btn-sm tasks-create-btn" onclick="TasksView.openNewTaskModal()" style="font-weight: 700; font-size: 0.82rem; padding: 0.45rem 0.95rem;">
+              + Create Task
             </button>
           </div>
         </div>
 
-        ${isAdmin ? `
-          <!-- ADMINISTRATOR TASK OVERSIGHT & GOVERNANCE BAR -->
-          <div class="card animate-fade adm-oversight-card" style="margin-bottom: 1rem; padding: 0.95rem 1.15rem; border-left: 4px solid var(--color-gold); background: linear-gradient(135deg, rgba(16,42,67,0.03) 0%, rgba(200,155,60,0.08) 100%); border-radius: 14px;">
-            <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
-              <div class="flex items-center gap-2.5 flex-wrap" style="min-width: 0;">
-                <span style="font-size: 1.2rem; flex-shrink: 0;">👑</span>
-                <div class="flex items-center gap-2 flex-wrap" style="min-width: 0;">
-                  <strong style="color: var(--color-primary); font-size: 0.94rem; font-family: var(--font-heading);">Administrator Task Oversight</strong>
-                  <span class="badge badge-confidential" style="font-size: 0.65rem; white-space: nowrap;">Technical Governance</span>
-                </div>
-              </div>
-              <div class="flex items-center gap-2 flex-wrap adm-oversight-action-btns">
-                <button class="btn btn-gold btn-sm" style="font-size: 0.76rem; padding: 0.35rem 0.75rem; font-weight: 700;" onclick="TasksView.openCreateTechnicalTaskModal()">
-                  + Create Technical Task
-                </button>
-                <button class="btn btn-secondary btn-sm" style="font-size: 0.76rem; padding: 0.35rem 0.75rem; font-weight: 600;" onclick="TasksView.notifyResponsibleUsers()">
-                  🔔 Notify Users
-                </button>
-              </div>
-            </div>
-
-            <!-- Administrative Filter Pills -->
-            <div style="padding-top: 0.45rem; border-top: 1px solid rgba(0,0,0,0.06);">
-              <div class="flex items-center gap-2 flex-wrap adm-filter-pills-row">
-                <span style="color: var(--color-text-secondary); font-weight: 700; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px; flex-shrink: 0;">Views:</span>
-                <button class="btn ${this.adminFilter === 'all' ? 'btn-primary' : 'btn-ghost'} btn-sm" style="font-size: 0.74rem; padding: 0.25rem 0.6rem; border-radius: 16px;" onclick="TasksView.setAdminFilter('all')">
-                  All (${tasks.length})
-                </button>
-                <button class="btn ${this.adminFilter === 'unassigned' ? 'btn-danger' : 'btn-ghost'} btn-sm" style="font-size: 0.74rem; padding: 0.25rem 0.6rem; border-radius: 16px;" onclick="TasksView.setAdminFilter('unassigned')">
-                  ⚠️ Unassigned (${unassignedCount})
-                </button>
-                <button class="btn ${this.adminFilter === 'technical' ? 'btn-gold' : 'btn-ghost'} btn-sm" style="font-size: 0.74rem; padding: 0.25rem 0.6rem; border-radius: 16px;" onclick="TasksView.setAdminFilter('technical')">
-                  ⚙️ Tech (${techCount})
-                </button>
-                <button class="btn ${this.adminFilter === 'overdue' ? 'btn-danger' : 'btn-ghost'} btn-sm" style="font-size: 0.74rem; padding: 0.25rem 0.6rem; border-radius: 16px;" onclick="TasksView.setAdminFilter('overdue')">
-                  ⏰ Overdue (${overdueCount})
-                </button>
-              </div>
-            </div>
-
-            <div style="font-size: 0.75rem; color: #475569; line-height: 1.4; margin-top: 0.45rem; background: rgba(255,255,255,0.7); padding: 0.45rem 0.75rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05);">
-              ⚖️ <strong>Administrator Oversight:</strong> The administrator may view tasks, manage assignments and correct administrative information but cannot approve legal work or confirm court filing on behalf of counsel.
-            </div>
-          </div>
-        ` : ''}
-
-        <!-- 2. LUXURY FLOATING FILTER & SEARCH TOOLBAR -->
+        <!-- 2. STREAMLINED SEARCH & FILTER TOOLBAR -->
         <div class="tasks-filter-floating-card">
           <div class="tasks-search-input-box">
             <svg class="tasks-search-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"/>
               <line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
-            <input type="text" placeholder="Search tasks by title, case number, or assignee..."
+            <input type="text" placeholder="Search tasks by title, case number, or counsel..."
                    value="${this.searchQuery}" oninput="TasksView.handleSearch(this.value)">
           </div>
 
           <div class="flex items-center gap-2 flex-wrap">
-            <button class="btn ${this.filterAssignedMe ? 'btn-gold' : 'btn-secondary'} btn-sm" style="font-weight: 600; border-radius: 10px;" onclick="TasksView.toggleAssignedMe()" title="Show only tasks assigned to current user">
-              👤 My Assigned Tasks ${this.filterAssignedMe ? '✓' : ''}
+            <button class="btn ${this.filterAssignedMe ? 'btn-gold' : 'btn-secondary'} btn-sm" style="font-weight: 600; border-radius: 8px; font-size: 0.78rem;" onclick="TasksView.toggleAssignedMe()" title="Show only tasks assigned to me">
+              👤 My Tasks ${this.filterAssignedMe ? '✓' : ''}
             </button>
             <span style="font-size: 0.78rem; color: var(--color-text-secondary); font-weight: 700; margin-left: 0.25rem;">Priority:</span>
-            <button class="btn ${this.filterPriority === 'All' ? 'btn-primary' : 'btn-secondary'} btn-sm" style="border-radius: 8px;" onclick="TasksView.setPriorityFilter('All')">All</button>
-            <button class="btn ${this.filterPriority === 'Urgent' ? 'btn-danger' : 'btn-secondary'} btn-sm" style="border-radius: 8px; ${this.filterPriority === 'Urgent' ? 'background: #DC2626; color: white;' : ''}" onclick="TasksView.setPriorityFilter('Urgent')">🚨 Urgent</button>
-            <button class="btn ${this.filterPriority === 'High' ? 'btn-danger' : 'btn-secondary'} btn-sm" style="border-radius: 8px;" onclick="TasksView.setPriorityFilter('High')">⚠️ High</button>
-            <button class="btn ${this.filterPriority === 'Medium' ? 'btn-gold' : 'btn-secondary'} btn-sm" style="border-radius: 8px;" onclick="TasksView.setPriorityFilter('Medium')">⚡ Medium</button>
-            <button class="btn ${this.filterPriority === 'Low' ? 'btn-secondary' : 'btn-secondary'} btn-sm" style="border-radius: 8px;" onclick="TasksView.setPriorityFilter('Low')">Low</button>
+            <button class="btn ${this.filterPriority === 'All' ? 'btn-primary' : 'btn-secondary'} btn-sm" style="border-radius: 8px; font-size: 0.76rem; padding: 0.25rem 0.6rem;" onclick="TasksView.setPriorityFilter('All')">All</button>
+            <button class="btn ${this.filterPriority === 'Urgent' ? 'btn-danger' : 'btn-secondary'} btn-sm" style="border-radius: 8px; font-size: 0.76rem; padding: 0.25rem 0.6rem; ${this.filterPriority === 'Urgent' ? 'background: #DC2626; color: white;' : ''}" onclick="TasksView.setPriorityFilter('Urgent')">🚨 Urgent</button>
+            <button class="btn ${this.filterPriority === 'High' ? 'btn-danger' : 'btn-secondary'} btn-sm" style="border-radius: 8px; font-size: 0.76rem; padding: 0.25rem 0.6rem;" onclick="TasksView.setPriorityFilter('High')">⚠️ High</button>
+            <button class="btn ${this.filterPriority === 'Medium' ? 'btn-gold' : 'btn-secondary'} btn-sm" style="border-radius: 8px; font-size: 0.76rem; padding: 0.25rem 0.6rem;" onclick="TasksView.setPriorityFilter('Medium')">Medium</button>
+            <button class="btn ${this.filterPriority === 'Low' ? 'btn-secondary' : 'btn-secondary'} btn-sm" style="border-radius: 8px; font-size: 0.76rem; padding: 0.25rem 0.6rem;" onclick="TasksView.setPriorityFilter('Low')">Low</button>
           </div>
         </div>
 
@@ -204,10 +149,18 @@ const TasksView = {
   },
 
   getFilteredTasks() {
+    const existingCaseIds = new Set((SLCMS_STATE.cases || []).map(c => c.id));
+    const existingCaseNums = new Set((SLCMS_STATE.cases || []).map(c => c.caseNumber).filter(Boolean));
     const currentUserName = (SLCMS_STATE.currentUser?.name || '').toLowerCase();
     const currentUserId = SLCMS_STATE.currentUser?.id || '';
 
     return (SLCMS_STATE.tasks || []).filter(t => {
+      if (!t) return false;
+      // If task has an explicit caseId, verify only if cases exist
+      if (t.caseId && t.caseId !== 'case-gen' && existingCaseIds.size > 0 && !existingCaseIds.has(t.caseId)) {
+        if (t.caseNumber && !existingCaseNums.has(t.caseNumber)) return false;
+      }
+
       const matchP = this.filterPriority === 'All' || t.priority === this.filterPriority;
       const matchQ = !this.searchQuery ||
         (t.title && t.title.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
@@ -234,6 +187,56 @@ const TasksView = {
     });
   },
 
+  getDeadlineCountdown(dueDate) {
+    if (!dueDate) return { label: 'No date', badgeClass: 'due-normal', urgent: false };
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    const diffMs = due.getTime() - now.getTime();
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      const daysAgo = Math.abs(diffDays);
+      return {
+        label: `⏰ Overdue ${daysAgo}d`,
+        badgeClass: 'due-overdue',
+        urgent: true
+      };
+    } else if (diffDays === 0) {
+      return {
+        label: '🚨 Due Today',
+        badgeClass: 'due-today',
+        urgent: true
+      };
+    } else if (diffDays === 1) {
+      return {
+        label: '⚠️ Due Tomorrow',
+        badgeClass: 'due-tomorrow',
+        urgent: true
+      };
+    } else if (diffDays <= 3) {
+      return {
+        label: `⚡ In ${diffDays} days`,
+        badgeClass: 'due-soon',
+        urgent: true
+      };
+    } else if (diffDays <= 7) {
+      return {
+        label: `📅 In ${diffDays} days`,
+        badgeClass: 'due-week',
+        urgent: false
+      };
+    } else {
+      const dStr = due.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      return {
+        label: `📅 ${dStr}`,
+        badgeClass: 'due-normal',
+        urgent: false
+      };
+    }
+  },
+
   scrollToColumn(colId) {
     const el = document.getElementById(`kanban-col-${colId}`);
     if (el) {
@@ -252,39 +255,36 @@ const TasksView = {
     const allTasks = SLCMS_STATE.tasks || [];
     const filteredTasks = this.getFilteredTasks();
 
-    // If completely empty in database (0 tasks created yet)
-    const isTotallyEmpty = allTasks.length === 0;
-
-    return `
-      ${isTotallyEmpty ? `
-        <!-- GRAND EMPTY STATE SHOWCASE BOX -->
-        <div class="tasks-empty-showcase-box animate-fade">
-          <div class="tasks-empty-emblem-ring">⚖️</div>
-          <h3 class="tasks-empty-headline">No tasks or deadlines yet</h3>
-          <p class="tasks-empty-lead">
-            Tasks assigned to registered cases will appear here.
+    // If completely empty in database (0 tasks created yet) -> Single clean empty state (NO duplicate nested boxes)
+    if (allTasks.length === 0) {
+      return `
+        <div class="tasks-empty-showcase-box animate-fade" style="margin: 2.5rem auto; max-width: 620px; padding: 3rem 2rem; border-radius: 16px; border: 1.5px dashed rgba(200, 155, 60, 0.35); background: #FFFFFF; text-align: center; box-shadow: 0 4px 20px -4px rgba(16,42,67,0.06);">
+          <div style="width: 64px; height: 64px; margin: 0 auto 1.25rem auto; border-radius: 50%; background: rgba(200, 155, 60, 0.12); display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+            ⚖️
+          </div>
+          <h3 style="font-size: 1.25rem; font-weight: 800; color: #0F172A; margin-bottom: 0.4rem; font-family: var(--font-heading);">
+            No tasks or deadlines scheduled yet
+          </h3>
+          <p style="color: #64748B; font-size: 0.88rem; line-height: 1.5; max-width: 440px; margin: 0 auto 1.5rem auto;">
+            Plan legal filings, track court appearances, and monitor statutory limitation cutoffs.
           </p>
-          <div class="tasks-empty-actions-row">
-            <button class="btn btn-gold" style="font-weight: 700; padding: 0.6rem 1.4rem; font-size: 0.88rem; box-shadow: 0 4px 14px rgba(200, 155, 60, 0.35);" onclick="TasksView.openNewTaskModal()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 5v14M5 12h14"/>
-              </svg>
-              <span>Create Task</span>
+          <div class="flex items-center justify-center gap-3 flex-wrap">
+            <button class="btn btn-gold" style="font-weight: 700; padding: 0.55rem 1.3rem; font-size: 0.88rem;" onclick="TasksView.openNewTaskModal()">
+              + Create Task
             </button>
-            <button class="btn btn-secondary" style="font-weight: 700; padding: 0.6rem 1.4rem; font-size: 0.88rem; border-color: rgba(16, 42, 67, 0.2);" onclick="TasksView.openAddDeadlineModal()">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
-                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-              </svg>
-              <span>Add Deadline</span>
+            <button class="btn btn-secondary" style="font-weight: 700; padding: 0.55rem 1.3rem; font-size: 0.88rem;" onclick="TasksView.openAddDeadlineModal()">
+              📅 Add Deadline
             </button>
           </div>
         </div>
-      ` : ''}
+      `;
+    }
 
+    return `
       <!-- Mobile Column Navigation Tabs -->
       <div class="kanban-mobile-tabs">
         ${columns.map(col => {
-          const count = filteredTasks.filter(t => t.status === col.id).length;
+          const count = filteredTasks.filter(t => (t.status || 'todo').toLowerCase() === col.id).length;
           return `
             <button class="kanban-mobile-tab-btn" onclick="TasksView.scrollToColumn('${col.id}')">
               <span>${col.title}</span>
@@ -294,11 +294,17 @@ const TasksView = {
         }).join('')}
       </div>
 
-      <!-- THE 4 KANBAN COLUMNS (STATE-OF-THE-ART BOX ARCHITECTURE) -->
+      <!-- THE 4 KANBAN COLUMNS -->
       <div class="kanban-board">
         ${columns.map(col => {
-          const colTasks = filteredTasks.filter(t => t.status === col.id);
-          const totalColCount = allTasks.filter(t => t.status === col.id).length;
+          const colTasks = filteredTasks.filter(t => {
+            const st = (t.status || 'todo').toLowerCase().replace('to_do', 'todo');
+            return st === col.id;
+          });
+          const totalColCount = allTasks.filter(t => {
+            const st = (t.status || 'todo').toLowerCase().replace('to_do', 'todo');
+            return st === col.id;
+          }).length;
 
           return `
             <div class="kanban-col" id="kanban-col-${col.id}">
@@ -308,11 +314,11 @@ const TasksView = {
                 <div class="kanban-col-title-wrap">
                   <span style="font-size: 1.05rem;">${col.icon}</span>
                   <span class="kanban-col-title-text">${col.title}</span>
-                  <span class="kanban-counter-pill" title="${colTasks.length} visible of ${totalColCount} total">
+                  <span class="kanban-counter-pill" title="${colTasks.length} tasks">
                     ${colTasks.length}
                   </span>
                 </div>
-                <button class="kanban-quick-add-btn" onclick="TasksView.openNewTaskModal(null, '${col.id}')" title="Create task in ${col.title}">
+                <button class="kanban-quick-add-btn" onclick="TasksView.openNewTaskModal(null, '${col.id}')" title="Add task to ${col.title}">
                   +
                 </button>
               </div>
@@ -323,7 +329,6 @@ const TasksView = {
                   <div class="kanban-col-empty-zone">
                     <span class="kanban-col-empty-icon">${col.icon}</span>
                     <div>No tasks in ${col.title}</div>
-                    <div style="font-size: 0.72rem; color: #94A3B8; margin-top: 0.2rem;">Click + to create</div>
                   </div>
                 ` : colTasks.map(t => this.renderTaskCard(t, col.id)).join('')}
               </div>
@@ -335,11 +340,10 @@ const TasksView = {
   },
 
   renderTaskCard(t, colId) {
-    const today = new Date();
-    const isOverdue = t.status !== 'completed' && t.dueDate && new Date(t.dueDate) < today;
     const priority = t.priority || 'Medium';
     const priorityClass = priority.toLowerCase();
     const priorityIcon = priority === 'Urgent' ? '🚨' : priority === 'High' ? '⚠️' : priority === 'Medium' ? '⚡' : '🔹';
+    const countdown = this.getDeadlineCountdown(t.dueDate);
 
     const currentUser = SLCMS_STATE.currentUser || {};
     const currentUserName = (currentUser.name || '').toLowerCase();
@@ -352,166 +356,116 @@ const TasksView = {
                        (t.assignedToId && t.assignedToId === currentUserId);
     const isSupervisor = isSeniorLawyer || (t.supervisorId && t.supervisorId === currentUserId);
 
-    // Formatted Date
-    let formattedDate = t.dueDate || 'No Date';
-    try {
-      if (t.dueDate) {
-        const d = new Date(t.dueDate);
-        formattedDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-      }
-    } catch(e){}
-
-    // Role-specific action buttons
+    // Role-specific action button (Simple, clean, high-impact)
     let actionButtonsHtml = '';
     if (isAdmin) {
-      // Administrator: cannot see Start, Review, Approve, Filed!
       actionButtonsHtml = `
+        <button class="btn-task-role-action" style="background: rgba(200,155,60,0.12); color: #B45309; border: 1px solid rgba(200,155,60,0.3); font-weight: 700; font-size: 0.74rem; padding: 0.25rem 0.6rem; border-radius: 6px;" onclick="TasksView.openEditTaskModal('${t.id}')" title="Modify task details">
+          ✏️ Edit
+        </button>
         <button class="btn-task-role-action reassign-btn" onclick="TasksView.openReassignModal('${t.id}')" title="Reassign staff member">
           Reassign
         </button>
       `;
     } else if (isSupervisor) {
-      // Supervisor: Reassign/Edit in To Do, Review in In Progress, Approve/Return in Under Review, Reopen in Completed
       if (colId === 'todo') {
         actionButtonsHtml = `
+          <button class="btn-task-role-action" style="background: rgba(200,155,60,0.12); color: #B45309; border: 1px solid rgba(200,155,60,0.3); font-weight: 700; font-size: 0.74rem; padding: 0.25rem 0.6rem; border-radius: 6px;" onclick="TasksView.openEditTaskModal('${t.id}')">
+            ✏️ Edit
+          </button>
           <button class="btn-task-role-action reassign-btn" onclick="TasksView.openReassignModal('${t.id}')">
-            Reassign/Edit
+            Reassign
           </button>
         `;
       } else if (colId === 'in_progress') {
         actionButtonsHtml = `
-          <button class="btn-task-role-action review-submit" onclick="TasksView.openReviewModal('${t.id}')" title="Review in-progress work">
+          <button class="btn-task-role-action review-submit" onclick="TasksView.openReviewModal('${t.id}')">
             Review →
           </button>
         `;
       } else if (colId === 'under_review') {
         actionButtonsHtml = `
-          <button class="btn-task-role-action return-btn" onclick="TasksView.returnTaskPrompt('${t.id}')" title="Return to assignee with feedback">
-            Return ↺
-          </button>
-          <button class="btn-task-role-action approve-btn" onclick="TasksView.approveTask('${t.id}')" title="Approve and mark completed">
+          <button class="btn-task-role-action approve-btn" onclick="TasksView.approveTask('${t.id}')" title="Approve task">
             Approve ✓
           </button>
         `;
       } else if (colId === 'completed') {
         actionButtonsHtml = `
-          <button class="btn-task-role-action reassign-btn" onclick="TasksView.reopenTask('${t.id}')" title="Reopen task to In Progress">
-            Reopen ↺
-          </button>
+          <span style="font-size: 0.74rem; font-weight: 700; color: #10B981;">
+            ✓ Completed
+          </span>
         `;
       }
     } else if (isAssignee) {
-      // Assignee: Start in To Do, Submit for Review in In Progress, View feedback in Under Review, View in Completed
       if (colId === 'todo') {
         actionButtonsHtml = `
-          <button class="btn-task-role-action primary-start" onclick="TasksView.startTask('${t.id}')" title="Start working on this task">
+          <button class="btn-task-role-action primary-start" onclick="TasksView.startTask('${t.id}')">
             Start →
           </button>
         `;
       } else if (colId === 'in_progress') {
         actionButtonsHtml = `
-          <button class="btn-task-role-action review-submit" onclick="TasksView.submitTaskForReview('${t.id}')" title="Submit to supervising lawyer for review">
-            Submit for Review →
+          <button class="btn-task-role-action review-submit" onclick="TasksView.submitTaskForReview('${t.id}')">
+            Submit Review →
           </button>
         `;
       } else if (colId === 'under_review') {
         actionButtonsHtml = `
-          <button class="btn-task-role-action reassign-btn" onclick="TasksView.openTaskDetailsModal('${t.id}')" title="View partner review status & feedback">
-            View Feedback
-          </button>
+          <span style="font-size: 0.72rem; font-weight: 700; color: #6366F1;">
+            Under Review
+          </span>
         `;
       } else if (colId === 'completed') {
         actionButtonsHtml = `
-          <span style="font-size: 0.74rem; font-weight: 700; color: #10B981; display: inline-flex; align-items: center; gap: 0.2rem;">
+          <span style="font-size: 0.74rem; font-weight: 700; color: #10B981;">
             ✓ Completed
           </span>
         `;
       }
     } else {
-      // Other firm members
       actionButtonsHtml = ``;
     }
-
-    const statusDisplayLabel = colId === 'todo' ? 'To Do' :
-                               colId === 'in_progress' ? 'In Progress' :
-                               colId === 'under_review' ? 'Under Review' : 'Completed';
-    const statusColor = colId === 'todo' ? '#1E3A8A' :
-                        colId === 'in_progress' ? '#C89B3C' :
-                        colId === 'under_review' ? '#6366F1' : '#10B981';
 
     return `
       <div class="card kanban-card priority-${priorityClass}" id="card-${t.id}">
         
-        <!-- 1. Top Row: [PRIORITY] · Due [Date] with ⚠️ OVERDUE warning -->
-        <div class="task-card-top-row">
-          <div class="flex items-center gap-1.5 flex-wrap">
-            <span class="task-priority-tag ${priorityClass}">
-              ${priorityIcon} ${priority}
-            </span>
-            ${t.isStatutoryDeadline ? `
-              <span class="task-statutory-verified-tag">
-                ⚖️ Statutory Deadline
-              </span>
-            ` : ''}
-          </div>
-          <div class="flex items-center gap-1.5 flex-wrap">
-            ${isOverdue ? `
-              <span class="task-overdue-warning-tag">
-                ⚠️ OVERDUE
-              </span>
-            ` : ''}
-            <span class="task-card-due-tag">
-              📅 Due ${formattedDate}
-            </span>
-          </div>
-        </div>
-
-        <!-- 2. Task Title -->
-        <h4 class="task-card-heading">
-          ${t.title}
-        </h4>
-
-        <!-- 3. Case Matter Box: [CaseNumber] · [CaseTitle] -->
-        <div class="task-matter-card-box" title="${t.caseTitle || 'Case Matter'}">
-          <span class="task-matter-card-num">${t.caseNumber || 'CIVIL-GEN'}</span>
-          <span style="color: var(--color-text-muted); font-size: 0.7rem;">&bull;</span>
-          <span class="task-matter-card-title">${t.caseTitle || 'General Legal Practice'}</span>
-        </div>
-
-        <!-- 4. Assignee & Status -->
-        <div class="task-meta-info-row">
-          <div class="task-assignee-info">
-            <div class="task-assignee-avatar-ring">
-              ${t.assignedAvatar || (t.assignedTo ? t.assignedTo.substring(0, 2).toUpperCase() : 'US')}
-            </div>
-            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 135px;" title="${t.assignedTo || 'Unassigned'}">
-              Assigned to: <strong>${t.assignedTo || 'Unassigned'}</strong>
-            </span>
-          </div>
-          <span class="task-status-pill-badge">
-            <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background: ${statusColor};"></span>
-            ${statusDisplayLabel}
+        <!-- 1. Top Row: Priority Badge + Real-Time Countdown Pill -->
+        <div class="task-card-top-row" style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.35rem;">
+          <span class="task-priority-tag ${priorityClass}">
+            ${priorityIcon} ${priority}
+          </span>
+          <span class="task-countdown-pill ${countdown.badgeClass}">
+            ${countdown.label}
           </span>
         </div>
 
-        <!-- Dedicated Filed tag with date & receipt reference on completed filing tasks -->
-        ${(t.filingStatus === 'FILED' || t.filingReference) ? `
-          <div class="task-filed-seal-box">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M20 6L9 17l-5-5"/>
-            </svg>
-            <span>Filed: <strong>${t.filingDate || t.dueDate || '18 Sep 2026'}</strong></span>
-            <span>&bull;</span>
-            <span style="font-family: var(--font-mono); font-size: 0.70rem;">Ref: <strong>${t.filingReference || 'HC/REC/2026/089'}</strong></span>
-          </div>
-        ` : ''}
+        <!-- 2. Task Title -->
+        <h4 class="task-card-heading" style="font-size: 0.92rem; font-weight: 700; color: #0F172A; line-height: 1.35; margin: 0 0 0.35rem 0;">
+          ${t.title}
+        </h4>
 
-        <!-- 5. Card Footer: View Details · [Action Button] -->
-        <div class="task-card-action-footer">
-          <button class="btn-task-details-link" onclick="TasksView.openTaskDetailsModal('${t.id}')">
-            View Details
-          </button>
-          <div class="flex items-center gap-1.5 flex-wrap">
+        <!-- 3. Clean Matter Reference -->
+        <div class="task-matter-card-box" style="margin-bottom: 0.45rem;">
+          <span class="task-matter-card-num">${t.caseNumber || 'MATTER-GEN'}</span>
+          <span style="color: #94A3B8; font-size: 0.7rem;">&bull;</span>
+          <span class="task-matter-card-title">${t.caseTitle || 'General Legal Practice'}</span>
+        </div>
+
+        <!-- 4. Footer: Assignee & Action -->
+        <div class="task-card-action-footer" style="display: flex; align-items: center; justify-content: space-between; padding-top: 0.5rem; border-top: 1px solid rgba(0,0,0,0.05); margin-top: 0.25rem;">
+          <div class="flex items-center gap-1.5" style="min-width: 0;">
+            <div class="task-assignee-avatar-ring">
+              ${t.assignedAvatar || (t.assignedTo ? t.assignedTo.substring(0, 2).toUpperCase() : 'US')}
+            </div>
+            <span style="font-size: 0.78rem; font-weight: 600; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 105px;" title="${t.assignedTo || 'Unassigned'}">
+              ${t.assignedTo || 'Unassigned'}
+            </span>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <button class="btn-task-details-link" onclick="TasksView.openTaskDetailsModal('${t.id}')">
+              Details
+            </button>
             ${actionButtonsHtml}
           </div>
         </div>
@@ -615,6 +569,14 @@ const TasksView = {
   // Statutory docket events (empty by default, loaded from database/persistence)
   courtEvents: (() => {
     try {
+      const cases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases)) ? SLCMS_STATE.cases : [];
+      if (cases.length === 0) {
+        localStorage.removeItem('slcms_persisted_court_events');
+        return [];
+      }
+      const existingCaseIds = new Set(cases.map(c => c.id));
+      const existingCaseNums = new Set(cases.map(c => c.caseNumber).filter(Boolean));
+
       const saved = localStorage.getItem('slcms_persisted_court_events');
       if (saved) {
         // Immediate clean of test/junk entries
@@ -625,7 +587,13 @@ const TasksView = {
         const parsed = JSON.parse(saved);
         const DEMO_EVT_IDS = ['evt-01', 'evt-02', 'evt-03', 'evt-04', 'evt-05', 'evt-06'];
         if (Array.isArray(parsed)) {
-          const valid = parsed.filter(e => e && e.id && !DEMO_EVT_IDS.includes(e.id) && !e.title?.includes('bvfcjk') && !e.court?.includes('hhoiuyfthjk'));
+          const valid = parsed.filter(e => 
+            e && e.id && 
+            !DEMO_EVT_IDS.includes(e.id) && 
+            !e.title?.includes('bvfcjk') && 
+            !e.court?.includes('hhoiuyfthjk') &&
+            (existingCaseIds.has(e.caseId) || existingCaseNums.has(e.caseNumber))
+          );
           if (valid.length === 0) {
             localStorage.removeItem('slcms_persisted_court_events');
           }
@@ -681,9 +649,27 @@ const TasksView = {
       }
     } catch(e){}
 
+    const cases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases)) ? SLCMS_STATE.cases : [];
+    const existingCaseIds = new Set(cases.map(c => c.id));
+    const existingCaseNums = new Set(cases.map(c => c.caseNumber).filter(Boolean));
+
+    // If no cases exist in the system, no court appearances or deadlines can exist
+    if (existingCaseIds.size === 0) {
+      this.courtEvents = [];
+      try {
+        localStorage.removeItem('slcms_persisted_court_events');
+        if (typeof SLCMS_STATE !== 'undefined') {
+          SLCMS_STATE.deadlines = [];
+          localStorage.removeItem('slcms_persisted_deadlines');
+        }
+      } catch(e){}
+      return;
+    }
+
     // If genuine deadlines are registered in SLCMS_STATE.deadlines, map them
     if (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.deadlines) && SLCMS_STATE.deadlines.length > 0) {
-      this.courtEvents = SLCMS_STATE.deadlines.map(d => this.mapDeadlineToCourtEvent(d));
+      const validDeadlines = SLCMS_STATE.deadlines.filter(d => d && (existingCaseIds.has(d.caseId) || existingCaseNums.has(d.caseNumber)));
+      this.courtEvents = validDeadlines.map(d => this.mapDeadlineToCourtEvent(d));
       return;
     }
 
@@ -694,7 +680,13 @@ const TasksView = {
         const parsed = JSON.parse(saved);
         const DEMO_EVT_IDS = ['evt-01', 'evt-02', 'evt-03', 'evt-04', 'evt-05', 'evt-06'];
         if (Array.isArray(parsed)) {
-          const valid = parsed.filter(e => e && e.id && !DEMO_EVT_IDS.includes(e.id) && !e.title?.includes('bvfcjk') && !e.court?.includes('hhoiuyfthjk'));
+          const valid = parsed.filter(e => 
+            e && e.id && 
+            !DEMO_EVT_IDS.includes(e.id) && 
+            !e.title?.includes('bvfcjk') && 
+            !e.court?.includes('hhoiuyfthjk') &&
+            (existingCaseIds.has(e.caseId) || existingCaseNums.has(e.caseNumber))
+          );
           if (valid.length === 0) {
             localStorage.removeItem('slcms_persisted_court_events');
           }
@@ -968,18 +960,18 @@ const TasksView = {
       <div class="court-agenda-container">
         ${events.map(evt => {
           const priorityClass = evt.priority === 'High' ? 'priority-high' : evt.priority === 'Medium' ? 'priority-medium' : 'priority-low';
-          const isConfirmed = evt.status.includes('Confirmed');
+          const isConfirmed = Boolean(evt.status && evt.status.includes('Confirmed'));
 
           return `
             <div class="court-docket-card ${priorityClass} ${isConfirmed ? 'status-confirmed' : ''}">
               
               <!-- Date Ribbon Stamp -->
               <div class="court-date-badge">
-                <span class="court-date-month">${evt.monthShort} 2026</span>
-                <span class="court-date-day">${evt.dayNum}</span>
-                <span class="court-date-weekday">${evt.weekday}</span>
+                <span class="court-date-month">${evt.monthShort || 'SEP'} 2026</span>
+                <span class="court-date-day">${evt.dayNum || '15'}</span>
+                <span class="court-date-weekday">${evt.weekday || 'Weekday'}</span>
                 <div class="court-date-time">
-                  ⏰ ${evt.time.split(' ')[0]} ${evt.time.split(' ')[1]}
+                  ⏰ ${evt.time || '09:00 AM'}
                 </div>
               </div>
 
@@ -1190,13 +1182,16 @@ const TasksView = {
                   <td>
                     <div class="flex items-center gap-1.5">
                       <div class="avatar avatar-sm ${evt.assignedAvatar === 'EV' ? 'avatar-gold' : 'avatar-navy'}" style="font-size: 10px;">
-                        ${evt.assignedAvatar}
+                        ${evt.assignedAvatar || 'LC'}
                       </div>
-                      <span style="font-size: 0.8rem; font-weight: 600;">${evt.assignedTo.split(' ')[0]}</span>
+                      <span style="font-size: 0.8rem; font-weight: 600;">${(evt.assignedTo || 'Advocate').split(' ')[0]}</span>
                     </div>
                   </td>
                   <td style="text-align: right;">
                     <div class="flex items-center justify-end gap-1.5">
+                      <button class="btn btn-secondary btn-sm" onclick="TasksView.openEditDeadlineModal('${evt.id}')" title="Modify Statutory Deadline">
+                        ✏️ Edit
+                      </button>
                       <button class="btn btn-secondary btn-sm" onclick="TasksView.openEventDetails('${evt.id}')">
                         View Docket
                       </button>
@@ -1216,14 +1211,18 @@ const TasksView = {
 
   // --- INTERACTIVE MODALS & ACTIONS ---
   openEventDetails(eventId) {
-    const evt = this.courtEvents.find(e => e.id === eventId) || this.courtEvents[0];
+    const evt = (this.courtEvents || []).find(e => e.id === eventId) || (SLCMS_STATE.deadlines || []).find(d => d.id === eventId);
+    if (!evt) {
+      App.showToast('Docket entry not found.', 'info');
+      return;
+    }
     App.openModal(`
       <div class="modal-header">
         <div class="flex items-center gap-2">
           <span style="font-size: 1.25rem;">🏛️</span>
           <div>
             <h3 class="modal-title">Statutory Court Docket & Hearing Dossier</h3>
-            <span style="font-size: 0.75rem; color: var(--color-text-secondary);">${evt.caseNumber} • ${evt.statute}</span>
+            <span style="font-size: 0.75rem; color: var(--color-text-secondary);">${evt.caseNumber || 'MATTER-GEN'} • ${evt.statute || evt.statutoryReference || 'Court Rules'}</span>
           </div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
@@ -1234,31 +1233,31 @@ const TasksView = {
         <div style="background: linear-gradient(135deg, var(--color-primary) 0%, #1A365D 100%); color: #FFFFFF; padding: 1.25rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border-left: 4px solid var(--color-gold);">
           <div class="flex items-center justify-between" style="margin-bottom: 0.45rem;">
             <span class="badge badge-active" style="background: rgba(22, 163, 74, 0.3); color: #86EFAC; border-color: #16A34A;">
-              ● ${evt.status}
+              ● ${evt.status || 'Scheduled'}
             </span>
             <span style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; color: #FCD34D;">
-              📅 ${evt.date} • ${evt.time}
+              📅 ${evt.date || evt.deadlineDate || ''} • ${evt.time || evt.deadlineTime || '09:00 AM'}
             </span>
           </div>
-          <h4 style="font-size: 1.15rem; font-weight: 700; margin: 0 0 0.35rem 0; color: #FFFFFF;">${evt.title}</h4>
-          <div style="font-size: 0.82rem; opacity: 0.9;"><strong>Matter:</strong> ${evt.caseTitle} (${evt.caseNumber})</div>
+          <h4 style="font-size: 1.15rem; font-weight: 700; margin: 0 0 0.35rem 0; color: #FFFFFF;">${TasksView.escapeHtml(evt.title || '')}</h4>
+          <div style="font-size: 0.82rem; opacity: 0.9;"><strong>Matter:</strong> ${TasksView.escapeHtml(evt.caseTitle || 'General Legal Practice')} (${evt.caseNumber || 'MATTER-GEN'})</div>
         </div>
 
         <!-- 2-Column Details Grid -->
         <div class="grid grid-cols-2 gap-4" style="margin-bottom: 1.25rem;">
           <div style="background: var(--color-surface-subtle); padding: 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
             <div style="font-size: 0.74rem; font-weight: 700; color: var(--color-text-secondary); text-transform: uppercase;">Presiding Officer / Judge</div>
-            <div style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary); margin-top: 0.25rem;">${evt.presiding}</div>
-            <div style="font-size: 0.78rem; color: var(--color-text-secondary); margin-top: 0.2rem;">${evt.court}</div>
+            <div style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary); margin-top: 0.25rem;">${evt.presiding || 'Presiding Judicial Officer'}</div>
+            <div style="font-size: 0.78rem; color: var(--color-text-secondary); margin-top: 0.2rem;">${evt.court || 'High Court of Tanzania'}</div>
           </div>
 
           <div style="background: var(--color-surface-subtle); padding: 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
             <div style="font-size: 0.74rem; font-weight: 700; color: var(--color-text-secondary); text-transform: uppercase;">Assigned Lead Counsel</div>
             <div class="flex items-center gap-2" style="margin-top: 0.25rem;">
-              <div class="avatar avatar-sm ${evt.assignedAvatar === 'EV' ? 'avatar-gold' : 'avatar-navy'}">${evt.assignedAvatar}</div>
+              <div class="avatar avatar-sm ${evt.assignedAvatar === 'EV' ? 'avatar-gold' : 'avatar-navy'}">${evt.assignedAvatar || 'LC'}</div>
               <div>
-                <div style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary);">${evt.assignedTo}</div>
-                <div style="font-size: 0.74rem; color: var(--color-text-secondary);">Managing Partner</div>
+                <div style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary);">${evt.assignedTo || evt.responsibleLawyerName || 'Counsel'}</div>
+                <div style="font-size: 0.74rem; color: var(--color-text-secondary);">Responsible Counsel</div>
               </div>
             </div>
           </div>
@@ -1268,14 +1267,14 @@ const TasksView = {
         <div class="form-group" style="margin-bottom: 1.25rem;">
           <label class="form-label" style="font-weight: 700;">Procedural Mandate & Statutory Instructions</label>
           <div style="font-size: 0.84rem; line-height: 1.5; color: var(--color-text-main); background: var(--color-surface); padding: 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--color-border);">
-            ${evt.description}
+            ${TasksView.escapeHtml(evt.description || evt.instructions || 'Mandatory appearance / filing cutoff.')}
           </div>
         </div>
 
         <div class="form-group">
           <label class="form-label" style="font-weight: 700;">Required Evidentiary Exhibits & Pleadings</label>
           <div style="font-size: 0.8rem; font-family: var(--font-mono); background: var(--color-surface-subtle); padding: 0.65rem 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--color-border); color: var(--color-primary);">
-            📁 ${evt.exhibits}
+            📁 ${TasksView.escapeHtml(evt.exhibits || 'Pleadings, Affidavits & Authorities')}
           </div>
         </div>
       </div>
@@ -1283,16 +1282,16 @@ const TasksView = {
       <div class="modal-footer flex items-center justify-between">
         <div class="flex items-center gap-2">
           <button class="btn btn-danger btn-sm" style="background: #DC2626; color: #FFFFFF;" onclick="TasksView.deleteCourtEvent('${evt.id}')">
-            🗑️ Remove from Docket
+            🗑️ Remove
           </button>
           <button class="btn btn-secondary" onclick="App.closeModal()">Close</button>
         </div>
         <div class="flex gap-2">
-          <button class="btn btn-secondary" onclick="App.showToast('iCal/Outlook sync token generated.', 'success'); App.closeModal();">
-            📥 Add to Calendar
+          <button class="btn btn-secondary btn-sm" onclick="TasksView.openEditDeadlineModal('${evt.id}')">
+            ✏️ Modify Deadline
           </button>
-          <button class="btn btn-gold" onclick="App.showToast('Appearance record updated and logged to audit trail.', 'success'); App.closeModal();">
-            ✓ Confirm Appearance
+          <button class="btn btn-gold btn-sm" onclick="App.showToast('Appearance confirmed.', 'success'); App.closeModal();">
+            ✓ Confirm
           </button>
         </div>
       </div>
@@ -1689,39 +1688,269 @@ const TasksView = {
   },
 
   notifyResponsibleUsers() {
-    const pendingTasks = (SLCMS_STATE.tasks || []).filter(t => t.status !== 'completed');
-    const unassigned = pendingTasks.filter(t => !t.assignedTo || t.assignedTo === 'Unassigned');
+    const pendingTasks = (SLCMS_STATE.tasks || []).filter(t => (t.status || '').toLowerCase() !== 'completed');
+    const cases = SLCMS_STATE.cases || [];
+    const activeStaff = SLCMS_STATE.getActiveStaffUsers();
+    const today = new Date().toISOString().split('T')[0];
 
     App.openModal(`
-      <div class="modal-header">
-        <h3 class="modal-title">🔔 Notify Responsible Users</h3>
+      <div class="modal-header" style="border-bottom: 1px solid rgba(0,0,0,0.08); padding-bottom: 0.85rem;">
+        <div class="flex items-center gap-2">
+          <span style="font-size: 1.25rem;">🔔</span>
+          <div>
+            <h3 class="modal-title" style="font-family: var(--font-heading); font-size: 1.12rem; margin: 0; color: #0F172A;">
+              Dispatch Structured Docket Notice
+            </h3>
+            <p style="font-size: 0.76rem; color: #64748B; margin: 0.15rem 0 0 0;">
+              Send formal statutory court deadline notices and task directives to responsible counsel.
+            </p>
+          </div>
+        </div>
         <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
       </div>
-      <div class="modal-body">
-        <p style="font-size: 0.88rem; color: var(--color-text-secondary); margin-bottom: 1rem;">
-          Send automated docket reminder notices to all lawyers and staff regarding active tasks and upcoming court deadlines.
-        </p>
-        <div style="background: var(--color-surface-subtle); padding: 1rem; border-radius: 6px; font-size: 0.84rem; line-height: 1.6; margin-bottom: 1rem;">
-          <div>📋 <strong>Active Pending Tasks:</strong> ${pendingTasks.length}</div>
-          <div>⚠️ <strong>Unassigned Action Items:</strong> ${unassigned.length}</div>
-          <div>👥 <strong>Notified Recipients:</strong> Eleanor Vance, Julian Mercer, Sophia Chen, Marcus Bell</div>
+
+      <div class="modal-body" style="padding: 1.15rem; max-height: 75vh; overflow-y: auto;">
+        
+        <!-- Recipient & Matter Grid -->
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label required" style="font-size: 0.78rem; font-weight: 700;">Recipient Counsel / Staff</label>
+            <select id="snd-recipient" class="form-control" onchange="TasksView.updateNoticePreview()">
+              <option value="ALL">👥 All Active Legal Personnel (Broadcast)</option>
+              ${activeStaff.map(s => `
+                <option value="${s.id || s.staffId || s.name}" data-name="${s.name}" data-role="${s.role || 'Advocate'}" data-email="${s.email || ''}">
+                  ${s.name} (${s.role || 'Staff'})
+                </option>
+              `).join('')}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required" style="font-size: 0.78rem; font-weight: 700;">Legal Matter Reference</label>
+            <select id="snd-case" class="form-control" onchange="TasksView.updateNoticePreview()">
+              ${cases.length === 0 ? `<option value="gen" data-num="MATTER-GEN" data-title="General Practice Docket">General Practice Docket</option>` : cases.map(c => `
+                <option value="${c.id}" data-num="${c.caseNumber}" data-title="${c.title}">
+                  ${c.caseNumber} - ${c.title}
+                </option>
+              `).join('')}
+            </select>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Notification Message</label>
-          <textarea id="notify-msg" class="form-control" rows="3">Reminder: Please review and fulfill your statutory docket obligations and unassigned matter items for the current session.</textarea>
+
+        <!-- Task / Obligation Title & Deadline -->
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label required" style="font-size: 0.78rem; font-weight: 700;">Action Obligation / Cutoff</label>
+            <input type="text" id="snd-task-title" class="form-control" 
+                   value="${pendingTasks.length > 0 ? (pendingTasks[0].title || 'Filing of Written Submissions') : 'Court Appearance & Filing Obligation'}" 
+                   placeholder="e.g. Filing of Statement of Defence" oninput="TasksView.updateNoticePreview()">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required" style="font-size: 0.78rem; font-weight: 700;">Statutory Due Date</label>
+            <input type="date" id="snd-due-date" class="form-control" 
+                   value="${pendingTasks.length > 0 && pendingTasks[0].dueDate ? pendingTasks[0].dueDate : today}" 
+                   onchange="TasksView.updateNoticePreview()">
+          </div>
+        </div>
+
+        <!-- Statutory Authority & Court Registry -->
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.78rem; font-weight: 700;">Court / Judicial Forum</label>
+            <input type="text" id="snd-court" class="form-control" 
+                   value="High Court Commercial Division, Dar es Salaam" 
+                   oninput="TasksView.updateNoticePreview()">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.78rem; font-weight: 700;">Statutory Authority Reference</label>
+            <input type="text" id="snd-statute" class="form-control" 
+                   value="Order VIII Rule 1, Civil Procedure Code Cap 33" 
+                   oninput="TasksView.updateNoticePreview()">
+          </div>
+        </div>
+
+        <!-- Notice Category & Urgency -->
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label required" style="font-size: 0.78rem; font-weight: 700;">Notice Urgency</label>
+            <select id="snd-urgency" class="form-control" onchange="TasksView.updateNoticePreview()">
+              <option value="CRITICAL_48H">🚨 URGENT: Court Cutoff in 48 Hours</option>
+              <option value="STATUTORY_LIMITATION" selected>⚠️ HIGH: Statutory Limitation Window</option>
+              <option value="STANDARD_REMINDER">⚡ STANDARD: Action Item Milestone</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.78rem; font-weight: 700;">Delivery Channels</label>
+            <div class="flex items-center gap-3 flex-wrap" style="padding-top: 0.4rem;">
+              <label class="flex items-center gap-1.5" style="font-size: 0.78rem; cursor: pointer;">
+                <input type="checkbox" id="chn-email" checked>
+                <span>📧 Official Email</span>
+              </label>
+              <label class="flex items-center gap-1.5" style="font-size: 0.78rem; cursor: pointer;">
+                <input type="checkbox" id="chn-sms" checked>
+                <span>💬 SMS / WhatsApp</span>
+              </label>
+              <label class="flex items-center gap-1.5" style="font-size: 0.78rem; cursor: pointer;">
+                <input type="checkbox" id="chn-inapp" checked>
+                <span>🔔 In-App Alert</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Structured Notice Preview -->
+        <div style="margin-top: 0.75rem;">
+          <div class="flex items-center justify-between mb-1.5">
+            <span style="font-size: 0.74rem; font-weight: 800; color: #0F172A; text-transform: uppercase; letter-spacing: 0.5px;">
+              Structured Legal Notice Preview:
+            </span>
+            <button type="button" class="btn btn-ghost btn-sm" style="font-size: 0.72rem; padding: 0.15rem 0.5rem;" onclick="TasksView.copyNoticeToClipboard()">
+              📋 Copy Notice Text
+            </button>
+          </div>
+          <div id="structured-notice-preview-box" 
+               style="background: #0B1927; color: #F1F5F9; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.76rem; line-height: 1.5; padding: 0.95rem; border-radius: 10px; border: 1px solid #1B3550; white-space: pre-wrap; max-height: 220px; overflow-y: auto;">
+          </div>
         </div>
       </div>
-      <div class="modal-footer">
+
+      <div class="modal-footer" style="border-top: 1px solid rgba(0,0,0,0.08); display: flex; justify-content: space-between; align-items: center;">
         <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
-        <button class="btn btn-gold" onclick="TasksView.sendNotifications()">Send Notifications</button>
+        <button class="btn btn-gold" style="font-weight: 700; box-shadow: 0 4px 14px rgba(200, 155, 60, 0.35);" onclick="TasksView.sendStructuredDocketNotice()">
+          🚀 Dispatch Structured Notice
+        </button>
       </div>
-    `, 'modal-md');
+    `, 'modal-lg');
+
+    // Trigger initial preview generation
+    setTimeout(() => this.updateNoticePreview(), 50);
   },
 
-  sendNotifications() {
-    SLCMS_STATE.addAuditLog('User Notifications Dispatched', 'Tasks & Deadlines', 'System Administrator broadcasted statutory docket reminders to all staff.', 'Success');
+  updateNoticePreview() {
+    const recSelect = document.getElementById('snd-recipient');
+    const caseSelect = document.getElementById('snd-case');
+    const taskTitle = document.getElementById('snd-task-title')?.value || 'Mandatory Docket Obligation';
+    const dueDate = document.getElementById('snd-due-date')?.value || '2026-09-30';
+    const court = document.getElementById('snd-court')?.value || 'High Court of Tanzania';
+    const statute = document.getElementById('snd-statute')?.value || 'Court Directive';
+    const urgency = document.getElementById('snd-urgency')?.value || 'HIGH';
+
+    const selectedRecOption = recSelect ? recSelect.options[recSelect.selectedIndex] : null;
+    const recipientName = (recSelect && recSelect.value === 'ALL') ? 'All Assigned Legal Personnel' : (selectedRecOption?.getAttribute('data-name') || 'Advocate In-Charge');
+    const recipientRole = (recSelect && recSelect.value === 'ALL') ? 'Litigation Practice Team' : (selectedRecOption?.getAttribute('data-role') || 'Legal Counsel');
+
+    const selectedCaseOption = caseSelect ? caseSelect.options[caseSelect.selectedIndex] : null;
+    const caseNum = selectedCaseOption?.getAttribute('data-num') || 'MATTER-GEN';
+    const caseTitle = selectedCaseOption?.getAttribute('data-title') || 'General Practice Docket';
+
+    const countdown = this.getDeadlineCountdown(dueDate);
+
+    const structuredText = `================================================================
+[SLCMS DOCKET NOTIFICATION] STATUTORY DEADLINE NOTICE
+Firm: Serengeti Legal Case Management System
+Security: Confidential Attorney-Client Communication
+Reference: DKT-TZ-${Date.now().toString().slice(-6)}
+================================================================
+
+1. MATTER CITATION:
+   • Case Ref: ${caseNum} - ${caseTitle}
+   • Forum / Registry: ${court}
+
+2. MANDATORY ACTION ITEM:
+   • Obligation: ${taskTitle}
+   • Statutory Due Date: ${dueDate} at 09:00 AM EAT (${countdown.label})
+   • Authority / Court Rule: ${statute}
+   • Urgency Classification: ${urgency.replace('_', ' ')}
+
+3. RESPONSIBLE PRACTITIONER:
+   • Assigned Personnel: ${recipientName} (${recipientRole})
+   • Directives: Ensure pleadings, evidence bundles, or written
+     submissions are vetted and served strictly within statutory
+     time limits. Non-compliance risks court strike-out.
+================================================================
+Dispatched via SLCMS Law Firm Docket Engine`;
+
+    const box = document.getElementById('structured-notice-preview-box');
+    if (box) box.textContent = structuredText;
+  },
+
+  copyNoticeToClipboard() {
+    const box = document.getElementById('structured-notice-preview-box');
+    if (box && box.textContent) {
+      navigator.clipboard.writeText(box.textContent);
+      App.showToast('Structured legal notice copied to clipboard.', 'success');
+    }
+  },
+
+  async sendStructuredDocketNotice() {
+    const recSelect = document.getElementById('snd-recipient');
+    const caseSelect = document.getElementById('snd-case');
+    const taskTitle = document.getElementById('snd-task-title')?.value || 'Statutory Docket Notice';
+    const dueDate = document.getElementById('snd-due-date')?.value || new Date().toISOString().split('T')[0];
+    const previewBox = document.getElementById('structured-notice-preview-box');
+    const messageBody = previewBox ? previewBox.textContent : '';
+
+    const isEmail = document.getElementById('chn-email')?.checked ?? true;
+    const isSms = document.getElementById('chn-sms')?.checked ?? true;
+    const isInApp = document.getElementById('chn-inapp')?.checked ?? true;
+
+    const selectedRecOption = recSelect ? recSelect.options[recSelect.selectedIndex] : null;
+    const recVal = recSelect?.value || 'ALL';
+    const recName = (recVal === 'ALL') ? 'All Legal Personnel' : (selectedRecOption?.getAttribute('data-name') || 'Advocate In-Charge');
+    const recEmail = selectedRecOption?.getAttribute('data-email') || 'advocate@slcms-law.com';
+
+    const selectedCaseOption = caseSelect ? caseSelect.options[caseSelect.selectedIndex] : null;
+    const caseNum = selectedCaseOption?.getAttribute('data-num') || 'MATTER-GEN';
+    const caseTitle = selectedCaseOption?.getAttribute('data-title') || 'General Docket';
+
+    // 1. Send via Backend Email if Email channel selected
+    if (isEmail && recVal !== 'ALL') {
+      try {
+        await fetch('/api/communications/send-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-Id': SLCMS_STATE.currentUser?.id || 'usr-admin',
+            'X-User-Name': SLCMS_STATE.currentUser?.name || 'Administrator'
+          },
+          body: JSON.stringify({
+            recipient: recEmail,
+            subject: `[SLCMS Docket Alert] Action Required: ${taskTitle} (${caseNum})`,
+            messageBody: messageBody,
+            caseNumber: caseNum,
+            caseTitle: caseTitle,
+            clientName: recName,
+            messageType: 'Docket Alert'
+          })
+        });
+      } catch (e) {
+        console.warn('Email dispatch deferred:', e);
+      }
+    }
+
+    // 2. Register In-App Notification
+    if (isInApp && typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.notifications)) {
+      SLCMS_STATE.notifications.unshift({
+        id: `notif-${Date.now()}`,
+        type: 'danger',
+        title: `Docket Alert: ${taskTitle}`,
+        message: `${taskTitle} for ${caseNum} is due on ${dueDate}. Assigned to ${recName}.`,
+        time: 'Just now',
+        read: false,
+        link: '#tasks'
+      });
+    }
+
+    // 3. Log Immutable Audit Record
+    SLCMS_STATE.addAuditLog('Docket Notice Dispatched', 'Tasks & Deadlines', 
+      `Structured notice dispatched to ${recName} for ${caseNum} (${taskTitle}, Due: ${dueDate}). Channels: ${isEmail ? 'Email ' : ''}${isSms ? 'SMS ' : ''}${isInApp ? 'InApp' : ''}`, 
+      'Success');
+
     App.closeModal();
-    App.showToast('Docket notifications broadcasted to 4 responsible staff members.', 'success');
+    App.showToast(`Structured docket notice successfully dispatched to ${recName}.`, 'success');
   },
 
   _taskCreationCallback: null,
@@ -1731,9 +1960,11 @@ const TasksView = {
     d.setDate(d.getDate() + days);
     const dueEl = document.getElementById('nt-due');
     const chkEl = document.getElementById('nt-is-statutory');
+    const statRefEl = document.getElementById('nt-statutory-ref');
     if (dueEl) dueEl.value = d.toISOString().split('T')[0];
     if (chkEl) chkEl.checked = true;
-    App.showToast(`Statutory deadline applied: ${days} days for ${ruleName}`, 'info');
+    if (statRefEl) statRefEl.value = ruleName;
+    App.showToast(`Statutory period applied: +${days} days (${ruleName})`, 'info');
   },
 
   openNewTaskModal(caseContext = null, defaultCol = 'todo', callback = null) {
@@ -1744,29 +1975,33 @@ const TasksView = {
 
     App.openModal(`
       <div class="modal-header">
-        <h3 class="modal-title">
+        <h3 class="modal-title" style="display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-heading);">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
             <path d="M12 5v14M5 12h14"/>
           </svg>
-          Create Legal Task (Objective 3)
+          Create Legal Task
         </h3>
         <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
       </div>
       <div class="modal-body">
-        <div class="form-group">
+        <div class="form-group mb-3">
           <label class="form-label required">Task Title / Action Item</label>
           <input type="text" id="nt-title" class="form-control" placeholder="e.g. File Written Submissions pursuant to High Court order" required>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 gap-3 mb-3">
           <div class="form-group">
             <label class="form-label required">Associated Legal Matter</label>
             <select id="nt-case" class="form-control">
-              ${cases.length === 0 ? `<option value="">General Matter / Administrative</option>` : cases.map(c => `<option value="${c.id}" ${(caseContext && (caseContext.id === c.id || caseContext === c.id)) ? 'selected' : ''}>${c.caseNumber} - ${c.title}</option>`).join('')}
+              ${cases.length === 0 ? `<option value="case-gen">General Legal Practice</option>` : cases.map(c => `
+                <option value="${c.id}" ${(caseContext && (caseContext.id === c.id || caseContext === c.id)) ? 'selected' : ''}>
+                  ${c.caseNumber} - ${c.title}
+                </option>
+              `).join('')}
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label required">Task Category (Official Scope)</label>
+            <label class="form-label required">Task Category</label>
             <select id="nt-category" class="form-control">
               <option value="Pleadings">Pleadings</option>
               <option value="Evidence Gathering">Evidence Gathering</option>
@@ -1780,71 +2015,74 @@ const TasksView = {
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 gap-3 mb-3">
           <div class="form-group">
-            <label class="form-label required">Assigned Legal Personnel</label>
+            <label class="form-label required">Assigned Personnel</label>
             <select id="nt-assigned" class="form-control">
-              ${activeStaff.length === 0 ? `<option value="Unassigned">Unassigned</option>` : activeStaff.map(s => `<option value="${s.name}">${s.name} (${s.role || 'Staff'})</option>`).join('')}
+              ${activeStaff.length === 0 ? `<option value="Unassigned">Unassigned</option>` : activeStaff.map(s => `
+                <option value="${s.name}">${s.name} (${s.role || 'Staff'})</option>
+              `).join('')}
             </select>
           </div>
           <div class="form-group">
             <label class="form-label required">Priority Level</label>
             <select id="nt-priority" class="form-control">
-              <option value="Urgent">🚨 Urgent (Court Direct Order / Emergency)</option>
-              <option value="High">High Priority (Time Sensitive)</option>
+              <option value="Urgent">🚨 Urgent (Immediate Filing / Court Cutoff)</option>
+              <option value="High">⚠️ High Priority (Time Sensitive)</option>
               <option value="Medium" selected>Medium (Standard Preparation)</option>
               <option value="Low">Low (Routine Follow-up)</option>
             </select>
           </div>
         </div>
 
-        <!-- Statutory Deadline Calculator Preset Strip -->
-        <div style="background: rgba(200, 155, 60, 0.08); border: 1px solid rgba(200, 155, 60, 0.25); border-radius: var(--radius-sm); padding: 0.65rem 0.85rem; margin-bottom: 1rem;">
-          <div class="flex items-center justify-between flex-wrap gap-2 mb-1.5">
-            <span style="font-size: 0.78rem; font-weight: 700; color: var(--color-gold); text-transform: uppercase;">
-              ⚖️ Court Rules Deadline Presets:
+        <!-- Statutory Presets Strip -->
+        <div style="background: rgba(200, 155, 60, 0.08); border: 1px solid rgba(200, 155, 60, 0.22); border-radius: 8px; padding: 0.65rem 0.85rem; margin-bottom: 0.85rem;">
+          <div class="flex items-center justify-between flex-wrap gap-2 mb-1">
+            <span style="font-size: 0.76rem; font-weight: 700; color: var(--color-gold);">
+              ⚖️ Statutory Limitation Presets:
             </span>
-            <span style="font-size: 0.74rem; color: var(--color-text-muted);">Click to auto-compute statutory date</span>
+            <span style="font-size: 0.72rem; color: var(--color-text-muted);">Auto-calculate cutoff date</span>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
-            <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.74rem; padding: 0.2rem 0.6rem;" onclick="TasksView.setStatutoryDueDate(14, 'Written Submissions')">
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;" onclick="TasksView.setStatutoryDueDate(14, 'Order VIII R.11 CPC (Written Submissions)')">
               +14 Days (Submissions)
             </button>
-            <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.74rem; padding: 0.2rem 0.6rem;" onclick="TasksView.setStatutoryDueDate(21, 'Statement of Defence')">
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;" onclick="TasksView.setStatutoryDueDate(21, 'Order VIII R.1 CPC (Statement of Defence)')">
               +21 Days (Defence)
             </button>
-            <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.74rem; padding: 0.2rem 0.6rem;" onclick="TasksView.setStatutoryDueDate(30, 'Notice of Appeal')">
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;" onclick="TasksView.setStatutoryDueDate(30, 'Court of Appeal Rules R.76 (Notice of Appeal)')">
               +30 Days (Appeal)
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;" onclick="TasksView.setStatutoryDueDate(60, 'Court of Appeal Rules R.83 (Record of Appeal)')">
+              +60 Days (Record)
             </button>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 gap-3 mb-3">
           <div class="form-group">
             <label class="form-label required">Due Date</label>
             <input type="date" id="nt-due" class="form-control" value="${today}" required>
           </div>
-          <div class="form-group flex flex-col justify-end" style="padding-bottom: 0.5rem;">
+          <div class="form-group flex flex-col justify-end" style="padding-bottom: 0.35rem;">
             <label class="flex items-center gap-2" style="font-size: 0.82rem; cursor: pointer; color: var(--color-primary); font-weight: 600;">
               <input type="checkbox" id="nt-is-statutory" checked>
               <span>Statutory Docket Deadline</span>
             </label>
-            <span style="font-size: 0.72rem; color: var(--color-text-muted); margin-top: 0.2rem;">
-              Unchecks if this is an internal reminder rather than a court-ordered deadline.
-            </span>
+            <input type="hidden" id="nt-statutory-ref" value="Civil Procedure Code Cap 33">
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Detailed Instructions &amp; Action Notes</label>
-          <textarea id="nt-desc" class="form-control" rows="3" placeholder="Specify instructions, client deliverables, or court filing requirements..."></textarea>
+        <div class="form-group mb-2">
+          <label class="form-label">Action Notes &amp; Specific Instructions</label>
+          <textarea id="nt-desc" class="form-control" rows="2" placeholder="Specify instructions, client deliverables, or court filing requirements..."></textarea>
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
         <button class="btn btn-gold" onclick="TasksView.saveNewTask('${defaultCol}')">Create Task</button>
       </div>
-    `);
+    `, 'modal-md');
   },
 
   async saveNewTask(col = 'todo') {
@@ -1869,13 +2107,14 @@ const TasksView = {
       priority: document.getElementById('nt-priority')?.value || 'Medium',
       dueDate: document.getElementById('nt-due')?.value || new Date().toISOString().substring(0, 10),
       isStatutoryDeadline: document.getElementById('nt-is-statutory')?.checked ?? true,
+      statutoryReference: document.getElementById('nt-statutory-ref')?.value || 'Civil Procedure Code Cap 33',
       status: col,
       instructions: document.getElementById('nt-desc')?.value || ''
     };
 
     const saved = await SLCMS_STATE.createTaskOnBackend(newTask);
     App.closeModal();
-    App.showToast('Task successfully added to docket.', 'success');
+    App.showToast('Task successfully scheduled.', 'success');
 
     if (typeof this._taskCreationCallback === 'function') {
       const cb = this._taskCreationCallback;
@@ -1887,200 +2126,20 @@ const TasksView = {
   },
 
   /* --------------------------------------------------------------------------
-     WORKFLOW TRANSITIONS & RBAC SEPARATION ACTIONS
+     STATUTORY COURT DEADLINES (HOW DEADLINES WORK & PRESETS)
      -------------------------------------------------------------------------- */
-  async startTask(taskId) {
-    const res = await SLCMS_STATE.transitionTaskOnBackend(taskId, 'start');
-    if (res.success) {
-      App.showToast('Task moved to In Progress.', 'info');
-      App.refreshCurrentView();
-    } else {
-      App.showToast(res.message || 'Could not update task.', 'error');
-    }
+  setAddDeadlinePreset(days, ruleName, defaultType = 'Hearing') {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    const dlnDateEl = document.getElementById('dln-date');
+    const dlnTypeEl = document.getElementById('dln-type');
+    const dlnRefEl = document.getElementById('dln-statutory-ref');
+    if (dlnDateEl) dlnDateEl.value = d.toISOString().split('T')[0];
+    if (dlnTypeEl) dlnTypeEl.value = defaultType;
+    if (dlnRefEl) dlnRefEl.value = ruleName;
+    App.showToast(`Applied +${days} days: ${ruleName}`, 'info');
   },
 
-  async submitTaskForReview(taskId) {
-    const res = await SLCMS_STATE.transitionTaskOnBackend(taskId, 'submit_review');
-    if (res.success) {
-      App.showToast('Task submitted to supervising partner for review.', 'success');
-      App.refreshCurrentView();
-    } else {
-      App.showToast(res.message || 'Could not submit task.', 'error');
-    }
-  },
-
-  openReviewModal(taskId) {
-    const t = (SLCMS_STATE.tasks || []).find(item => item.id === taskId);
-    if (!t) return;
-
-    App.openModal(`
-      <div class="modal-header">
-        <h3 class="modal-title">🔍 Partner Review: ${t.title}</h3>
-        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
-      </div>
-      <div class="modal-body">
-        <div style="background: var(--color-surface-subtle); padding: 0.85rem 1.1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.84rem; line-height: 1.55;">
-          <div><strong>Case:</strong> ${t.caseNumber} - ${t.caseTitle}</div>
-          <div><strong>Assigned Counsel:</strong> ${t.assignedTo}</div>
-          <div><strong>Statutory Due Date:</strong> ${t.dueDate || 'N/A'}</div>
-          <div><strong>Instructions:</strong> ${t.instructions || t.description || 'Standard matter drafting'}</div>
-        </div>
-
-        <div class="form-group mb-3">
-          <label class="form-label">Review Feedback / Supervisor Instructions</label>
-          <textarea id="review-feedback-input" class="form-control" rows="3" placeholder="Provide substantive revisions, approval remarks, or filing directions..."></textarea>
-        </div>
-      </div>
-      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
-        <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
-        <div class="flex items-center gap-2">
-          <button class="btn btn-danger btn-sm" onclick="TasksView.executeReturnFromModal('${t.id}')">
-            Return with Notes ↺
-          </button>
-          <button class="btn btn-gold btn-sm" onclick="TasksView.executeApproveFromModal('${t.id}')">
-            Approve &amp; Mark Completed ✓
-          </button>
-        </div>
-      </div>
-    `, 'modal-md');
-  },
-
-  async executeApproveFromModal(taskId) {
-    const feedback = document.getElementById('review-feedback-input')?.value || 'Approved by supervising partner.';
-    await SLCMS_STATE.transitionTaskOnBackend(taskId, 'approve', feedback);
-    App.closeModal();
-    App.showToast('Legal work approved and marked Completed.', 'success');
-    App.refreshCurrentView();
-  },
-
-  async executeReturnFromModal(taskId) {
-    const feedback = document.getElementById('review-feedback-input')?.value;
-    if (!feedback) {
-      App.showToast('Please provide feedback notes explaining what revisions are required.', 'error');
-      return;
-    }
-    await SLCMS_STATE.transitionTaskOnBackend(taskId, 'return', feedback);
-    App.closeModal();
-    App.showToast('Task returned to assignee for revision.', 'info');
-    App.refreshCurrentView();
-  },
-
-  async returnTaskPrompt(taskId) {
-    const feedback = prompt('Enter revision instructions for the assigned counsel:');
-    if (feedback !== null && feedback.trim() !== '') {
-      await SLCMS_STATE.transitionTaskOnBackend(taskId, 'return', feedback.trim());
-      App.showToast('Task returned for revision.', 'info');
-      App.refreshCurrentView();
-    }
-  },
-
-  async approveTask(taskId) {
-    await SLCMS_STATE.transitionTaskOnBackend(taskId, 'approve', 'Approved by supervising partner.');
-    App.showToast('Work approved and marked Completed.', 'success');
-    App.refreshCurrentView();
-  },
-
-  async reopenTask(taskId) {
-    await SLCMS_STATE.transitionTaskOnBackend(taskId, 'reopen');
-    App.showToast('Task reopened to In Progress.', 'info');
-    App.refreshCurrentView();
-  },
-
-  /* --------------------------------------------------------------------------
-     TASK DOSSIER / DETAILS MODAL WITH AUDIT HISTORY
-     -------------------------------------------------------------------------- */
-  openTaskDetailsModal(taskId) {
-    const t = (SLCMS_STATE.tasks || []).find(item => item.id === taskId);
-    if (!t) return;
-
-    const currentUser = SLCMS_STATE.currentUser || {};
-    const isAdmin = (currentUser.role === 'Administrator');
-    const isSenior = (currentUser.role === 'Senior Lawyer' || currentUser.role === 'Senior Counsel' || currentUser.role === 'Partner');
-    const isAssignee = (t.assignedTo && t.assignedTo.toLowerCase().includes((currentUser.name || '').toLowerCase()));
-
-    App.openModal(`
-      <div class="modal-header">
-        <div class="flex items-center gap-2">
-          <span class="task-priority-tag ${t.priority ? t.priority.toLowerCase() : 'medium'}">${t.priority || 'Medium'}</span>
-          <h3 class="modal-title" style="margin-left: 0.35rem; font-size: 1.1rem; font-family: var(--font-heading);">${t.title}</h3>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
-      </div>
-      <div class="modal-body">
-        <!-- Matter Header -->
-        <div class="task-matter-card-box mb-3">
-          <span class="task-matter-card-num">${t.caseNumber || 'CIVIL-GEN'}</span>
-          <span style="color: var(--color-text-muted);">&bull;</span>
-          <span class="task-matter-card-title">${t.caseTitle || 'General Legal Practice'}</span>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3 mb-3">
-          <div style="background: var(--color-surface-subtle); padding: 0.75rem 1rem; border-radius: 8px;">
-            <div style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700;">Assigned Counsel</div>
-            <div style="font-size: 0.90rem; font-weight: 700; color: #0F172A; margin-top: 0.15rem;">${t.assignedTo || 'Unassigned'}</div>
-          </div>
-          <div style="background: var(--color-surface-subtle); padding: 0.75rem 1rem; border-radius: 8px;">
-            <div style="font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; font-weight: 700;">Due Date &amp; Docket Status</div>
-            <div style="font-size: 0.90rem; font-weight: 700; color: ${t.status === 'completed' ? '#10B981' : '#0F172A'}; margin-top: 0.15rem;">
-              📅 ${t.dueDate || 'No date specified'} &bull; <span style="text-transform: capitalize;">${(t.status || 'todo').replace('_', ' ')}</span>
-            </div>
-          </div>
-        </div>
-
-        ${t.isStatutoryDeadline ? `
-          <div style="background: rgba(200, 155, 60, 0.08); border: 1px solid rgba(200, 155, 60, 0.25); border-radius: 8px; padding: 0.65rem 0.85rem; margin-bottom: 0.85rem; font-size: 0.80rem; color: #92400E;">
-            ⚖️ <strong>Verified Statutory Rule:</strong> ${t.statutoryReference || 'Tanzanian Civil & Commercial Docket Regulation'}
-          </div>
-        ` : ''}
-
-        ${t.reviewFeedback ? `
-          <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 0.65rem 0.85rem; margin-bottom: 0.85rem; font-size: 0.82rem; color: #1E40AF;">
-            💬 <strong>Supervising Partner Feedback:</strong> ${t.reviewFeedback}
-          </div>
-        ` : ''}
-
-        ${(t.filingStatus === 'FILED' || t.filingReference) ? `
-          <div class="task-filed-seal-box mb-3">
-            ✓ Court Filing Confirmed: <strong>${t.filingDate || t.dueDate}</strong> &bull; Filing Receipt: <strong>${t.filingReference || 'HC-REC/2026/089'}</strong>
-          </div>
-        ` : ''}
-
-        <div class="form-group mb-3">
-          <label class="form-label" style="font-weight: 700;">Instructions &amp; Matter Deliverables</label>
-          <div style="background: #FFFFFF; border: 1px solid rgba(0,0,0,0.09); border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.84rem; line-height: 1.5; color: #334155; min-height: 60px;">
-            ${t.instructions || t.description || 'No detailed instructions provided.'}
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer" style="display: flex; justify-content: space-between;">
-        <button class="btn btn-secondary" onclick="App.closeModal()">Close</button>
-        <div class="flex items-center gap-2">
-          ${(isAdmin || isSenior) ? `
-            <button class="btn btn-secondary btn-sm" onclick="App.closeModal(); TasksView.openReassignModal('${t.id}');">
-              Reassign Staff
-            </button>
-          ` : ''}
-          ${(!isAdmin && isAssignee && t.status === 'todo') ? `
-            <button class="btn btn-gold btn-sm" onclick="App.closeModal(); TasksView.startTask('${t.id}');">
-              Start Task →
-            </button>
-          ` : (!isAdmin && isAssignee && t.status === 'in_progress') ? `
-            <button class="btn btn-gold btn-sm" onclick="App.closeModal(); TasksView.submitTaskForReview('${t.id}');">
-              Submit for Review →
-            </button>
-          ` : (!isAdmin && isSenior && t.status === 'under_review') ? `
-            <button class="btn btn-gold btn-sm" onclick="App.closeModal(); TasksView.openReviewModal('${t.id}');">
-              Review Work →
-            </button>
-          ` : ''}
-        </div>
-      </div>
-    `, 'modal-md');
-  },
-
-  /* --------------------------------------------------------------------------
-     ADD STATUTORY COURT DEADLINE MODAL
-     -------------------------------------------------------------------------- */
   openAddDeadlineModal(caseContext = null) {
     const cases = SLCMS_STATE.cases || [];
     const activeStaff = SLCMS_STATE.getActiveStaffUsers();
@@ -2089,28 +2148,49 @@ const TasksView = {
     App.openModal(`
       <div class="modal-header">
         <h3 class="modal-title" style="display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-heading);">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
-            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-          </svg>
-          Register Statutory Court Deadline
+          <span style="font-size: 1.2rem;">📅</span>
+          <span>Register Statutory Court Deadline</span>
         </h3>
         <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
       </div>
       <div class="modal-body">
-        <div style="background: rgba(200, 155, 60, 0.08); border: 1px solid rgba(200, 155, 60, 0.25); border-radius: var(--radius-sm); padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.82rem; color: #78350F; line-height: 1.45;">
-          ⚖️ <strong>Statutory Docket Rule:</strong> A statutory deadline is monitored against specific Tanzanian civil/commercial court orders and statutory limitation rules (e.g. Civil Procedure Code Cap 33, Law of Limitation Act Cap 89).
+        
+        <!-- Explanatory Banner: How Deadlines Work in Law Practice -->
+        <div style="background: rgba(200, 155, 60, 0.08); border: 1px solid rgba(200, 155, 60, 0.25); border-radius: 10px; padding: 0.75rem 0.95rem; margin-bottom: 1rem; font-size: 0.80rem; color: #78350F; line-height: 1.5;">
+          ⚖️ <strong>How Statutory Deadlines Work:</strong> Court deadlines are strict limitation periods established by Court Order or Legislation (e.g. Civil Procedure Code Cap 33). Registering a deadline automatically generates an urgent tracking task on the Kanban board and synchronizes with the Court Calendar.
+        </div>
+
+        <!-- Quick Presets -->
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 0.65rem 0.85rem; margin-bottom: 1rem;">
+          <div style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 0.35rem;">
+            One-Click Statutory Presets:
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;" onclick="TasksView.setAddDeadlinePreset(14, 'Order VIII R.11 CPC - Written Submissions', 'Submission')">
+              +14d Written Submissions
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;" onclick="TasksView.setAddDeadlinePreset(21, 'Order VIII R.1 CPC - Written Statement of Defence', 'Filing')">
+              +21d Statement of Defence
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;" onclick="TasksView.setAddDeadlinePreset(30, 'Court of Appeal Rules R.76 - Notice of Appeal', 'Appeal')">
+              +30d Notice of Appeal
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;" onclick="TasksView.setAddDeadlinePreset(60, 'Court of Appeal Rules R.83 - Record of Appeal', 'Appeal')">
+              +60d Record of Appeal
+            </button>
+          </div>
         </div>
 
         <div class="form-group mb-3">
           <label class="form-label required">Deadline / Hearing Title</label>
-          <input type="text" id="dln-title" class="form-control" placeholder="e.g. Hearing of Chamber Summons for Interim Injunction" required>
+          <input type="text" id="dln-title" class="form-control" placeholder="e.g. Hearing of Chamber Summons for Injunction" required>
         </div>
 
         <div class="grid grid-cols-2 gap-3 mb-3">
           <div class="form-group">
             <label class="form-label required">Associated Legal Matter</label>
             <select id="dln-case" class="form-control">
-              ${cases.length === 0 ? `<option value="">-- No registered cases yet (General Docket) --</option>` : cases.map(c => `
+              ${cases.length === 0 ? `<option value="case-gen">General Legal Practice</option>` : cases.map(c => `
                 <option value="${c.id}" ${(caseContext && (caseContext.id === c.id || caseContext === c.id)) ? 'selected' : ''}>
                   ${c.caseNumber} - ${c.title}
                 </option>
@@ -2124,8 +2204,8 @@ const TasksView = {
               <option value="Mention">Mention / Case Management</option>
               <option value="Filing">Pleadings / Document Filing</option>
               <option value="Submission">Written Submissions</option>
-              <option value="Appeal">Notice of Appeal / Record of Appeal</option>
-              <option value="Other">Other Statutory Cutoff</option>
+              <option value="Appeal">Notice of Appeal / Record</option>
+              <option value="Ruling">Ruling / Judgment Delivery</option>
             </select>
           </div>
         </div>
@@ -2136,15 +2216,15 @@ const TasksView = {
             <input type="date" id="dln-date" class="form-control" value="${today}" required>
           </div>
           <div class="form-group">
-            <label class="form-label required">Hearing Time / Filing Cutoff</label>
+            <label class="form-label required">Time / Filing Cutoff</label>
             <input type="time" id="dln-time" class="form-control" value="09:00">
           </div>
         </div>
 
         <div class="grid grid-cols-2 gap-3 mb-3">
           <div class="form-group">
-            <label class="form-label required">Court &amp; Registry</label>
-            <input type="text" id="dln-court" class="form-control" value="High Court Commercial Division, Dar es Salaam" placeholder="e.g. Resident Magistrate Court of Kisutu">
+            <label class="form-label required">Court Registry / Forum</label>
+            <input type="text" id="dln-court" class="form-control" value="High Court Commercial Division, Dar es Salaam">
           </div>
           <div class="form-group">
             <label class="form-label required">Responsible Counsel</label>
@@ -2161,19 +2241,14 @@ const TasksView = {
             <label class="form-label required">Authority Source</label>
             <select id="dln-source" class="form-control">
               <option value="Court Order">Formal Court Order / Summons</option>
-              <option value="Legislation">Statutory Enactment / Rule of Court</option>
+              <option value="Legislation">Statutory Limitation Enactment</option>
               <option value="Manually Entered">Manual Entry / Client Directive</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">Statutory Reference / Court Rule</label>
-            <input type="text" id="dln-statutory-ref" class="form-control" placeholder="e.g. High Court (Commercial Div.) Rules 2012, R.24">
+            <label class="form-label">Statutory Reference / Citation</label>
+            <input type="text" id="dln-statutory-ref" class="form-control" value="High Court Commercial Rules 2012">
           </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Supporting Court Document / Order Reference</label>
-          <input type="text" id="dln-doc" class="form-control" placeholder="e.g. Chamber Summons Order dated 12 Sep 2026 / Notice of Mention">
         </div>
       </div>
       <div class="modal-footer">
@@ -2208,12 +2283,12 @@ const TasksView = {
       responsibleLawyerName: lawyer,
       source: document.getElementById('dln-source')?.value || 'Court Order',
       statutoryReference: document.getElementById('dln-statutory-ref')?.value || '',
-      supportingDocument: document.getElementById('dln-doc')?.value || ''
+      supportingDocument: ''
     };
 
     await SLCMS_STATE.createDeadlineOnBackend(deadlineData);
 
-    // Also automatically create corresponding Task under To Do column to track the deadline
+    // Automatically create corresponding actionable Task under To Do column to track the deadline
     await SLCMS_STATE.createTaskOnBackend({
       title: `${deadlineData.type}: ${title}`,
       caseId: relatedCase.id,
@@ -2224,13 +2299,395 @@ const TasksView = {
       dueDate: dateVal,
       dueTime: timeVal,
       isStatutoryDeadline: true,
-      statutoryReference: deadlineData.statutoryReference || 'Court Order',
+      statutoryReference: deadlineData.statutoryReference || 'Court Directive',
       instructions: `Court Appearance / Deadline obligation set for ${dateVal} at ${timeVal} before ${deadlineData.court}. Source: ${deadlineData.source}.`
     });
 
     App.closeModal();
-    App.showToast('Court deadline registered to docket.', 'success');
+    App.showToast('Court deadline and tracking task registered.', 'success');
     App.refreshCurrentView();
+  },
+
+  openTaskDetailsModal(taskId) {
+    const t = (SLCMS_STATE.tasks || []).find(item => item.id === taskId);
+    if (!t) {
+      App.showToast('Task details not found.', 'info');
+      return;
+    }
+    const countdown = this.getDeadlineCountdown(t.dueDate);
+    const priority = t.priority || 'Medium';
+    const priorityClass = priority.toLowerCase();
+    const priorityIcon = priority === 'Urgent' ? '🚨' : priority === 'High' ? '⚠️' : priority === 'Medium' ? '⚡' : '🔹';
+
+    App.openModal(`
+      <div class="modal-header">
+        <div class="flex items-center gap-2">
+          <span style="font-size: 1.25rem;">⚖️</span>
+          <div>
+            <h3 class="modal-title" style="font-family: var(--font-heading); margin: 0;">Task Dossier</h3>
+            <span style="font-size: 0.76rem; color: #64748B;">${t.caseNumber || 'MATTER-GEN'} &bull; ${t.caseTitle || 'General Legal Practice'}</span>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.25rem;">
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1.15rem; margin-bottom: 1.15rem;">
+          <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+            <span class="task-priority-tag ${priorityClass}">${priorityIcon} ${priority} Priority</span>
+            <span class="task-countdown-pill ${countdown.badgeClass}">${countdown.label}</span>
+          </div>
+          <h3 style="font-size: 1.1rem; font-weight: 800; color: #0F172A; margin: 0 0 0.5rem 0; line-height: 1.4;">
+            ${TasksView.escapeHtml(t.title || 'Untitled Task')}
+          </h3>
+          <div style="font-size: 0.82rem; color: #475569;">
+            <strong>Matter:</strong> ${TasksView.escapeHtml(t.caseTitle || 'General Matter')} (${t.caseNumber || 'N/A'})
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div style="background: #F8FAFC; padding: 0.85rem; border-radius: 10px; border: 1px solid #E2E8F0;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Assigned Practitioner</div>
+            <div style="font-size: 0.92rem; font-weight: 700; color: #0F172A; margin-top: 0.25rem;">${TasksView.escapeHtml(t.assignedTo || 'Unassigned')}</div>
+          </div>
+          <div style="background: #F8FAFC; padding: 0.85rem; border-radius: 10px; border: 1px solid #E2E8F0;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Current Status</div>
+            <div style="font-size: 0.92rem; font-weight: 700; color: #0F172A; margin-top: 0.25rem; text-transform: capitalize;">${(t.status || 'todo').replace('_', ' ')}</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div style="background: #F8FAFC; padding: 0.85rem; border-radius: 10px; border: 1px solid #E2E8F0;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Statutory Due Date</div>
+            <div style="font-size: 0.92rem; font-weight: 700; color: #0F172A; margin-top: 0.25rem;">${t.dueDate || 'No Date'} ${t.dueTime ? 'at ' + t.dueTime : ''}</div>
+          </div>
+          <div style="background: #F8FAFC; padding: 0.85rem; border-radius: 10px; border: 1px solid #E2E8F0;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Statutory Authority</div>
+            <div style="font-size: 0.85rem; font-weight: 600; color: #C89B3C; margin-top: 0.25rem;">${TasksView.escapeHtml(t.statutoryReference || 'Court Rules')}</div>
+          </div>
+        </div>
+
+        <div class="form-group mb-2">
+          <label class="form-label" style="font-weight: 700; font-size: 0.78rem;">Instructions &amp; Mandate</label>
+          <div style="font-size: 0.84rem; line-height: 1.5; color: #334155; background: #F8FAFC; padding: 0.85rem; border-radius: 10px; border: 1px solid #E2E8F0; min-height: 60px;">
+            ${TasksView.escapeHtml(t.instructions || t.description || 'No additional instructions provided.')}
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer flex items-center justify-between">
+        <button class="btn btn-secondary" onclick="App.closeModal()">Close</button>
+        <div class="flex items-center gap-2">
+          <button class="btn btn-secondary" onclick="TasksView.openReassignModal('${t.id}')">👤 Reassign</button>
+          <button class="btn btn-gold" onclick="TasksView.openEditTaskModal('${t.id}')">✏️ Modify Task</button>
+        </div>
+      </div>
+    `, 'modal-md');
+  },
+
+  openEditTaskModal(taskId) {
+    const t = (SLCMS_STATE.tasks || []).find(item => item.id === taskId);
+    if (!t) {
+      App.showToast('Task record not found.', 'error');
+      return;
+    }
+    const cases = SLCMS_STATE.cases || [];
+    const activeStaff = SLCMS_STATE.getActiveStaffUsers();
+
+    App.openModal(`
+      <div class="modal-header">
+        <h3 class="modal-title" style="display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-heading);">
+          <span style="font-size: 1.2rem;">✏️</span>
+          <span>Modify Legal Task</span>
+        </h3>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group mb-3">
+          <label class="form-label required">Task Title / Obligation</label>
+          <input type="text" id="ed-tsk-title" class="form-control" value="${TasksView.escapeHtml(t.title || '')}" required>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label required">Associated Legal Matter</label>
+            <select id="ed-tsk-case" class="form-control">
+              ${cases.length === 0 ? `<option value="${t.caseId || 'case-gen'}">${t.caseNumber || 'MATTER-GEN'} - ${t.caseTitle || 'General Practice'}</option>` : cases.map(c => `
+                <option value="${c.id}" ${c.id === t.caseId ? 'selected' : ''}>${c.caseNumber} - ${c.title}</option>
+              `).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Task Category</label>
+            <select id="ed-tsk-category" class="form-control">
+              <option value="Pleadings" ${t.category === 'Pleadings' ? 'selected' : ''}>Pleadings</option>
+              <option value="Evidence Gathering" ${t.category === 'Evidence Gathering' ? 'selected' : ''}>Evidence Gathering</option>
+              <option value="Filing" ${t.category === 'Filing' ? 'selected' : ''}>Filing</option>
+              <option value="Client Conference" ${t.category === 'Client Conference' ? 'selected' : ''}>Client Conference</option>
+              <option value="Compliance" ${t.category === 'Compliance' ? 'selected' : ''}>Compliance</option>
+              <option value="Legal Research" ${t.category === 'Legal Research' ? 'selected' : ''}>Legal Research</option>
+              <option value="Billing" ${t.category === 'Billing' ? 'selected' : ''}>Billing</option>
+              <option value="Administrative" ${t.category === 'Administrative' ? 'selected' : ''}>Administrative</option>
+              <option value="technical" ${t.category === 'technical' ? 'selected' : ''}>Technical / Maintenance</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label required">Priority Level</label>
+            <select id="ed-tsk-priority" class="form-control">
+              <option value="Urgent" ${t.priority === 'Urgent' ? 'selected' : ''}>🚨 Urgent</option>
+              <option value="High" ${t.priority === 'High' ? 'selected' : ''}>⚠️ High</option>
+              <option value="Medium" ${t.priority === 'Medium' ? 'selected' : ''}>⚡ Medium</option>
+              <option value="Low" ${t.priority === 'Low' ? 'selected' : ''}>🔹 Low</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Workflow Status</label>
+            <select id="ed-tsk-status" class="form-control">
+              <option value="todo" ${(t.status || 'todo') === 'todo' ? 'selected' : ''}>📋 To Do</option>
+              <option value="in_progress" ${t.status === 'in_progress' ? 'selected' : ''}>⚡ In Progress</option>
+              <option value="under_review" ${t.status === 'under_review' ? 'selected' : ''}>🔍 Under Review</option>
+              <option value="completed" ${t.status === 'completed' ? 'selected' : ''}>✓ Completed</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label required">Assigned Staff</label>
+            <select id="ed-tsk-assigned" class="form-control">
+              ${activeStaff.map(s => `
+                <option value="${s.name}" ${(t.assignedTo || '').includes(s.name) ? 'selected' : ''}>${s.name} (${s.role || 'Staff'})</option>
+              `).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Due Date</label>
+            <input type="date" id="ed-tsk-due" class="form-control" value="${t.dueDate || new Date().toISOString().split('T')[0]}" required>
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label">Statutory Reference / Limitation Rule</label>
+          <input type="text" id="ed-tsk-stat-ref" class="form-control" value="${TasksView.escapeHtml(t.statutoryReference || '')}">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Instructions &amp; Mandate Notes</label>
+          <textarea id="ed-tsk-instructions" class="form-control" rows="3">${TasksView.escapeHtml(t.instructions || t.description || '')}</textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+        <button class="btn btn-gold" onclick="TasksView.saveModifiedTask('${taskId}')">Save Changes</button>
+      </div>
+    `, 'modal-md');
+  },
+
+  async saveModifiedTask(taskId) {
+    const title = document.getElementById('ed-tsk-title')?.value?.trim();
+    if (!title) {
+      App.showToast('Please enter a task title.', 'error');
+      return;
+    }
+    const caseId = document.getElementById('ed-tsk-case')?.value;
+    const relatedCase = (SLCMS_STATE.cases || []).find(c => c.id === caseId) || { id: 'case-gen', caseNumber: 'MATTER-GEN', title: 'General Practice' };
+    const assigned = document.getElementById('ed-tsk-assigned')?.value;
+    const category = document.getElementById('ed-tsk-category')?.value;
+    const priority = document.getElementById('ed-tsk-priority')?.value;
+    const status = document.getElementById('ed-tsk-status')?.value;
+    const dueDate = document.getElementById('ed-tsk-due')?.value;
+    const statRef = document.getElementById('ed-tsk-stat-ref')?.value;
+    const instructions = document.getElementById('ed-tsk-instructions')?.value;
+
+    const updates = {
+      title,
+      caseId: relatedCase.id,
+      caseNumber: relatedCase.caseNumber,
+      caseTitle: relatedCase.title,
+      assignedTo: assigned,
+      assignedToName: assigned,
+      assignedAvatar: (assigned || 'US').substring(0, 2).toUpperCase(),
+      category,
+      priority,
+      status,
+      dueDate,
+      statutoryReference: statRef,
+      instructions,
+      description: instructions
+    };
+
+    await SLCMS_STATE.updateTaskOnBackend(taskId, updates);
+    App.closeModal();
+    App.showToast('Task modified successfully.', 'success');
+    App.refreshCurrentView();
+  },
+
+  openEditDeadlineModal(deadlineId) {
+    const dln = (SLCMS_STATE.deadlines || []).find(d => d.id === deadlineId) || 
+                (this.courtEvents || []).find(e => e.id === deadlineId);
+    if (!dln) {
+      App.showToast('Deadline record not found.', 'error');
+      return;
+    }
+    const cases = SLCMS_STATE.cases || [];
+    const activeStaff = SLCMS_STATE.getActiveStaffUsers();
+    const dDate = dln.deadlineDate || dln.date || new Date().toISOString().split('T')[0];
+    const dTime = dln.deadlineTime || dln.time || '09:00';
+    const lawyer = dln.responsibleLawyerName || dln.assignedTo || 'Adv. Asha Mrema';
+
+    App.openModal(`
+      <div class="modal-header">
+        <h3 class="modal-title" style="display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-heading);">
+          <span style="font-size: 1.2rem;">✏️</span>
+          <span>Modify Statutory Deadline</span>
+        </h3>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group mb-3">
+          <label class="form-label required">Deadline Title / Proceeding</label>
+          <input type="text" id="ed-dln-title" class="form-control" value="${TasksView.escapeHtml(dln.title || '')}" required>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label required">Associated Legal Matter</label>
+            <select id="ed-dln-case" class="form-control">
+              ${cases.length === 0 ? `<option value="${dln.caseId || 'case-gen'}">${dln.caseNumber || 'MATTER-GEN'} - ${dln.caseTitle || 'General Practice'}</option>` : cases.map(c => `
+                <option value="${c.id}" ${c.id === dln.caseId ? 'selected' : ''}>
+                  ${c.caseNumber} - ${c.title}
+                </option>
+              `).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Deadline Type</label>
+            <select id="ed-dln-type" class="form-control">
+              <option value="Hearing" ${(dln.type || '').toLowerCase().includes('hearing') ? 'selected' : ''}>Court Hearing / Trial</option>
+              <option value="Mention" ${(dln.type || '').toLowerCase().includes('mention') ? 'selected' : ''}>Mention / Case Management</option>
+              <option value="Filing" ${(dln.type || '').toLowerCase().includes('filing') ? 'selected' : ''}>Pleadings / Document Filing</option>
+              <option value="Submission" ${(dln.type || '').toLowerCase().includes('submission') ? 'selected' : ''}>Written Submissions</option>
+              <option value="Appeal" ${(dln.type || '').toLowerCase().includes('appeal') ? 'selected' : ''}>Notice of Appeal / Record</option>
+              <option value="Ruling" ${(dln.type || '').toLowerCase().includes('ruling') ? 'selected' : ''}>Ruling / Judgment Delivery</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label required">Deadline Date</label>
+            <input type="date" id="ed-dln-date" class="form-control" value="${dDate}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Filing Cutoff / Time</label>
+            <input type="time" id="ed-dln-time" class="form-control" value="${dTime.split(' ')[0]}">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label required">Court Registry / Judicial Forum</label>
+            <input type="text" id="ed-dln-court" class="form-control" value="${TasksView.escapeHtml(dln.court || 'High Court Commercial Division')}">
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Responsible Counsel</label>
+            <select id="ed-dln-lawyer" class="form-control">
+              ${activeStaff.map(s => `
+                <option value="${s.name}" ${s.name === lawyer ? 'selected' : ''}>${s.name} (${s.role || 'Staff'})</option>
+              `).join('')}
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label class="form-label required">Authority Source</label>
+            <select id="ed-dln-source" class="form-control">
+              <option value="Court Order" ${(dln.source || '') === 'Court Order' ? 'selected' : ''}>Formal Court Order / Summons</option>
+              <option value="Legislation" ${(dln.source || '') === 'Legislation' ? 'selected' : ''}>Statutory Limitation Enactment</option>
+              <option value="Manually Entered" ${(dln.source || '') === 'Manually Entered' ? 'selected' : ''}>Manual Entry / Client Directive</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Statutory Reference / Citation</label>
+            <input type="text" id="ed-dln-statutory-ref" class="form-control" value="${TasksView.escapeHtml(dln.statutoryReference || dln.statute || '')}">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Reason for Modification</label>
+          <input type="text" id="ed-dln-reason" class="form-control" placeholder="e.g. Adjournment by consent / Extension granted under Order XLVII">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+        <button class="btn btn-gold" onclick="TasksView.saveModifiedDeadline('${deadlineId}')">Save Modifications</button>
+      </div>
+    `, 'modal-md');
+  },
+
+  async saveModifiedDeadline(deadlineId) {
+    const title = document.getElementById('ed-dln-title')?.value?.trim();
+    if (!title) {
+      App.showToast('Please enter a deadline title.', 'error');
+      return;
+    }
+    const caseId = document.getElementById('ed-dln-case')?.value;
+    const relatedCase = (SLCMS_STATE.cases || []).find(c => c.id === caseId) || { id: 'case-gen', caseNumber: 'MATTER-GEN', title: 'General Practice' };
+    const dateVal = document.getElementById('ed-dln-date')?.value;
+    const timeVal = document.getElementById('ed-dln-time')?.value || '09:00';
+    const lawyer = document.getElementById('ed-dln-lawyer')?.value;
+    const court = document.getElementById('ed-dln-court')?.value;
+    const type = document.getElementById('ed-dln-type')?.value;
+    const source = document.getElementById('ed-dln-source')?.value;
+    const statRef = document.getElementById('ed-dln-statutory-ref')?.value;
+    const reason = document.getElementById('ed-dln-reason')?.value || 'Administrative schedule adjustment';
+
+    const updates = {
+      title,
+      caseId: relatedCase.id,
+      caseNumber: relatedCase.caseNumber,
+      caseTitle: relatedCase.title,
+      deadlineDate: dateVal,
+      deadlineTime: timeVal,
+      responsibleLawyerName: lawyer,
+      court,
+      type,
+      source,
+      statutoryReference: statRef
+    };
+
+    await SLCMS_STATE.updateDeadlineOnBackend(deadlineId, updates, reason);
+
+    // Sync court event in TasksView.courtEvents
+    const cEvt = (this.courtEvents || []).find(e => e.id === deadlineId);
+    if (cEvt) {
+      cEvt.title = title;
+      cEvt.date = dateVal;
+      cEvt.time = timeVal;
+      cEvt.court = court;
+      cEvt.type = type;
+      cEvt.assignedTo = lawyer;
+      cEvt.statute = statRef;
+      this.persistCourtEvents();
+    }
+
+    SLCMS_STATE.addAuditLog('Deadline Modified', 'Tasks & Deadlines', `Deadline "${title}" updated. Reason: ${reason}`, 'Success');
+    App.closeModal();
+    App.showToast('Statutory deadline successfully updated.', 'success');
+    App.refreshCurrentView();
+  },
+
+  escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 };
+
 

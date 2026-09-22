@@ -12,6 +12,50 @@ const DashboardView = {
     const pendingTasksCount = SLCMS_STATE.getPendingTasksCount();
     const upcomingDeadlinesCount = SLCMS_STATE.getUpcomingDeadlinesCount();
 
+    const realCases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases)) ? SLCMS_STATE.cases : [];
+    const totalCasesCount = realCases.length;
+    const closedCasesCount = realCases.filter(c => ['won', 'closed', 'resolved', 'concluded'].includes((c.status || '').toLowerCase())).length;
+    const scheduledHearingsCount = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.courtAttendances)) ? SLCMS_STATE.courtAttendances.length : 0;
+
+    const commCount = realCases.filter(c => /commercial|bank|financ|corp/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+    const civilCount = realCases.filter(c => /civil|contract|tort|dispute/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+    const landCount = realCases.filter(c => /land|property|real/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+    const constiCount = realCases.filter(c => /constitut|review|appeal/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+    const crimCount = realCases.filter(c => /crimin|penal/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+
+    const userCategoriesConfig = [
+      { name: 'Commercial & Banking', count: commCount, color: '#6EE7B7' },
+      { name: 'Civil Litigation', count: civilCount, color: '#6366F1' },
+      { name: 'Land & Real Estate', count: landCount, color: '#38BDF8' },
+      { name: 'Constitutional Review', count: constiCount, color: '#A78BFA' },
+      { name: 'Criminal Defense & Appeals', count: crimCount, color: '#10B981' }
+    ];
+
+    const registeredUserCategories = userCategoriesConfig.filter(cat => cat.count > 0);
+
+    let userCategoryChipsHtml = '';
+    if (totalCasesCount === 0 || registeredUserCategories.length === 0) {
+      userCategoryChipsHtml = `
+        <div style="grid-column: 1 / -1; padding: 1.4rem 1.1rem; background: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.16); border-radius: 14px; text-align: center;">
+          <div style="font-size: 1.6rem; margin-bottom: 0.35rem;">📂</div>
+          <div style="font-size: 0.95rem; font-weight: 700; color: #FFFFFF;">0 Matters Registered</div>
+          <div style="font-size: 0.78rem; color: #94A3B8; margin-top: 0.25rem; max-width: 320px; margin-left: auto; margin-right: auto; line-height: 1.4;">
+            No legal matters currently on record. Registered legal cases and litigation files will appear here automatically.
+          </div>
+        </div>
+      `;
+    } else {
+      userCategoryChipsHtml = registeredUserCategories.map((cat, idx) => `
+        <div class="luxury-cat-legend-item">
+          <span class="cat-legend-dot" style="--cat-color: ${cat.color};"></span>
+          <div class="cat-legend-info">
+            <div class="cat-legend-title">${cat.name}</div>
+            <div class="cat-legend-amount" id="user-cat-val-${idx + 1}">${cat.count} ${cat.count === 1 ? 'Case' : 'Cases'}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
     return `
       <div class="animate-fade">
         <!-- 1. TOP WELCOME HERO BANNER -->
@@ -19,7 +63,7 @@ const DashboardView = {
           <div>
             <div class="flex items-center gap-2" style="margin-bottom: 0.35rem;">
               <h1 style="font-size: 1.65rem; color: #FFFFFF; font-weight: 700; margin: 0; font-family: var(--font-heading);">
-                Karibu, ${user.name}
+                Welcome, ${user.name}
               </h1>
               <span class="badge badge-confidential" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">
                 ${user.role}
@@ -217,66 +261,123 @@ const DashboardView = {
           </div>
         </div>
 
-        <!-- 5. CHARTS & RECENT PRACTICE ACTIVITY ROW -->
-        <div class="grid grid-cols-2 gap-6" style="margin-bottom: 1.5rem;">
-          <!-- Left: Single Donut Chart (Case Status Overview) -->
-          <div class="card" style="box-shadow: var(--shadow-xs);">
-            <div class="card-header">
+        <!-- 5. LUXURY PRACTICE & CASEWORK ANALYTICS ROW -->
+        <div class="luxury-analytics-grid luxury-analytics-grid-2col">
+          <!-- CARD 1: CASEWORK FORECAST & VELOCITY (PERIWINKLE LUXURY CARD) -->
+          <div class="luxury-forecast-card">
+            <div class="luxury-forecast-header">
               <div>
-                <h3 class="card-title" style="font-size: 1.05rem;">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
-                    <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
-                    <path d="M22 12A10 10 0 0 0 12 2v10z"/>
-                  </svg>
-                  Case Status Distribution
-                </h3>
-                <p class="card-subtitle">Active legal portfolio breakdown</p>
+                <h3 class="luxury-forecast-title">Casework Forecast</h3>
+                <span class="luxury-forecast-sub">Hearing Velocity &amp; Litigation Milestones</span>
               </div>
-              <span class="badge badge-active">${SLCMS_STATE.cases.length} Total Cases</span>
+              <button class="luxury-filter-btn" onclick="DashboardView.cycleUserForecastPeriod(event)">
+                <span id="user-forecast-filter-label">Monthly</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
             </div>
-            <div class="chart-card-body flex items-center justify-center" style="min-height: 230px;">
-              <canvas id="caseStatusChart" style="max-height: 220px;"></canvas>
+
+            <div class="luxury-forecast-body">
+              <!-- Left Stack: 2 Stat Pills -->
+              <div class="luxury-pill-stack">
+                <div class="luxury-stat-pill luxury-pill-white">
+                  <span class="luxury-pill-label">Active Matters</span>
+                  <div class="luxury-pill-value" id="user-pill-active-val">${activeCasesCount}<span class="luxury-pill-unit">${activeCasesCount === 1 ? 'Case' : 'Cases'}</span></div>
+                  <div class="luxury-pill-trend">${activeCasesCount > 0 ? `<span class="trend-up">&uarr; ${activeCasesCount} active</span> in chambers` : `<span style="color: #64748B;">0 active cases</span>`}</div>
+                </div>
+
+                <div class="luxury-stat-pill luxury-pill-dark">
+                  <span class="luxury-pill-label">Concluded Matters</span>
+                  <div class="luxury-pill-value" id="user-pill-resolved-val">${closedCasesCount}<span class="luxury-pill-unit">${closedCasesCount === 1 ? 'Matter' : 'Matters'}</span></div>
+                  <div class="luxury-pill-trend">${closedCasesCount > 0 ? `<span class="trend-gold">&bull; ${closedCasesCount} closed</span> favorable` : `<span style="color: #94A3B8;">0 closed matters</span>`}</div>
+                </div>
+              </div>
+
+              <!-- Right: Elevated Inner Card with Live Badge and Multi-Bar Chart -->
+              <div class="luxury-chart-inner-card">
+                <div class="luxury-chart-top-bar">
+                  <span class="luxury-live-badge">
+                    <span class="live-pulse-dot"></span> Live
+                  </span>
+                  <div class="luxury-chart-metric-callout">
+                    <div class="luxury-callout-value" id="user-callout-avg-val">${scheduledHearingsCount}<span class="unit">Sessions</span></div>
+                    <div class="luxury-callout-label">Scheduled Court Hearings</div>
+                  </div>
+                </div>
+                <div class="luxury-chart-canvas-wrapper">
+                  <canvas id="userCaseworkForecastChart"></canvas>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Right: Recent Practice Activity & Casework Stream -->
-          <div class="card" style="box-shadow: var(--shadow-xs);">
-            <div class="card-header">
+          <!-- CARD 2: MATTERS BY LEGAL CATEGORY (DARK CHARCOAL LUXURY CARD) -->
+          <div class="luxury-category-card">
+            <div class="luxury-category-header">
               <div>
-                <h3 class="card-title" style="font-size: 1.05rem;">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
-                    <path d="m9 12 2 2 4-4"/>
-                  </svg>
-                  Recent Practice Activity
-                </h3>
-                <p class="card-subtitle">Live litigation updates, filings &amp; matter actions</p>
+                <h3 class="luxury-category-title">Matters by Category</h3>
+                <span class="luxury-category-sub">Practice Distribution &amp; Portfolio Breakdown</span>
               </div>
-              <button class="btn btn-secondary btn-sm" onclick="App.navigate('cases')">View Cases →</button>
+              <button class="luxury-filter-btn luxury-filter-btn-dark" onclick="DashboardView.cycleUserCategoryFilter(event)">
+                <span id="user-category-filter-label">All Areas</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 0.65rem; padding: 0.5rem 0;">
-              ${(SLCMS_STATE.auditLogs || SLCMS_STATE.activityLogs || []).slice(0, 4).map(l => {
-                const isAi = (l.action || '').toLowerCase().includes('ai') || (l.details || '').toLowerCase().includes('draft');
-                const isTask = (l.action || '').toLowerCase().includes('task');
-                const isCase = (l.action || '').toLowerCase().includes('case');
-                const icon = isAi ? '⚖️' : (isTask ? '✅' : (isCase ? '📁' : '🏛️'));
 
-                return `
-                  <div class="dash-audit-timeline-item">
-                    <span style="font-size: 1.1rem; flex-shrink: 0; margin-top: 0.1rem;">${icon}</span>
-                    <div style="flex: 1; min-width: 0;">
-                      <div style="font-size: 0.82rem; color: var(--color-primary); line-height: 1.35;">
-                        <strong>${l.user || l.userName || 'Advocate'}</strong>: ${l.action || l.details}
-                      </div>
-                      <div style="color: var(--color-text-secondary); font-size: 0.72rem; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.4rem;">
-                        <span class="badge" style="background: var(--color-surface-subtle); font-size: 0.65rem; padding: 0.1rem 0.35rem;">${l.module || 'Litigation'}</span>
-                        <span style="font-family: var(--font-mono); color: var(--color-text-muted);">${l.timestamp || 'Today'}</span>
-                      </div>
+            <div class="luxury-category-body">
+              <!-- Left: Segmented Donut with Rounded Ends & Center Callout -->
+              <div class="luxury-donut-wrapper">
+                <canvas id="userPracticeCategoryChart"></canvas>
+                <div class="luxury-donut-center-badge">
+                  <div class="donut-center-val" id="user-donut-total-val">${totalCasesCount}</div>
+                  <div class="donut-center-sub">${totalCasesCount === 0 ? 'NO MATTERS' : (totalCasesCount === 1 ? 'MATTER' : 'TOTAL MATTERS')}</div>
+                </div>
+              </div>
+
+              <!-- Right: Category Legend Chips with Color Dots -->
+              <div class="luxury-category-legend-grid">
+                ${userCategoryChipsHtml}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. STREAMLINED RECENT PRACTICE ACTIVITY STREAM -->
+        <div class="card" style="margin-bottom: 1.5rem; box-shadow: var(--shadow-xs);">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title" style="font-size: 1.05rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
+                  <path d="m9 12 2 2 4-4"/>
+                </svg>
+                Recent Practice Activity &amp; Casework Stream
+              </h3>
+              <p class="card-subtitle">Live litigation updates, filings &amp; matter actions across firm chambers</p>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="App.navigate('cases')">View All Cases &rarr;</button>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.75rem; padding: 0.5rem 0;">
+            ${(SLCMS_STATE.auditLogs || SLCMS_STATE.activityLogs || []).slice(0, 4).map(l => {
+              const isAi = (l.action || '').toLowerCase().includes('ai') || (l.details || '').toLowerCase().includes('draft');
+              const isTask = (l.action || '').toLowerCase().includes('task');
+              const isCase = (l.action || '').toLowerCase().includes('case');
+              const icon = isAi ? '⚖️' : (isTask ? '✅' : (isCase ? '📁' : '🏛️'));
+
+              return `
+                <div class="dash-audit-timeline-item" style="border: 1px solid var(--color-border-subtle); border-radius: 12px; padding: 0.75rem 1rem;">
+                  <span style="font-size: 1.15rem; flex-shrink: 0; margin-top: 0.1rem;">${icon}</span>
+                  <div style="flex: 1; min-width: 0;">
+                    <div style="font-size: 0.82rem; color: var(--color-primary); line-height: 1.35;">
+                      <strong>${l.user || l.userName || 'Advocate'}</strong>: ${l.action || l.details}
+                    </div>
+                    <div style="color: var(--color-text-secondary); font-size: 0.72rem; margin-top: 0.25rem; display: flex; align-items: center; gap: 0.4rem;">
+                      <span class="badge" style="background: var(--color-surface-subtle); font-size: 0.65rem; padding: 0.1rem 0.35rem;">${l.module || 'Litigation'}</span>
+                      <span style="font-family: var(--font-mono); color: var(--color-text-muted);">${l.timestamp || 'Today'}</span>
                     </div>
                   </div>
-                `;
-              }).join('')}
-            </div>
+                </div>
+              `;
+            }).join('')}
           </div>
         </div>
 
@@ -298,7 +399,13 @@ const DashboardView = {
             </div>
 
             ${(() => {
-              const events = (typeof TasksView !== 'undefined' && Array.isArray(TasksView.courtEvents)) ? TasksView.courtEvents : (SLCMS_STATE.courtEvents || []);
+              const hasCases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases) && SLCMS_STATE.cases.length > 0);
+              if (typeof TasksView !== 'undefined' && typeof TasksView.syncCourtEvents === 'function') {
+                TasksView.syncCourtEvents();
+              }
+              const events = hasCases && (typeof TasksView !== 'undefined' && Array.isArray(TasksView.courtEvents)) 
+                ? TasksView.courtEvents 
+                : [];
               if (events.length === 0) {
                 return `
                   <div style="padding: 2rem 1rem; text-align: center; color: var(--color-text-muted);">
@@ -470,24 +577,204 @@ const DashboardView = {
   },
 
   initCharts() {
+    if (typeof Chart === 'undefined') return;
+
+    const realCases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases)) ? SLCMS_STATE.cases : [];
+    const realAttendances = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.courtAttendances)) ? SLCMS_STATE.courtAttendances : [];
+    const realTasks = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.tasks)) ? SLCMS_STATE.tasks : [];
+
+    // 1. User Casework Forecast Multi-Bar Chart (Jan - May)
+    const ctxForecast = document.getElementById('userCaseworkForecastChart');
+    if (ctxForecast) {
+      if (this._userForecastChart) {
+        try { this._userForecastChart.destroy(); } catch (e) {}
+      }
+
+      // Compute monthly distribution (Jan-May)
+      const caseMonthly = [0, 0, 0, 0, 0];
+      realCases.forEach(c => {
+        const d = c.createdAt || c.filingDate || c.date;
+        if (d) {
+          const m = new Date(d).getMonth();
+          if (m >= 0 && m < 5) caseMonthly[m]++;
+        }
+      });
+
+      const attendMonthly = [0, 0, 0, 0, 0];
+      realAttendances.forEach(a => {
+        const d = a.date || a.hearingDate || a.createdAt;
+        if (d) {
+          const m = new Date(d).getMonth();
+          if (m >= 0 && m < 5) attendMonthly[m]++;
+        }
+      });
+
+      const taskMonthly = [0, 0, 0, 0, 0];
+      realTasks.forEach(t => {
+        const d = t.dueDate || t.createdAt;
+        if (d) {
+          const m = new Date(d).getMonth();
+          if (m >= 0 && m < 5) taskMonthly[m]++;
+        }
+      });
+
+      const maxVal = Math.max(5, ...caseMonthly, ...attendMonthly, ...taskMonthly);
+
+      const ctx = ctxForecast.getContext('2d');
+      this._userForecastChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+          datasets: [
+            {
+              label: 'Registered Cases',
+              data: caseMonthly,
+              backgroundColor: '#6366F1', // Pastel Purple / Indigo
+              borderRadius: 6,
+              barPercentage: 0.65,
+              categoryPercentage: 0.65
+            },
+            {
+              label: 'Court Hearings',
+              data: attendMonthly,
+              backgroundColor: '#10B981', // Mint Green
+              borderRadius: 6,
+              barPercentage: 0.65,
+              categoryPercentage: 0.65
+            },
+            {
+              label: 'Practice Tasks',
+              data: taskMonthly,
+              backgroundColor: '#38BDF8', // Sky Blue
+              borderRadius: 6,
+              barPercentage: 0.65,
+              categoryPercentage: 0.65
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 650, easing: 'easeOutQuart' },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.94)',
+              titleFont: { family: 'Inter', size: 12, weight: '700' },
+              bodyFont: { family: 'Inter', size: 11 },
+              padding: 10,
+              cornerRadius: 8,
+              callbacks: {
+                label: function(context) {
+                  return ` ${context.dataset.label}: ${context.raw} records`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false, drawBorder: false },
+              ticks: {
+                color: '#94A3B8',
+                font: { family: 'Inter', size: 11, weight: '600' }
+              }
+            },
+            y: {
+              display: false,
+              grid: { display: false },
+              beginAtZero: true,
+              suggestedMax: maxVal
+            }
+          }
+        }
+      });
+    }
+
+    // 2. Matters by Category Segmented Ring Chart with rounded caps
+    const ctxCategory = document.getElementById('userPracticeCategoryChart');
+    if (ctxCategory) {
+      if (this._userCategoryChart) {
+        try { this._userCategoryChart.destroy(); } catch (e) {}
+      }
+
+      const commCount = realCases.filter(c => /commercial|bank|financ|corp/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+      const civilCount = realCases.filter(c => /civil|contract|tort|dispute/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+      const landCount = realCases.filter(c => /land|property|real/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+      const constiCount = realCases.filter(c => /constitut|review|appeal/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+      const crimCount = realCases.filter(c => /crimin|penal/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+
+      const activeCategories = [
+        { label: 'Commercial & Banking', count: commCount, color: '#6EE7B7' },
+        { label: 'Civil Litigation', count: civilCount, color: '#6366F1' },
+        { label: 'Land & Real Estate', count: landCount, color: '#38BDF8' },
+        { label: 'Constitutional Review', count: constiCount, color: '#A78BFA' },
+        { label: 'Criminal Defense & Appeals', count: crimCount, color: '#10B981' }
+      ].filter(cat => cat.count > 0);
+
+      const hasCases = activeCategories.length > 0;
+      const chartLabels = hasCases ? activeCategories.map(c => c.label) : ['No Matters Registered'];
+      const chartData = hasCases ? activeCategories.map(c => c.count) : [1];
+      const chartColors = hasCases ? activeCategories.map(c => c.color) : ['rgba(255, 255, 255, 0.08)'];
+
+      const ctxCat = ctxCategory.getContext('2d');
+      this._userCategoryChart = new Chart(ctxCat, {
+        type: 'doughnut',
+        data: {
+          labels: chartLabels,
+          datasets: [{
+            data: chartData,
+            backgroundColor: chartColors,
+            borderWidth: 0,
+            hoverOffset: hasCases ? 6 : 0,
+            borderRadius: hasCases ? 8 : 0,
+            spacing: hasCases ? 5 : 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '72%',
+          animation: { duration: 750, easing: 'easeOutQuart' },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              enabled: hasCases,
+              backgroundColor: 'rgba(15, 23, 42, 0.94)',
+              titleFont: { family: 'Inter', size: 12, weight: '700' },
+              bodyFont: { family: 'Inter', size: 11 },
+              padding: 10,
+              cornerRadius: 8,
+              callbacks: {
+                label: function(context) {
+                  return ` ${context.label}: ${context.raw} matters`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 3. Fallback Legacy Status Chart if in DOM
     const ctxStatus = document.getElementById('caseStatusChart');
-    if (ctxStatus && typeof Chart !== 'undefined') {
-      const active = SLCMS_STATE.cases.filter(c => c.status === 'Active').length;
-      const pending = SLCMS_STATE.cases.filter(c => c.status === 'Pending').length;
-      const won = SLCMS_STATE.cases.filter(c => c.status === 'Won').length;
-      const onHold = SLCMS_STATE.cases.filter(c => c.status === 'On Hold').length;
+    if (ctxStatus) {
+      const active = realCases.filter(c => c.status === 'Active').length;
+      const pending = realCases.filter(c => c.status === 'Pending').length;
+      const won = realCases.filter(c => c.status === 'Won').length;
+      const onHold = realCases.filter(c => c.status === 'On Hold').length;
+      const hasStatusData = (active + pending + won + onHold) > 0;
 
       if (this._chartInstance) {
-        this._chartInstance.destroy();
+        try { this._chartInstance.destroy(); } catch (e) {}
       }
 
       this._chartInstance = new Chart(ctxStatus, {
         type: 'doughnut',
         data: {
-          labels: ['Active', 'Pending Review', 'Won / Favorable', 'On Hold'],
+          labels: hasStatusData ? ['Active', 'Pending Review', 'Won / Favorable', 'On Hold'] : ['No Matters Registered'],
           datasets: [{
-            data: [active, pending, won, onHold],
-            backgroundColor: ['#102A43', '#C89B3C', '#16A34A', '#64748B'],
+            data: hasStatusData ? [active, pending, won, onHold] : [1],
+            backgroundColor: hasStatusData ? ['#102A43', '#C89B3C', '#16A34A', '#64748B'] : ['rgba(0,0,0,0.06)'],
             borderWidth: 2,
             borderColor: '#FFFFFF'
           }]
@@ -505,5 +792,44 @@ const DashboardView = {
         }
       });
     }
+  },
+
+  cycleUserForecastPeriod(e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    this._forecastMode = (this._forecastMode || 0) + 1;
+    if (this._forecastMode > 2) this._forecastMode = 0;
+
+    const periods = ['Monthly', 'Quarterly', 'YTD'];
+    const realCases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases)) ? SLCMS_STATE.cases : [];
+    const realAttendances = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.courtAttendances)) ? SLCMS_STATE.courtAttendances : [];
+    const activeCases = realCases.filter(c => (c.status || '').toLowerCase() === 'active').length;
+    const closedCases = realCases.filter(c => ['won', 'closed', 'resolved', 'concluded'].includes((c.status || '').toLowerCase())).length;
+
+    const filterBtn = document.getElementById('user-forecast-filter-label');
+    if (filterBtn) filterBtn.textContent = periods[this._forecastMode];
+
+    const activeEl = document.getElementById('user-pill-active-val');
+    if (activeEl) activeEl.innerHTML = `${activeCases}<span class="luxury-pill-unit">${activeCases === 1 ? 'Case' : 'Cases'}</span>`;
+
+    const resolvedEl = document.getElementById('user-pill-resolved-val');
+    if (resolvedEl) resolvedEl.innerHTML = `${closedCases}<span class="luxury-pill-unit">${closedCases === 1 ? 'Matter' : 'Matters'}</span>`;
+
+    const avgEl = document.getElementById('user-callout-avg-val');
+    if (avgEl) avgEl.innerHTML = `${realAttendances.length}<span class="unit">Sessions</span>`;
+  },
+
+  cycleUserCategoryFilter(e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    this._categoryMode = (this._categoryMode || 0) + 1;
+    if (this._categoryMode > 2) this._categoryMode = 0;
+
+    const modes = ['All Areas', 'Commercial & Civil', 'Public & Appeals'];
+    const realCases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases)) ? SLCMS_STATE.cases : [];
+
+    const filterBtn = document.getElementById('user-category-filter-label');
+    if (filterBtn) filterBtn.textContent = modes[this._categoryMode];
+
+    const totalEl = document.getElementById('user-donut-total-val');
+    if (totalEl) totalEl.textContent = String(realCases.length);
   }
 };

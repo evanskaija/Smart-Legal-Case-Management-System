@@ -354,6 +354,64 @@
   100% { transform: scale(1); opacity: 1; }
 }
 
+/* Real-Time Deadline Countdown Pill */
+.task-countdown-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.16rem 0.55rem;
+  border-radius: 6px;
+  letter-spacing: 0.2px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.task-countdown-pill.due-overdue {
+  background: #FEF2F2;
+  color: #991B1B;
+  border: 1px solid #F87171;
+  font-weight: 800;
+  animation: taskPulseOverdue 1.8s infinite;
+}
+
+.task-countdown-pill.due-today {
+  background: #FEF2F2;
+  color: #DC2626;
+  border: 1px solid #FCA5A5;
+  font-weight: 800;
+}
+
+.task-countdown-pill.due-tomorrow {
+  background: #FFF7ED;
+  color: #C2410C;
+  border: 1px solid #FDBA74;
+  font-weight: 700;
+}
+
+.task-countdown-pill.due-soon {
+  background: #FEFCE8;
+  color: #B45309;
+  border: 1px solid #FDE047;
+  font-weight: 700;
+}
+
+.task-countdown-pill.due-week {
+  background: #F0FDF4;
+  color: #15803D;
+  border: 1px solid #86EFAC;
+  font-weight: 600;
+}
+
+.task-countdown-pill.due-normal {
+  background: #F8FAFC;
+  color: #475569;
+  border: 1px solid #E2E8F0;
+  font-weight: 600;
+}
+
 .task-statutory-verified-tag {
   display: inline-flex;
   align-items: center;
@@ -659,3 +717,34 @@
 }
 [data-theme="dark"] .tasks-empty-headline { color: #F8FAFC; }
 [data-theme="dark"] .tasks-empty-lead { color: #94A3B8; }
+
+[data-theme="dark"] .task-countdown-pill.due-overdue {
+  background: rgba(153, 27, 27, 0.25);
+  color: #FCA5A5;
+  border-color: rgba(248, 113, 113, 0.45);
+}
+[data-theme="dark"] .task-countdown-pill.due-today {
+  background: rgba(220, 38, 38, 0.22);
+  color: #F87171;
+  border-color: rgba(252, 165, 165, 0.4);
+}
+[data-theme="dark"] .task-countdown-pill.due-tomorrow {
+  background: rgba(194, 65, 12, 0.22);
+  color: #FB923C;
+  border-color: rgba(251, 146, 60, 0.35);
+}
+[data-theme="dark"] .task-countdown-pill.due-soon {
+  background: rgba(180, 83, 9, 0.22);
+  color: #FBBF24;
+  border-color: rgba(251, 191, 36, 0.35);
+}
+[data-theme="dark"] .task-countdown-pill.due-week {
+  background: rgba(21, 128, 61, 0.2);
+  color: #4ADE80;
+  border-color: rgba(74, 222, 128, 0.35);
+}
+[data-theme="dark"] .task-countdown-pill.due-normal {
+  background: #08131F;
+  color: #94A3B8;
+  border-color: #1B3550;
+}

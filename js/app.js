@@ -257,14 +257,12 @@ const App = {
           <!-- Topbar Right Actions -->
           <div class="topbar-right">
             <!-- Quick "Add New" Button (Desktop Only) -->
-            ${SLCMS_STATE.currentUser?.role === 'Administrator' ? '' : `
             <button class="btn btn-gold btn-sm topbar-add-new-btn topbar-btn-hide-mobile" onclick="CasesView.openNewCaseModal()" title="New Legal Case">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
               <span>Add New</span>
             </button>
-            `}
 
             <!-- Mobile Search Icon (visible on mobile) -->
             <button class="topbar-icon-btn mobile-search-btn" onclick="App.openGlobalSearch()" title="Search (Ctrl+K)">
@@ -453,7 +451,7 @@ const App = {
       }, 250);
     } else if (openModalParam === 'newCase') {
       setTimeout(() => {
-        if (SLCMS_STATE.currentUser?.role !== 'Administrator' && typeof CasesView !== 'undefined' && CasesView.openNewCaseModal) {
+        if (typeof CasesView !== 'undefined' && CasesView.openNewCaseModal) {
           CasesView.openNewCaseModal();
         }
       }, 250);
@@ -642,9 +640,9 @@ const App = {
     // Check Role Restrictions (Direct URLs cannot bypass role restrictions - Section 13)
     const role = SLCMS_STATE.currentUser?.role;
 
-    // Administrator Separation of Duties Guard (Legal practice casework, documents, communications & AI drafting restricted)
+    // Administrator Separation of Duties Guard (Legal practice documents, communications & AI drafting restricted)
     if (role === 'Administrator') {
-      if (cleanRoute === 'cases' || cleanRoute === 'documents' || cleanRoute === 'ai-drafting' || cleanRoute === 'ai-draft-assistant' || cleanRoute === 'reports' || cleanRoute === 'case-assignments' || cleanRoute === 'admin-assignments' || cleanRoute === 'communications' || cleanRoute === 'case-tracking') {
+      if (cleanRoute === 'documents' || cleanRoute === 'ai-drafting' || cleanRoute === 'ai-draft-assistant' || cleanRoute === 'reports' || cleanRoute === 'case-assignments' || cleanRoute === 'admin-assignments' || cleanRoute === 'communications' || cleanRoute === 'case-tracking') {
         const container = document.getElementById('main-content-container');
         if (container) {
           container.innerHTML = `
@@ -802,6 +800,7 @@ const App = {
       'backup': 'Backup',
       'user-management': 'Users & Security',
       'settings': 'System Settings',
+      'admin-cases-matters': 'Cases and Matters',
       'dashboard': (role === 'Administrator' || role === 'Managing Partner') ? 'Admin Dashboard' : 'Dashboard',
       'cases': 'Cases and Matters',
       'clients': 'Clients Directory',
@@ -860,6 +859,7 @@ const App = {
           if (role === 'Administrator' || role === 'Managing Partner') {
             AdminView.activeTab = 'dashboard';
             container.innerHTML = AdminView.render();
+            setTimeout(() => { if (typeof AdminView.initDashboardCharts === 'function') AdminView.initDashboardCharts(); }, 60);
           } else {
             // Lawyers, Senior Lawyers, Legal Clerks all get their own dashboard
             container.innerHTML = DashboardView.render();
@@ -870,6 +870,7 @@ const App = {
         case 'admin-dashboard':
           AdminView.activeTab = 'dashboard';
           container.innerHTML = AdminView.render();
+          setTimeout(() => { if (typeof AdminView.initDashboardCharts === 'function') AdminView.initDashboardCharts(); }, 60);
           break;
         case 'senior-lawyer/dashboard':
         case 'lawyer/dashboard':
@@ -902,6 +903,10 @@ const App = {
         case 'admin-backup':
         case 'backup':
           AdminView.activeTab = 'backup';
+          container.innerHTML = AdminView.render();
+          break;
+        case 'admin-cases-matters':
+          AdminView.activeTab = 'cases-matters';
           container.innerHTML = AdminView.render();
           break;
         case 'cases':
@@ -1024,7 +1029,7 @@ const App = {
       const qp = new URLSearchParams(window.location.search);
       if (qp.get('action') === 'addcase' || qp.get('modal') === 'addcase') {
         setTimeout(() => {
-          if (SLCMS_STATE.currentUser?.role !== 'Administrator' && typeof CasesView !== 'undefined' && typeof CasesView.openNewCaseModal === 'function') {
+          if (typeof CasesView !== 'undefined' && typeof CasesView.openNewCaseModal === 'function') {
             CasesView.openNewCaseModal();
             if (qp.get('sample') === 'true' || qp.get('autofill') === 'sample') {
               CasesView.loadTanzaniaSampleCase();
@@ -1287,7 +1292,7 @@ const App = {
               <span>🔒</span> Zero-Trust Security &amp; Audit Compliance
             </div>
             <div style="font-size: 0.74rem; color: #15803D; margin-top: 0.2rem;">
-              Authentication: <strong>Argon2id Hash Verified</strong> • Role Access: <strong>${u.role}</strong> • Assigned Matters: <strong>${(u.assignedCaseIds && u.assignedCaseIds.length) || 0} Active Cases</strong>
+              Authentication: <strong>Argon2id Hash Verified</strong> • Role Access: <strong>${u.role}</strong> • Assigned Matters: <strong>${(SLCMS_STATE.cases || []).filter(c => c.assignedLawyerId === u.id || (u.name && c.lawyer && c.lawyer.toLowerCase().includes(u.name.toLowerCase()))).length} Active Cases</strong>
             </div>
           </div>
           <span class="badge" style="background: #DCFCE7; color: #15803D; font-weight: 700; border: 1px solid #86EFAC; font-size: 0.7rem;">
@@ -1637,9 +1642,9 @@ const App = {
     if (!navContainer) return;
 
     // Dynamic database badge values with defaults matching specification
-    const casesAttentionCount = (typeof SLCMS_STATE.getCasesRequiringAttentionCount === 'function' && SLCMS_STATE.getCasesRequiringAttentionCount()) 
+    const casesAttentionCount = (typeof SLCMS_STATE.getCasesRequiringAttentionCount === 'function') 
       ? SLCMS_STATE.getCasesRequiringAttentionCount() 
-      : 3;
+      : 0;
     const judgmentsCount = (typeof SLCMS_STATE.getDistinctJudgmentsCount === 'function' && SLCMS_STATE.getDistinctJudgmentsCount()) 
       ? SLCMS_STATE.getDistinctJudgmentsCount() 
       : 77;
@@ -1650,7 +1655,7 @@ const App = {
     // Nav item helper
     const navItem = (route, icon, label, badge = null, badgeAction = null, badgeType = 'default') => {
       let badgeHtml = '';
-      if (badge !== null && badge !== undefined) {
+      if (badge !== null && badge !== undefined && Number(badge) > 0) {
         if (badgeAction || badgeType === 'danger') {
           badgeHtml = `<span class="nav-badge nav-badge-danger" onclick="event.stopPropagation(); ${badgeAction || `App.navigate('${route}')`}; App.closeMobileSidebar();" title="${badge} cases requiring attention" style="cursor: pointer;">${badge}</span>`;
         } else {
@@ -1661,7 +1666,8 @@ const App = {
         (route === 'dashboard' && this.currentRoute === 'admin-dashboard') ||
         (route === 'admin-users' && this.currentRoute === 'user-management') ||
         (route === 'admin-settings' && this.currentRoute === 'settings') ||
-        (route === 'admin-security-activity' && (this.currentRoute === 'admin-security' || this.currentRoute === 'admin-logs'));
+        (route === 'admin-security-activity' && (this.currentRoute === 'admin-security' || this.currentRoute === 'admin-logs')) ||
+        (route === 'admin-cases-matters' && this.currentRoute === 'admin-cases-matters');
 
       return `
         <a class="nav-item ${isActive ? 'active' : ''}" data-route="${route}" onclick="App.navigate('${route}'); App.closeMobileSidebar();" title="${label}">
@@ -1711,6 +1717,7 @@ const App = {
       html += `
         ${sectionLabel('ADMINISTRATION')}
         ${navItem('admin-users', icons.users, 'Users & Security')}
+        ${navItem('admin-cases-matters', icons.cases, 'Cases and Matters', (SLCMS_STATE.cases || []).length || null, null, 'info')}
         ${navItem('admin-settings', icons.settings, 'System Settings')}
         ${navItem('admin-backup', icons.backup, 'Backup')}
       `;

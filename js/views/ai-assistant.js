@@ -372,6 +372,64 @@ const AIAssistantView = {
     }, 2200);
   },
 
+  // ── Quick Select (simple form) — live-highlight tile without full re-render ──
+  quickSelectDocType(key) {
+    this.selectedDocType = key;
+    // Highlight tiles without full render
+    document.querySelectorAll('.dg-simple-tile').forEach(el => {
+      const isActive = (el.getAttribute('onclick') || '').includes(`'${key}'`);
+      el.style.borderColor = isActive ? 'var(--color-gold)' : 'var(--color-border)';
+      el.style.background = isActive ? 'rgba(200,155,60,0.1)' : 'var(--color-bg)';
+      const span = el.querySelectorAll('span')[1];
+      if (span) {
+        span.style.color = isActive ? 'var(--color-gold)' : 'var(--color-primary)';
+        span.style.fontWeight = isActive ? '700' : '600';
+      }
+    });
+    // Update panel header
+    const hdr = document.querySelector('[data-dg-type-header]');
+    if (hdr) hdr.textContent = this.getDocTypeLabel(key);
+    // Enable generate button
+    const btn = document.querySelector('.dg-simple-generate-btn');
+    if (btn) btn.disabled = false;
+    // Update sticky panel header via re-render of just the right panel header
+    const panelTitle = document.querySelector('[data-dg-panel-title]');
+    if (panelTitle) {
+      panelTitle.innerHTML = `${this.getDocTypeIcon(key)} ${this.escHtml(this.getDocTypeLabel(key))}`;
+    }
+  },
+
+  // ── Quick Generate — skips wizard steps, uses defaults ───────────────────
+  quickGenerate() {
+    if (!this.selectedDocType) { App.showToast && App.showToast('Please select a document type first', 'warning'); return; }
+    const access = this.checkCaseAccess(this.selectedCaseId);
+    if (!access.allowed) { App.showToast && App.showToast('Access denied: ' + access.reason, 'error'); return; }
+    // Default all sources to true
+    Object.keys(this.selectedSources).forEach(k => { this.selectedSources[k] = true; });
+    this.generationState = 'generating';
+    this.subPage = 'new-document'; // stay on page, show spinner
+    App.refreshCurrentView();
+    setTimeout(() => {
+      const c = (SLCMS_STATE.cases || []).find(x => x.id === this.selectedCaseId) || {};
+      this.generatedDoc = this.buildGeneratedDoc(c);
+      this.generationState = 'done';
+      this.subPage = 'preview';
+      if (typeof SLCMS_STATE.addAuditLog === 'function') {
+        SLCMS_STATE.addAuditLog('AI Document Generated', 'Document Generator',
+          `${this.getDocTypeLabel(this.selectedDocType)} generated for case ${c.caseNumber || c.id} by ${(SLCMS_STATE.currentUser||{}).name}`, 'Success');
+      }
+      App.refreshCurrentView();
+    }, 1800);
+  },
+
+  onCaseChange(id) {
+    this.selectedCaseId = id;
+    // Live update client info in the sidebar without full re-render
+    const c = (SLCMS_STATE.cases || []).find(x => x.id === id);
+    const meta = document.querySelector('[data-dg-case-meta]');
+    if (meta && c) meta.textContent = `Client: ${c.client || ''} • ${c.status || ''}`;
+  },
+
   // ── Build Generated Document Object ──────────────────────────────────────
   buildGeneratedDoc(c) {
     const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -682,86 +740,161 @@ const AIAssistantView = {
   /* ==========================================================================
      5-STEP WIZARD — Shell + Steps
      ========================================================================== */
+  /* ── Simple Document Creator (replaces 5-step wizard) ─────────────────── */
   renderNewDocumentWizard() {
-    const steps = [
-      { n: 1, label: 'Select Assigned Case', sub: 'Choose from your authorized cases' },
-      { n: 2, label: 'Select Document Type', sub: 'Reports, letters or internal docs' },
-      { n: 3, label: 'Give Instructions', sub: 'Describe what the AI should prepare' },
-      { n: 4, label: 'Select Information', sub: 'Choose case data sources' },
-      { n: 5, label: 'Generate Draft', sub: 'Review, edit and approve' },
+    // Simple single-form document creator
+    const authCases = this.getAuthorizedCases();
+    const selectedCase = (SLCMS_STATE.cases || []).find(c => c.id === this.selectedCaseId) || authCases[0] || {};
+    if (!this.selectedCaseId && authCases.length > 0) this.selectedCaseId = authCases[0].id;
+
+    const docGroups = [
+      { label: '📊 Reports', types: [
+        { key: 'case_progress_report',    icon: '📈', label: 'Progress Report' },
+        { key: 'court_attendance_report', icon: '🏛️', label: 'Court Attendance' },
+        { key: 'case_summary_report',     icon: '📋', label: 'Case Summary' },
+      ]},
+      { label: '✉️ Client Letters', types: [
+        { key: 'client_update_letter',     icon: '📬', label: 'Case Update' },
+        { key: 'hearing_reminder',         icon: '🔔', label: 'Hearing Reminder' },
+        { key: 'closure_letter',           icon: '📫', label: 'Closure Letter' },
+      ]},
+      { label: '🏛️ Court Letters', types: [
+        { key: 'filing_cover_letter',           icon: '📤', label: 'Filing Cover' },
+        { key: 'court_followup_letter',         icon: '📨', label: 'Registry Follow-up' },
+      ]},
+      { label: '⚡ Demand & Notice', types: [
+        { key: 'demand_letter',    icon: '⚡', label: 'Demand Letter' },
+        { key: 'notice_of_action', icon: '⚠️', label: 'Notice of Action' },
+      ]},
+      { label: '📑 Internal', types: [
+        { key: 'internal_memo',  icon: '📑', label: 'Internal Memo' },
+        { key: 'handover_note',  icon: '🔄', label: 'Handover Note' },
+      ]},
     ];
 
-    const stepHtml = {
-      1: this.renderStep1(),
-      2: this.renderStep2(),
-      3: this.renderStep3(),
-      4: this.renderStep4(),
-      5: this.renderStep5(),
-    }[this.wizardStep] || this.renderStep1();
-
-    const stepperHtml = steps.map(s => {
-      const cls = this.wizardStep > s.n ? 'dg-step-done' : this.wizardStep === s.n ? 'dg-step-active' : '';
-      const numContent = this.wizardStep > s.n ? '✓' : s.n;
-      return `
-        <div class="dg-stepper-item ${cls}">
-          <div class="dg-stepper-num">${numContent}</div>
-          <div class="dg-stepper-text">
-            <div class="dg-stepper-label">${s.label}</div>
-            <div class="dg-stepper-sub">${s.sub}</div>
-          </div>
-        </div>`;
-    }).join('');
-
-    const currentStepObj = steps[this.wizardStep - 1] || steps[0];
-    const progressPercent = Math.round((this.wizardStep / 5) * 100);
+    const isGenerating = this.generationState === 'generating';
 
     return `
-      <!-- Mobile Sub-Navigation Pill Strip -->
+      <!-- Mobile Sub-Navigation -->
       <div class="dg-mobile-subnav">
         <button class="dg-subnav-pill" onclick="AIAssistantView.navigateTo('dashboard')">🏠 Hub</button>
         <button class="dg-subnav-pill dg-subnav-pill-active" onclick="AIAssistantView.startNewDocument()">✦ New Doc</button>
-        <button class="dg-subnav-pill" onclick="AIAssistantView.navigateTo('my-documents')">📂 My Docs (${this.myDocuments.length})</button>
+        <button class="dg-subnav-pill" onclick="AIAssistantView.navigateTo('my-documents')">📂 My Docs</button>
         <button class="dg-subnav-pill" onclick="AIAssistantView.navigateTo('templates')">📋 Templates</button>
       </div>
 
-      <!-- Wizard Header -->
-      <div class="dg-header-row" style="margin-bottom:1rem;">
+      <!-- Header -->
+      <div class="dg-header-row" style="margin-bottom:1.25rem;">
         <div style="display:flex;align-items:center;gap:0.75rem;">
           <button class="dg-preview-back-btn" onclick="AIAssistantView.navigateTo('dashboard')">← Dashboard</button>
           <div>
-            <h2 style="font-size:1.15rem;font-weight:800;margin:0;color:var(--color-primary);">Create Case Document</h2>
-            <div style="font-size:0.75rem;color:var(--color-text-secondary);margin-top:0.1rem;">Step ${this.wizardStep} of 5 &bull; ${this.escHtml(currentStepObj.label)}</div>
+            <h2 style="font-size:1.2rem;font-weight:800;margin:0;color:var(--color-primary);">Create Document</h2>
+            <div style="font-size:0.75rem;color:var(--color-text-secondary);margin-top:0.1rem;">Select a document type, choose your case, and generate</div>
           </div>
         </div>
       </div>
 
-      <!-- Mobile Stepper Progress Bar (Shown on Mobile & Tablet <= 900px) -->
-      <div class="dg-mobile-stepper">
-        <div class="dg-mobile-stepper-top">
-          <span class="dg-mobile-stepper-title">${this.escHtml(currentStepObj.label)}</span>
-          <span class="dg-mobile-stepper-count">Step ${this.wizardStep} of 5 &bull; ${progressPercent}%</span>
-        </div>
-        <div class="dg-mobile-progress-bar">
-          <div class="dg-mobile-progress-fill" style="width:${progressPercent}%;"></div>
-        </div>
-        <div class="dg-mobile-step-pills">
-          ${steps.map(s => `
-            <div class="dg-step-pill ${this.wizardStep > s.n ? 'dg-pill-done' : this.wizardStep === s.n ? 'dg-pill-active' : ''}"
-                 onclick="${s.n < this.wizardStep ? `AIAssistantView.goToStep(${s.n})` : ''}">
-              ${this.wizardStep > s.n ? '✓' : s.n}
-            </div>`).join('')}
-        </div>
-      </div>
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:1.5rem;align-items:start;">
 
-      <!-- Wizard Shell -->
-      <div class="dg-wizard-shell">
-        <!-- Stepper Sidebar (Desktop) -->
-        <div class="dg-stepper-sidebar">
-          <div class="dg-stepper-title">Progress</div>
-          <div class="dg-stepper-list">${stepperHtml}</div>
+        <!-- LEFT: Document Type Picker -->
+        <div>
+          ${docGroups.map(g => `
+            <div style="margin-bottom:1.25rem;">
+              <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-text-secondary);margin-bottom:0.6rem;padding-left:0.1rem;">${g.label}</div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem;">
+                ${g.types.map(t => {
+                  const isActive = this.selectedDocType === t.key;
+                  return `<button
+                    class="dg-simple-tile${isActive ? ' dg-simple-tile-active' : ''}"
+                    onclick="AIAssistantView.quickSelectDocType('${t.key}')"
+                    style="display:flex;align-items:center;gap:0.55rem;padding:0.65rem 0.85rem;border-radius:10px;border:1.5px solid ${isActive ? 'var(--color-gold)' : 'var(--color-border)'};background:${isActive ? 'rgba(200,155,60,0.1)' : 'var(--color-bg)'};cursor:pointer;text-align:left;transition:all 0.15s;width:100%;">
+                    <span style="font-size:1.1rem;flex-shrink:0;">${t.icon}</span>
+                    <span style="font-size:0.8rem;font-weight:${isActive ? '700' : '600'};color:${isActive ? 'var(--color-gold)' : 'var(--color-primary)'};line-height:1.2;">${t.label}</span>
+                  </button>`;
+                }).join('')}
+              </div>
+            </div>
+          `).join('')}
         </div>
-        <!-- Step Content -->
-        <div class="dg-wizard-content">${stepHtml}</div>
+
+        <!-- RIGHT: Case + Options + Generate -->
+        <div style="position:sticky;top:1rem;">
+          <div style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+
+            <!-- Selected Type Header -->
+            <div style="background:linear-gradient(135deg,var(--color-primary),#1a3a5c);padding:1.1rem 1.25rem;">
+              <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.6);margin-bottom:0.3rem;">Document Type</div>
+              <div style="font-size:1rem;font-weight:800;color:#fff;">${this.selectedDocType ? `${this.getDocTypeIcon(this.selectedDocType)} ${this.escHtml(this.getDocTypeLabel(this.selectedDocType))}` : '<span style="color:rgba(255,255,255,0.4);font-weight:400;font-size:0.88rem;">← Select a type</span>'}</div>
+            </div>
+
+            <div style="padding:1.1rem 1.25rem;display:flex;flex-direction:column;gap:1rem;">
+
+              <!-- Case Selector -->
+              <div>
+                <label style="display:block;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-secondary);margin-bottom:0.4rem;">Case Matter</label>
+                ${authCases.length === 0 ? `
+                  <div style="padding:0.75rem;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-size:0.8rem;color:#DC2626;">
+                    ⚠️ No cases assigned to your account
+                  </div>` : `
+                  <select class="dg-case-select" style="width:100%;font-size:0.84rem;" onchange="AIAssistantView.onCaseChange(this.value)">
+                    ${authCases.map(c => `<option value="${c.id}" ${this.selectedCaseId === c.id ? 'selected' : ''}>${this.escHtml(c.caseNumber)} — ${this.escHtml(c.title)}</option>`).join('')}
+                  </select>
+                  ${selectedCase.id ? `<div style="margin-top:0.4rem;font-size:0.74rem;color:var(--color-text-muted);">Client: <strong>${this.escHtml(selectedCase.client || '')}</strong> &bull; ${this.escHtml(selectedCase.status || '')}</div>` : ''}
+                `}
+              </div>
+
+              <!-- Tone + Language -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem;">
+                <div>
+                  <label style="display:block;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-secondary);margin-bottom:0.3rem;">Tone</label>
+                  <select class="dg-opts-select" style="width:100%;font-size:0.8rem;" onchange="AIAssistantView.docOptions.tone = this.value">
+                    <option value="formal" ${this.docOptions.tone==='formal'?'selected':''}>Formal Legal</option>
+                    <option value="professional" ${this.docOptions.tone==='professional'?'selected':''}>Professional</option>
+                    <option value="client" ${this.docOptions.tone==='client'?'selected':''}>Client-Friendly</option>
+                    <option value="urgent" ${this.docOptions.tone==='urgent'?'selected':''}>Urgent</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display:block;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-secondary);margin-bottom:0.3rem;">Language</label>
+                  <select class="dg-opts-select" style="width:100%;font-size:0.8rem;" onchange="AIAssistantView.docOptions.language = this.value">
+                    <option value="en" ${this.docOptions.language==='en'?'selected':''}>English</option>
+                    <option value="sw" ${this.docOptions.language==='sw'?'selected':''}>Kiswahili</option>
+                    <option value="en-sw" ${this.docOptions.language==='en-sw'?'selected':''}>Bilingual</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Optional Note -->
+              <div>
+                <label style="display:block;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-secondary);margin-bottom:0.3rem;">Instructions <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+                <textarea class="dg-opts-select" rows="3" style="width:100%;font-size:0.82rem;resize:vertical;font-family:inherit;padding:0.55rem 0.7rem;border-radius:8px;"
+                  placeholder="Any specific instructions for the AI…"
+                  oninput="AIAssistantView.docInstructions = this.value">${this.escHtml(this.docInstructions)}</textarea>
+              </div>
+
+              <!-- Generate Button -->
+              ${isGenerating ? `
+                <div style="text-align:center;padding:1.25rem;background:var(--color-surface-subtle);border-radius:10px;">
+                  <div style="display:flex;justify-content:center;gap:6px;margin-bottom:0.65rem;">
+                    <div style="width:8px;height:8px;border-radius:50%;background:var(--color-gold);animation:dgDot 1.2s ease-in-out infinite;"></div>
+                    <div style="width:8px;height:8px;border-radius:50%;background:var(--color-gold);animation:dgDot 1.2s ease-in-out 0.2s infinite;"></div>
+                    <div style="width:8px;height:8px;border-radius:50%;background:var(--color-gold);animation:dgDot 1.2s ease-in-out 0.4s infinite;"></div>
+                  </div>
+                  <div style="font-size:0.82rem;color:var(--color-text-secondary);">Generating document…</div>
+                </div>` : `
+                <button class="dg-btn-next" style="width:100%;padding:0.85rem;font-size:0.92rem;border-radius:12px;"
+                  onclick="AIAssistantView.quickGenerate()"
+                  ${!this.selectedDocType || authCases.length === 0 ? 'disabled' : ''}>
+                  ✦ Generate Document
+                </button>
+              `}
+
+              <div style="font-size:0.72rem;color:var(--color-text-muted);text-align:center;line-height:1.4;">
+                ⚠️ AI draft — professional review required before use
+              </div>
+            </div>
+          </div>
+        </div>
       </div>`;
   },
 

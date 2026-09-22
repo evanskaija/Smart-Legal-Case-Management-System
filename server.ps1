@@ -156,6 +156,12 @@ function Save-DbDeadlines($deadlinesList) {
     [System.IO.File]::WriteAllText($deadlinesFile, $json, [System.Text.Encoding]::UTF8)
 }
 
+function Set-PSProp($targetObj, $name, $value) {
+    if ($null -ne $value) {
+        $targetObj | Add-Member -NotePropertyName $name -NotePropertyValue $value -Force
+    }
+}
+
 function Get-DbTaskHistory {
     if (Test-Path $taskHistoryFile) {
         $raw = [System.IO.File]::ReadAllText($taskHistoryFile, [System.Text.Encoding]::UTF8)
@@ -1006,75 +1012,155 @@ try {
         }
 
         # -------------------------------------------------------------
-        # 7b. GET /api/admin/security-activity
+        # 7b. GET / POST /api/admin/security-activity
         # -------------------------------------------------------------
-        if ($localPath -eq '/api/admin/security-activity' -and $req.HttpMethod -eq 'GET') {
-            $events = @(Get-DbEvents)
-            $users = @(Get-DbUsers)
-
-            $logs = @()
-            foreach ($e in $events) {
-                $u = $users | Where-Object { $_.id -eq $e.userId -or $_.staffId -eq $e.userId } | Select-Object -First 1
-                $userName = if ($u) { $u.name } else { if ($e.userId -eq 'unknown') { 'Unknown Identity' } else { $e.userId } }
-                $userRole = if ($u) { $u.role } else { 'External / System' }
-                $staffId = if ($u) { $u.staffId } else { 'N/A' }
-
-                $actionName = switch ($e.eventType) {
-                    'LOGIN_SUCCESS' { 'Login Succeeded' }
-                    'LOGIN_FAILED'  { 'Login Failed' }
-                    'TEMPORARY_LOCK'{ 'Account Temporarily Locked' }
-                    'ADMIN_LOCK'    { 'Account Manually Locked' }
-                    'ADMIN_UNLOCK'  { 'Account Unlocked' }
-                    'PASSWORD_RESET'{ 'Temporary Password Issued' }
-                    default { $e.eventType }
-                }
-
-                $resBadge = switch ($e.eventType) {
-                    'LOGIN_SUCCESS' { 'Success' }
-                    'ADMIN_UNLOCK'  { 'Success' }
-                    'PASSWORD_RESET'{ 'Success' }
-                    'TEMPORARY_LOCK'{ 'Locked' }
-                    'ADMIN_LOCK'    { 'Locked' }
-                    'LOGIN_FAILED'  { 'Failed' }
-                    default { 'Success' }
-                }
-
-                $ts = $e.eventTime
+        if ($localPath -eq '/api/admin/security-activity') {
+            if ($req.HttpMethod -eq 'POST') {
+                $reader = [System.IO.StreamReader]::new($req.InputStream, [System.Text.Encoding]::UTF8)
+                $bodyStr = $reader.ReadToEnd()
                 try {
-                    $parsedDate = [DateTime]::Parse($ts)
-                    $ts = $parsedDate.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")
-                } catch {}
+                    $item = $bodyStr | ConvertFrom-Json
+                    $events = @(Get-DbEvents)
+                    
+                    $eventId = if ($item.id) { $item.id } else { "evt-" + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + "-" + (Get-Random -Minimum 1000 -Maximum 9999) }
+                    $eventTime = if ($item.eventTime) { $item.eventTime } else { [DateTime]::UtcNow.ToString("o") }
+                    $ts = if ($item.timestamp) { $item.timestamp } else { [DateTime]::UtcNow.ToString("yyyy-MM-dd HH:mm:ss") }
+                    $mod = if ($item.module) { $item.module } else { "Security Activity" }
+                    $act = if ($item.action) { $item.action } else { if ($item.eventType) { $item.eventType } else { "Activity Logged" } }
+                    $rec = if ($item.record) { $item.record } else { if ($item.description) { $item.description } else { "" } }
+                    $stat = if ($item.status) { $item.status } else { if ($item.result) { $item.result } else { "Success" } }
+                    $usr = if ($item.user) { $item.user } else { if ($item.userName) { $item.userName } else { "System Administrator" } }
+                    $uId = if ($item.userId) { $item.userId } else { "usr-001" }
+                    $sId = if ($item.staffId) { $item.staffId } else { "ADM-0001" }
+                    $rol = if ($item.role) { $item.role } else { "Administrator" }
+                    $clientIp = if ($item.ip) { $item.ip } else { if ($item.ipAddress) { $item.ipAddress } else { $req.RemoteEndPoint.Address.ToString() } }
+                    $secLvl = if ($item.securityLevel) { $item.securityLevel } else { if ($stat -eq 'Locked') { 'Critical' } elseif ($stat -eq 'Failed' -or $stat -eq 'Blocked') { 'High' } else { 'Standard' } }
 
-                $logs += [PSCustomObject]@{
-                    id            = $e.id
-                    timestamp     = $ts
-                    user          = $userName
-                    staffId       = $staffId
-                    role          = $userRole
-                    module        = 'Security Activity'
-                    action        = $actionName
-                    record        = $e.description
-                    result        = $resBadge
-                    status        = $resBadge
-                    ip            = $e.ipAddress
-                    securityLevel = if ($resBadge -eq 'Locked') { 'Critical' } elseif ($resBadge -eq 'Failed') { 'High' } else { 'Standard' }
+                    $newEvent = [PSCustomObject]@{
+                        id            = $eventId
+                        userId        = $uId
+                        userName      = $usr
+                        staffId       = $sId
+                        role          = $rol
+                        module        = $mod
+                        eventType     = $act
+                        action        = $act
+                        result        = $stat
+                        status        = $stat
+                        description   = $rec
+                        record        = $rec
+                        eventTime     = $eventTime
+                        timestamp     = $ts
+                        ipAddress     = $clientIp
+                        securityLevel = $secLvl
+                        resolved      = $false
+                        resolvedAt    = $null
+                        resolvedBy    = $null
+                    }
+
+                    # Deduplicate by id if already exists, otherwise prepend
+                    $existingIds = $events | ForEach-Object { $_.id }
+                    if (-not ($existingIds -contains $eventId)) {
+                        $events = @($newEvent) + $events
+                        Save-DbEvents $events
+                    }
+
+                    $res.ContentType = 'application/json; charset=utf-8'
+                    $respBytes = [System.Text.Encoding]::UTF8.GetBytes('{"success":true,"id":"' + $eventId + '"}')
+                    $res.OutputStream.Write($respBytes, 0, $respBytes.Length)
+                    $res.Close()
+                    continue
+                } catch {
+                    $res.StatusCode = 400
+                    $res.ContentType = 'application/json; charset=utf-8'
+                    $respBytes = [System.Text.Encoding]::UTF8.GetBytes('{"error":"Invalid payload"}')
+                    $res.OutputStream.Write($respBytes, 0, $respBytes.Length)
+                    $res.Close()
+                    continue
                 }
             }
 
-            [Array]::Reverse($logs)
+            if ($req.HttpMethod -eq 'GET') {
+                $events = @(Get-DbEvents)
+                $users = @(Get-DbUsers)
 
-            $res.ContentType = 'application/json; charset=utf-8'
-            $outJson = $logs | ConvertTo-Json -Depth 5
-            if ($logs.Count -eq 1 -and -not $outJson.Trim().StartsWith('[')) {
-                $outJson = "[$outJson]"
+                $logs = @()
+                foreach ($e in $events) {
+                    $u = $users | Where-Object { $_.id -eq $e.userId -or $_.staffId -eq $e.userId } | Select-Object -First 1
+                    $userName = if ($e.userName) { $e.userName } elseif ($e.user) { $e.user } elseif ($u) { $u.name } elseif ($e.userId -eq 'unknown') { 'Unknown Identity' } else { $e.userId }
+                    $userRole = if ($e.role) { $e.role } elseif ($u) { $u.role } else { 'External / System' }
+                    $staffId = if ($e.staffId) { $e.staffId } elseif ($u) { $u.staffId } else { 'N/A' }
+
+                    $actionName = if ($e.action) { $e.action } else {
+                        switch ($e.eventType) {
+                            'LOGIN_SUCCESS' { 'Login Succeeded' }
+                            'LOGIN_FAILED'  { 'Login Failed' }
+                            'TEMPORARY_LOCK'{ 'Account Temporarily Locked' }
+                            'ADMIN_LOCK'    { 'Account Manually Locked' }
+                            'ADMIN_UNLOCK'  { 'Account Unlocked' }
+                            'PASSWORD_RESET'{ 'Temporary Password Issued' }
+                            default { $e.eventType }
+                        }
+                    }
+
+                    $resBadge = if ($e.status) { $e.status } elseif ($e.result) { $e.result } else {
+                        switch ($e.eventType) {
+                            'LOGIN_SUCCESS' { 'Success' }
+                            'ADMIN_UNLOCK'  { 'Success' }
+                            'PASSWORD_RESET'{ 'Success' }
+                            'TEMPORARY_LOCK'{ 'Locked' }
+                            'ADMIN_LOCK'    { 'Locked' }
+                            'LOGIN_FAILED'  { 'Failed' }
+                            default { 'Success' }
+                        }
+                    }
+
+                    $modName = if ($e.module) { $e.module } else { 'Security Activity' }
+                    $recordDesc = if ($e.record) { $e.record } elseif ($e.description) { $e.description } else { '' }
+                    $ipAddr = if ($e.ip) { $e.ip } elseif ($e.ipAddress) { $e.ipAddress } else { '127.0.0.1' }
+
+                    $ts = if ($e.timestamp) { $e.timestamp } else { $e.eventTime }
+                    try {
+                        if ($ts -match 'T') {
+                            $parsedDate = [DateTime]::Parse($ts)
+                            $ts = $parsedDate.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                        }
+                    } catch {}
+
+                    $secLvl = if ($e.securityLevel) { $e.securityLevel } else {
+                        if ($resBadge -eq 'Locked') { 'Critical' } elseif ($resBadge -eq 'Failed' -or $resBadge -eq 'Blocked') { 'High' } else { 'Standard' }
+                    }
+
+                    $logs += [PSCustomObject]@{
+                        id            = $e.id
+                        timestamp     = $ts
+                        eventTime     = $e.eventTime
+                        user          = $userName
+                        staffId       = $staffId
+                        role          = $userRole
+                        module        = $modName
+                        action        = $actionName
+                        record        = $recordDesc
+                        result        = $resBadge
+                        status        = $resBadge
+                        ip            = $ipAddr
+                        securityLevel = $secLvl
+                    }
+                }
+
+                $res.ContentType = 'application/json; charset=utf-8'
+                $outJson = $logs | ConvertTo-Json -Depth 5
+                if ($logs.Count -eq 1 -and -not $outJson.Trim().StartsWith('[')) {
+                    $outJson = "[$outJson]"
+                }
+                if ($logs.Count -eq 0) {
+                    $outJson = "[]"
+                }
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes($outJson)
+                $res.OutputStream.Write($bytes, 0, $bytes.Length)
+                $res.Close()
+                continue
             }
-            if ($logs.Count -eq 0) {
-                $outJson = "[]"
-            }
-            $bytes = [System.Text.Encoding]::UTF8.GetBytes($outJson)
-            $res.OutputStream.Write($bytes, 0, $bytes.Length)
-            $res.Close()
-            continue
         }
 
         # -------------------------------------------------------------
@@ -1447,7 +1533,8 @@ try {
         if ($localPath -eq '/api/tasks' -and $req.HttpMethod -eq 'GET') {
             $res.ContentType = 'application/json; charset=utf-8'
             $tasks = @(Get-DbTasks)
-            $bytes = [System.Text.Encoding]::UTF8.GetBytes(($tasks | ConvertTo-Json -Depth 8))
+            $json = if ($tasks.Count -gt 0) { ($tasks | ConvertTo-Json -Depth 8) } else { "[]" }
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
             $res.OutputStream.Write($bytes, 0, $bytes.Length)
             $res.Close()
             continue
@@ -1652,8 +1739,64 @@ try {
             $taskId = $matches[1]
             $histories = @(Get-DbTaskHistory)
             $taskHist = @($histories | Where-Object { $_.taskId -eq $taskId })
+            $json = if ($taskHist.Count -gt 0) { ($taskHist | ConvertTo-Json -Depth 8) } else { "[]" }
             $res.ContentType = 'application/json; charset=utf-8'
-            $bytes = [System.Text.Encoding]::UTF8.GetBytes(($taskHist | ConvertTo-Json -Depth 8))
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
+            $res.OutputStream.Write($bytes, 0, $bytes.Length)
+            $res.Close()
+            continue
+        }
+
+        # PUT /api/tasks/{id} (Modify Task)
+        if ($localPath -match '^/api/tasks/([^/]+)$' -and $req.HttpMethod -eq 'PUT') {
+            $taskId = $matches[1]
+            $reader = [System.IO.StreamReader]::new($req.InputStream, [System.Text.Encoding]::UTF8)
+            $body = $reader.ReadToEnd()
+            $reader.Dispose()
+            $payload = $body | ConvertFrom-Json
+
+            $tasks = @(Get-DbTasks)
+            $targetTask = $tasks | Where-Object { $_.id -eq $taskId } | Select-Object -First 1
+
+            if ($targetTask) {
+                Set-PSProp $targetTask "title" $payload.title
+                Set-PSProp $targetTask "caseId" $payload.caseId
+                Set-PSProp $targetTask "caseNumber" $payload.caseNumber
+                Set-PSProp $targetTask "caseTitle" $payload.caseTitle
+                Set-PSProp $targetTask "assignedTo" $payload.assignedTo
+                Set-PSProp $targetTask "assignedToName" $payload.assignedToName
+                Set-PSProp $targetTask "priority" $payload.priority
+                Set-PSProp $targetTask "dueDate" $payload.dueDate
+                Set-PSProp $targetTask "dueTime" $payload.dueTime
+                Set-PSProp $targetTask "status" $payload.status
+                Set-PSProp $targetTask "instructions" $payload.instructions
+                Set-PSProp $targetTask "category" $payload.category
+                Set-PSProp $targetTask "statutoryReference" $payload.statutoryReference
+                Set-PSProp $targetTask "updatedAt" ([DateTime]::UtcNow.ToString("o"))
+
+                Save-DbTasks $tasks
+
+                $res.ContentType = 'application/json; charset=utf-8'
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes(($targetTask | ConvertTo-Json -Depth 8))
+                $res.OutputStream.Write($bytes, 0, $bytes.Length)
+            } else {
+                $res.StatusCode = 404
+                $res.ContentType = 'application/json; charset=utf-8'
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes('{"error":"Task not found"}')
+                $res.OutputStream.Write($bytes, 0, $bytes.Length)
+            }
+            $res.Close()
+            continue
+        }
+
+        # DELETE /api/tasks/{id}
+        if ($localPath -match '^/api/tasks/([^/]+)$' -and $req.HttpMethod -eq 'DELETE') {
+            $taskId = $matches[1]
+            $tasks = @(Get-DbTasks)
+            $newTasks = @($tasks | Where-Object { $_.id -ne $taskId })
+            Save-DbTasks $newTasks
+            $res.ContentType = 'application/json; charset=utf-8'
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes('{"success":true,"message":"Task deleted"}')
             $res.OutputStream.Write($bytes, 0, $bytes.Length)
             $res.Close()
             continue
@@ -1663,7 +1806,8 @@ try {
         if ($localPath -eq '/api/deadlines' -and $req.HttpMethod -eq 'GET') {
             $res.ContentType = 'application/json; charset=utf-8'
             $deadlines = @(Get-DbDeadlines)
-            $bytes = [System.Text.Encoding]::UTF8.GetBytes(($deadlines | ConvertTo-Json -Depth 8))
+            $json = if ($deadlines.Count -gt 0) { ($deadlines | ConvertTo-Json -Depth 8) } else { "[]" }
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
             $res.OutputStream.Write($bytes, 0, $bytes.Length)
             $res.Close()
             continue
@@ -1705,18 +1849,18 @@ try {
             $targetDln = $deadlines | Where-Object { $_.id -eq $dlnId } | Select-Object -First 1
 
             if ($targetDln) {
-                $targetDln.previousDeadlineAt = $targetDln.deadlineAt
-                if ($payload.title) { $targetDln.title = $payload.title }
-                if ($payload.type) { $targetDln.type = $payload.type }
-                if ($payload.deadlineAt) { $targetDln.deadlineAt = $payload.deadlineAt }
-                if ($payload.deadlineDateString) { $targetDln.deadlineDateString = $payload.deadlineDateString }
-                if ($payload.court) { $targetDln.court = $payload.court }
-                if ($payload.registry) { $targetDln.registry = $payload.registry }
-                if ($payload.responsibleLawyerId) { $targetDln.responsibleLawyerId = $payload.responsibleLawyerId }
-                if ($payload.responsibleLawyerName) { $targetDln.responsibleLawyerName = $payload.responsibleLawyerName }
-                if ($payload.source) { $targetDln.source = $payload.source }
-                if ($payload.changeReason) { $targetDln.changeReason = $payload.changeReason }
-                $targetDln.updatedAt = [DateTime]::UtcNow.ToString("o")
+                Set-PSProp $targetDln "previousDeadlineAt" $targetDln.deadlineAt
+                Set-PSProp $targetDln "title" $payload.title
+                Set-PSProp $targetDln "type" $payload.type
+                Set-PSProp $targetDln "deadlineAt" $payload.deadlineAt
+                Set-PSProp $targetDln "deadlineDateString" $payload.deadlineDateString
+                Set-PSProp $targetDln "court" $payload.court
+                Set-PSProp $targetDln "registry" $payload.registry
+                Set-PSProp $targetDln "responsibleLawyerId" $payload.responsibleLawyerId
+                Set-PSProp $targetDln "responsibleLawyerName" $payload.responsibleLawyerName
+                Set-PSProp $targetDln "source" $payload.source
+                Set-PSProp $targetDln "changeReason" $payload.changeReason
+                Set-PSProp $targetDln "updatedAt" ([DateTime]::UtcNow.ToString("o"))
 
                 Save-DbDeadlines $deadlines
 

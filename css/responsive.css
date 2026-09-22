@@ -2308,19 +2308,31 @@ textarea.form-control {
 
   .auth-mobile-brand-header {
     display: flex !important;
+    flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 0.75rem !important;
-    margin-bottom: 1.25rem !important;
+    gap: 0.55rem !important;
+    margin-bottom: 1.35rem !important;
+    text-align: center !important;
   }
 
   .auth-white-card {
     width: 100% !important;
     max-width: 440px !important;
-    padding: 1.75rem 1.25rem !important;
-    border-radius: 18px !important;
+    padding: 2rem 1.6rem 1.6rem 1.6rem !important;
+    border-radius: 20px !important;
     margin: 0 auto !important;
     box-sizing: border-box !important;
+  }
+
+  .auth-card-title {
+    font-size: 1.65rem !important;
+    font-weight: 800 !important;
+  }
+
+  .auth-card-subtitle {
+    font-size: 0.84rem !important;
+    margin-bottom: 1.15rem !important;
   }
 
   /* Theme Toggle Pill: mobile-friendly size adjustment on top of white form side */
@@ -2370,17 +2382,17 @@ textarea.form-control {
   }
 
   .auth-white-card {
-    padding: 1.35rem 0.85rem !important;
-    border-radius: 16px !important;
+    padding: 1.65rem 1.15rem 1.35rem 1.15rem !important;
+    border-radius: 18px !important;
   }
 
   .auth-card-title {
-    font-size: 1.35rem !important;
+    font-size: 1.45rem !important;
   }
 
   .auth-card-subtitle {
-    font-size: 0.78rem !important;
-    margin-bottom: 1.1rem !important;
+    font-size: 0.8rem !important;
+    margin-bottom: 1rem !important;
   }
 
   .auth-toggle-tabs {
@@ -2404,4 +2416,47 @@ textarea.form-control {
   }
 }
 
+/* ==========================================================================
+   RESPONSIVE LUXURY ANALYTICS CARDS & DOCK
+   ========================================================================== */
+@media (max-width: 991px) {
+  .luxury-analytics-grid-2col {
+    grid-template-columns: 1fr !important;
+    gap: 1.25rem !important;
+  }
 
+  .luxury-forecast-card,
+  .luxury-category-card {
+    padding: 1.35rem 1.25rem 1.5rem 1.25rem !important;
+    border-radius: 20px !important;
+  }
+
+  .adm-compact-dock-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.25rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .luxury-forecast-body {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  .luxury-category-body {
+    grid-template-columns: 1fr !important;
+    gap: 1.25rem !important;
+  }
+
+  .luxury-pill-value {
+    font-size: 1.75rem !important;
+  }
+
+  .luxury-chart-inner-card {
+    padding: 1rem 1.15rem !important;
+  }
+
+  .adm-dock-actions-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}

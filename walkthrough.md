@@ -642,3 +642,51 @@ Run using headless Chrome on the live system (`http://127.0.0.1:8080/scratch/tes
   - `Case about deceased appellant` &rarr; `[PASS]` (`tz-j-065`, Benedicto Nicodemus)
   - `Case concerning cross-examination` &rarr; `[PASS]` (`tz-j-070`, Peter Thomas Bocco v Republic)
 - **Mobile Drawer Preset Prompts**: All 4 preset prompt pills (`about cases like criminal`, `Find High Court & Appellate judgments (2020 - 2026)`, `Summarize Attilio v Mbowe [1969] HCD 284`, `Show facts of Abdallah Salum Muwinge vs Halima Ismail`) route accurately with verified TanzLII citations and structured legal formatting.
+
+---
+
+## 5. Tasks & Deadlines: Admin Governance & Modification Module
+
+### 5.1 Problem Statement & Root Cause
+1. **Rendering Notice Error**: In the Tasks & Deadlines calendar/agenda view, a `TypeError: Cannot read properties of undefined (reading 'includes')` crashed the view inside `app.js` error boundary whenever newly added court events or statutory deadlines did not have an explicit `.status` property (`evt.status.includes('Confirmed')`).
+2. **Missing Edit/Modify Functionality**: Both tasks and court statutory deadlines previously only supported creation and status transitions or reassignments. There was no capability for lawyers or administrators to modify existing task titles, priorities, due dates, court venues, statutory references, or instructions.
+3. **Lack of Admin Governance**: The Administration module (`#admin`) had no direct oversight or management capabilities for firm tasks and statutory court deadlines.
+
+### 5.2 Solutions Implemented
+
+#### 1. Resilient Error-Proofing (`js/views/tasks.js`)
+- Replaced fragile un-guarded calls like `evt.status.includes('Confirmed')` with safe boolean checks: `Boolean(evt.status && evt.status.includes('Confirmed'))`.
+- Protected time string splitting: `(evt.time || '09:00 AM').split(' ')[1]`.
+- Protected assignee name splitting: `((evt.assignedTo || 'Advocate') + '').split(' ')[0]`.
+- Guarded `openEventDetails(eventId)` against undefined objects.
+
+#### 2. Interactive Task & Deadline Modification Modals (`js/views/tasks.js`)
+- **Modify Task Modal (`openEditTaskModal(taskId)`)**: Allows modifying Title, Associated Matter, Task Category, Priority (`Urgent`, `High`, `Medium`, `Low`), Lifecycle Status, Assigned Advocate/Staff, Due Date, Due Time, Statutory Authority, and Detailed Instructions.
+- **Modify Court Deadline Modal (`openEditDeadlineModal(deadlineId)`)**: Allows modifying Deadline Title, Associated Case, Proceeding Type, Court Registry / Division, Due Date, Cutoff Time, Responsible Lawyer, Statutory Authority citation, and Reason for Rescheduling/Modification.
+- **Direct Edit Triggers**: Added `✏️ Edit` buttons on all Kanban task cards, List view rows, and Calendar / Agenda table actions for authorized personnel.
+
+#### 3. Administrative Tasks & Deadlines Hub (`js/views/admin.js`)
+Added a new administrative governance module in the Admin suite accessible via the **`📋 Tasks & Deadlines`** tab:
+- **Executive KPI Cards**: Real-time counts for *Total Active Tasks*, *Urgent & High Priority*, *Court Deadlines*, and *Completed Tasks*.
+- **Search & Filtering**: Live search filter by task name, case number, or advocate, paired with multi-criteria Priority and Status filters.
+- **Governance Actions**:
+  - `✏️ Modify`: Directly edits task or court deadline details.
+  - `👤 Reassign`: Instant advocate reassignment with audit reason tracking.
+  - `🗑️ Delete`: Administrative deletion with confirmation prompt and audit logging.
+
+#### 4. Backend Database Endpoints & Persistence (`server.ps1` & `js/state.js`)
+- Added `PUT /api/tasks/{id}`: Persists modifications to `data/tasks.json` and updates in-memory state.
+- Added `DELETE /api/tasks/{id}`: Safely removes tasks with audit log recording.
+- Created `Set-PSProp` helper function to safely mutate PowerShell `PSCustomObject` properties without triggering `SetValueInvocationException`.
+- Added `updateTaskOnBackend(taskId, updates)` and `deleteTaskOnBackend(taskId)` methods to the state management layer.
+
+### 5.3 Automated Verification
+- **API Test Suite (`scratch/test_modify.ps1`)**:
+  - `PUT /api/tasks/tsk-1790079146327-eb6b` &rarr; `[PASS]` (`New Title: Draft Statement of Defence (AMENDED) - Suit No. 142`, `Priority: Urgent`)
+  - `PUT /api/deadlines/dln-1790079146457-14d2` &rarr; `[PASS]` (`New Title: Hearing of Chamber Summons for Injunction (RESCHEDULED)`)
+- **Asset Serving Test (`scratch/test_http_assets.ps1`)**:
+  - `http://127.0.0.1:8080/` &rarr; `200 OK`
+  - `http://127.0.0.1:8080/js/app.js` &rarr; `200 OK`
+  - `http://127.0.0.1:8080/js/state.js` &rarr; `200 OK`
+  - `http://127.0.0.1:8080/js/views/tasks.js` &rarr; `200 OK`
+  - `http://127.0.0.1:8080/js/views/admin.js` &rarr; `200 OK`

@@ -8,17 +8,29 @@
 const ClientsView = {
   currentTab: 'all', // 'all' | 'organization' | 'individual'
   searchQuery: '',
+  viewMode: 'horizontal', // 'horizontal' | 'carousel' | 'grid'
 
   render() {
-    const filteredClients = SLCMS_STATE.clients.filter(c => {
+    const allClients = SLCMS_STATE.clients || [];
+    const totalCount = allClients.length;
+    const corpCount = allClients.filter(c => c.type === 'Corporate' || c.type === 'Organization').length;
+    const indivCount = allClients.filter(c => c.type === 'Individual').length;
+    const activeCount = allClients.filter(c => c.status !== 'Deactivated').length;
+
+    const filteredClients = allClients.filter(c => {
       const matchSearch = !this.searchQuery ||
         c.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
         c.email.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
         c.phone.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        (c.idNumber && c.idNumber.toLowerCase().includes(this.searchQuery.toLowerCase()));
+        (c.idNumber && c.idNumber.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+        (c.assignedLawyer && c.assignedLawyer.toLowerCase().includes(this.searchQuery.toLowerCase()));
       
-      const isAdmin = (SLCMS_STATE.currentUser?.role === 'Administrator');
-      const matchType = this.currentTab === 'all' || c.type.toLowerCase() === this.currentTab;
+      let matchType = true;
+      if (this.currentTab === 'organization' || this.currentTab === 'corporate') {
+        matchType = (c.type === 'Corporate' || c.type === 'Organization');
+      } else if (this.currentTab === 'individual') {
+        matchType = (c.type === 'Individual');
+      }
       return matchSearch && matchType;
     });
 
@@ -26,29 +38,52 @@ const ClientsView = {
 
     return `
       <div class="animate-fade">
-        <div class="view-header">
-          <div>
-            <h1 class="page-title">Clients &amp; Retainer Accounts</h1>
-            <p style="color: var(--color-text-secondary); font-size: 0.88rem;">
-              Manage legal client profiles, corporate registrations, KYC data, and assigned legal counsel
+        <!-- 1. EXECUTIVE HERO BANNER WITH REAL TELEMETRY -->
+        <div class="clients-hero-banner">
+          <div class="clients-hero-left">
+            <h1 class="clients-hero-title">
+              <span>Clients &amp; Retainer Accounts</span>
+            </h1>
+            <p class="clients-hero-sub">
+              Manage legal client profiles, corporate registrations, KYC protocols, and assigned legal counsel
             </p>
           </div>
-          <div class="flex items-center gap-2">
+
+          <!-- Real Telemetry Micro-Pills -->
+          <div class="clients-hero-stats">
+            <div class="clients-hero-stat-pill">
+              <div class="clients-stat-num text-gold">${totalCount}</div>
+              <div class="clients-stat-label">Retainers</div>
+            </div>
+            <div class="clients-hero-stat-pill">
+              <div class="clients-stat-num text-sky">${corpCount}</div>
+              <div class="clients-stat-label">Corporate</div>
+            </div>
+            <div class="clients-hero-stat-pill">
+              <div class="clients-stat-num text-teal">${indivCount}</div>
+              <div class="clients-stat-label">Individual</div>
+            </div>
+            <div class="clients-hero-stat-pill">
+              <div class="clients-stat-num" style="color: #6EE7B7;">${activeCount}</div>
+              <div class="clients-stat-label">Active</div>
+            </div>
+          </div>
+
+          <!-- Executive Actions -->
+          <div class="clients-hero-actions">
             ${isAdmin ? `
-              <button class="btn btn-secondary" onclick="ClientsView.openCheckDuplicatesModal()" title="Detect duplicate client records">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <button class="btn-clients-secondary" onclick="ClientsView.openCheckDuplicatesModal()" title="Verify uniqueness across all client records">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
                   <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
                 </svg>
-                <span>Check Duplicate Records</span>
+                <span>Check Duplicates</span>
               </button>
             ` : ''}
-            <button class="btn btn-gold" onclick="ClientsView.openNewClientModal()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <line x1="19" y1="8" x2="19" y2="14"/>
-                <line x1="22" y1="11" x2="16" y2="11"/>
+            <button class="btn-clients-gold" onclick="ClientsView.openNewClientModal()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
               <span>Register Client</span>
             </button>
@@ -56,142 +91,350 @@ const ClientsView = {
         </div>
 
         ${isAdmin ? `
-          <!-- PRIVILEGED DATA PROTECTION NOTICE -->
-          <div class="alert alert-info animate-fade" style="margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid var(--color-gold); background: #F8FAFC; border: 1px solid #E2E8F0; padding: 0.85rem 1.25rem; border-radius: 8px;">
-            <div class="flex items-center gap-3">
-              <span style="font-size: 1.35rem;">🛡️</span>
-              <div style="font-size: 0.82rem; color: #334155; line-height: 1.4;">
-                <strong>Attorney-Client Privilege Protocol Active:</strong> Identification numbers are masked, and privileged legal strategy notes or advice are shielded from administrative access. Administrators can verify directory metadata, detect duplicate entries, toggle active status, and review access rosters.
+          <!-- 2. PRIVILEGED SENTINEL NOTICE BANNER -->
+          <div class="clients-privilege-sentinel animate-fade">
+            <div class="clients-sentinel-left">
+              <div class="clients-sentinel-icon">🛡️</div>
+              <div class="clients-sentinel-text">
+                <strong style="color: #F8FAFC;">Attorney-Client Privilege Protocol Active:</strong> Identification numbers are masked, and privileged legal strategy notes or advice are shielded from administrative access. Administrators can verify directory metadata, detect duplicate entries, toggle active status, and review access rosters.
               </div>
             </div>
-            <span class="badge badge-confidential" style="white-space: nowrap; font-size: 0.7rem;">Privileged Boundary</span>
+            <div class="clients-sentinel-badge">
+              <span class="clients-sentinel-dot"></span>
+              <span>PRIVILEGED BOUNDARY</span>
+            </div>
           </div>
         ` : ''}
 
-        <!-- Filter Bar -->
-        <div class="filter-bar">
-          <div class="input-with-icon" style="flex: 1; min-width: 240px;">
-            <span class="input-icon">
+        <!-- 3. SEARCH & CATEGORY FILTER RIBBON -->
+        <div class="clients-filter-ribbon">
+          <div class="clients-search-box">
+            <span class="clients-search-icon">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"/>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
             </span>
-            <input type="text" class="form-control" placeholder="Search clients by name, email, ID number or contact person..."
+            <input type="text" class="clients-search-input" placeholder="Search clients by legal name, email, phone, ID number, or assigned counsel..."
                    value="${this.searchQuery}" oninput="ClientsView.handleSearch(this.value)">
           </div>
 
-          <div class="tabs-nav" style="border-bottom: none; margin-bottom: 0;">
-            <button class="tab-btn ${this.currentTab === 'all' ? 'active' : ''}" onclick="ClientsView.filterTab('all')">All (${SLCMS_STATE.clients.length})</button>
-            <button class="tab-btn ${this.currentTab === 'organization' ? 'active' : ''}" onclick="ClientsView.filterTab('organization')">Organizations</button>
-            <button class="tab-btn ${this.currentTab === 'individual' ? 'active' : ''}" onclick="ClientsView.filterTab('individual')">Individuals</button>
+          <div class="clients-tabs-pills">
+            <button class="client-tab-pill ${this.currentTab === 'all' ? 'active' : ''}" onclick="ClientsView.filterTab('all')">
+              All (${totalCount})
+            </button>
+            <button class="client-tab-pill ${this.currentTab === 'organization' ? 'active' : ''}" onclick="ClientsView.filterTab('organization')">
+              Organizations (${corpCount})
+            </button>
+            <button class="client-tab-pill ${this.currentTab === 'individual' ? 'active' : ''}" onclick="ClientsView.filterTab('individual')">
+              Individuals (${indivCount})
+            </button>
+          </div>
+
+          <!-- View Mode Switcher: Horizontal Rows (Default), Carousel, Grid -->
+          <div class="clients-view-switcher">
+            <button class="client-view-btn ${this.viewMode === 'horizontal' ? 'active' : ''}" onclick="ClientsView.toggleViewMode('horizontal')" title="Horizontal Dossier Rows">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+              </svg>
+              <span>Horizontal</span>
+            </button>
+            <button class="client-view-btn ${this.viewMode === 'carousel' ? 'active' : ''}" onclick="ClientsView.toggleViewMode('carousel')" title="Horizontal Carousel Track">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="4" width="9" height="16" rx="2"/><rect x="13" y="4" width="9" height="16" rx="2"/>
+              </svg>
+              <span>Carousel</span>
+            </button>
+            <button class="client-view-btn ${this.viewMode === 'grid' ? 'active' : ''}" onclick="ClientsView.toggleViewMode('grid')" title="Multi-column Grid View">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+              </svg>
+              <span>Grid</span>
+            </button>
           </div>
         </div>
 
-        <!-- Clients Content -->
+        <!-- 4. CLIENTS DOSSIER DISPLAY (Horizontal Rows / Carousel / Grid) -->
         ${filteredClients.length === 0 ? `
-          <div class="card empty-state" style="padding: 3.5rem 1.5rem; text-align: center; margin-top: 1rem;">
+          <div class="card empty-state" style="padding: 3.5rem 1.5rem; text-align: center; margin-top: 1rem; border-radius: 16px; border: 1px dashed var(--color-border);">
             <div class="empty-icon" style="font-size: 2.8rem; margin-bottom: 0.85rem;">👥</div>
-            <h3 class="empty-title" style="font-size: 1.25rem; color: var(--color-primary); font-weight: 700;">No clients registered</h3>
+            <h3 class="empty-title" style="font-size: 1.25rem; color: var(--color-primary); font-weight: 700;">No clients match your filter</h3>
             <p class="empty-desc" style="color: var(--color-text-secondary); max-width: 480px; margin: 0.5rem auto 1.5rem auto; line-height: 1.5;">
-              There are currently no clients registered in the firm repository. Register a new individual or corporate client to begin matter onboarding.
+              ${totalCount === 0 
+                ? 'There are currently no clients registered in the firm repository. Register a new individual or corporate client to begin matter onboarding.' 
+                : 'No client records matched your search query. Try clearing search filters or add a new client to the chambers.'}
             </p>
-            <button class="btn btn-gold" onclick="ClientsView.openNewClientModal()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <line x1="19" y1="8" x2="19" y2="14"/>
-                <line x1="22" y1="11" x2="16" y2="11"/>
-              </svg>
-              <span>+ Add Client</span>
+            <button class="btn-clients-gold" onclick="ClientsView.openNewClientModal()" style="margin: 0 auto;">
+              <span>+ Register Client</span>
             </button>
           </div>
+        ` : this.viewMode === 'horizontal' ? `
+          <div class="clients-horizontal-list">
+            ${filteredClients.map(c => this.renderHorizontalCard(c, isAdmin)).join('')}
+          </div>
+        ` : this.viewMode === 'carousel' ? `
+          <div class="clients-carousel-wrapper">
+            <div class="clients-carousel-controls">
+              <div class="text-xs text-secondary font-medium">
+                Showing <strong>${filteredClients.length}</strong> client dossiers &middot; Scroll horizontally or use navigation arrows
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="clients-nav-arrow-btn" onclick="ClientsView.scrollCarousel('prev')" title="Scroll Left">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <button class="clients-nav-arrow-btn" onclick="ClientsView.scrollCarousel('next')" title="Scroll Right">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="clients-carousel-track" id="clients-carousel-track">
+              ${filteredClients.map(c => this.renderGridCard(c, isAdmin)).join('')}
+            </div>
+          </div>
         ` : `
-          <!-- Clients Cards Grid -->
-          <div class="grid grid-cols-3 gap-6">
-            ${filteredClients.map(c => {
-              const clientCases = SLCMS_STATE.cases.filter(cs => cs.clientId === c.id || cs.client === c.name);
-              const lawyer = c.assignedLawyer || (clientCases[0] ? clientCases[0].lawyer : 'Adv. Asha Mrema');
-              const maskedId = isAdmin 
-                ? (c.idNumber ? `TIN-***-${c.idNumber.slice(-4)}` : 'N/A')
-                : (c.idNumber || 'N/A');
-
-              return `
-                <div class="card card-hover flex flex-col justify-between" style="position: relative;">
-                  <div>
-                    <div class="flex items-start justify-between" style="margin-bottom: 0.75rem;">
-                      <div class="flex items-center gap-3">
-                        <div class="avatar avatar-md ${c.type === 'Corporate' || c.type === 'Organization' ? 'avatar-navy' : 'avatar-gold'}">
-                          ${c.name.substring(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <h3 style="font-size: 1.05rem; color: var(--color-primary); line-height: 1.2; margin: 0;">${c.name}</h3>
-                          <div class="flex items-center gap-1.5" style="margin-top: 0.25rem;">
-                            <span class="badge" style="background: var(--color-surface-subtle); font-size: 0.7rem;">${c.type}</span>
-                            <span class="badge ${c.status === 'Deactivated' ? 'badge-lost' : 'badge-active'}" style="font-size: 0.68rem;">${c.status || 'Active'}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Client Info Details -->
-                    <div class="flex flex-col gap-2" style="font-size: 0.8rem; color: var(--color-text-secondary); margin: 0.85rem 0;">
-                      <div class="flex items-center gap-2">
-                        <span style="color: var(--color-text-muted); width: 80px; flex-shrink: 0;">ID / Reg No:</span>
-                        <strong style="font-family: var(--font-mono); color: var(--color-primary);">${maskedId}</strong>
-                        ${isAdmin ? `<span class="badge" style="font-size: 0.62rem; padding: 1px 4px; background: #FEF3C7; color: #92400E;">Masked</span>` : ''}
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <span style="color: var(--color-text-muted); width: 80px; flex-shrink: 0;">Assigned:</span>
-                        <span style="color: var(--color-primary); font-weight: 600;">${lawyer}</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <span style="color: var(--color-text-muted); width: 80px; flex-shrink: 0;">Email:</span>
-                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.email || 'Not provided'}</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <span style="color: var(--color-text-muted); width: 80px; flex-shrink: 0;">Phone:</span>
-                        <span>${c.phone}</span>
-                      </div>
-                      <div class="flex items-start gap-2">
-                        <span style="color: var(--color-text-muted); width: 80px; flex-shrink: 0;">Address:</span>
-                        <span style="font-size: 0.76rem; line-height: 1.35;">${c.address || 'Not provided'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Footer with related cases & actions -->
-                  <div class="pt-3" style="border-top: 1px solid var(--color-border-subtle); font-size: 0.78rem;">
-                    <div class="flex items-center justify-between mb-2">
-                      <div>
-                        <span style="color: var(--color-text-muted);">Related Cases:</span>
-                        <strong style="color: var(--color-gold); font-size: 0.88rem;">${clientCases.length}</strong>
-                      </div>
-                      <button class="btn btn-ghost btn-sm" style="font-size: 0.72rem; padding: 0.15rem 0.45rem;" onclick="ClientsView.viewRelatedCases('${c.name}')">
-                        View Cases →
-                      </button>
-                    </div>
-                    <div class="client-card-actions">
-                      <div class="client-card-main-btns">
-                        ${!isAdmin ? `
-                        <button class="btn btn-gold btn-sm client-card-btn-addcase" onclick="ClientsView.createCaseForClient('${c.name}')" title="Create Case">+ Case</button>
-                        ` : ''}
-                      </div>
-                      <div class="client-card-sub-btns">
-                        <button class="btn btn-ghost btn-sm" onclick="ClientsView.openWhoCanAccessClientModal('${c.id}')" title="Review Who Can Access Client">👥 Access</button>
-                        <button class="btn btn-ghost btn-sm ${c.status === 'Deactivated' ? 'text-success' : 'text-danger'}" onclick="ClientsView.toggleClientStatus('${c.id}')" title="${c.status === 'Deactivated' ? 'Activate Client' : 'Deactivate Client'}">
-                          ${c.status === 'Deactivated' ? '🟢 Activate' : '🚫 Deactivate'}
-                        </button>
-                        <button class="btn btn-ghost btn-sm" onclick="ClientsView.openEditClientModal('${c.id}')" title="Edit Client Information">✏️</button>
-                        <button class="btn btn-ghost btn-sm text-danger" onclick="ClientsView.confirmDeleteClient('${c.id}')" title="Delete Client">🗑️</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              `;
-            }).join('')}
+          <div class="clients-luxury-grid">
+            ${filteredClients.map(c => this.renderGridCard(c, isAdmin)).join('')}
           </div>
         `}
+      </div>
+    `;
+  },
+
+  toggleViewMode(mode) {
+    this.viewMode = mode;
+    App.refreshCurrentView();
+  },
+
+  scrollCarousel(direction) {
+    const el = document.getElementById('clients-carousel-track');
+    if (el) {
+      const scrollAmt = el.clientWidth * 0.75;
+      el.scrollBy({ left: direction === 'next' ? scrollAmt : -scrollAmt, behavior: 'smooth' });
+    }
+  },
+
+  renderHorizontalCard(c, isAdmin) {
+    const clientCases = (SLCMS_STATE.cases || []).filter(cs => cs.clientId === c.id || cs.client === c.name);
+    const lawyer = c.assignedLawyer || (clientCases[0] ? clientCases[0].lawyer : 'Advocate Unassigned');
+    const isCorporate = (c.type === 'Corporate' || c.type === 'Organization');
+    const cleanId = (c.idNumber || '').trim();
+    const lastDigits = cleanId.replace(/[^0-9A-Za-z]/g, '').slice(-4) || '0000';
+    const maskedId = isAdmin 
+      ? (cleanId ? `TIN-***-${lastDigits}` : 'N/A')
+      : (cleanId || 'N/A');
+    const isActive = (c.status !== 'Deactivated');
+    const initials = (c.name || 'CL').substring(0, 2).toUpperCase();
+
+    return `
+      <div class="luxury-client-card client-card-horizontal ${isCorporate ? 'card-corp' : 'card-indiv'}">
+        <!-- 1. Identity & Credentials -->
+        <div class="c-horiz-col c-horiz-identity">
+          <div class="client-avatar-luxury ${isCorporate ? 'avatar-corp' : 'avatar-indiv'}">
+            ${initials}
+            <span class="client-type-icon-badge">${isCorporate ? '🏢' : '👤'}</span>
+          </div>
+          <div class="c-horiz-id-details">
+            <h3 class="client-name-heading" onclick="ClientsView.openClientProfile('${c.id}')" title="Click to open client dossier">${c.name}</h3>
+            <div class="client-badges-strip">
+              <span class="client-type-tag">${c.type}</span>
+              <span class="client-status-tag ${isActive ? 'active' : 'deactivated'}">
+                <span class="${isActive ? 'pulse-dot-green' : 'pulse-dot-red'}"></span>
+                ${isActive ? 'Active' : 'Deactivated'}
+              </span>
+            </div>
+            <div class="c-horiz-id-row">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span class="mono">ID / Reg: <strong>${maskedId}</strong></span>
+              ${isAdmin ? `<span class="badge" style="font-size: 0.58rem; padding: 1px 4px; background: #FEF3C7; color: #92400E; font-weight: 700;">MASKED</span>` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Legal Counsel & Matters Exposure -->
+        <div class="c-horiz-col c-horiz-counsel">
+          <div class="c-horiz-counsel-box">
+            <div class="c-horiz-meta-label">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>Assigned Counsel</span>
+            </div>
+            <div class="c-horiz-counsel-name">${lawyer}</div>
+          </div>
+          <div class="client-casework-pill ${clientCases.length > 0 ? 'has-cases' : 'no-cases'}">
+            ${clientCases.length > 0 ? `
+              <span class="pulse-dot-green"></span>
+              <span><strong>${clientCases.length}</strong> Active ${clientCases.length === 1 ? 'Matter' : 'Matters'}</span>
+              <button class="client-cases-view-link" onclick="ClientsView.viewRelatedCases('${c.id}')" title="View legal matters for ${c.name}">
+                <span>View Cases &rarr;</span>
+              </button>
+            ` : `
+              <span style="color: #94A3B8;">0 Linked Matters</span>
+              <span class="no-matters-tag" style="font-size: 0.72rem; color: #94A3B8; font-weight: 600; padding: 1px 4px;">No Active Cases</span>
+            `}
+          </div>
+        </div>
+
+        <!-- 3. Direct Contact Channels -->
+        <div class="c-horiz-col c-horiz-contacts">
+          <a href="mailto:${c.email || ''}" class="client-contact-link" title="${c.email || 'Email not provided'}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <span>${c.email || 'Email unlisted'}</span>
+          </a>
+          <a href="tel:${c.phone || ''}" class="client-contact-link" title="${c.phone || 'Phone unlisted'}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            <span>${c.phone || 'Phone unlisted'}</span>
+          </a>
+          <div class="client-address-text" title="${c.address || ''}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${c.address || 'Address unlisted'}</span>
+          </div>
+        </div>
+
+        <!-- 4. Operations Dock -->
+        <div class="c-horiz-col c-horiz-actions">
+          <div class="c-horiz-actions-top">
+            ${!isAdmin ? `
+              <button class="client-btn-dock-addcase" onclick="ClientsView.createCaseForClient('${c.name}')" title="Register new legal matter for this client">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Case</span>
+              </button>
+            ` : ''}
+            <button class="client-btn-dock-pill" onclick="ClientsView.openWhoCanAccessClientModal('${c.id}')" title="Review Staff Access Roster">
+              👥 Access
+            </button>
+          </div>
+          <div class="c-horiz-actions-bottom">
+            <button class="client-btn-dock-pill ${isActive ? 'danger' : ''}" onclick="ClientsView.toggleClientStatus('${c.id}')" title="${isActive ? 'Deactivate Client Account' : 'Activate Client Account'}">
+              ${isActive ? '🚫 Deactivate' : '🟢 Activate'}
+            </button>
+            <button class="client-btn-dock-icon" onclick="ClientsView.openEditClientModal('${c.id}')" title="Edit Client Information">
+              ✏️
+            </button>
+            <button class="client-btn-dock-icon delete" onclick="ClientsView.confirmDeleteClient('${c.id}')" title="Permanently Delete Record">
+              🗑️
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  renderGridCard(c, isAdmin) {
+    const clientCases = (SLCMS_STATE.cases || []).filter(cs => cs.clientId === c.id || cs.client === c.name);
+    const lawyer = c.assignedLawyer || (clientCases[0] ? clientCases[0].lawyer : 'Advocate Unassigned');
+    const isCorporate = (c.type === 'Corporate' || c.type === 'Organization');
+    const cleanId = (c.idNumber || '').trim();
+    const lastDigits = cleanId.replace(/[^0-9A-Za-z]/g, '').slice(-4) || '0000';
+    const maskedId = isAdmin 
+      ? (cleanId ? `TIN-***-${lastDigits}` : 'N/A')
+      : (cleanId || 'N/A');
+    const isActive = (c.status !== 'Deactivated');
+    const initials = (c.name || 'CL').substring(0, 2).toUpperCase();
+
+    return `
+      <div class="luxury-client-card ${isCorporate ? 'card-corp' : 'card-indiv'}">
+        <div>
+          <!-- Top Header -->
+          <div class="luxury-client-header">
+            <div class="client-avatar-luxury ${isCorporate ? 'avatar-corp' : 'avatar-indiv'}">
+              ${initials}
+              <span class="client-type-icon-badge">${isCorporate ? '🏢' : '👤'}</span>
+            </div>
+            <div class="client-title-block">
+              <h3 class="client-name-heading" onclick="ClientsView.openClientProfile('${c.id}')" title="Click to open client dossier">${c.name}</h3>
+              <div class="client-badges-strip">
+                <span class="client-type-tag">${c.type}</span>
+                <span class="client-status-tag ${isActive ? 'active' : 'deactivated'}">
+                  <span class="${isActive ? 'pulse-dot-green' : 'pulse-dot-red'}"></span>
+                  ${isActive ? 'Active' : 'Deactivated'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Body Details -->
+          <div class="luxury-client-body">
+            <!-- Identification & Counsel -->
+            <div class="client-meta-row">
+              <span class="client-meta-label">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                ID / Reg No:
+              </span>
+              <span class="client-meta-value mono">
+                ${maskedId}
+                ${isAdmin ? `<span class="badge" style="font-size: 0.62rem; padding: 1px 5px; background: #FEF3C7; color: #92400E; margin-left: 4px; font-weight: 700;">MASKED</span>` : ''}
+              </span>
+            </div>
+
+            <div class="client-meta-row">
+              <span class="client-meta-label">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Assigned Counsel:
+              </span>
+              <span class="client-meta-value" style="color: var(--color-primary);">${lawyer}</span>
+            </div>
+
+            <!-- Contact Channels -->
+            <div class="client-contact-chips-wrap">
+              <a href="mailto:${c.email || ''}" class="client-contact-link" title="${c.email || 'Email not provided'}">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                <span>${c.email || 'Email unlisted'}</span>
+              </a>
+              <a href="tel:${c.phone || ''}" class="client-contact-link" title="${c.phone || 'Phone unlisted'}">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                <span>${c.phone || 'Phone unlisted'}</span>
+              </a>
+              <div class="client-address-text" title="${c.address || ''}">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${c.address || 'Address unlisted'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Casework & Actions -->
+        <div>
+          <!-- Casework Exposure Strip -->
+          <div class="client-casework-strip">
+            <div class="client-casework-pill ${clientCases.length > 0 ? 'has-cases' : 'no-cases'}">
+              ${clientCases.length > 0 ? `
+                <span class="pulse-dot-green"></span>
+                <span><strong>${clientCases.length}</strong> Active ${clientCases.length === 1 ? 'Matter' : 'Matters'}</span>
+                <button class="client-cases-view-link" onclick="ClientsView.viewRelatedCases('${c.id}')">
+                  <span>View Cases &rarr;</span>
+                </button>
+              ` : `
+                <span style="color: #94A3B8;">0 Linked Matters</span>
+                <span class="no-matters-tag" style="font-size: 0.72rem; color: #94A3B8; font-weight: 600; padding: 1px 4px;">No Active Cases</span>
+              `}
+            </div>
+          </div>
+
+          <!-- Action Dock -->
+          <div class="client-card-dock">
+            <div class="client-dock-left">
+              ${!isAdmin ? `
+                <button class="client-btn-dock-addcase" onclick="ClientsView.createCaseForClient('${c.name}')" title="Register new legal matter for this client">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <span>Case</span>
+                </button>
+              ` : ''}
+              <button class="client-btn-dock-pill" onclick="ClientsView.openWhoCanAccessClientModal('${c.id}')" title="Review Staff Access Roster">
+                👥 Access
+              </button>
+            </div>
+            <div class="client-dock-right">
+              <button class="client-btn-dock-pill ${isActive ? 'danger' : ''}" onclick="ClientsView.toggleClientStatus('${c.id}')" title="${isActive ? 'Deactivate Client Account' : 'Activate Client Account'}">
+                ${isActive ? '🚫 Deactivate' : '🟢 Activate'}
+              </button>
+              <button class="client-btn-dock-icon" onclick="ClientsView.openEditClientModal('${c.id}')" title="Edit Client Information">
+                ✏️
+              </button>
+              <button class="client-btn-dock-icon delete" onclick="ClientsView.confirmDeleteClient('${c.id}')" title="Permanently Delete Record">
+                🗑️
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     `;
   },
@@ -199,6 +442,13 @@ const ClientsView = {
   handleSearch(val) {
     this.searchQuery = val;
     App.refreshCurrentView();
+    setTimeout(() => {
+      const el = document.querySelector('.clients-search-input');
+      if (el) {
+        el.focus();
+        el.setSelectionRange(el.value.length, el.value.length);
+      }
+    }, 50);
   },
 
   filterTab(tab) {
@@ -206,11 +456,34 @@ const ClientsView = {
     App.refreshCurrentView();
   },
 
-  viewRelatedCases(clientName) {
-    App.navigate('cases');
+  viewRelatedCases(clientIdOrName) {
+    const c = (SLCMS_STATE.clients || []).find(item => item.id === clientIdOrName || item.name === clientIdOrName);
+    const clientName = c ? c.name : clientIdOrName;
+    const clientId = c ? c.id : clientIdOrName;
+
     if (typeof CasesView !== 'undefined') {
-      CasesView.searchQuery = clientName;
+      CasesView.selectedClientFilter = clientId;
+      CasesView.selectedClientName = clientName;
+      CasesView.searchQuery = clientName || '';
+      CasesView.selectedFilterStatus = 'All';
+      CasesView.selectedFilterType = 'All';
+      CasesView.selectedFilterPriority = 'All';
+    }
+
+    App.navigate('cases');
+
+    if (typeof CasesView !== 'undefined') {
+      CasesView.selectedClientFilter = clientId;
+      CasesView.selectedClientName = clientName;
+      CasesView.searchQuery = clientName || '';
+      CasesView.selectedFilterStatus = 'All';
+      CasesView.selectedFilterType = 'All';
+      CasesView.selectedFilterPriority = 'All';
       App.refreshCurrentView();
+      setTimeout(() => {
+        const input = document.querySelector('.cases-search-input');
+        if (input && clientName) input.value = clientName;
+      }, 50);
     }
   },
 
@@ -220,7 +493,7 @@ const ClientsView = {
     if (!c) return;
 
     const clientCases = SLCMS_STATE.cases.filter(cs => cs.clientId === c.id || cs.client === c.name);
-    const lawyer = c.assignedLawyer || (clientCases[0] ? clientCases[0].lawyer : 'Eleanor Vance, Esq.');
+    const lawyer = c.assignedLawyer || (clientCases[0] ? clientCases[0].lawyer : 'Advocate Unassigned');
 
     App.openModal(`
       <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
@@ -260,8 +533,10 @@ const ClientsView = {
               Assigned Lawyer: <strong>${lawyer}</strong>
             </div>
             <div style="font-size: 0.78rem; color: var(--color-gold); margin-top: 0.25rem;">
-              ${clientCases.length} Active Matters on Record
+              ${clientCases.length === 0 ? '0 Linked Matters on Record' : `${clientCases.length} Active ${clientCases.length === 1 ? 'Matter' : 'Matters'} on Record`}
             </div>
+          </div>
+        </div>
         ${isAdmin ? `
           <!-- PRIVILEGED LEGAL NOTES & STRATEGY SHIELD -->
           <div class="card" style="background: #F8FAFC; border: 1px solid #E2E8F0; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid var(--color-gold);">
@@ -641,7 +916,7 @@ const ClientsView = {
     if (!c) return;
 
     const clientCases = SLCMS_STATE.cases.filter(cs => cs.clientId === c.id || cs.client === c.name);
-    const lawyers = [...new Set(clientCases.map(cs => cs.lawyer).concat([c.assignedLawyer || 'Eleanor Vance, Esq.']))];
+    const lawyers = [...new Set(clientCases.map(cs => cs.lawyer).concat([c.assignedLawyer || 'Adv. Asha Mrema']))];
     const users = SLCMS_STATE.users || [];
 
     App.openModal(`

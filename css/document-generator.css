@@ -991,3 +991,92 @@ body.ai-page-active .content-area {
 [data-theme="dark"] .dg-canvas-card { background: #0B1927; border-color: #1B3550; }
 [data-theme="dark"] .dg-mob-pill { background: #0B1927; border-color: #1B3550; color: #CBD5E1; }
 [data-theme="dark"] .dg-mob-step-pill { background: #08131F; border-color: #1B3550; color: #94A3B8; }
+
+/* ── Simple Document Creator Tiles ───────────────────────────────────── */
+.dg-simple-tile {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-bg);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  width: 100%;
+}
+.dg-simple-tile:hover {
+  border-color: var(--color-gold);
+  background: rgba(200, 155, 60, 0.06);
+  box-shadow: 0 2px 8px rgba(200, 155, 60, 0.12);
+}
+.dg-simple-tile.dg-simple-tile-active {
+  border-color: var(--color-gold) !important;
+  background: rgba(200, 155, 60, 0.1) !important;
+}
+
+/* Stack the simple creator on mobile */
+@media (max-width: 768px) {
+  .dg-simple-creator-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .dg-simple-sidebar {
+    position: static !important;
+  }
+}
+
+/* ── Dot Bounce Animation (used for generation spinner) ───────────────── */
+@keyframes dgDot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-6px); opacity: 1; }
+}
+
+/* ── Dark mode for simple tiles ───────────────────────────────────────── */
+[data-theme="dark"] .dg-simple-tile { background: #0B1927; border-color: #1B3550; }
+[data-theme="dark"] .dg-simple-tile:hover { background: #0F2338; }
+[data-theme="dark"] .dg-simple-tile.dg-simple-tile-active { background: rgba(200,155,60,0.1) !important; }
+
+/* ── Premium Document Paper Canvas ───────────────────────────────────── */
+.dg-doc-paper {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: #1a2332;
+  background: #FFFFFF;
+  padding: 3rem 3.5rem;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 8px 32px rgba(0,0,0,0.08);
+  min-height: 600px;
+  max-width: 820px;
+  margin: 0 auto;
+  position: relative;
+}
+.dg-doc-paper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #C89B3C, #F0C060, #C89B3C);
+  border-radius: 4px 4px 0 0;
+}
+[data-theme="dark"] .dg-doc-paper {
+  background: #f8f8f6;
+  color: #1a2332;
+}
+@media (max-width: 768px) {
+  .dg-doc-paper { padding: 1.5rem 1.25rem; }
+}
+
+/* ── Responsive override: stack simple creator columns on mobile ──────── */
+@media (max-width: 900px) {
+  /* The inline grid style="display:grid;grid-template-columns:1fr 340px" needs stacking */
+  .dg-wrapper [style*="grid-template-columns:1fr 340px"] {
+    grid-template-columns: 1fr !important;
+  }
+  .dg-wrapper [style*="position:sticky"] {
+    position: static !important;
+  }
+}

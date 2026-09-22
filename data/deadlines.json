@@ -1,1 +1,17 @@
-﻿[]
+﻿[{
+    "deadlineTime":  "09:00",
+    "deadlineDate":  "2026-10-06",
+    "source":  "Court Order",
+    "caseNumber":  "CV/2026/0142",
+    "type":  "Hearing",
+    "responsibleLawyerName":  "Adv. Asha Mrema",
+    "caseTitle":  "Commercial Bank vs Kivukoni Traders",
+    "statutoryReference":  "Order XXXIX Rule 1 CPC",
+    "caseId":  "case-101",
+    "id":  "dln-1790079146457-14d2",
+    "createdAt":  "2026-09-22T12:12:26.4582892Z",
+    "title":  "Hearing of Chamber Summons for Injunction (RESCHEDULED)",
+    "court":  "High Court Commercial Division, Dar es Salaam - Courtroom 3",
+    "changeReason":  "Adjournment on mutual advocate consent",
+    "updatedAt":  "2026-09-22T12:44:42.5133205Z"
+}]

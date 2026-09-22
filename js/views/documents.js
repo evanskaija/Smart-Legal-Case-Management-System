@@ -652,7 +652,7 @@ ${j.finalOrders || j.reasoning || 'Orders accordingly as rendered.'}`
     }
 
     const caseId = document.getElementById('ud-case')?.value;
-    const relatedCase = SLCMS_STATE.cases.find(c => c.id === caseId) || SLCMS_STATE.cases[0];
+    const relatedCase = (SLCMS_STATE.cases || []).find(c => c.id === caseId) || (SLCMS_STATE.cases || [])[0] || { id: 'case-general', caseNumber: 'GENERAL', title: 'General Firm Practice' };
 
     const newDoc = {
       id: 'doc-' + Date.now(),

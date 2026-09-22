@@ -1,1 +1,14 @@
-[]
+﻿[{
+    "status":  "todo",
+    "assignedTo":  "Adv. Asha Mrema",
+    "caseTitle":  "Commercial Bank vs Kivukoni Traders",
+    "caseId":  "case-101",
+    "caseNumber":  "CV/2026/0142",
+    "id":  "tsk-1790079146327-eb6b",
+    "createdAt":  "2026-09-22T12:12:26.3637433Z",
+    "title":  "Draft Statement of Defence (AMENDED) - Suit No. 142",
+    "priority":  "Urgent",
+    "dueDate":  "2026-10-15",
+    "instructions":  "Modified by Administrator with statutory limitation extension.",
+    "updatedAt":  "2026-09-22T12:44:42.4599130Z"
+}]

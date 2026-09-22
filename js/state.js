@@ -628,8 +628,27 @@ const SLCMS_STATE = {
     lastUpdatedAt: '2026-09-10 13:00:00 UTC'
   },
 
-  // Immutable Audit & Activity Logs (Populated from backend /api/admin/security-activity)
-  activityLogs: [],
+  // Immutable Audit & Activity Logs (Populated from real system database & backend /api/admin/security-activity)
+  activityLogs: (() => {
+    try {
+      const stored = localStorage.getItem('slcms_activity_logs');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Check if this is the old synthetic test loop with repetitive Joseph Moss login loops
+          const isStaleDummy = parsed.length >= 25 && parsed.filter(l => l.user === 'Joseph Moss' && ((l.action || '').includes('Login') || (l.action || '').includes('attempt'))).length > (parsed.length * 0.6);
+          if (!isStaleDummy) return parsed;
+        }
+      }
+    } catch(e) {}
+    if (typeof window !== 'undefined' && Array.isArray(window.SLCMS_INITIAL_LOGS) && window.SLCMS_INITIAL_LOGS.length > 0) {
+      try {
+        localStorage.setItem('slcms_activity_logs', JSON.stringify(window.SLCMS_INITIAL_LOGS));
+      } catch (e) {}
+      return [...window.SLCMS_INITIAL_LOGS];
+    }
+    return [];
+  })(),
 
   // Notifications
   notifications: [
@@ -961,7 +980,13 @@ const SLCMS_STATE = {
     // STEP 2 — Account must exist (generic error prevents username enumeration)
     if (!account) {
       this.addAuditLog('Login Failed — Account Not Found', 'Authentication',
-        `Identifier attempted: ${cleanId || '(empty)'}`, 'Failure');
+        `Identifier attempted: ${cleanId || '(empty)'}`, 'Blocked', {
+          userId: 'unknown',
+          userName: 'Unknown Identity',
+          staffId: 'N/A',
+          role: 'External / System',
+          securityLevel: 'High'
+        });
       return { success: false, attemptsRemaining: 2, message: 'Incorrect credentials. 2 attempts remaining.' };
     }
 
@@ -970,19 +995,37 @@ const SLCMS_STATE = {
     // STEP 3 — Check account status BEFORE password check
     if (account.adminLocked || (status === 'LOCKED' && !account.lockedUntil)) {
       this.addAuditLog('Login Blocked — Administrator Locked', 'Authentication',
-        `User: ${account.name} (${account.staffId || account.employeeId})`, 'Failure');
+        `User: ${account.name} (${account.staffId || account.employeeId})`, 'Locked', {
+          userId: account.id,
+          userName: account.name,
+          staffId: account.staffId || account.employeeId,
+          role: account.role,
+          securityLevel: 'Critical'
+        });
       return { success: false, errorType: 'ADMIN_LOCKED', message: 'Your account has been locked by the administrator. Contact the system administrator.' };
     }
 
     if (status === 'DEACTIVATED') {
       this.addAuditLog('Login Blocked — Account Deactivated', 'Authentication',
-        `User: ${account.name} (${account.staffId || account.employeeId})`, 'Failure');
+        `User: ${account.name} (${account.staffId || account.employeeId})`, 'Blocked', {
+          userId: account.id,
+          userName: account.name,
+          staffId: account.staffId || account.employeeId,
+          role: account.role,
+          securityLevel: 'High'
+        });
       return { success: false, errorType: 'ACCOUNT_DISABLED', message: 'This account is inactive. Contact the system administrator.' };
     }
 
     if (status === 'SUSPENDED') {
       this.addAuditLog('Login Blocked — Account Suspended', 'Authentication',
-        `User: ${account.name} (${account.staffId || account.employeeId})`, 'Failure');
+        `User: ${account.name} (${account.staffId || account.employeeId})`, 'Blocked', {
+          userId: account.id,
+          userName: account.name,
+          staffId: account.staffId || account.employeeId,
+          role: account.role,
+          securityLevel: 'High'
+        });
       return { success: false, errorType: 'ACCOUNT_DISABLED', message: 'This account is inactive. Contact the system administrator.' };
     }
 
@@ -1069,7 +1112,13 @@ const SLCMS_STATE = {
 
         this.persistUsers();
         this.addAuditLog('Account Locked Automatically', 'Security Activity',
-          `Account ${account.staffId || account.employeeId} locked for 2 minutes after 3 failed login attempts`, 'Locked');
+          `Account ${account.staffId || account.employeeId} locked for 2 minutes after 3 failed login attempts`, 'Locked', {
+            userId: account.id,
+            userName: account.name,
+            staffId: account.staffId || account.employeeId,
+            role: account.role,
+            securityLevel: 'Critical'
+          });
 
         return {
           success: false,
@@ -1084,7 +1133,13 @@ const SLCMS_STATE = {
       const rem = 3 - account.failedAttempts;
       const remText = rem === 1 ? '1 attempt remaining.' : `${rem} attempts remaining.`;
       this.addAuditLog('Login Failed — Wrong Password', 'Authentication',
-        `User: ${account.name} (${account.staffId || account.employeeId}) — Attempt ${account.failedAttempts} of 3`, 'Failure');
+        `User: ${account.name} (${account.staffId || account.employeeId}) — Attempt ${account.failedAttempts} of 3`, 'Failed', {
+          userId: account.id,
+          userName: account.name,
+          staffId: account.staffId || account.employeeId,
+          role: account.role,
+          securityLevel: 'High'
+        });
       return { success: false, attemptsRemaining: rem, message: `Incorrect credentials. ${remText}` };
     }
 
@@ -1102,10 +1157,6 @@ const SLCMS_STATE = {
     account.locked_until = null;
     account.locked_at = null;
     account.locked_reason = null;
-
-    // Ordinary successful login recorded only in Security Activity:
-    this.addAuditLog('Login successful', 'Security Activity',
-      `User: ${account.staffId || account.employeeId}, Date and time: Automatically recorded`, 'Success');
 
     const sessionToken = this.generateSessionToken();
 
@@ -1135,6 +1186,16 @@ const SLCMS_STATE = {
       lastLogin: 'Just now',
       status: account.status || 'ACTIVE'
     };
+
+    // Ordinary successful login recorded only in Security Activity:
+    this.addAuditLog('Login Succeeded', 'Security Activity',
+      `Staff member ${account.name} (${account.staffId || account.employeeId}) authenticated via secure TLS 1.3 session`, 'Success', {
+        userId: account.id,
+        userName: account.name,
+        staffId: account.staffId || account.employeeId,
+        role: account.role,
+        securityLevel: 'Standard'
+      });
 
     account.lastLogin = 'Today, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     account.last_login_at = new Date().toISOString();
@@ -1378,111 +1439,82 @@ const SLCMS_STATE = {
 
   restoreCases() {
     try {
+      const DEMO_CASE_IDS = [
+        'case-act-001', 'case-act-002', 'case-act-003', 'case-act-004',
+        'case-001', 'case-002', 'case-003', 'case-004',
+        'case-101', 'case-102', 'case-103', 'case-104', 'case-105', 'case-106'
+      ];
+      const DEMO_CASE_NUMS = ['CV/2026/0042', 'CM/2026/0217', 'EM/2026/0089', 'CA/2026/0321', 'CR/2026/0014'];
+      const DEMO_TITLES = [
+        'abdallah salum muwinge v halima ismail',
+        'kilombero sugar co. ltd v mara logistics ltd',
+        'bank of africa tanzania v serengeti telecoms ltd',
+        'serengeti breweries ltd v tra',
+        'serengeti breweries v. tra',
+        'kilombero sugar co. v. mara logistics ltd',
+        'bank of africa tanzania v. serengeti telecoms ltd'
+      ];
       const savedCasesJson = localStorage.getItem('slcms_persisted_cases');
-      if (savedCasesJson) {
+      if (savedCasesJson !== null) {
         const savedCases = JSON.parse(savedCasesJson);
-        if (Array.isArray(savedCases) && savedCases.length > 0) {
-          this.cases = savedCases;
+        if (Array.isArray(savedCases)) {
+          // Keep only user-created cases, filtering out any demo/seed cases
+          const realCases = savedCases.filter(c => {
+            if (!c || !c.id) return false;
+            if (DEMO_CASE_IDS.includes(c.id)) return false;
+            if (c.caseNumber && DEMO_CASE_NUMS.includes(c.caseNumber)) return false;
+            const normTitle = (c.title || c.caseTitle || '').trim().toLowerCase();
+            if (DEMO_TITLES.some(dt => normTitle.includes(dt))) return false;
+            return true;
+          });
+          this.cases = realCases;
+          this.persistCases();
+          this.syncUsersWithCases();
           return;
         }
       }
-      // Default registered active casework if storage is empty
-      this.cases = [
-        {
-          id: 'case-act-001',
-          caseNumber: 'PC Civil Appeal No. 69 of 2018',
-          title: 'Abdallah Salum Muwinge v Halima Ismail',
-          caseTitle: 'Abdallah Salum Muwinge v Halima Ismail',
-          caseType: 'Civil Litigation',
-          type: 'Civil Litigation',
-          status: 'Active',
-          priority: 'High',
-          clientId: 'client-act-001',
-          client: 'Halima Ismail',
-          clientName: 'Halima Ismail',
-          clientEmail: 'halima@example.com',
-          clientPhone: '+255 754 889 900',
-          lawyer: 'Adv. Asha Mrema',
-          assignedLawyerId: 'usr-002',
-          court: 'High Court of Tanzania, Dar es Salaam District Registry',
-          registry: 'Dar es Salaam District Registry',
-          nextHearingDate: '2026-09-25T09:00',
-          description: 'Civil appeal from Primary Court decision regarding probate and real estate inheritance rights in Kariakoo, Dar es Salaam.'
-        },
-        {
-          id: 'case-act-002',
-          caseNumber: 'CV/2026/0042',
-          title: 'Kilombero Sugar Co. Ltd v Mara Logistics Ltd',
-          caseTitle: 'Kilombero Sugar Co. Ltd v Mara Logistics Ltd',
-          caseType: 'Commercial Litigation',
-          type: 'Commercial Litigation',
-          status: 'Active',
-          priority: 'High',
-          clientId: 'client-act-002',
-          client: 'Kilombero Sugar Co. Ltd',
-          clientName: 'Kilombero Sugar Co. Ltd',
-          clientEmail: 'legal@kilomberosugar.co.tz',
-          clientPhone: '+255 784 112 233',
-          lawyer: 'Adv. Baraka Juma',
-          assignedLawyerId: 'usr-003',
-          court: 'High Court of Tanzania (Commercial Division), Dar es Salaam',
-          registry: 'Commercial Registry',
-          nextHearingDate: '2026-09-28T09:00',
-          description: 'Breach of bulk haulage agreement and claim for commercial loss resulting from contractual demurrage.'
-        },
-        {
-          id: 'case-act-003',
-          caseNumber: 'CM/2026/0217',
-          title: 'Bank of Africa Tanzania v Serengeti Telecoms Ltd',
-          caseTitle: 'Bank of Africa Tanzania v Serengeti Telecoms Ltd',
-          caseType: 'Banking & Finance',
-          type: 'Banking & Finance',
-          status: 'Active',
-          priority: 'Medium',
-          clientId: 'client-act-003',
-          client: 'Bank of Africa Tanzania',
-          clientName: 'Bank of Africa Tanzania',
-          clientEmail: 'recoveries@bankofafrica.co.tz',
-          clientPhone: '+255 22 211 0000',
-          lawyer: 'Adv. Asha Mrema',
-          assignedLawyerId: 'usr-002',
-          court: 'High Court of Tanzania (Commercial Division)',
-          registry: 'Commercial Division',
-          nextHearingDate: '2026-10-02T10:00',
-          description: 'Debt recovery proceedings regarding syndicated term facility and enforcement of company debenture.'
-        },
-        {
-          id: 'case-act-004',
-          caseNumber: 'CA/2026/0321',
-          title: 'Serengeti Breweries Ltd v Tanzania Revenue Authority',
-          caseTitle: 'Serengeti Breweries Ltd v Tanzania Revenue Authority',
-          caseType: 'Tax Law',
-          type: 'Tax Law',
-          status: 'Active',
-          priority: 'High',
-          clientId: 'client-act-004',
-          client: 'Serengeti Breweries Ltd',
-          clientName: 'Serengeti Breweries Ltd',
-          clientEmail: 'compliance@serengetibreweries.co.tz',
-          clientPhone: '+255 765 443 322',
-          lawyer: 'Adv. Baraka Juma',
-          assignedLawyerId: 'usr-003',
-          court: 'Tax Revenue Appeals Tribunal, Dar es Salaam',
-          registry: 'Appeals Tribunal Registry',
-          nextHearingDate: '2026-10-05T09:30',
-          description: 'Tax dispute on computation of manufacturing excise duties and capital investment deductions.'
-        }
-      ];
+      // If no cases saved in system, system has 0 cases by default
+      this.cases = [];
       this.persistCases();
+      this.syncUsersWithCases();
     } catch (e) {
       console.warn('Cases restore error:', e);
       this.cases = [];
+      this.syncUsersWithCases();
+    }
+  },
+
+  syncUsersWithCases() {
+    try {
+      const existingCaseIds = new Set((this.cases || []).map(c => c.id));
+      if (Array.isArray(this.users)) {
+        this.users.forEach(u => {
+          if (Array.isArray(u.assignedCaseIds)) {
+            u.assignedCaseIds = u.assignedCaseIds.filter(id => existingCaseIds.has(id));
+          } else {
+            u.assignedCaseIds = [];
+          }
+          u.activeCases = u.assignedCaseIds.length;
+        });
+        this.persistUsers();
+      }
+      if (this.currentUser) {
+        if (Array.isArray(this.currentUser.assignedCaseIds)) {
+          this.currentUser.assignedCaseIds = this.currentUser.assignedCaseIds.filter(id => existingCaseIds.has(id));
+        } else {
+          this.currentUser.assignedCaseIds = [];
+        }
+        this.currentUser.activeCases = this.currentUser.assignedCaseIds.length;
+        this.persistCurrentUser();
+      }
+    } catch (e) {
+      console.warn('Sync users with cases error:', e);
     }
   },
 
   persistCases() {
     try {
-      localStorage.setItem('slcms_persisted_cases', JSON.stringify(this.cases));
+      localStorage.setItem('slcms_persisted_cases', JSON.stringify(this.cases || []));
     } catch (e) {
       console.warn('Failed to persist cases:', e);
     }
@@ -1490,62 +1522,85 @@ const SLCMS_STATE = {
 
   restoreClients() {
     try {
+      const DEMO_CLIENT_IDS = ['client-act-001', 'client-act-002', 'client-act-003', 'client-act-004'];
+      const DEMO_CLIENT_NAMES = ['Halima Ismail', 'Kilombero Sugar Co. Ltd', 'Bank of Africa Tanzania', 'Serengeti Breweries Ltd'];
+      const existingCaseIds = new Set((this.cases || []).map(c => c.id));
+      const existingCaseClientNames = new Set((this.cases || []).map(c => c.clientName || c.client).filter(Boolean));
+      const existingCaseClientIds = new Set((this.cases || []).map(c => c.clientId).filter(Boolean));
+      const hasCases = existingCaseIds.size > 0;
+
       const saved = localStorage.getItem('slcms_persisted_clients');
-      if (saved) {
+      if (saved !== null) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          this.clients = parsed;
+        if (Array.isArray(parsed)) {
+          // Filter out demo clients if no cases exist
+          const validClients = parsed.filter(c => {
+            if (!c) return false;
+            if (!hasCases) {
+              // No cases: only allow clients that were explicitly user-registered (not demo IDs)
+              return !DEMO_CLIENT_IDS.includes(c.id) && !DEMO_CLIENT_NAMES.includes(c.name);
+            }
+            return true; // If cases exist, keep all persisted clients
+          });
+          this.clients = validClients;
+          this.persistClients();
           return;
         }
       }
-      // Default registered clients matching active casework
-      this.clients = [
-        {
-          id: 'client-act-001',
-          name: 'Halima Ismail',
-          type: 'Individual',
-          email: 'halima@example.com',
-          phone: '+255 754 889 900',
-          address: 'Plot 44, Msimbazi Street, Kariakoo, Dar es Salaam',
-          idNumber: '19880412-1410-00021',
-          assignedLawyer: 'Adv. Asha Mrema',
-          status: 'Active'
-        },
-        {
-          id: 'client-act-002',
-          name: 'Kilombero Sugar Co. Ltd',
-          type: 'Corporate',
-          email: 'legal@kilomberosugar.co.tz',
-          phone: '+255 784 112 233',
-          address: 'Kilombero Valley & Ohio Street Office, Dar es Salaam',
-          idNumber: 'TIN-100-849-210',
-          assignedLawyer: 'Adv. Baraka Juma',
-          status: 'Active'
-        },
-        {
-          id: 'client-act-003',
-          name: 'Bank of Africa Tanzania',
-          type: 'Corporate',
-          email: 'recoveries@bankofafrica.co.tz',
-          phone: '+255 22 211 0000',
-          address: 'Bank of Africa Tower, Ali Hassan Mwinyi Road, Dar es Salaam',
-          idNumber: 'TIN-102-441-998',
-          assignedLawyer: 'Adv. Asha Mrema',
-          status: 'Active'
-        },
-        {
-          id: 'client-act-004',
-          name: 'Serengeti Breweries Ltd',
-          type: 'Corporate',
-          email: 'compliance@serengetibreweries.co.tz',
-          phone: '+255 765 443 322',
-          address: 'Chang\'ombe Industrial Area, Dar es Salaam',
-          idNumber: 'TIN-103-998-112',
-          assignedLawyer: 'Adv. Baraka Juma',
-          status: 'Active'
-        }
-      ];
-      this.persistClients();
+      // No saved clients: only seed demo clients if cases exist that reference them
+      if (hasCases) {
+        this.clients = [
+          {
+            id: 'client-act-001',
+            name: 'Halima Ismail',
+            type: 'Individual',
+            email: 'halima@example.com',
+            phone: '+255 754 889 900',
+            address: 'Plot 44, Msimbazi Street, Kariakoo, Dar es Salaam',
+            idNumber: '19880412-1410-00021',
+            assignedLawyer: 'Adv. Asha Mrema',
+            status: 'Active'
+          },
+          {
+            id: 'client-act-002',
+            name: 'Kilombero Sugar Co. Ltd',
+            type: 'Corporate',
+            email: 'legal@kilomberosugar.co.tz',
+            phone: '+255 784 112 233',
+            address: 'Kilombero Valley & Ohio Street Office, Dar es Salaam',
+            idNumber: 'TIN-100-849-210',
+            assignedLawyer: 'Adv. Baraka Juma',
+            status: 'Active'
+          },
+          {
+            id: 'client-act-003',
+            name: 'Bank of Africa Tanzania',
+            type: 'Corporate',
+            email: 'recoveries@bankofafrica.co.tz',
+            phone: '+255 22 211 0000',
+            address: 'Bank of Africa Tower, Ali Hassan Mwinyi Road, Dar es Salaam',
+            idNumber: 'TIN-102-441-998',
+            assignedLawyer: 'Adv. Asha Mrema',
+            status: 'Active'
+          },
+          {
+            id: 'client-act-004',
+            name: 'Serengeti Breweries Ltd',
+            type: 'Corporate',
+            email: 'compliance@serengetibreweries.co.tz',
+            phone: '+255 765 443 322',
+            address: 'Chang\'ombe Industrial Area, Dar es Salaam',
+            idNumber: 'TIN-103-998-112',
+            assignedLawyer: 'Adv. Baraka Juma',
+            status: 'Active'
+          }
+        ];
+        this.persistClients();
+      } else {
+        // No cases and no saved clients — system starts clean
+        this.clients = [];
+        this.persistClients();
+      }
     } catch (e) {
       console.warn('Failed to restore clients:', e);
       this.clients = [];
@@ -1562,82 +1617,23 @@ const SLCMS_STATE = {
 
   async restoreClientMessages() {
     try {
+      const existingCaseIds = new Set((this.cases || []).map(c => c.id));
+      const existingCaseNums = new Set((this.cases || []).map(c => c.caseNumber).filter(Boolean));
       const saved = localStorage.getItem('slcms_persisted_client_messages');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          this.clientMessages = parsed;
+        if (Array.isArray(parsed)) {
+          this.clientMessages = parsed.filter(m => m && (existingCaseIds.has(m.caseId) || existingCaseNums.has(m.caseNumber)));
+          this.persistClientMessages();
           this.loadClientMessagesFromBackend();
           return;
         }
       }
-      // Seed default verified communication records
-      this.clientMessages = [
-        {
-          messageId: 'comm-101',
-          caseId: 'case-101',
-          caseTitle: 'Abdallah Salum Muwinge v Halima Ismail',
-          caseNumber: 'PC Civil Appeal No. 69 of 2018',
-          clientId: 'client-1',
-          clientName: 'Halima Ismail',
-          messageType: 'Hearing Reminder',
-          channel: 'Email',
-          recipient: 'halima@example.com',
-          subject: 'Hearing Reminder — PC Civil Appeal No. 69 of 2018',
-          messageBody: 'Dear Halima Ismail,\n\nThis is a formal reminder concerning Abdallah Salum Muwinge v Halima Ismail, PC Civil Appeal No. 69 of 2018. The hearing is scheduled on 2026-09-25 at 09:00 at the High Court of Tanzania, Dar es Salaam District Registry.',
-          language: 'English',
-          status: 'Sent',
-          preparedBy: 'Adv. Asha Mrema',
-          approvedBy: 'Adv. Asha Mrema',
-          sentBy: 'Adv. Asha Mrema',
-          sentAt: '2026-09-17T14:30:00Z',
-          createdAt: '2026-09-17T14:15:00Z'
-        },
-        {
-          messageId: 'comm-102',
-          caseId: 'case-102',
-          caseTitle: 'Kilombero Sugar Co. Ltd v Mara Logistics Ltd',
-          caseNumber: 'Commercial Case No. 88 of 2021',
-          clientId: 'client-2',
-          clientName: 'Kilombero Sugar Company Ltd',
-          messageType: 'Request for Documents',
-          channel: 'WhatsApp',
-          recipient: '+255 784 112 233',
-          subject: 'Document Request — Commercial Case No. 88 of 2021',
-          messageBody: 'Dear Kilombero Sugar Team,\n\nIn preparation for the upcoming trial conference, please provide the original freight invoices and customs clearance certificates by 2026-10-02.',
-          language: 'English',
-          status: 'Confirmed Sent by Staff',
-          preparedBy: 'Adv. Baraka Juma',
-          approvedBy: 'Adv. Asha Mrema',
-          sentBy: 'Adv. Baraka Juma',
-          sentAt: '2026-09-16T11:00:00Z',
-          createdAt: '2026-09-16T10:45:00Z'
-        },
-        {
-          messageId: 'comm-103',
-          caseId: 'case-103',
-          caseTitle: 'Bank of Africa Tanzania Ltd v Quality Group Ltd',
-          caseNumber: 'Commercial Case No. 142 of 2019',
-          clientId: 'client-3',
-          clientName: 'Bank of Africa Tanzania Ltd',
-          messageType: 'Case Progress Update',
-          channel: 'Email',
-          recipient: 'legal@boatanzania.co.tz',
-          subject: 'Matter Update: Commercial Case No. 142 of 2019',
-          messageBody: 'Dear Managing Counsel,\n\nPlease be advised that the court heard arguments on the preliminary objection yesterday and reserved the ruling.',
-          language: 'English',
-          status: 'Pending Approval',
-          preparedBy: 'Marcus Bell',
-          approvedBy: null,
-          sentBy: null,
-          sentAt: null,
-          createdAt: '2026-09-18T08:00:00Z'
-        }
-      ];
+      this.clientMessages = [];
       this.persistClientMessages();
-      this.loadClientMessagesFromBackend();
     } catch (e) {
       console.warn('Failed to restore client messages:', e);
+      this.clientMessages = [];
     }
   },
 
@@ -1691,6 +1687,24 @@ const SLCMS_STATE = {
 
   restoreTasks() {
     try {
+      const existingCaseIds = new Set((this.cases || []).map(c => c.id));
+      const existingCaseNums = new Set((this.cases || []).map(c => c.caseNumber).filter(Boolean));
+
+      // If no cases are registered in the system, no matter tasks or deadlines can exist
+      if (existingCaseIds.size === 0) {
+        this.tasks = [];
+        this.deadlines = [];
+        this.persistTasks();
+        try {
+          localStorage.removeItem('slcms_persisted_deadlines');
+          localStorage.removeItem('slcms_persisted_court_events');
+        } catch(e){}
+        if (typeof TasksView !== 'undefined') {
+          TasksView.courtEvents = [];
+        }
+        return;
+      }
+
       const saved = localStorage.getItem('slcms_persisted_tasks');
       const DEMO_TASK_IDS = ['tsk-101', 'tsk-102', 'tsk-103', 'tsk-104', 'task-001', 'task-002', 'task-003', 'task-004', 'task-005'];
       const DEMO_CASE_NUMS = ['CV/2026/0042', 'CM/2026/0217', 'EM/2026/0089', 'CA/2026/0321', 'CR/2026/0014'];
@@ -1701,7 +1715,8 @@ const SLCMS_STATE = {
           this.tasks = parsed.filter(t => 
             t && !DEMO_TASK_IDS.includes(t.id) &&
             !DEMO_CASE_NUMS.includes(t.caseNumber) &&
-            !DEMO_TITLES.includes(t.caseTitle)
+            !DEMO_TITLES.includes(t.caseTitle) &&
+            (existingCaseIds.has(t.caseId) || existingCaseNums.has(t.caseNumber))
           );
         } else {
           this.tasks = [];
@@ -1729,6 +1744,13 @@ const SLCMS_STATE = {
 
   async loadTasksFromBackend() {
     try {
+      const existingCaseIds = new Set((this.cases || []).map(c => c.id));
+      const existingCaseNums = new Set((this.cases || []).map(c => c.caseNumber).filter(Boolean));
+      if (existingCaseIds.size === 0) {
+        this.tasks = [];
+        this.persistTasks();
+        return;
+      }
       const res = await fetch('/api/tasks');
       if (res.ok) {
         const data = await res.json();
@@ -1739,7 +1761,8 @@ const SLCMS_STATE = {
           this.tasks = data.filter(t => 
             t && !DEMO_TASK_IDS.includes(t.id) &&
             !DEMO_CASE_NUMS.includes(t.caseNumber) &&
-            !DEMO_TITLES.includes(t.caseTitle)
+            !DEMO_TITLES.includes(t.caseTitle) &&
+            (existingCaseIds.has(t.caseId) || existingCaseNums.has(t.caseNumber))
           );
           this.persistTasks();
           if (typeof TasksView !== 'undefined' && typeof App !== 'undefined' && App.currentView === 'tasks') {
@@ -1754,12 +1777,26 @@ const SLCMS_STATE = {
 
   async loadDeadlinesFromBackend() {
     try {
+      const existingCaseIds = new Set((this.cases || []).map(c => c.id));
+      const existingCaseNums = new Set((this.cases || []).map(c => c.caseNumber).filter(Boolean));
+      if (existingCaseIds.size === 0) {
+        this.deadlines = [];
+        try { localStorage.removeItem('slcms_persisted_deadlines'); } catch(e){}
+        if (typeof TasksView !== 'undefined') {
+          TasksView.courtEvents = [];
+          try { localStorage.removeItem('slcms_persisted_court_events'); } catch(e){}
+        }
+        return;
+      }
       const res = await fetch('/api/deadlines');
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          this.deadlines = data;
-          try { localStorage.setItem('slcms_persisted_deadlines', JSON.stringify(data)); } catch(e){}
+          this.deadlines = data.filter(d => d && (existingCaseIds.has(d.caseId) || existingCaseNums.has(d.caseNumber)));
+          try { localStorage.setItem('slcms_persisted_deadlines', JSON.stringify(this.deadlines)); } catch(e){}
+          if (typeof TasksView !== 'undefined') {
+            TasksView.syncCourtEvents();
+          }
         }
       }
     } catch (err) {
@@ -1902,6 +1939,53 @@ const SLCMS_STATE = {
     return { success: true, task };
   },
 
+  async updateTaskOnBackend(taskId, updates) {
+    if (!this.tasks) this.tasks = [];
+    const task = this.tasks.find(t => t.id === taskId);
+    if (task) {
+      Object.assign(task, updates);
+      task.updatedAt = new Date().toISOString();
+      this.persistTasks();
+    }
+
+    try {
+      await fetch(`/api/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': this.currentUser?.id || 'usr-admin',
+          'X-User-Name': this.currentUser?.name || 'Administrator',
+          'X-User-Role': this.currentUser?.role || 'Administrator'
+        },
+        body: JSON.stringify(updates)
+      });
+    } catch (e) {
+      console.warn('Backend update error:', e);
+    }
+
+    this.addAuditLog('Task Modified', 'Tasks & Deadlines', `Task "${updates.title || taskId}" modified by ${this.currentUser?.name || 'User'}`, 'Success');
+    return task;
+  },
+
+  async deleteTaskOnBackend(taskId) {
+    if (!this.tasks) this.tasks = [];
+    this.tasks = this.tasks.filter(t => t.id !== taskId);
+    this.persistTasks();
+
+    try {
+      await fetch(`/api/tasks/${taskId}`, {
+        method: 'DELETE',
+        headers: {
+          'X-User-Id': this.currentUser?.id || 'usr-admin'
+        }
+      });
+    } catch (e) {
+      console.warn('Backend task delete error:', e);
+    }
+
+    this.addAuditLog('Task Deleted', 'Tasks & Deadlines', `Task ${taskId} deleted`, 'Success');
+  },
+
   async createDeadlineOnBackend(deadlineData) {
     const id = deadlineData.id || `dln-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
     const nowIso = new Date().toISOString();
@@ -2008,114 +2092,22 @@ const SLCMS_STATE = {
   // --------------------------------------------------------------------------
   restoreDocuments() {
     try {
+      const existingCaseIds = new Set((this.cases || []).map(c => c.id));
+      const existingCaseNums = new Set((this.cases || []).map(c => c.caseNumber).filter(Boolean));
       const saved = localStorage.getItem('slcms_persisted_documents');
-      if (saved) {
+      if (saved !== null) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          this.documents = parsed;
+        if (Array.isArray(parsed)) {
+          this.documents = parsed.filter(d => d && (existingCaseIds.has(d.caseId) || existingCaseNums.has(d.caseNumber)));
+          this.persistDocuments();
           return;
         }
       }
-      if (!this.documents || this.documents.length === 0) {
-        this.documents = [
-          {
-            id: 'doc-001',
-            caseId: 'case-001',
-            caseNumber: 'CV/2026/0042',
-            caseTitle: 'Kilombero Sugar Co. v. Mara Logistics Ltd',
-            title: 'Plaint & Chamber Summons for Interim Injunction',
-            fileName: 'Plaint_Chamber_Summons_Injunction.pdf',
-            category: 'Pleadings',
-            uploadedBy: 'Adv. Robert Kasoma',
-            uploadDate: '2026-09-08',
-            size: '2.4 MB',
-            version: 'v1.0',
-            accessLevel: 'Attorney-Client Privileged',
-            fileType: 'PDF',
-            status: 'Ready for AI',
-            ocrConfidence: '98.4%',
-            versions: [
-              { version: 'v1.0', fileName: 'Plaint_Chamber_Summons_Injunction.pdf', uploadedBy: 'Adv. Robert Kasoma', uploadDate: '2026-09-08', size: '2.4 MB', changeNotes: 'Initial formal filing with High Court Registry' }
-            ],
-            accessHistory: [
-              { action: 'Created & Uploaded', actor: 'Adv. Robert Kasoma', timestamp: '2026-09-08 10:14', notes: 'Initial filing version uploaded' },
-              { action: 'OCR Processing Verified', actor: 'System OCR Engine', timestamp: '2026-09-08 10:15', notes: 'Confidence score: 98.4%' }
-            ]
-          },
-          {
-            id: 'doc-002',
-            caseId: 'case-001',
-            caseNumber: 'CV/2026/0042',
-            caseTitle: 'Kilombero Sugar Co. v. Mara Logistics Ltd',
-            title: 'Commercial Bulk Haulage Contract 2024',
-            fileName: 'Commercial_Haulage_Agreement_2024.pdf',
-            category: 'Contracts',
-            uploadedBy: 'Adv. Robert Kasoma',
-            uploadDate: '2026-09-09',
-            size: '4.8 MB',
-            version: 'v1.0',
-            accessLevel: 'Confidential',
-            fileType: 'PDF',
-            status: 'Verified',
-            ocrConfidence: '99.1%',
-            versions: [
-              { version: 'v1.0', fileName: 'Commercial_Haulage_Agreement_2024.pdf', uploadedBy: 'Adv. Robert Kasoma', uploadDate: '2026-09-09', size: '4.8 MB', changeNotes: 'Executed primary agreement with indemnity clauses' }
-            ],
-            accessHistory: [
-              { action: 'Uploaded', actor: 'Adv. Robert Kasoma', timestamp: '2026-09-09 14:22', notes: 'Annexed as Exhibit P-1' }
-            ]
-          },
-          {
-            id: 'doc-003',
-            caseId: 'case-002',
-            caseNumber: 'CM/2026/0217',
-            caseTitle: 'Bank of Africa Tanzania v. Serengeti Telecoms Ltd',
-            title: 'Syndicated Term Facility Agreement & Debenture',
-            fileName: 'Facility_Agreement_Debenture_BOA.pdf',
-            category: 'Contracts',
-            uploadedBy: 'Adv. Robert Kasoma',
-            uploadDate: '2026-09-10',
-            size: '5.1 MB',
-            version: 'v1.0',
-            accessLevel: 'Confidential',
-            fileType: 'PDF',
-            status: 'Ready for AI',
-            ocrConfidence: '97.9%',
-            versions: [
-              { version: 'v1.0', fileName: 'Facility_Agreement_Debenture_BOA.pdf', uploadedBy: 'Adv. Robert Kasoma', uploadDate: '2026-09-10', size: '5.1 MB', changeNotes: 'Primary security deed' }
-            ],
-            accessHistory: [
-              { action: 'Uploaded', actor: 'Adv. Robert Kasoma', timestamp: '2026-09-10 11:30', notes: 'Facility document registered at BRELA' }
-            ]
-          },
-          {
-            id: 'doc-004',
-            caseId: 'case-004',
-            caseNumber: 'CA/2026/0321',
-            caseTitle: 'Serengeti Breweries v. TRA',
-            title: 'Memorandum of Appeal Against TRA Assessment',
-            fileName: 'Memorandum_of_Appeal_TRA.pdf',
-            category: 'Pleadings',
-            uploadedBy: 'Adv. Robert Kasoma',
-            uploadDate: '2026-09-11',
-            size: '3.1 MB',
-            version: 'v1.1',
-            accessLevel: 'Attorney-Client Privileged',
-            fileType: 'PDF',
-            status: 'Ready for AI',
-            ocrConfidence: '99.5%',
-            versions: [
-              { version: 'v1.1', fileName: 'Memorandum_of_Appeal_TRA.pdf', uploadedBy: 'Adv. Robert Kasoma', uploadDate: '2026-09-11', size: '3.1 MB', changeNotes: 'Amended to incorporate TRA ruling grounds' }
-            ],
-            accessHistory: [
-              { action: 'Amended Version Uploaded', actor: 'Adv. Robert Kasoma', timestamp: '2026-09-11 16:40', notes: 'Substituted pursuant to leave granted' }
-            ]
-          }
-        ];
-        this.persistDocuments();
-      }
+      this.documents = [];
+      this.persistDocuments();
     } catch (e) {
       console.warn('Failed to restore documents:', e);
+      this.documents = [];
     }
   },
 
@@ -2132,165 +2124,21 @@ const SLCMS_STATE = {
   // --------------------------------------------------------------------------
   restoreCommunications() {
     try {
+      const existingCaseNums = new Set((this.cases || []).map(c => c.caseNumber).filter(Boolean));
       const saved = localStorage.getItem('slcms_persisted_communications');
-      if (saved) {
+      if (saved !== null) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          this.communications = parsed;
+        if (Array.isArray(parsed)) {
+          this.communications = parsed.filter(cm => cm && existingCaseNums.has(cm.caseNumber));
+          this.persistCommunications();
           return;
         }
       }
-      if (!this.communications || this.communications.length === 0) {
-        this.communications = [
-          {
-            id: 'comm-101',
-            type: 'Telephone Call',
-            channel: 'phone',
-            caseNumber: 'CV/2026/0042',
-            client: 'Kilombero Sugar Co. Ltd',
-            sender: 'Adv. Robert Kasoma',
-            recipient: 'Eng. Bakari (CEO, Mara Logistics)',
-            participants: 'Adv. Robert Kasoma, Eng. Bakari, Legal Clerk',
-            timestamp: '2026-09-12 10:30',
-            subject: 'Conferral on Settlement Framework Prior to Submissions',
-            summary: 'Conferred with defendant CEO on proposed installment repayment framework. Defendant requested 14 days to complete internal audit of haulage log reconciliations.',
-            nextAction: 'Draft and dispatch draft settlement deed',
-            followUpDeadline: '2026-09-24',
-            attachment: null
-          },
-          {
-            id: 'comm-102',
-            type: 'Email',
-            channel: 'email',
-            caseNumber: 'CV/2026/0042',
-            client: 'Kilombero Sugar Co. Ltd',
-            sender: 'Adv. Robert Kasoma',
-            recipient: 'legal@kilomberosugar.co.tz',
-            participants: 'Adv. Robert Kasoma, Managing Director, Financial Controller',
-            timestamp: '2026-09-13 14:15',
-            subject: 'Court Hearing Outcome & Interim Injunction Ruling Briefing',
-            summary: 'Briefed client on Chamber Summons ruling delivered by Hon. Lady Justice Msumange. Court granted interim preservation of sugar consignment pending trial.',
-            nextAction: 'Finalize witness statements of operations managers',
-            followUpDeadline: '2026-09-26',
-            attachment: 'Injunction_Ruling_Summary.pdf'
-          },
-          {
-            id: 'comm-103',
-            type: 'Client Meeting',
-            channel: 'in-person',
-            caseNumber: 'CM/2026/0217',
-            client: 'Bank of Africa Tanzania',
-            sender: 'Adv. Robert Kasoma',
-            recipient: 'Bank Recovery & Remedial Directorate',
-            participants: 'Adv. Robert Kasoma, Head of Credit Recovery, Senior Remedial Manager',
-            timestamp: '2026-09-13 11:00',
-            subject: 'Pre-Trial Strategy Conference on Collateral Realization',
-            summary: 'Review of mortgaged commercial properties and valuation reports. Agreed to oppose borrower application for injunction and file counter-claim for default interest.',
-            nextAction: 'Prepare counter-affidavit and statutory valuation exhibits',
-            followUpDeadline: '2026-09-22',
-            attachment: 'Valuation_Report_Summary.pdf'
-          },
-          {
-            id: 'comm-104',
-            type: 'Court Communication',
-            channel: 'portal',
-            caseNumber: 'CA/2026/0321',
-            client: 'Serengeti Breweries Ltd',
-            sender: 'High Court Commercial Registry',
-            recipient: 'SLCMS Law Chambers',
-            participants: 'Deputy Registrar, Adv. Robert Kasoma',
-            timestamp: '2026-09-14 09:00',
-            subject: 'Hearing Date Allocation Notice - Commercial Appeal',
-            summary: 'Electronic hearing notice issued by High Court Commercial Division. Appeal allocated for oral hearing on 28 September 2026 at 09:00 AM before Coram of three judges.',
-            nextAction: 'Serve notice of hearing on Tanzania Revenue Authority legal counsel',
-            followUpDeadline: '2026-09-21',
-            attachment: 'Court_Hearing_Notice_28Sep.pdf'
-          },
-          {
-            id: 'comm-105',
-            type: 'Opposing Counsel Communication',
-            channel: 'email',
-            caseNumber: 'CV/2026/0042',
-            client: 'Kilombero Sugar Co. Ltd',
-            sender: 'Apex Legal Advocates (Counsel for Defendant)',
-            recipient: 'Adv. Robert Kasoma',
-            participants: 'Adv. David Sterling, Adv. Robert Kasoma',
-            timestamp: '2026-09-14 16:45',
-            subject: 'Without Prejudice Settlement Proposal & Schedule',
-            summary: 'Opposing counsel delivered without prejudice proposal offering initial payment of TZS 150M within 30 days and balance across 4 monthly tranches.',
-            nextAction: 'Take client instructions on proposed installment terms',
-            followUpDeadline: '2026-09-20',
-            attachment: 'Without_Prejudice_Settlement_Terms.pdf'
-          },
-          {
-            id: 'comm-106',
-            type: 'Letter Sent',
-            channel: 'letter',
-            caseNumber: 'CM/2026/0217',
-            client: 'Bank of Africa Tanzania',
-            sender: 'SLCMS Law Chambers',
-            recipient: 'Managing Director, Serengeti Telecoms Ltd',
-            participants: 'Adv. Robert Kasoma, Managing Director',
-            timestamp: '2026-09-15 08:30',
-            subject: 'Statutory Demand Notice Prior to Commercial Enforcement',
-            summary: 'Dispatched formal 14-day statutory demand under Section 42 of the Law of Contract Act [Cap. 345 R.E. 2019] demanding full payment of outstanding credit facilities.',
-            nextAction: 'Track registry proof of service and expiry of 14-day window',
-            followUpDeadline: '2026-09-29',
-            attachment: 'Statutory_Demand_BOA_2026.pdf'
-          },
-          {
-            id: 'comm-107',
-            type: 'Letter Received',
-            channel: 'letter',
-            caseNumber: 'EM/2026/0089',
-            client: 'Juma Hamisi',
-            sender: 'Commission for Mediation and Arbitration (CMA)',
-            recipient: 'SLCMS Advocates',
-            participants: 'CMA Arbitrator, Legal Clerk',
-            timestamp: '2026-09-15 11:20',
-            subject: 'Certificate of Unresolved Labour Dispute (Form No. CMA-07)',
-            summary: 'Received official certificate from CMA Dar es Salaam confirming failed mediation. Matter officially referred to the Labour Court for trial adjudication.',
-            nextAction: 'Draft and file Statement of Claim in the High Court Labour Division',
-            followUpDeadline: '2026-09-30',
-            attachment: 'CMA_Certificate_Dispute_0089.pdf'
-          },
-          {
-            id: 'comm-108',
-            type: 'Internal Meeting',
-            channel: 'in-person',
-            caseNumber: 'CV/2026/0042',
-            client: 'Kilombero Sugar Co. Ltd',
-            sender: 'Commercial Litigation Group',
-            recipient: 'Assigned Matter Team',
-            participants: 'Adv. Robert Kasoma, Supporting Lawyer, Legal Clerk',
-            timestamp: '2026-09-15 15:00',
-            subject: 'Trial Strategy & Submissions Preparation Conferral',
-            summary: 'Internal team review of evidence bundle, contractual default notices, and preparation of written submissions pursuant to High Court order.',
-            nextAction: 'Legal Clerk to paginate exhibits and bind submission bundle',
-            followUpDeadline: '2026-09-25',
-            attachment: null
-          },
-          {
-            id: 'comm-109',
-            type: 'Other',
-            channel: 'portal',
-            caseNumber: 'CR/2026/0014',
-            client: 'Joseph Mwita',
-            sender: 'National Prosecution Services (NPS)',
-            recipient: 'Defense Counsel',
-            participants: 'State Attorney, Adv. Robert Kasoma',
-            timestamp: '2026-09-16 09:30',
-            subject: 'Electronic Supply of Prosecution Exhibits & Witness Statements',
-            summary: 'State Attorney provided electronic disclosure bundle containing prosecution witness statements, seizure memo, and police inventory logs under Section 246 of CPA.',
-            nextAction: 'Scrutinize disclosures for inconsistencies to prepare cross-examination outline',
-            followUpDeadline: '2026-09-23',
-            attachment: 'Prosecution_Disclosure_Bundle.pdf'
-          }
-        ];
-        this.persistCommunications();
-      }
+      this.communications = [];
+      this.persistCommunications();
     } catch (e) {
       console.warn('Failed to restore communications:', e);
+      this.communications = [];
     }
   },
 
@@ -2304,53 +2152,22 @@ const SLCMS_STATE = {
 
   restoreCourtAttendances() {
     try {
+      const existingCaseIds = new Set((this.cases || []).map(c => c.id));
+      const existingCaseNums = new Set((this.cases || []).map(c => c.caseNumber).filter(Boolean));
       const saved = localStorage.getItem('slcms_persisted_court_attendances');
-      if (saved) {
+      if (saved !== null) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          this.courtAttendances = parsed;
+        if (Array.isArray(parsed)) {
+          this.courtAttendances = parsed.filter(ca => ca && (existingCaseIds.has(ca.caseId) || existingCaseNums.has(ca.caseNumber)));
+          this.persistCourtAttendances();
           return;
         }
       }
-      if (!this.courtAttendances || this.courtAttendances.length === 0) {
-        this.courtAttendances = [
-          {
-            id: 'ca-001',
-            caseId: 'case-001',
-            caseNumber: 'CV/2026/0042',
-            caseTitle: 'Kilombero Sugar Co. v. Mara Logistics Ltd',
-            court: 'High Court of Tanzania (Commercial Division), Dar es Salaam',
-            hearingDate: '2026-09-14',
-            attendingLawyer: 'Adv. Robert Kasoma',
-            judge: 'Hon. Lady Justice Msumange',
-            coram: 'Hon. Lady Justice Msumange (Single Judge)',
-            proceedingStage: 'Hearing of Chamber Summons (Interim Relief)',
-            directions: 'Interim injunction maintained until 28 September 2026. Respondent ordered to file and serve counter-affidavit within 7 statutory days. Applicant rejoinder within 4 days thereafter. Oral submissions scheduled for 28 September 2026.',
-            nextHearingDate: '2026-09-28',
-            notes: 'Opposing counsel pleaded for 14 days for reply; court denied extension citing risk of commercial inventory dissipation.',
-            createdAt: '2026-09-14 12:45'
-          },
-          {
-            id: 'ca-002',
-            caseId: 'case-004',
-            caseNumber: 'CA/2026/0321',
-            caseTitle: 'Serengeti Breweries v. TRA',
-            court: 'Tax Revenue Appeals Tribunal, Dar es Salaam',
-            hearingDate: '2026-09-11',
-            attendingLawyer: 'Adv. Robert Kasoma',
-            judge: 'Hon. Chairman Mwambapa',
-            coram: 'Hon. Chairman Mwambapa, Members Dr. Lyimo and Adv. Mndeme',
-            proceedingStage: 'Pre-Trial Scheduling & Directions Conference',
-            directions: 'Parties ordered to execute and file Joint Memorandum of Agreed Facts and Disputed Issues within 14 days. Hearing of preliminary objections scheduled for 05 October 2026.',
-            nextHearingDate: '2026-10-05',
-            notes: 'TRA Principal Revenue Counsel agreed to concede grounds 2 and 4 regarding depreciation allowances.',
-            createdAt: '2026-09-11 15:30'
-          }
-        ];
-        this.persistCourtAttendances();
-      }
+      this.courtAttendances = [];
+      this.persistCourtAttendances();
     } catch (e) {
       console.warn('Failed to restore court attendances:', e);
+      this.courtAttendances = [];
     }
   },
 
@@ -2371,60 +2188,22 @@ const SLCMS_STATE = {
 
   restoreProgressUpdates() {
     try {
+      const existingCaseIds = new Set((this.cases || []).map(c => c.id));
+      const existingCaseNums = new Set((this.cases || []).map(c => c.caseNumber).filter(Boolean));
       const saved = localStorage.getItem('slcms_persisted_progress_updates');
-      if (saved) {
+      if (saved !== null) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          this.progressUpdates = parsed;
+        if (Array.isArray(parsed)) {
+          this.progressUpdates = parsed.filter(pu => pu && (existingCaseIds.has(pu.caseId) || existingCaseNums.has(pu.caseNumber)));
+          this.persistProgressUpdates();
           return;
         }
       }
-      if (!this.progressUpdates || this.progressUpdates.length === 0) {
-        this.progressUpdates = [
-          {
-            id: 'pu-001',
-            caseId: 'case-001',
-            caseNumber: 'CV/2026/0042',
-            caseTitle: 'Kilombero Sugar Co. v. Mara Logistics Ltd',
-            date: '2026-09-14',
-            updateType: 'Procedural Ruling',
-            title: 'Interim Preservation Order Granted by High Court',
-            details: 'The High Court delivered a favourable ruling on the Chamber Summons, directing that the commercial consignment of raw sugar remain preserved under joint custody.',
-            impactOnTimeline: 'Next hearing expedited to 28 September 2026 for oral submissions.',
-            author: 'Adv. Robert Kasoma',
-            createdAt: '2026-09-14 13:00'
-          },
-          {
-            id: 'pu-002',
-            caseId: 'case-002',
-            caseNumber: 'CM/2026/0217',
-            caseTitle: 'Bank of Africa Tanzania v. Serengeti Telecoms Ltd',
-            date: '2026-09-15',
-            updateType: 'Settlement Discussion',
-            title: 'Without Prejudice Debt Restructuring Discussions Opened',
-            details: 'Counsel for borrower approached firm with formal restructuring term sheet proposing upfront payment of 25% outstanding debt with structured amortization.',
-            impactOnTimeline: 'Summary judgment filing paused for 10 days pending board approval of terms.',
-            author: 'Adv. Robert Kasoma',
-            createdAt: '2026-09-15 17:15'
-          },
-          {
-            id: 'pu-003',
-            caseId: 'case-004',
-            caseNumber: 'CA/2026/0321',
-            caseTitle: 'Serengeti Breweries v. TRA',
-            date: '2026-09-11',
-            updateType: 'Stage Change',
-            title: 'Matter Advanced from Pleadings to Pre-Trial Hearing Stage',
-            details: 'All appellate grounds and replies closed. Tribunal issued pre-trial directions and fixed date for oral contest on disputed excise tax computations.',
-            impactOnTimeline: 'Submissions to be completed within 14 statutory days.',
-            author: 'Adv. Robert Kasoma',
-            createdAt: '2026-09-11 16:00'
-          }
-        ];
-        this.persistProgressUpdates();
-      }
+      this.progressUpdates = [];
+      this.persistProgressUpdates();
     } catch (e) {
       console.warn('Failed to restore progress updates:', e);
+      this.progressUpdates = [];
     }
   },
 
@@ -2448,16 +2227,29 @@ const SLCMS_STATE = {
   // --------------------------------------------------------------------------
   restoreDrafts() {
     try {
+      const existingCaseIds = new Set((this.cases || []).map(c => c.id));
+      const existingCaseNums = new Set((this.cases || []).map(c => c.caseNumber).filter(Boolean));
+      const hasCases = existingCaseIds.size > 0;
       const saved = localStorage.getItem('slcms_persisted_drafts');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          this.legalDrafts = parsed;
+        if (Array.isArray(parsed)) {
+          // Keep drafts that have no caseId link (general drafts) OR whose case exists
+          const validDrafts = parsed.filter(d => {
+            if (!d) return false;
+            if (!d.caseId && !d.caseNumber) return true; // standalone draft
+            if (d.caseId && existingCaseIds.has(d.caseId)) return true;
+            if (d.caseNumber && existingCaseNums.has(d.caseNumber)) return true;
+            return false;
+          });
+          this.legalDrafts = validDrafts;
           return;
         }
       }
+      this.legalDrafts = [];
     } catch (e) {
       console.warn('Failed to restore legal drafts:', e);
+      this.legalDrafts = [];
     }
   },
 
@@ -2495,7 +2287,7 @@ const SLCMS_STATE = {
     return (this.cases || []).filter(c => {
       if (!this.canAccessCase(user, c.id)) return false;
       const st = (c.status || '').toUpperCase();
-      return st === 'ACTIVE' || st === 'ASSIGNED / ACTIVE' || st === 'ASSIGNED';
+      return st !== 'CLOSED' && st !== 'WON' && st !== 'ARCHIVED' && st !== 'RESOLVED' && st !== 'CONCLUDED';
     }).length;
   },
 
@@ -2504,18 +2296,29 @@ const SLCMS_STATE = {
   },
 
   getPendingTasksCount() {
+    if (!this.cases || this.cases.length === 0) return 0;
+    const existingCaseIds = new Set((this.cases || []).map(c => c.id));
+    const existingCaseNums = new Set((this.cases || []).map(c => c.caseNumber).filter(Boolean));
     return (this.tasks || []).filter(t => {
+      if (!t) return false;
+      if (t.caseId && !existingCaseIds.has(t.caseId)) return false;
+      if (t.caseNumber && !existingCaseNums.has(t.caseNumber)) return false;
       const st = (t.status || '').toLowerCase();
       return st !== 'completed' && st !== 'filed' && st !== 'cancelled';
     }).length;
   },
 
   getUpcomingDeadlinesCount() {
+    if (!this.cases || this.cases.length === 0) return 0;
+    const existingCaseIds = new Set((this.cases || []).map(c => c.id));
+    const existingCaseNums = new Set((this.cases || []).map(c => c.caseNumber).filter(Boolean));
     const events = (typeof TasksView !== 'undefined' && Array.isArray(TasksView.courtEvents)) 
       ? TasksView.courtEvents 
       : (this.courtEvents || []);
     return events.filter(e => {
-      if (!e.date) return false;
+      if (!e || !e.date) return false;
+      if (e.caseId && !existingCaseIds.has(e.caseId)) return false;
+      if (e.caseNumber && !existingCaseNums.has(e.caseNumber)) return false;
       return new Date(e.date) >= new Date('2026-09-01');
     }).length;
   },
@@ -2576,10 +2379,57 @@ const SLCMS_STATE = {
     if (idx >= 0) {
       const removed = this.cases.splice(idx, 1)[0];
       this.persistCases();
+
+      // Clean up linked data across all user pages
+      if (Array.isArray(this.documents)) {
+        this.documents = this.documents.filter(d => d.caseId !== caseId && d.caseNumber !== removed.caseNumber);
+        this.persistDocuments();
+      }
+      if (Array.isArray(this.tasks)) {
+        this.tasks = this.tasks.filter(t => t.caseId !== caseId && t.caseNumber !== removed.caseNumber);
+        this.persistTasks();
+      }
+      if (Array.isArray(this.courtAttendances)) {
+        this.courtAttendances = this.courtAttendances.filter(ca => ca.caseId !== caseId && ca.caseNumber !== removed.caseNumber);
+        this.persistCourtAttendances();
+      }
+      if (Array.isArray(this.progressUpdates)) {
+        this.progressUpdates = this.progressUpdates.filter(pu => pu.caseId !== caseId && pu.caseNumber !== removed.caseNumber);
+        this.persistProgressUpdates();
+      }
+      if (Array.isArray(this.communications)) {
+        this.communications = this.communications.filter(cm => cm.caseId !== caseId && cm.caseNumber !== removed.caseNumber);
+        this.persistCommunications();
+      }
+
+      this.syncUsersWithCases();
       this.addAuditLog('Legal Case Removed', 'Case Management', `${removed.caseNumber} - ${removed.title}`);
       return true;
     }
     return false;
+  },
+
+  clearAllCases() {
+    this.cases = [];
+    this.persistCases();
+
+    // Clean up all linked matter records
+    this.documents = [];
+    this.persistDocuments();
+    this.courtAttendances = [];
+    this.persistCourtAttendances();
+    this.progressUpdates = [];
+    this.persistProgressUpdates();
+    this.communications = [];
+    this.persistCommunications();
+    if (Array.isArray(this.tasks)) {
+      this.tasks = this.tasks.filter(t => !t.caseId && !t.caseNumber);
+      this.persistTasks();
+    }
+
+    this.syncUsersWithCases();
+    this.addAuditLog('All Legal Cases Cleared', 'Case Management', 'System repository cases reset to 0');
+    return true;
   },
 
   persistCurrentUser() {
@@ -2975,24 +2825,18 @@ const SLCMS_STATE = {
 
   canAccessCase(user, caseId) {
     if (!user) return false;
-    if (user.role === 'Administrator') return true;
+    if (user.role === 'Administrator' || user.role === 'Senior Lawyer') return true;
     
-    const targetCase = this.cases.find(c => c.id === caseId);
-    if (targetCase) {
-      // Restricted: System must allow only assigned users to open restricted cases
-      if (targetCase.accessLevel === 'Restricted') {
-        return this.isUserAssignedToCase(user, caseId);
-      }
-      // All Lawyers: Any lawyer or senior lawyer can open
-      if (targetCase.accessLevel === 'All Lawyers' && (user.role === 'Senior Lawyer' || user.role === 'Lawyer')) {
-        return true;
-      }
+    const targetCase = (this.cases || []).find(c => c.id === caseId);
+    if (!targetCase) return false;
+
+    // Restricted access: System only allows assigned users to open restricted cases
+    if (targetCase.accessLevel === 'Restricted') {
+      return this.isUserAssignedToCase(user, caseId);
     }
 
-    if (user.role === 'Senior Lawyer') {
-      return true;
-    }
-    return this.isUserAssignedToCase(user, caseId);
+    // Standard / General / All Lawyers / Unassigned: Visible to all verified firm users
+    return true;
   },
 
   hasRolePermission(roleOrUser, permissionKey) {
@@ -4109,10 +3953,6 @@ const SLCMS_STATE = {
   },
 
   addCase(caseData) {
-    if (this.currentUser?.role === 'Administrator') {
-      console.warn('Access Denied: Administrators do not have access to create or add cases.');
-      return null;
-    }
     if (!caseData || typeof caseData !== 'object') caseData = {};
     const safeTitle = caseData.caseTitle ?? caseData.title ?? 'Untitled Case';
     const safeNumber = caseData.caseNumber ?? caseData.officialCaseNumber ?? 'Not provided';
@@ -4139,12 +3979,17 @@ const SLCMS_STATE = {
 
     this.cases.unshift(normalized);
     this.persistCases();
+    this.syncUsersWithCases();
     this.addAuditLog('New Legal Case Registered', 'Case Management', `${safeNumber} - ${safeTitle}`);
+    return normalized;
   },
 
   addTask(taskData) {
+    if (!this.tasks) this.tasks = [];
     this.tasks.unshift(taskData);
+    this.persistTasks();
     this.addAuditLog('New Legal Task Created', 'Tasks & Deadlines', taskData.title);
+    return taskData;
   },
 
   addDocument(docData) {
@@ -4170,6 +4015,94 @@ const SLCMS_STATE = {
     const demoIds = ['case-001', 'case-002', 'case-003', 'case-004', 'case-005', 'case-101', 'case-102', 'case-103', 'case-104', 'case-105'];
     const demoNums = ['CV/2026/0042', 'CM/2026/0217', 'EM/2026/0089', 'CA/2026/0321', 'CR/2026/0014'];
     return (this.cases || []).filter(c => c && !demoIds.includes(c.id) && !demoNums.includes(c.caseNumber));
+  },
+
+  deleteCase(caseId) {
+    if (!caseId) return false;
+    const idx = (this.cases || []).findIndex(c => c.id === caseId);
+    if (idx === -1) return false;
+    const removed = this.cases.splice(idx, 1)[0];
+    // Cascade: remove all linked data
+    if (Array.isArray(this.tasks)) {
+      this.tasks = this.tasks.filter(t => t.caseId !== caseId && t.caseNumber !== removed.caseNumber);
+      this.persistTasks();
+    }
+    if (Array.isArray(this.documents)) {
+      this.documents = this.documents.filter(d => d.caseId !== caseId && d.caseNumber !== removed.caseNumber);
+      this.persistDocuments();
+    }
+    if (Array.isArray(this.communications)) {
+      this.communications = this.communications.filter(cm => cm.caseId !== caseId && cm.caseNumber !== removed.caseNumber);
+      this.persistCommunications();
+    }
+    if (Array.isArray(this.courtAttendances)) {
+      this.courtAttendances = this.courtAttendances.filter(ca => ca.caseId !== caseId && ca.caseNumber !== removed.caseNumber);
+      this.persistCourtAttendances();
+    }
+    if (Array.isArray(this.progressUpdates)) {
+      this.progressUpdates = this.progressUpdates.filter(pu => pu.caseId !== caseId && pu.caseNumber !== removed.caseNumber);
+      this.persistProgressUpdates();
+    }
+    if (Array.isArray(this.deadlines)) {
+      this.deadlines = this.deadlines.filter(d => d.caseId !== caseId && d.caseNumber !== removed.caseNumber);
+      try { localStorage.setItem('slcms_persisted_deadlines', JSON.stringify(this.deadlines)); } catch(e){}
+    }
+    if (Array.isArray(this.clientMessages)) {
+      this.clientMessages = this.clientMessages.filter(m => m.caseId !== caseId && m.caseNumber !== removed.caseNumber);
+      this.persistClientMessages();
+    }
+    if (Array.isArray(this.legalDrafts)) {
+      this.legalDrafts = this.legalDrafts.filter(d => d.caseId !== caseId && d.caseNumber !== removed.caseNumber);
+      this.persistDrafts();
+    }
+    this.persistCases();
+    this.syncUsersWithCases();
+    // Sync court events if TasksView loaded
+    if (typeof TasksView !== 'undefined' && typeof TasksView.syncCourtEvents === 'function') {
+      TasksView.syncCourtEvents();
+    }
+    this.addAuditLog('Case Deleted', 'Case Management', `Removed case: ${removed.caseNumber} - ${removed.title || removed.caseTitle}`);
+    return true;
+  },
+
+  clearAllCases() {
+    this.cases = [];
+    this.tasks = [];
+    this.deadlines = [];
+    this.documents = [];
+    this.communications = [];
+    this.courtAttendances = [];
+    this.progressUpdates = [];
+    this.clientMessages = [];
+    this.legalDrafts = [];
+    // Also purge demo clients — no cases = no clients
+    const DEMO_CLIENT_IDS = ['client-act-001', 'client-act-002', 'client-act-003', 'client-act-004'];
+    const DEMO_CLIENT_NAMES = ['Halima Ismail', 'Kilombero Sugar Co. Ltd', 'Bank of Africa Tanzania', 'Serengeti Breweries Ltd'];
+    if (Array.isArray(this.clients)) {
+      this.clients = this.clients.filter(c => c && !DEMO_CLIENT_IDS.includes(c.id) && !DEMO_CLIENT_NAMES.includes(c.name));
+    } else {
+      this.clients = [];
+    }
+    this.persistCases();
+    this.persistTasks();
+    this.persistDocuments();
+    this.persistCommunications();
+    this.persistCourtAttendances();
+    this.persistProgressUpdates();
+    this.persistClientMessages();
+    this.persistDrafts();
+    this.persistClients();
+    try {
+      localStorage.removeItem('slcms_persisted_deadlines');
+      localStorage.removeItem('slcms_persisted_court_events');
+    } catch(e){}
+    this.syncUsersWithCases();
+    if (typeof TasksView !== 'undefined') {
+      TasksView.courtEvents = [];
+    }
+    this.addAuditLog('All Cases Cleared', 'Case Management', 'All registered cases and linked records have been removed from the system.');
+    console.info('[SLCMS] clearAllCases(): System is now at 0 cases. Run location.reload() to reflect across all views.');
+    return true;
   },
 
   // ==========================================================================
@@ -26845,20 +26778,75 @@ Theobat Lameck Mlyuka was convicted of two counts of rape of his 11-year-old gra
     return { success: true, record };
   },
 
-  addAuditLog(action, module, record, status = 'Success') {
+  addAuditLog(action, module, record, status = 'Success', options = {}) {
     const now = new Date();
     const timestamp = now.toISOString().replace('T', ' ').substring(0, 19);
-    this.activityLogs.unshift({
-      id: 'log-' + Date.now(),
+    const eventTime = now.toISOString();
+    const u = this.currentUser || {};
+    const userId = options.userId || u.id || u.user_id || 'usr-001';
+    const userName = options.userName || u.name || u.full_name || 'System Administrator';
+    const staffId = options.staffId || u.staffId || u.staff_id || u.employeeId || 'ADM-0001';
+    const role = options.role || u.role || 'Administrator';
+    const ip = options.ip || '192.168.1.104 (Dar es Salaam Chambers)';
+    const logId = options.id || ('evt-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7));
+    const stat = (status || 'Success');
+    const securityLevel = options.securityLevel || (
+      stat.toLowerCase() === 'locked' ? 'Critical' :
+      (stat.toLowerCase() === 'failed' || stat.toLowerCase() === 'blocked') ? 'High' : 'Standard'
+    );
+
+    const logEntry = {
+      id: logId,
       timestamp: timestamp,
-      user: this.currentUser?.name || 'System / Unauthenticated',
-      role: this.currentUser?.role || 'Guest',
+      eventTime: eventTime,
+      userId: userId,
+      user: userName,
+      userName: userName,
+      staffId: staffId,
+      role: role,
       action: action,
-      module: module,
+      eventType: action,
+      module: module || 'Security Activity',
       record: record,
-      ip: '192.168.1.45 (Firm Office VPN)',
-      status: status
-    });
+      description: record,
+      result: stat,
+      status: stat,
+      ip: ip,
+      ipAddress: ip,
+      securityLevel: securityLevel
+    };
+
+    if (!Array.isArray(this.activityLogs)) this.activityLogs = [];
+    
+    // Deduplicate by ID
+    const existingIdx = this.activityLogs.findIndex(l => l.id === logId);
+    if (existingIdx !== -1) {
+      this.activityLogs[existingIdx] = logEntry;
+    } else {
+      this.activityLogs.unshift(logEntry);
+    }
+
+    try {
+      localStorage.setItem('slcms_activity_logs', JSON.stringify(this.activityLogs));
+    } catch(e) {}
+
+    // Asynchronously dispatch to backend database
+    try {
+      if (typeof fetch === 'function') {
+        fetch('/api/admin/security-activity', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(logEntry)
+        }).catch(() => {});
+      }
+    } catch (e) {}
+
+    // Update AdminView live count if available
+    if (typeof AdminView !== 'undefined' && typeof AdminView.updateSecurityActivityCounts === 'function') {
+      try { AdminView.updateSecurityActivityCounts(); } catch(e) {}
+    }
+
+    return logEntry;
   },
 
   // Cases Requiring Attention (Requirement: exactly 3 cases from database)

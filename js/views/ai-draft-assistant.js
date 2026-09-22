@@ -675,7 +675,7 @@ const AIDraftAssistantView = {
 
     setTimeout(() => {
       if (this.activeMode === 'matter_docs') {
-        const c = (SLCMS_STATE.cases || []).find(x => x.id === this.selectedCaseId) || SLCMS_STATE.cases[0] || {};
+        const c = (SLCMS_STATE.cases || []).find(x => x.id === this.selectedCaseId) || (SLCMS_STATE.cases || [])[0] || {};
         this.currentDraftText = this.buildMatterDocument(c, this.selectedDraftType, this.lawyerInstructions);
       } else {
         const j = (SLCMS_STATE.tanzaniaJudgments || []).find(x => x.id === this.selectedJudgmentId) || SLCMS_STATE.tanzaniaJudgments[0] || {};
@@ -1098,7 +1098,7 @@ Compiled by: ${lawyer}`;
     }
 
     if (type === 'case_comparison_report') {
-      const activeCase = SLCMS_STATE.cases[0] || {};
+      const activeCase = (SLCMS_STATE.cases || [])[0] || { caseNumber: 'NO-ACTIVE-MATTER', title: 'General Legal Analysis' };
       return warningLine + `COMPARATIVE CASE ANALYSIS REPORT
 ACTIVE MATTER: ${activeCase.caseNumber} &bull; ${activeCase.title}
 PRECEDENT BENCHMARK: ${citation} &bull; ${title}
@@ -1205,9 +1205,9 @@ Instructions: "${instructions}"`;
   },
 
   approveAndAttach(caseId) {
-    const c = (SLCMS_STATE.cases || []).find(item => item.id === caseId) || SLCMS_STATE.cases[0];
+    const c = (SLCMS_STATE.cases || []).find(item => item.id === caseId) || (SLCMS_STATE.cases || [])[0];
     if (!c) {
-      App.showToast('Please select a valid case.', 'error');
+      App.showToast('No active case registered to attach this draft to.', 'error');
       return;
     }
 
