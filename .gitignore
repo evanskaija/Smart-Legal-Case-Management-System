@@ -45,4 +45,15 @@ scratch/
 
 # Local runtime data
 backend/data/
+backend/backups/
+*.mv.db
+*.trace.db
+
+# Gmail OAuth credentials and authorization tokens
+backend/secure/
+backend/tokens/
+backend/uploads/
+**/gmail-credentials.json
+.env
+
 

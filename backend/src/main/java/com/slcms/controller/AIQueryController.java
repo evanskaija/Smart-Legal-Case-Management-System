@@ -14,7 +14,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/ai")
-@CrossOrigin(origins = "*")
+@CrossOrigin(originPatterns = "*")
 public class AIQueryController {
 
     private final AIResearchService aiResearchService;

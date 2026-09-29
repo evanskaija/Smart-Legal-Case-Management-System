@@ -723,13 +723,28 @@ input[type="checkbox"]:focus-visible + .checkbox-custom {
   transform: translateY(0) scale(1);
 }
 
+/* AI Copilot FAB: Exclusively reserved for the Lawyer Page */
+#ai-copilot-fab,
+.ai-copilot-fab,
+body:not(.is-lawyer-page) #ai-copilot-fab,
+body:not(.is-lawyer-page) .ai-copilot-fab,
 body.modal-open #ai-copilot-fab,
 .modal-overlay.active ~ #ai-copilot-fab,
 body.modal-open .ai-copilot-fab {
+  display: none !important;
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
   transform: scale(0.6) !important;
+}
+
+body.is-lawyer-page:not(.copilot-open):not(.modal-open):not(.auth-view-active) #ai-copilot-fab,
+body.is-lawyer-page:not(.copilot-open):not(.modal-open):not(.auth-view-active) .ai-copilot-fab {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: scale(1) !important;
 }
 
 @media (max-width: 768px) {
@@ -1808,5 +1823,196 @@ body.modal-open .ai-copilot-fab {
 
 [data-theme="dark"] .ai-markdown-table tr:hover td {
   background: rgba(255, 255, 255, 0.03);
+}
+
+/* ==========================================================================
+   SMART GLOBAL SEARCH SPOTLIGHT COMPONENT
+   ========================================================================== */
+.global-search-modal-wrap {
+  width: 100%;
+}
+
+.global-search-item {
+  position: relative;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid var(--color-border, #E2E8F0);
+}
+
+.global-search-item:hover {
+  transform: translateX(3px);
+  background-color: var(--color-surface-hover, #F1F5F9) !important;
+  border-color: var(--color-gold, #C89B3C) !important;
+  box-shadow: 0 4px 12px rgba(10, 25, 47, 0.06);
+}
+
+.btn-search-filter:hover {
+  border-color: var(--color-gold, #C89B3C) !important;
+  color: var(--color-gold, #C89B3C) !important;
+}
+
+#global-search-results::-webkit-scrollbar {
+  width: 6px;
+}
+
+#global-search-results::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#global-search-results::-webkit-scrollbar-thumb {
+  background: var(--color-border, #CBD5E1);
+  border-radius: 4px;
+}
+
+#global-search-results::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted, #94A3B8);
+}
+
+/* Dark Mode Enhancements for Global Search */
+[data-theme="dark"] .global-search-modal-wrap .modal-header,
+[data-theme="dark"] .global-search-modal-wrap .modal-body {
+  background: #0B192C !important;
+}
+
+[data-theme="dark"] #global-search-filter-bar {
+  background: #061121 !important;
+  border-bottom-color: #1E293B !important;
+}
+
+[data-theme="dark"] .btn-search-filter {
+  background: #0F172A !important;
+  border-color: #334155 !important;
+  color: #94A3B8 !important;
+}
+
+[data-theme="dark"] .btn-search-filter.active {
+  background: var(--color-gold, #C89B3C) !important;
+  color: #0A192F !important;
+  border-color: var(--color-gold, #C89B3C) !important;
+}
+
+[data-theme="dark"] .global-search-item {
+  background: #0E1E34 !important;
+  border-color: #1E293B !important;
+}
+
+[data-theme="dark"] .global-search-item:hover {
+  background: #132742 !important;
+  border-color: var(--color-gold, #C89B3C) !important;
+}
+
+[data-theme="dark"] #global-modal-search-input {
+  color: #F8FAFC !important;
+}
+
+[data-theme="dark"] #global-modal-search-input::placeholder {
+  color: #64748B !important;
+}
+
+/* ==========================================================================
+   CLIENT CASE FORM – VALIDATION STYLES
+   ========================================================================== */
+
+/* --- Field Validation States --- */
+.field-valid input,
+.field-valid select,
+.field-valid textarea {
+  border-color: #059669 !important;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1) !important;
+}
+
+.field-invalid input,
+.field-invalid select,
+.field-invalid textarea {
+  border-color: #EF4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+.field-valid input:focus,
+.field-valid select:focus,
+.field-valid textarea:focus {
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.18) !important;
+}
+
+.field-invalid input:focus,
+.field-invalid select:focus,
+.field-invalid textarea:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18) !important;
+}
+
+/* --- Inline Error Message --- */
+.field-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #DC2626;
+  line-height: 1.3;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: opacity 0.25s ease, max-height 0.3s ease, margin 0.25s ease;
+}
+
+.field-error-msg.visible {
+  opacity: 1;
+  max-height: 3rem;
+  margin-top: 0.4rem;
+}
+
+.field-error-msg::before {
+  content: "⚠";
+  font-size: 0.82rem;
+  flex-shrink: 0;
+}
+
+/* --- Success checkmark indicator --- */
+.field-valid-icon {
+  position: absolute;
+  right: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #059669;
+  font-size: 1rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.field-valid .field-valid-icon {
+  opacity: 1;
+}
+
+/* --- Shake Animation (invalid submit) --- */
+@keyframes formShake {
+  0%, 100% { transform: translateX(0); }
+  10%, 50%, 90% { transform: translateX(-4px); }
+  30%, 70% { transform: translateX(4px); }
+}
+
+.form-shake {
+  animation: formShake 0.45s ease-in-out;
+}
+
+/* --- Submit Button States --- */
+#btn-submit-req:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+}
+
+/* --- Error Summary Box Transitions --- */
+#client-req-error {
+  transition: opacity 0.3s ease, max-height 0.3s ease;
+}
+
+#client-req-error:not(.hidden) {
+  animation: formShake 0.4s ease-in-out;
+}
+
+/* --- Label asterisk highlight on error --- */
+.field-invalid label {
+  color: #DC2626 !important;
 }
 

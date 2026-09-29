@@ -38,11 +38,15 @@ public class CorsConfig {
                     }
                 }
 
-                // Local frontend development hosts
+                // Local frontend development hosts (including XAMPP Apache port 80)
+                allowedOrigins.add("http://localhost");
+                allowedOrigins.add("http://localhost:80");
                 allowedOrigins.add("http://localhost:3000");
                 allowedOrigins.add("http://localhost:5173");
                 allowedOrigins.add("http://localhost:5500");
                 allowedOrigins.add("http://localhost:8080");
+                allowedOrigins.add("http://127.0.0.1");
+                allowedOrigins.add("http://127.0.0.1:80");
                 allowedOrigins.add("http://127.0.0.1:3000");
                 allowedOrigins.add("http://127.0.0.1:5173");
                 allowedOrigins.add("http://127.0.0.1:5500");
@@ -57,6 +61,17 @@ public class CorsConfig {
                         .allowedHeaders("*")
                         .allowCredentials(true)
                         .maxAge(3600);
+            }
+
+            @Override
+            public void addResourceHandlers(org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry registry) {
+                registry.addResourceHandler("/**")
+                        .addResourceLocations("file:../", "file:./", "classpath:/static/");
+            }
+
+            @Override
+            public void addViewControllers(org.springframework.web.servlet.config.annotation.ViewControllerRegistry registry) {
+                registry.addViewController("/").setViewName("forward:/index.html");
             }
         };
     }

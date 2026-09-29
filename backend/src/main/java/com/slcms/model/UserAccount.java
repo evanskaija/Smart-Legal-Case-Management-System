@@ -25,6 +25,9 @@ public class UserAccount {
     @Column(name = "employee_id", length = 50)
     private String employeeId;
 
+    @Column(name = "username", length = 100)
+    private String username;
+
     @Column(name = "name", length = 150, nullable = false)
     private String name;
 
@@ -42,7 +45,7 @@ public class UserAccount {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String passwordHash;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = UserRoleConverter.class)
     @Column(name = "role", length = 50, nullable = false)
     private UserRole role;
 
@@ -178,6 +181,9 @@ public class UserAccount {
 
     public String getEmployeeId() { return employeeId != null ? employeeId : staffId; }
     public void setEmployeeId(String employeeId) { this.employeeId = employeeId; this.staffId = employeeId; }
+
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }

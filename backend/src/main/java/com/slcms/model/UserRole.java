@@ -8,7 +8,13 @@ public enum UserRole {
     SENIOR_LAWYER("Senior Lawyer", "Lead assigned cases, supervise teams, approve legal drafts, use AI research, manage hearings and evidence."),
     LAWYER("Lawyer", "Work on assigned cases, draft pleadings/reports, upload evidence, submit drafts for Senior Lawyer review."),
     LEGAL_CLERK("Legal Clerk", "Register case info, upload/label documents, record court dates, maintain client contacts, prepare administrative forms."),
-    SYSTEM_ADMINISTRATOR("Administrator", "System Administrator");
+    LEGAL_OFFICER("Legal Officer", "Manage corporate legal compliance, contract reviews, regulatory filings, client records, and legal advisory."),
+    CLIENT("Client", "Client Portal Access to submit legal requests, view active cases, and exchange documents."),
+    SYSTEM_ADMINISTRATOR("Administrator", "System Administrator"),
+    MANAGING_PARTNER("Senior Lawyer", "Managing Partner / Senior Counsel"),
+    SENIOR_COUNSEL("Senior Lawyer", "Senior Counsel"),
+    ASSOCIATE_LAWYER("Lawyer", "Associate Lawyer"),
+    JUNIOR_LAWYER("Lawyer", "Junior Lawyer");
 
     private final String displayName;
     private final String description;

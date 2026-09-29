@@ -8,7 +8,9 @@ import com.slcms.repository.TaskRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 
 @Service
@@ -164,6 +166,30 @@ public class TaskService {
     }
 
     public Deadline createDeadline(Deadline deadline, String creatorId) {
+        if (deadline == null) {
+            throw new IllegalArgumentException("Deadline data payload is required.");
+        }
+        if (deadline.getTitle() == null || deadline.getTitle().trim().length() < 3 || deadline.getTitle().trim().length() > 150) {
+            throw new IllegalArgumentException("Appearance Title / Action Item must be between 3 and 150 characters.");
+        }
+        if (!deadline.getTitle().trim().matches(".*[a-zA-Z].*")) {
+            throw new IllegalArgumentException("Appearance Title must contain letters/words.");
+        }
+        if (deadline.getCourt() == null || deadline.getCourt().trim().length() < 3) {
+            throw new IllegalArgumentException("Courtroom / Location is required (minimum 3 characters).");
+        }
+        if (deadline.getResponsibleLawyerName() == null || deadline.getResponsibleLawyerName().trim().isBlank() || "Unassigned".equalsIgnoreCase(deadline.getResponsibleLawyerName().trim())) {
+            throw new IllegalArgumentException("Assigned staff member is required.");
+        }
+        if (deadline.getDeadlineDateString() != null && !deadline.getDeadlineDateString().isBlank()) {
+            try {
+                LocalDate dlDate = LocalDate.parse(deadline.getDeadlineDateString().trim());
+                if (dlDate.isBefore(LocalDate.now())) {
+                    throw new IllegalArgumentException("Appearance / Due Date cannot be in the past for a newly scheduled appearance.");
+                }
+            } catch (DateTimeParseException ignored) {}
+        }
+
         if (deadline.getId() == null || deadline.getId().isBlank()) {
             deadline.setId("dln-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 4));
         }

@@ -13,7 +13,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "*")
+@CrossOrigin(originPatterns = "*")
 public class TaskController {
 
     private final TaskService taskService;
@@ -93,8 +93,12 @@ public class TaskController {
     public ResponseEntity<?> createDeadline(
             @RequestBody Deadline deadline,
             @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        Deadline created = taskService.createDeadline(deadline, userId != null ? userId : "usr-admin");
-        return ResponseEntity.ok(created);
+        try {
+            Deadline created = taskService.createDeadline(deadline, userId != null ? userId : "usr-admin");
+            return ResponseEntity.ok(created);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
     }
 
     @PutMapping("/deadlines/{id}")

@@ -1,17 +1,33 @@
 package com.slcms.model;
 
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
  * System Setting entity representing a persistent configuration parameter.
+ * Mapped to the persistent 'system_settings' table in XAMPP MySQL (slcms_db).
  */
+@Entity
+@Table(name = "system_settings")
 public class SystemSetting {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "setting_key", length = 100, unique = true, nullable = false)
     private String settingKey;
+
+    @Column(name = "setting_value", columnDefinition = "TEXT")
     private String settingValue;
+
+    @Column(name = "setting_type", length = 30, nullable = false)
     private String settingType; // TEXT, NUMBER, BOOLEAN, EMAIL, PHONE, ENUM
+
+    @Column(name = "updated_by")
     private Long updatedBy;
+
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     public SystemSetting() {

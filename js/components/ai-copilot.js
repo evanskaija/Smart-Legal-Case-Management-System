@@ -53,24 +53,6 @@ const AICopilot = {
           </div>
         </div>
 
-        <!-- Tool Navigation Bar (5 Legal Modes: Chat, Win %, Brief, UTBMS, Deadlines) -->
-        <div class="ai-copilot-nav">
-          <button class="ai-copilot-nav-btn ${this.activeTab === 'chat' ? 'active' : ''}" onclick="AICopilot.switchTab('chat')">
-            💬 Legal Chat
-          </button>
-          <button class="ai-copilot-nav-btn ${this.activeTab === 'risk' ? 'active' : ''}" onclick="AICopilot.switchTab('risk')">
-            ⚖️ Win %
-          </button>
-          <button class="ai-copilot-nav-btn ${this.activeTab === 'summarize' ? 'active' : ''}" onclick="AICopilot.switchTab('summarize')">
-            📄 Redact & Brief
-          </button>
-          <button class="ai-copilot-nav-btn ${this.activeTab === 'billing' ? 'active' : ''}" onclick="AICopilot.switchTab('billing')">
-            ⏱️ UTBMS
-          </button>
-          <button class="ai-copilot-nav-btn ${this.activeTab === 'deadline' ? 'active' : ''}" onclick="AICopilot.switchTab('deadline')">
-            📅 Deadlines
-          </button>
-        </div>
 
         <!-- Dynamic Body Content Area -->
         <div id="ai-copilot-body" class="ai-copilot-content">
@@ -85,22 +67,80 @@ const AICopilot = {
     `;
 
     document.body.appendChild(container);
+    this.updateFabVisibility();
+  },
+
+  isAllowedPage() {
+    try {
+      if (typeof SLCMS_STATE === 'undefined' || !SLCMS_STATE.currentUser) return false;
+      const user = SLCMS_STATE.currentUser;
+      const roleStr = String(user.role || '').toLowerCase();
+      const titleStr = String(user.jobTitle || user.roleLabel || user.roleTitle || '').toLowerCase();
+      const isLawyerRole = roleStr.includes('lawyer') || titleStr.includes('lawyer') || roleStr.includes('advocate') || titleStr.includes('advocate');
+      if (!isLawyerRole) return false;
+
+      // Must be on the Lawyer Page / Lawyer Dashboard
+      const currentRoute = (typeof App !== 'undefined' && App.currentRoute) ? App.currentRoute : (window.location.hash || '');
+      const cleanRoute = String(currentRoute || '').replace(/^#\/?/, '').replace(/^\/+/, '').trim();
+
+      return cleanRoute === 'lawyer/dashboard' || 
+             cleanRoute === 'senior-lawyer/dashboard' || 
+             cleanRoute === 'lawyer-dashboard' ||
+             cleanRoute === 'senior-lawyer-dashboard' || 
+             cleanRoute === 'dashboard' || 
+             cleanRoute === '';
+    } catch (e) {
+      return false;
+    }
+  },
+
+  updateFabVisibility() {
+    try {
+      const fab = document.getElementById('ai-copilot-fab');
+      const isAllowed = this.isAllowedPage();
+      if (document.body) {
+        document.body.classList.toggle('is-lawyer-page', isAllowed);
+      }
+
+      if (!fab) return;
+
+      if (isAllowed && !this.isOpen && !document.body.classList.contains('copilot-open') && !document.body.classList.contains('modal-open') && !document.body.classList.contains('auth-view-active')) {
+        fab.style.setProperty('display', 'flex', 'important');
+        fab.style.setProperty('opacity', '1', 'important');
+        fab.style.setProperty('visibility', 'visible', 'important');
+        fab.style.setProperty('pointer-events', 'auto', 'important');
+      } else {
+        fab.style.setProperty('display', 'none', 'important');
+        fab.style.setProperty('opacity', '0', 'important');
+        fab.style.setProperty('visibility', 'hidden', 'important');
+        fab.style.setProperty('pointer-events', 'none', 'important');
+      }
+    } catch (e) {
+      console.warn('AICopilot updateFabVisibility notice:', e);
+    }
   },
 
   bindKeyboardShortcuts() {
     window.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'j' || e.key === 'J')) {
         e.preventDefault();
-        this.toggleDrawer();
+        if (this.isAllowedPage() || this.isOpen) {
+          this.toggleDrawer();
+        }
       }
     });
   },
 
   toggleDrawer() {
-    this.isOpen ? this.closeDrawer() : this.openDrawer();
+    if (this.isOpen) {
+      this.closeDrawer();
+    } else if (this.isAllowedPage()) {
+      this.openDrawer();
+    }
   },
 
   openDrawer() {
+    if (!this.isAllowedPage()) return;
     this.isOpen = true;
     const drawer = document.getElementById('ai-copilot-drawer');
     const backdrop = document.getElementById('ai-copilot-backdrop');
@@ -108,9 +148,9 @@ const AICopilot = {
     if (drawer) drawer.classList.add('open');
     if (backdrop) backdrop.classList.add('open');
     if (fab) {
-      fab.style.display = 'none';
-      fab.style.opacity = '0';
-      fab.style.pointerEvents = 'none';
+      fab.style.setProperty('display', 'none', 'important');
+      fab.style.setProperty('opacity', '0', 'important');
+      fab.style.setProperty('pointer-events', 'none', 'important');
     }
     document.body.classList.add('copilot-open');
     this.updateBody();
@@ -120,15 +160,10 @@ const AICopilot = {
     this.isOpen = false;
     const drawer = document.getElementById('ai-copilot-drawer');
     const backdrop = document.getElementById('ai-copilot-backdrop');
-    const fab = document.getElementById('ai-copilot-fab');
     if (drawer) drawer.classList.remove('open');
     if (backdrop) backdrop.classList.remove('open');
-    if (fab) {
-      fab.style.display = '';
-      fab.style.opacity = '';
-      fab.style.pointerEvents = '';
-    }
     document.body.classList.remove('copilot-open');
+    this.updateFabVisibility();
   },
 
   clearChat() {
@@ -457,23 +492,8 @@ const AICopilot = {
               onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); AICopilot.sendChatMessage(); }"
             ></textarea>
             <div class="ai-chat-prompt-bottom-bar">
-              <div class="ai-prompt-left-tools">
-                <button type="button" class="ai-prompt-circle-plus" onclick="App.showToast('Attach documents from case dossier.', 'info')" title="Add files">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                  </svg>
-                </button>
-              </div>
+              <div class="ai-prompt-left-tools"></div>
               <div class="ai-prompt-right-tools">
-                <button type="button" class="ai-prompt-mic-icon-btn" onclick="App.showToast('Listening... Speak your legal query.', 'info')" title="Voice input">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                    <line x1="12" y1="19" x2="12" y2="23"></line>
-                    <line x1="8" y1="23" x2="16" y2="23"></line>
-                  </svg>
-                </button>
                 <button type="button" class="ai-prompt-send-icon-btn" id="btn-copilot-send" onclick="AICopilot.sendChatMessage()" title="Send">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="12" y1="19" x2="12" y2="5"></line>

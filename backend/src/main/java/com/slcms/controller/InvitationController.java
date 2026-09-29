@@ -16,7 +16,7 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/invitations")
-@CrossOrigin(origins = "*")
+@CrossOrigin(originPatterns = "*")
 public class InvitationController {
 
     private final RBACSecurityService securityService;

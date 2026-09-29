@@ -1,117 +1,83 @@
 package com.slcms.model;
 
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
- * Audit record for settings changes.
- * Masks sensitive values to ensure secret credentials/keys are never exposed in logs.
+ * Audit log entity tracking changes made to system configuration parameters.
+ * Mapped to the persistent 'system_setting_audit' table in XAMPP MySQL (slcms_db).
  */
+@Entity
+@Table(name = "system_setting_audit")
 public class SystemSettingAudit {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "admin_id", length = 50)
     private String adminId;
+
+    @Column(name = "admin_name", length = 150)
     private String adminName;
+
+    @Column(name = "setting_key", length = 100, nullable = false)
     private String settingKey;
+
+    @Column(name = "previous_value", columnDefinition = "TEXT")
     private String previousValue;
+
+    @Column(name = "new_value", columnDefinition = "TEXT")
     private String newValue;
+
+    @Column(name = "ip_address", length = 50)
     private String ipAddress;
-    private String actionStatus; // SUCCESS, BLOCKED, FAILED
-    private LocalDateTime createdAt;
+
+    @Column(name = "action_status", length = 30)
+    private String actionStatus = "SUCCESS";
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     public SystemSettingAudit() {
         this.createdAt = LocalDateTime.now();
-        this.actionStatus = "SUCCESS";
     }
 
     public SystemSettingAudit(String adminId, String adminName, String settingKey, String previousValue, String newValue, String ipAddress, String actionStatus) {
         this.adminId = adminId;
         this.adminName = adminName;
         this.settingKey = settingKey;
-        this.previousValue = maskIfSensitive(settingKey, previousValue);
-        this.newValue = maskIfSensitive(settingKey, newValue);
-        this.ipAddress = ipAddress != null ? ipAddress : "127.0.0.1";
+        this.previousValue = previousValue;
+        this.newValue = newValue;
+        this.ipAddress = ipAddress;
         this.actionStatus = actionStatus != null ? actionStatus : "SUCCESS";
         this.createdAt = LocalDateTime.now();
     }
 
-    public static String maskIfSensitive(String key, String value) {
-        if (key == null || value == null) return value;
-        String lower = key.toLowerCase();
-        if (lower.contains("password") || lower.contains("secret") || lower.contains("key") || lower.contains("token")) {
-            return "Security configuration updated.";
-        }
-        return value;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public Long getId() {
-        return id;
-    }
+    public String getAdminId() { return adminId; }
+    public void setAdminId(String adminId) { this.adminId = adminId; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public String getAdminName() { return adminName; }
+    public void setAdminName(String adminName) { this.adminName = adminName; }
 
-    public String getAdminId() {
-        return adminId;
-    }
+    public String getSettingKey() { return settingKey; }
+    public void setSettingKey(String settingKey) { this.settingKey = settingKey; }
 
-    public void setAdminId(String adminId) {
-        this.adminId = adminId;
-    }
+    public String getPreviousValue() { return previousValue; }
+    public void setPreviousValue(String previousValue) { this.previousValue = previousValue; }
 
-    public String getAdminName() {
-        return adminName;
-    }
+    public String getNewValue() { return newValue; }
+    public void setNewValue(String newValue) { this.newValue = newValue; }
 
-    public void setAdminName(String adminName) {
-        this.adminName = adminName;
-    }
+    public String getIpAddress() { return ipAddress; }
+    public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
 
-    public String getSettingKey() {
-        return settingKey;
-    }
+    public String getActionStatus() { return actionStatus; }
+    public void setActionStatus(String actionStatus) { this.actionStatus = actionStatus; }
 
-    public void setSettingKey(String settingKey) {
-        this.settingKey = settingKey;
-    }
-
-    public String getPreviousValue() {
-        return previousValue;
-    }
-
-    public void setPreviousValue(String previousValue) {
-        this.previousValue = maskIfSensitive(this.settingKey, previousValue);
-    }
-
-    public String getNewValue() {
-        return newValue;
-    }
-
-    public void setNewValue(String newValue) {
-        this.newValue = maskIfSensitive(this.settingKey, newValue);
-    }
-
-    public String getIpAddress() {
-        return ipAddress;
-    }
-
-    public void setIpAddress(String ipAddress) {
-        this.ipAddress = ipAddress;
-    }
-
-    public String getActionStatus() {
-        return actionStatus;
-    }
-
-    public void setActionStatus(String actionStatus) {
-        this.actionStatus = actionStatus;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

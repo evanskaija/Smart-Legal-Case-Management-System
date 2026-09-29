@@ -19,7 +19,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/legal-sources")
-@CrossOrigin(origins = "*")
+@CrossOrigin(originPatterns = "*")
 public class LegalSourceUploadController {
 
     private final LegalDocumentIndexingService indexingService;

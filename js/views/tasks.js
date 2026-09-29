@@ -24,6 +24,13 @@ const TasksView = {
     }
 
     const tasks = SLCMS_STATE.tasks || [];
+    const isLawyer = (function() {
+      const u = (typeof SLCMS_STATE !== 'undefined') ? SLCMS_STATE.currentUser : null;
+      if (!u) return false;
+      const r = String(u.role || '').toLowerCase();
+      const t = String(u.jobTitle || u.roleLabel || u.roleTitle || '').toLowerCase();
+      return r.includes('lawyer') || t.includes('lawyer') || r.includes('advocate') || t.includes('advocate');
+    })();
 
     return `
       <div class="animate-fade">
@@ -84,9 +91,11 @@ const TasksView = {
               📅 Add Deadline
             </button>
 
+            ${isLawyer ? '' : `
             <button class="btn btn-gold btn-sm tasks-create-btn" onclick="TasksView.openNewTaskModal()" style="font-weight: 700; font-size: 0.82rem; padding: 0.45rem 0.95rem;">
               + Create Task
             </button>
+            `}
           </div>
         </div>
 
@@ -254,6 +263,13 @@ const TasksView = {
 
     const allTasks = SLCMS_STATE.tasks || [];
     const filteredTasks = this.getFilteredTasks();
+    const isLawyer = (function() {
+      const u = (typeof SLCMS_STATE !== 'undefined') ? SLCMS_STATE.currentUser : null;
+      if (!u) return false;
+      const r = String(u.role || '').toLowerCase();
+      const t = String(u.jobTitle || u.roleLabel || u.roleTitle || '').toLowerCase();
+      return r.includes('lawyer') || t.includes('lawyer') || r.includes('advocate') || t.includes('advocate');
+    })();
 
     // If completely empty in database (0 tasks created yet) -> Single clean empty state (NO duplicate nested boxes)
     if (allTasks.length === 0) {
@@ -269,9 +285,11 @@ const TasksView = {
             Plan legal filings, track court appearances, and monitor statutory limitation cutoffs.
           </p>
           <div class="flex items-center justify-center gap-3 flex-wrap">
+            ${isLawyer ? '' : `
             <button class="btn btn-gold" style="font-weight: 700; padding: 0.55rem 1.3rem; font-size: 0.88rem;" onclick="TasksView.openNewTaskModal()">
               + Create Task
             </button>
+            `}
             <button class="btn btn-secondary" style="font-weight: 700; padding: 0.55rem 1.3rem; font-size: 0.88rem;" onclick="TasksView.openAddDeadlineModal()">
               📅 Add Deadline
             </button>
@@ -318,9 +336,11 @@ const TasksView = {
                     ${colTasks.length}
                   </span>
                 </div>
+                ${isLawyer ? '' : `
                 <button class="kanban-quick-add-btn" onclick="TasksView.openNewTaskModal(null, '${col.id}')" title="Add task to ${col.title}">
                   +
                 </button>
+                `}
               </div>
 
               <!-- Column Cards List / Drop Zone -->
@@ -475,6 +495,13 @@ const TasksView = {
 
   renderList() {
     const tasks = this.getFilteredTasks();
+    const isLawyer = (function() {
+      const u = (typeof SLCMS_STATE !== 'undefined') ? SLCMS_STATE.currentUser : null;
+      if (!u) return false;
+      const r = String(u.role || '').toLowerCase();
+      const t = String(u.jobTitle || u.roleLabel || u.roleTitle || '').toLowerCase();
+      return r.includes('lawyer') || t.includes('lawyer') || r.includes('advocate') || t.includes('advocate');
+    })();
 
     if (tasks.length === 0) {
       return `
@@ -482,14 +509,16 @@ const TasksView = {
           <div class="empty-icon" style="font-size: 2.8rem; margin-bottom: 0.85rem;">📋</div>
           <h3 class="empty-title" style="font-size: 1.25rem; color: var(--color-primary); font-weight: 700;">No tasks assigned</h3>
           <p class="empty-desc" style="color: var(--color-text-secondary); max-width: 480px; margin: 0.5rem auto 1.5rem auto; line-height: 1.5;">
-            There are currently no tasks assigned to legal or administrative personnel. Create an actionable task linked to a legal matter.
+            There are currently no tasks assigned to legal or administrative personnel. ${isLawyer ? 'Tasks will appear here once assigned to you.' : 'Create an actionable task linked to a legal matter.'}
           </p>
+          ${isLawyer ? '' : `
           <button class="btn btn-gold" onclick="TasksView.openNewTaskModal()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 5v14M5 12h14"/>
             </svg>
             <span>+ Create Task</span>
           </button>
+          `}
         </div>
       `;
     }
@@ -605,38 +634,58 @@ const TasksView = {
   })(),
 
   mapDeadlineToCourtEvent(dln) {
-    const dVal = dln.deadlineDate || dln.date || '2026-09-29';
+    const cleanStr = (val, fallback = '') => {
+      if (!val || val === 'undefined' || val === 'null') return fallback;
+      const s = String(val).trim();
+      return (s === '' || s.toLowerCase() === 'undefined' || s.toLowerCase() === 'null') ? fallback : s;
+    };
+
+    const dVal = cleanStr(dln.deadlineDate || dln.date, '2026-09-29');
     const dateObj = new Date(dVal);
     const dayNum = dVal.split('-')[2] || String(dateObj.getDate()).padStart(2, '0');
     const monthShort = isNaN(dateObj.getTime()) ? 'SEP' : dateObj.toLocaleString('en-US', { month: 'short' }).toUpperCase();
-    const weekday = isNaN(dateObj.getTime()) ? 'Tuesday' : dateObj.toLocaleString('en-US', { weekday: 'long' });
-    const assigned = dln.responsibleLawyerName || dln.advocate || dln.assignedTo || 'Advocate In-Charge';
-    const category = (dln.type || '').toLowerCase().includes('hearing') ? 'hearings' :
-                     (dln.type || '').toLowerCase().includes('motion') ? 'motions' : 'briefs';
+    const weekday = isNaN(dateObj.getTime()) ? 'Weekday' : dateObj.toLocaleString('en-US', { weekday: 'short' });
+    
+    let rawAssigned = cleanStr(dln.responsibleLawyerName || dln.advocate || dln.assignedTo, 'Advocate In-Charge');
+    if (rawAssigned.toLowerCase().includes('undefined') || rawAssigned.toLowerCase().includes('null')) {
+      rawAssigned = 'Advocate In-Charge';
+    }
+    const words = rawAssigned.split(/\s+/).filter(Boolean);
+    const initials = words.length >= 2 
+      ? (words[0][0] + words[1][0]).toUpperCase() 
+      : (rawAssigned.substring(0, 2) || 'LC').toUpperCase();
+
+    const category = (cleanStr(dln.type, '')).toLowerCase().includes('hearing') ? 'hearings' :
+                     (cleanStr(dln.type, '')).toLowerCase().includes('motion') ? 'motions' : 'briefs';
+
+    const cleanCourt = cleanStr(dln.court, 'High Court of Tanzania');
+    const cleanPresiding = cleanStr(dln.presiding, '');
+    const cleanStatute = cleanStr(dln.statutoryReference, '');
+    const cleanDesc = cleanStr(dln.instructions || dln.description || dln.supportingDocument, '');
 
     return {
       id: dln.id,
       date: dVal,
-      time: dln.deadlineTime || dln.time || '09:30 AM EAT',
+      time: cleanStr(dln.deadlineTime || dln.time, '09:30 AM EAT'),
       monthShort: monthShort,
       dayNum: dayNum,
       weekday: weekday,
-      title: dln.title,
-      caseId: dln.caseId || 'case-gen',
-      caseNumber: dln.caseNumber || 'MATTER-GEN',
-      caseTitle: dln.caseTitle || 'General Legal Matter',
+      title: cleanStr(dln.title, 'Statutory Proceeding'),
+      caseId: cleanStr(dln.caseId, 'case-gen'),
+      caseNumber: cleanStr(dln.caseNumber, 'MATTER-GEN'),
+      caseTitle: cleanStr(dln.caseTitle, 'General Legal Matter'),
       category: category,
-      type: dln.type || 'Statutory Deadline',
-      court: dln.court || 'High Court of Tanzania',
-      presiding: dln.presiding || 'Presiding Judge',
-      assignedTo: assigned,
-      assignedAvatar: (assigned.split(' ').map(w => w[0]).join('').substring(0, 2) || 'LC').toUpperCase(),
-      priority: dln.priority || 'High',
-      status: dln.status || 'Confirmed',
-      statute: dln.statutoryReference || 'Judiciary Rules',
-      location: dln.court || 'High Court of Tanzania',
-      description: dln.instructions || dln.description || dln.supportingDocument || 'Mandatory appearance / filing deadline.',
-      exhibits: dln.exhibits || 'Pleadings & Affidavits'
+      type: cleanStr(dln.type, 'Statutory Deadline'),
+      court: cleanCourt,
+      presiding: cleanPresiding,
+      assignedTo: rawAssigned,
+      assignedAvatar: initials,
+      priority: cleanStr(dln.priority, 'Medium'),
+      status: cleanStr(dln.status, 'Confirmed'),
+      statute: cleanStatute,
+      location: cleanCourt,
+      description: cleanDesc,
+      exhibits: cleanStr(dln.exhibits, 'Pleadings & Affidavits')
     };
   },
 
@@ -788,34 +837,53 @@ const TasksView = {
     return `
       <div class="court-cal-wrapper">
         
-        <!-- 1. EXECUTIVE CALENDAR METRIC STRIP -->
+        <!-- 1. EXECUTIVE CALENDAR METRIC STRIP (BEST BOXES & LUXURY PALETTE) -->
         <div class="court-cal-stats-strip">
-          <div class="court-cal-stat-card">
-            <div class="court-cal-stat-icon red">🏛️</div>
-            <div>
+          <!-- Card 1: Court Appearances -->
+          <div class="court-cal-stat-card variant-sapphire">
+            <div class="court-cal-stat-info">
               <div class="court-cal-stat-val">${courtCount}</div>
               <div class="court-cal-stat-label">Court Appearances</div>
+              <span class="court-cal-micro-chip chip-sapphire">🏛️ Active Docket</span>
+            </div>
+            <div class="court-cal-stat-icon-box sapphire">
+              🏛️
             </div>
           </div>
-          <div class="court-cal-stat-card">
-            <div class="court-cal-stat-icon gold">⚠️</div>
-            <div>
+
+          <!-- Card 2: Critical Motions Due -->
+          <div class="court-cal-stat-card variant-amber">
+            <div class="court-cal-stat-info">
               <div class="court-cal-stat-val">${motionCount}</div>
               <div class="court-cal-stat-label">Critical Motions Due</div>
+              <span class="court-cal-micro-chip chip-amber">${motionCount > 0 ? '⚡ Immediate Review' : '✓ Docket Clear'}</span>
+            </div>
+            <div class="court-cal-stat-icon-box amber">
+              ⚠️
             </div>
           </div>
-          <div class="court-cal-stat-card">
-            <div class="court-cal-stat-icon navy">⚖️</div>
-            <div>
+
+          <!-- Card 3: Commercial Div. Calls -->
+          <div class="court-cal-stat-card variant-violet">
+            <div class="court-cal-stat-info">
               <div class="court-cal-stat-val">${callCount}</div>
               <div class="court-cal-stat-label">Commercial Div. Calls</div>
+              <span class="court-cal-micro-chip chip-violet">⚖️ Commercial Div.</span>
+            </div>
+            <div class="court-cal-stat-icon-box violet">
+              ⚖️
             </div>
           </div>
-          <div class="court-cal-stat-card">
-            <div class="court-cal-stat-icon green">✓</div>
-            <div>
-              <div class="court-cal-stat-val">${filteredEvents.length === 0 ? 'N/A' : '100%'}</div>
+
+          <!-- Card 4: Statutory Compliance -->
+          <div class="court-cal-stat-card variant-emerald">
+            <div class="court-cal-stat-info">
+              <div class="court-cal-stat-val">${filteredEvents.length === 0 ? '100%' : '100%'}</div>
               <div class="court-cal-stat-label">Statutory Compliance</div>
+              <span class="court-cal-micro-chip chip-emerald">✓ Fully Compliant</span>
+            </div>
+            <div class="court-cal-stat-icon-box emerald">
+              ✓
             </div>
           </div>
         </div>
@@ -959,81 +1027,89 @@ const TasksView = {
     return `
       <div class="court-agenda-container">
         ${events.map(evt => {
-          const priorityClass = evt.priority === 'High' ? 'priority-high' : evt.priority === 'Medium' ? 'priority-medium' : 'priority-low';
-          const isConfirmed = Boolean(evt.status && evt.status.includes('Confirmed'));
+          const isHighPriority = evt.priority === 'High' || evt.priority === 'Urgent';
+          const priorityClass = isHighPriority ? 'priority-high' : evt.priority === 'Medium' ? 'priority-medium' : 'priority-low';
+          const isConfirmed = Boolean(evt.status && evt.status.toLowerCase().includes('confirmed'));
 
           return `
             <div class="court-docket-card ${priorityClass} ${isConfirmed ? 'status-confirmed' : ''}">
               
-              <!-- Date Ribbon Stamp -->
+              <!-- Modern Apple/Stripe-Style Date Badge -->
               <div class="court-date-badge">
-                <span class="court-date-month">${evt.monthShort || 'SEP'} 2026</span>
-                <span class="court-date-day">${evt.dayNum || '15'}</span>
-                <span class="court-date-weekday">${evt.weekday || 'Weekday'}</span>
-                <div class="court-date-time">
-                  ⏰ ${evt.time || '09:00 AM'}
+                <div class="court-date-ribbon">${evt.monthShort || 'SEP'} 2026</div>
+                <div class="court-date-day">${evt.dayNum || '15'}</div>
+                <div class="court-date-time-tag">
+                  ⏰ ${evt.time || '09:30 AM'}
                 </div>
               </div>
 
-              <!-- Center Body: Case & Appearance Brief -->
+              <!-- Streamlined Center Body (Reduced & Essential Details) -->
               <div class="court-docket-body">
-                <!-- Meta Row: Case Number & Priority -->
+                <!-- Meta Row: Matter Chip + Matter Name + Status/Priority Badges -->
                 <div class="court-docket-meta-row">
                   <span class="court-matter-pill" onclick="App.navigate('cases'); setTimeout(() => CasesView.openCaseDossier('${evt.caseId}'), 100);" title="Open Case Dossier">
                     ⚖️ ${evt.caseNumber}
                   </span>
-                  <span class="court-matter-name">${evt.caseTitle}</span>
-                  <span class="badge ${evt.priority === 'High' ? 'badge-priority-high' : 'badge-priority-med'}" style="font-size: 0.68rem; margin-left: auto;">
-                    ${evt.priority === 'High' ? '⚠️ HIGH PRIORITY' : 'MEDIUM'}
-                  </span>
-                  <span class="badge ${isConfirmed ? 'badge-active' : 'badge-pending'}" style="font-size: 0.68rem;">
-                    ${isConfirmed ? '● CONFIRMED' : '⏳ PENDING'}
+                  <span class="court-matter-name" title="${evt.caseTitle}">${evt.caseTitle}</span>
+                  ${isHighPriority ? `
+                    <span class="court-priority-capsule">
+                      ⚠️ High Priority
+                    </span>
+                  ` : ''}
+                  <span class="court-status-capsule ${isConfirmed ? 'confirmed' : 'pending'}">
+                    ${isConfirmed ? '● Confirmed' : '⏳ Pending'}
                   </span>
                 </div>
 
                 <!-- Hearing Title -->
                 <h4 class="court-hearing-title">${evt.title}</h4>
 
-                <!-- Courtroom & Presiding Officer -->
-                <div class="court-room-detail">
-                  <span class="court-detail-item">
-                    🏛️ <strong>${evt.court}</strong>
+                <!-- Concise Single Metadata Strip (NO undefineds or cluttered rows) -->
+                <div class="court-clean-meta-strip">
+                  <span class="court-clean-meta-item">
+                    🏛️ <span>${evt.court}</span>
                   </span>
-                  <span class="court-detail-item">
-                    👤 Presiding: <strong>${evt.presiding}</strong>
+                  ${evt.presiding ? `
+                    <span class="court-clean-meta-dot">•</span>
+                    <span class="court-clean-meta-item">
+                      👨‍⚖️ <span>${evt.presiding}</span>
+                    </span>
+                  ` : ''}
+                  <span class="court-clean-meta-dot">•</span>
+                  <span class="court-clean-meta-item">
+                    📅 <span>${evt.weekday}</span>
                   </span>
-                  <span class="court-detail-item">
-                    📜 Statute: <code style="font-family: var(--font-mono); font-size: 0.72rem; background: var(--color-surface-subtle); padding: 1px 4px; border-radius: 3px;">${evt.statute}</code>
-                  </span>
+                  ${evt.description && evt.description.toLowerCase() !== 'undefined' && evt.description.length > 3 ? `
+                    <span class="court-clean-meta-dot">•</span>
+                    <span style="color: #64748B; font-size: 0.76rem; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${evt.description}">
+                      📝 ${evt.description}
+                    </span>
+                  ` : ''}
                 </div>
-
-                <!-- Short Mandate Summary -->
-                <p style="font-size: 0.8rem; color: var(--color-text-secondary); margin: 0; line-height: 1.4;">
-                  ${evt.description}
-                </p>
               </div>
 
-              <!-- Right Area: Assigned Counsel & Action Buttons -->
+              <!-- Sleek Right Action & Counsel Area -->
               <div class="court-docket-action-area">
-                <div class="court-counsel-info flex items-center gap-2">
-                  <div class="avatar avatar-sm ${evt.assignedAvatar === 'EV' ? 'avatar-gold' : evt.assignedAvatar === 'JM' ? 'avatar-navy' : 'avatar-teal'}" style="font-size: 10px; font-weight: 700; flex-shrink: 0;">
+                <!-- Counsel Capsule -->
+                <div class="court-counsel-chip">
+                  <div class="avatar ${evt.assignedAvatar === 'EV' ? 'avatar-gold' : evt.assignedAvatar === 'JM' ? 'avatar-navy' : 'avatar-teal'}">
                     ${evt.assignedAvatar}
                   </div>
-                  <div class="court-counsel-meta">
-                    <div style="font-size: 0.78rem; font-weight: 700; color: var(--color-primary);">${evt.assignedTo}</div>
-                    <div style="font-size: 0.68rem; color: var(--color-text-muted);">Lead Counsel</div>
+                  <div class="court-counsel-name">
+                    ${evt.assignedTo}
                   </div>
                 </div>
 
-                <div class="court-action-btns flex items-center gap-1.5">
-                  <button class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;" onclick="TasksView.openEventDetails('${evt.id}')">
-                    Inspect Docket
+                <!-- Action Button Group -->
+                <div class="court-action-btns-group">
+                  <button class="btn-court-portal" onclick="App.showToast('Courtroom video portal launched for ${evt.caseNumber}', 'success')" title="Launch High Court Virtual Courtroom Portal">
+                    <span>🏛️ Court Portal</span>
                   </button>
-                  <button class="btn btn-gold btn-sm" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;" onclick="App.showToast('Courtroom video portal launched for ${evt.caseNumber}', 'success')">
-                    🏛️ Court Portal
+                  <button class="btn-court-inspect" onclick="TasksView.openEventDetails('${evt.id}')" title="Inspect Docket Details">
+                    <span>Inspect</span>
                   </button>
-                  <button class="btn btn-ghost btn-sm" style="font-size: 0.75rem; padding: 0.35rem 0.5rem; color: #DC2626; border: 1px solid rgba(220,38,38,0.25);" onclick="TasksView.deleteCourtEvent('${evt.id}')" title="Remove from Docket">
-                    🗑️ Remove
+                  <button class="btn-court-remove" onclick="TasksView.deleteCourtEvent('${evt.id}')" title="Remove from Docket">
+                    <span>🗑️</span>
                   </button>
                 </div>
               </div>
@@ -1304,6 +1380,7 @@ const TasksView = {
     this._deadlineCallback = callback;
     const activeStaff = SLCMS_STATE.getActiveStaffUsers();
     const cases = SLCMS_STATE.cases || [];
+    const today = new Date().toISOString().substring(0, 10);
 
     App.openModal(`
       <div class="modal-header">
@@ -1318,50 +1395,99 @@ const TasksView = {
         </h3>
         <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
       </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label required">Appearance Title / Action Item</label>
-          <input type="text" id="sch-title" class="form-control" placeholder="e.g. Pre-Trial Hearing / Motion Filing Deadline" required>
+      <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
+        <!-- Validation Alert Banner -->
+        <div id="sch-validation-alert" class="add-case-step-err-banner" style="display:none;"></div>
+
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label required">Appearance Title / Action Item <span class="text-danger">*</span></label>
+          <input type="text" id="sch-title" class="form-control" 
+                 placeholder="e.g. Pre-Trial Hearing / Motion Filing Deadline" 
+                 maxlength="150"
+                 oninput="TasksView.validateAppearanceFieldRealtime('title')" 
+                 onblur="TasksView.validateAppearanceFieldRealtime('title')">
+          <div class="sch-err-msg" id="err-sch-title">Appearance Title is required (3–150 characters with valid words).</div>
         </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="form-group">
-            <label class="form-label required">Associated Legal Matter</label>
-            <select id="sch-case" class="form-control">
-              ${cases.length === 0 ? `<option value="">General Matter / Firm Docket</option>` : cases.map(c => `<option value="${c.id}" ${(caseContext && (caseContext.id === c.id || caseContext === c.id)) ? 'selected' : ''}>${c.caseNumber} - ${c.title}</option>`).join('')}
+
+        <div class="grid grid-cols-2 gap-4" style="margin-bottom: 1rem;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label required">Associated Legal Matter <span class="text-danger">*</span></label>
+            <select id="sch-case" class="form-control"
+                    onchange="TasksView.validateAppearanceFieldRealtime('case')"
+                    onblur="TasksView.validateAppearanceFieldRealtime('case')">
+              <option value="">-- Select Legal Matter --</option>
+              ${cases.map(c => `<option value="${c.id}" ${(caseContext && (caseContext.id === c.id || caseContext === c.id)) ? 'selected' : ''}>${c.caseNumber} - ${c.title}</option>`).join('')}
             </select>
+            <div class="sch-err-msg" id="err-sch-case">Please select an associated legal matter from the docket.</div>
           </div>
-          <div class="form-group">
-            <label class="form-label required">Assigned Staff</label>
-            <select id="sch-assigned" class="form-control">
-              ${activeStaff.length === 0 ? `<option value="Unassigned">Unassigned</option>` : activeStaff.map(s => `<option value="${s.name}">${s.name} (${s.role})</option>`).join('')}
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label required">Assigned Staff <span class="text-danger">*</span></label>
+            <select id="sch-assigned" class="form-control"
+                    onchange="TasksView.validateAppearanceFieldRealtime('assigned')"
+                    onblur="TasksView.validateAppearanceFieldRealtime('assigned')">
+              <option value="">-- Select Assigned Staff --</option>
+              ${activeStaff.map(s => `<option value="${s.name}" ${s.role === 'Lawyer' || s.role === 'Advocate' ? 'selected' : ''}>${s.name} (${s.role})</option>`).join('')}
             </select>
+            <div class="sch-err-msg" id="err-sch-assigned">Please select a responsible staff member or advocate.</div>
           </div>
         </div>
-        <div class="grid grid-cols-3 gap-4">
-          <div class="form-group">
-            <label class="form-label required">Appearance / Due Date</label>
-            <input type="date" id="sch-date" class="form-control" value="2026-09-22" required>
+
+        <div class="grid grid-cols-3 gap-4" style="margin-bottom: 1rem;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label required">Appearance / Due Date <span class="text-danger">*</span></label>
+            <input type="date" id="sch-date" class="form-control" 
+                   value="${today}" 
+                   min="${today}"
+                   onchange="TasksView.validateAppearanceFieldRealtime('date')"
+                   onblur="TasksView.validateAppearanceFieldRealtime('date')">
+            <div class="sch-err-msg" id="err-sch-date">Appearance date cannot be in the past for a newly scheduled appearance.</div>
           </div>
-          <div class="form-group">
-            <label class="form-label required">Call Time</label>
-            <input type="text" id="sch-time" class="form-control" value="09:30 AM EAT">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label required">Call Time <span class="text-danger">*</span></label>
+            <input type="text" id="sch-time" class="form-control" value="09:30 AM EAT" placeholder="e.g. 09:30 AM or 14:00"
+                   oninput="TasksView.validateAppearanceFieldRealtime('time')"
+                   onblur="TasksView.validateAppearanceFieldRealtime('time')">
+            <div class="sch-err-msg" id="err-sch-time">Please provide a valid time (e.g. 09:30 AM or 14:00).</div>
           </div>
-          <div class="form-group">
-            <label class="form-label required">Event Type</label>
-            <select id="sch-category" class="form-control">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label required">Event Type <span class="text-danger">*</span></label>
+            <select id="sch-category" class="form-control"
+                    onchange="TasksView.validateAppearanceFieldRealtime('category')">
               <option value="hearings">Court Hearing / Motion Call</option>
               <option value="motions">Pleading &amp; Brief Filing</option>
               <option value="briefs">Discovery / Filing Due Date</option>
             </select>
+            <div class="sch-err-msg" id="err-sch-category">Please select a valid Event Type.</div>
           </div>
         </div>
-        <div class="form-group">
-          <label class="form-label required">Courtroom / Location</label>
-          <input type="text" id="sch-court" class="form-control" placeholder="e.g. High Court of Tanzania, Commercial Division">
+
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label class="form-label required">Courtroom / Location <span class="text-danger">*</span></label>
+          <input type="text" id="sch-court" class="form-control" 
+                 list="tz-court-locations" 
+                 placeholder="e.g. High Court of Tanzania, Commercial Division"
+                 oninput="TasksView.validateAppearanceFieldRealtime('court')"
+                 onblur="TasksView.validateAppearanceFieldRealtime('court')">
+          <datalist id="tz-court-locations">
+            <option value="High Court of Tanzania (Commercial Division)">
+            <option value="High Court of Tanzania (Land Division)">
+            <option value="Court of Appeal of Tanzania">
+            <option value="Resident Magistrate Court of Dar es Salaam at Kisutu">
+            <option value="District Court of Ilala">
+            <option value="District Court of Kinondoni">
+            <option value="District Court of Temeke">
+            <option value="Tax Appeals Tribunal">
+          </datalist>
+          <div class="sch-err-msg" id="err-sch-court">Courtroom / Location is required (minimum 3 characters).</div>
         </div>
-        <div class="form-group">
+
+        <div class="form-group" style="margin-bottom: 0.5rem;">
           <label class="form-label">Procedural Notes / Instructions</label>
-          <textarea id="sch-desc" class="form-control" rows="2" placeholder="Specify statutory citations or instructions..."></textarea>
+          <textarea id="sch-desc" class="form-control" rows="2" 
+                    maxlength="500"
+                    placeholder="Specify statutory citations or instructions..."
+                    oninput="TasksView.validateAppearanceFieldRealtime('desc')"></textarea>
+          <div class="sch-err-msg" id="err-sch-desc">Instructions cannot exceed 500 characters.</div>
         </div>
       </div>
       <div class="modal-footer">
@@ -1371,12 +1497,150 @@ const TasksView = {
     `);
   },
 
-  saveNewAppearance() {
-    const title = document.getElementById('sch-title')?.value?.trim();
+  validateAppearanceForm(silent = false) {
+    const errors = [];
+    const today = new Date().toISOString().substring(0, 10);
+
+    // 1. Appearance Title
+    const titleEl = document.getElementById('sch-title');
+    const title = titleEl ? titleEl.value.trim() : '';
     if (!title) {
-      App.showToast('Please enter an appearance title.', 'error');
+      errors.push({ field: 'sch-title', errId: 'err-sch-title', msg: 'Appearance Title / Action Item is required.' });
+    } else if (title.length < 3 || title.length > 150) {
+      errors.push({ field: 'sch-title', errId: 'err-sch-title', msg: 'Appearance Title must be between 3 and 150 characters.' });
+    } else if (!/[a-zA-Z]/.test(title)) {
+      errors.push({ field: 'sch-title', errId: 'err-sch-title', msg: 'Appearance Title must contain letters/words (cannot be numbers only).' });
+    } else if (/[bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ]{5,}/.test(title.replace(/[\s.,'"`:;()\-–—?!]/g, ''))) {
+      errors.push({ field: 'sch-title', errId: 'err-sch-title', msg: 'Appearance Title cannot contain random unpronounceable keyboard mash.' });
+    }
+
+    // 2. Associated Legal Matter
+    const caseEl = document.getElementById('sch-case');
+    const caseId = caseEl ? caseEl.value.trim() : '';
+    if (!caseId) {
+      errors.push({ field: 'sch-case', errId: 'err-sch-case', msg: 'Please select an associated legal matter from the docket.' });
+    }
+
+    // 3. Assigned Staff
+    const staffEl = document.getElementById('sch-assigned');
+    const staff = staffEl ? staffEl.value.trim() : '';
+    if (!staff || staff === 'Unassigned') {
+      errors.push({ field: 'sch-assigned', errId: 'err-sch-assigned', msg: 'Please select an assigned staff member or advocate.' });
+    }
+
+    // 4. Appearance / Due Date
+    const dateEl = document.getElementById('sch-date');
+    const dateVal = dateEl ? dateEl.value.trim() : '';
+    if (!dateVal) {
+      errors.push({ field: 'sch-date', errId: 'err-sch-date', msg: 'Appearance / Due Date is required.' });
+    } else if (dateVal < today) {
+      errors.push({ field: 'sch-date', errId: 'err-sch-date', msg: 'Appearance / Due Date cannot be in the past for a newly scheduled appearance.' });
+    }
+
+    // 5. Call Time
+    const timeEl = document.getElementById('sch-time');
+    const timeVal = timeEl ? timeEl.value.trim() : '';
+    const timeRegex = /^(0?[1-9]|1[0-2]):[0-5][0-9]\s*(AM|PM|am|pm)?(\s*[A-Z]{2,4})?$|^([01]?[0-9]|2[0-3]):[0-5][0-9](\s*[A-Z]{2,4})?$/i;
+    if (!timeVal) {
+      errors.push({ field: 'sch-time', errId: 'err-sch-time', msg: 'Call Time is required.' });
+    } else if (!timeRegex.test(timeVal)) {
+      errors.push({ field: 'sch-time', errId: 'err-sch-time', msg: 'Please enter a valid call time (e.g. 09:30 AM or 14:00).' });
+    }
+
+    // 6. Event Type
+    const catEl = document.getElementById('sch-category');
+    const catVal = catEl ? catEl.value.trim() : '';
+    const validCats = ['hearings', 'motions', 'briefs'];
+    if (!catVal || !validCats.includes(catVal)) {
+      errors.push({ field: 'sch-category', errId: 'err-sch-category', msg: 'Please select a valid Event Type.' });
+    }
+
+    // 7. Courtroom / Location
+    const courtEl = document.getElementById('sch-court');
+    const courtVal = courtEl ? courtEl.value.trim() : '';
+    if (!courtVal) {
+      errors.push({ field: 'sch-court', errId: 'err-sch-court', msg: 'Courtroom / Location is required.' });
+    } else if (courtVal.length < 3) {
+      errors.push({ field: 'sch-court', errId: 'err-sch-court', msg: 'Courtroom / Location must be at least 3 characters.' });
+    } else if (!/[a-zA-Z]/.test(courtVal)) {
+      errors.push({ field: 'sch-court', errId: 'err-sch-court', msg: 'Courtroom / Location must contain letters (e.g. court name or room).' });
+    }
+
+    // 8. Description
+    const descEl = document.getElementById('sch-desc');
+    const descVal = descEl ? descEl.value.trim() : '';
+    if (descVal.length > 500) {
+      errors.push({ field: 'sch-desc', errId: 'err-sch-desc', msg: 'Procedural notes cannot exceed 500 characters.' });
+    }
+
+    return errors;
+  },
+
+  validateAppearanceFieldRealtime(fieldName) {
+    const errors = this.validateAppearanceForm(true);
+
+    const markField = (inputElId, errElId) => {
+      const inputEl = document.getElementById(inputElId);
+      const errEl = document.getElementById(errElId);
+      if (!inputEl || !errEl) return;
+
+      const fieldErr = errors.find(e => e.field === inputElId);
+      if (fieldErr) {
+        inputEl.classList.add('is-invalid');
+        errEl.textContent = fieldErr.msg;
+        errEl.classList.add('visible');
+      } else {
+        inputEl.classList.remove('is-invalid');
+        errEl.classList.remove('visible');
+      }
+    };
+
+    if (fieldName === 'title' || !fieldName) markField('sch-title', 'err-sch-title');
+    if (fieldName === 'case' || !fieldName) markField('sch-case', 'err-sch-case');
+    if (fieldName === 'assigned' || !fieldName) markField('sch-assigned', 'err-sch-assigned');
+    if (fieldName === 'date' || !fieldName) markField('sch-date', 'err-sch-date');
+    if (fieldName === 'time' || !fieldName) markField('sch-time', 'err-sch-time');
+    if (fieldName === 'category' || !fieldName) markField('sch-category', 'err-sch-category');
+    if (fieldName === 'court' || !fieldName) markField('sch-court', 'err-sch-court');
+    if (fieldName === 'desc' || !fieldName) markField('sch-desc', 'err-sch-desc');
+
+    const banner = document.getElementById('sch-validation-alert');
+    if (banner) {
+      if (errors.length === 0) {
+        banner.style.display = 'none';
+      } else if (banner.style.display !== 'none') {
+        banner.innerHTML = `⚠️ <span>Please correct the highlighted fields: <strong>${TasksView.escapeHtml(errors[0].msg)}</strong></span>`;
+      }
+    }
+  },
+
+  saveNewAppearance() {
+    const errors = this.validateAppearanceForm(false);
+    if (errors.length > 0) {
+      // Highlight all invalid fields
+      errors.forEach(err => {
+        const el = document.getElementById(err.field);
+        if (el) el.classList.add('is-invalid');
+        const errEl = document.getElementById(err.errId);
+        if (errEl) {
+          errEl.textContent = err.msg;
+          errEl.classList.add('visible');
+        }
+      });
+
+      const banner = document.getElementById('sch-validation-alert');
+      if (banner) {
+        banner.innerHTML = `⚠️ <span>Please correct the highlighted fields before scheduling: <strong>${TasksView.escapeHtml(errors[0].msg)}</strong></span>`;
+        banner.style.display = 'flex';
+      }
+
+      App.showToast(errors[0].msg, 'error');
+      const firstEl = document.getElementById(errors[0].field);
+      if (firstEl) firstEl.focus();
       return;
     }
+
+    const title = document.getElementById('sch-title')?.value?.trim();
     const caseId = document.getElementById('sch-case')?.value;
     const c = (SLCMS_STATE.cases || []).find(item => item.id === caseId) || { id: 'case-gen', caseNumber: 'MATTER-GEN', title: 'General Practice Matter' };
     const dateVal = document.getElementById('sch-date')?.value || new Date().toISOString().substring(0, 10);
@@ -1968,6 +2232,19 @@ Dispatched via SLCMS Law Firm Docket Engine`;
   },
 
   openNewTaskModal(caseContext = null, defaultCol = 'todo', callback = null) {
+    const currentUser = (typeof SLCMS_STATE !== 'undefined') ? SLCMS_STATE.currentUser : null;
+    const isLawyer = (function(u) {
+      if (!u) return false;
+      const r = String(u.role || '').toLowerCase();
+      const t = String(u.jobTitle || u.roleLabel || u.roleTitle || '').toLowerCase();
+      return r.includes('lawyer') || t.includes('lawyer') || r.includes('advocate') || t.includes('advocate');
+    })(currentUser);
+
+    if (isLawyer) {
+      App.showToast('Access restricted: Lawyers do not have permission to create tasks.', 'warning');
+      return;
+    }
+
     this._taskCreationCallback = callback;
     const activeStaff = SLCMS_STATE.getActiveStaffUsers();
     const cases = SLCMS_STATE.cases || [];

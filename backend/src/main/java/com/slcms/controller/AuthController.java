@@ -18,20 +18,23 @@ import java.util.*;
  */
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "*")
+@CrossOrigin(originPatterns = "*")
 public class AuthController {
 
     private final RBACSecurityService rbacSecurityService;
     private final com.slcms.repository.UserRepository userRepository;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final com.slcms.service.JwtAuthService jwtAuthService;
 
     @Autowired
     public AuthController(RBACSecurityService rbacSecurityService,
                           com.slcms.repository.UserRepository userRepository,
-                          org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
+                          org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
+                          com.slcms.service.JwtAuthService jwtAuthService) {
         this.rbacSecurityService = rbacSecurityService;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtAuthService = jwtAuthService;
     }
 
     /**
@@ -78,6 +81,15 @@ public class AuthController {
         if (identifier == null || identifier.trim().isEmpty()) {
             identifier = credentials.get("identifier");
         }
+        if (identifier == null || identifier.trim().isEmpty()) {
+            identifier = credentials.get("username");
+        }
+        if (identifier == null || identifier.trim().isEmpty()) {
+            identifier = credentials.get("staffId");
+        }
+        if (identifier == null || identifier.trim().isEmpty()) {
+            identifier = credentials.get("employeeId");
+        }
         String password = credentials.get("password");
 
         if (identifier == null || password == null) {
@@ -85,20 +97,27 @@ public class AuthController {
                     .body(Map.of("success", false, "message", "Invalid email/username or password."));
         }
 
-        final String cleanId = identifier.trim().toLowerCase();
+        final String cleanId = identifier.trim();
         final String digitsOnly = identifier.replaceAll("\\D", "");
 
-        UserAccount user = rbacSecurityService.getAllUsers().stream()
-                .filter(u -> {
-                    if (u.getEmail() != null && u.getEmail().equalsIgnoreCase(cleanId)) return true;
-                    if (u.getEmployeeId() != null && u.getEmployeeId().equalsIgnoreCase(cleanId)) return true;
-                    if (u.getStaffId() != null && u.getStaffId().equalsIgnoreCase(cleanId)) return true;
-                    if (u.getName() != null && u.getName().equalsIgnoreCase(cleanId)) return true;
-                    if (digitsOnly.length() >= 7 && u.getPhone() != null && u.getPhone().replaceAll("\\D", "").endsWith(digitsOnly)) return true;
-                    return false;
-                })
-                .findFirst()
-                .orElse(null);
+        UserAccount user = userRepository.findByEmailIgnoreCase(cleanId)
+                .or(() -> userRepository.findByStaffIdIgnoreCase(cleanId))
+                .or(() -> userRepository.findByEmployeeIdIgnoreCase(cleanId))
+                .or(() -> userRepository.findByUsernameIgnoreCase(cleanId))
+                .orElseGet(() -> {
+                    return rbacSecurityService.getAllUsers().stream()
+                            .filter(u -> {
+                                if (u.getEmail() != null && u.getEmail().equalsIgnoreCase(cleanId)) return true;
+                                if (u.getStaffId() != null && u.getStaffId().equalsIgnoreCase(cleanId)) return true;
+                                if (u.getEmployeeId() != null && u.getEmployeeId().equalsIgnoreCase(cleanId)) return true;
+                                if (u.getUsername() != null && u.getUsername().equalsIgnoreCase(cleanId)) return true;
+                                if (u.getName() != null && u.getName().equalsIgnoreCase(cleanId)) return true;
+                                if (digitsOnly.length() >= 7 && u.getPhone() != null && u.getPhone().replaceAll("\\D", "").endsWith(digitsOnly)) return true;
+                                return false;
+                            })
+                            .findFirst()
+                            .orElse(null);
+                });
 
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -275,6 +294,20 @@ public class AuthController {
         rbacSecurityService.recordAudit(user.getEmail(), user.getRole().getDisplayName(), "Login successful", "Security Activity",
                 "User: " + user.getStaffId() + ", Date and time: Automatically recorded");
 
+        boolean isAdmin = (user.getRole() == UserRole.ADMINISTRATOR || user.getRole() == UserRole.SYSTEM_ADMINISTRATOR);
+        String destination = "dashboard";
+        if (isAdmin) {
+            destination = "admin-dashboard";
+        } else if (user.getRole() == UserRole.LEGAL_OFFICER) {
+            destination = "legal-requests";
+        } else if (user.getRole() == UserRole.LEGAL_CLERK) {
+            destination = "clerk-dashboard";
+        } else if (user.getRole() == UserRole.SENIOR_LAWYER) {
+            destination = "senior-lawyer-dashboard";
+        } else if (user.getRole() == UserRole.LAWYER) {
+            destination = "lawyer-dashboard";
+        }
+
         if (user.isMustChangePassword() || user.getStatus() == UserStatus.FIRST_LOGIN_PENDING || user.getAccountStatus() == AccountStatus.FIRST_LOGIN_RESET) {
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -284,6 +317,7 @@ public class AuthController {
                 "roleDisplayName", user.getRole().getDisplayName(),
                 "mustChangePassword", true,
                 "requiresFirstLoginChange", true,
+                "destination", destination,
                 "message", "Login successful. Welcome to SLCMS.",
                 "user", Map.of(
                     "id", user.getId(),
@@ -297,18 +331,21 @@ public class AuthController {
             ));
         }
 
-        return ResponseEntity.ok(Map.of(
-            "success", true,
-            "authenticated", true,
-            "staffId", user.getStaffId(),
-            "role", user.getRole().name(),
-            "roleDisplayName", user.getRole().getDisplayName(),
-            "mustChangePassword", false,
-            "requiresFirstLoginChange", false,
-            "message", "Login successful. Welcome to SLCMS.",
-            "token", "slcms_jwt_" + UUID.randomUUID(),
-            "user", user
-        ));
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("success", true);
+        resp.put("authenticated", true);
+        resp.put("staffId", user.getStaffId());
+        resp.put("role", user.getRole().getDisplayName());
+        resp.put("roleKey", user.getRole().name());
+        resp.put("roleDisplayName", user.getRole().getDisplayName());
+        resp.put("destination", destination);
+        resp.put("mustChangePassword", false);
+        resp.put("requiresFirstLoginChange", false);
+        resp.put("message", "Login successful. Welcome to SLCMS.");
+        String jwtToken = jwtAuthService.generateToken(user, null);
+        resp.put("token", jwtToken);
+        resp.put("user", user);
+        return ResponseEntity.ok(resp);
     }
 
     /**
@@ -320,6 +357,13 @@ public class AuthController {
         String identifier = payload.get("identifier");
         String userId = payload.get("userId");
         String newPassword = payload.get("newPassword");
+        String tempPassword = payload.get("currentPassword");
+        if (tempPassword == null || tempPassword.trim().isEmpty()) {
+            tempPassword = payload.get("temporaryPassword");
+        }
+        if (tempPassword == null || tempPassword.trim().isEmpty()) {
+            tempPassword = payload.get("oldPassword");
+        }
 
         if (newPassword == null || newPassword.length() < 10) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "New password must be at least 10 characters long."));
@@ -327,14 +371,38 @@ public class AuthController {
 
         UserAccount user = null;
         if (userId != null && !userId.trim().isEmpty()) {
-            user = rbacSecurityService.getUserById(userId.trim());
+            user = userRepository.findById(userId.trim()).orElse(null);
+            if (user == null) {
+                user = rbacSecurityService.getUserById(userId.trim());
+            }
         }
         if (user == null && identifier != null && !identifier.trim().isEmpty()) {
-            user = rbacSecurityService.getUserByEmail(identifier.trim());
+            String cleanId = identifier.trim();
+            user = userRepository.findByEmailIgnoreCase(cleanId)
+                    .or(() -> userRepository.findByStaffIdIgnoreCase(cleanId))
+                    .or(() -> userRepository.findByUsernameIgnoreCase(cleanId))
+                    .orElse(null);
+            if (user == null) {
+                user = rbacSecurityService.getUserByEmail(cleanId);
+            }
         }
 
         if (user == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("success", false, "message", "User account not found."));
+        }
+
+        // Verify temporary password before allowing replacement
+        if (tempPassword != null && !tempPassword.trim().isEmpty()) {
+            String cleanTemp = tempPassword.trim();
+            boolean matches = passwordEncoder.matches(cleanTemp, user.getPasswordHash())
+                    || cleanTemp.equals(user.getPasswordPlain())
+                    || cleanTemp.equals(user.getPasswordHash());
+            if (!matches) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                    "success", false,
+                    "message", "Temporary password does not match current records. Please verify the credentials issued by the administrator."
+                ));
+            }
         }
 
         boolean updated = rbacSecurityService.changeUserPassword(user.getId(), newPassword);
@@ -342,14 +410,94 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("success", false, "message", "Could not update password."));
         }
 
+        UserAccount refreshedUser = userRepository.findById(user.getId()).orElse(user);
+
         return ResponseEntity.ok(Map.of(
             "success", true,
             "authenticated", true,
-            "staffId", user.getStaffId(),
-            "role", user.getRole().name(),
-            "roleDisplayName", user.getRole().getDisplayName(),
+            "staffId", refreshedUser.getStaffId(),
+            "role", refreshedUser.getRole().name(),
+            "roleDisplayName", refreshedUser.getRole().getDisplayName(),
+            "accountStatus", refreshedUser.getAccountStatus() != null ? refreshedUser.getAccountStatus().name() : "ACTIVE",
+            "status", refreshedUser.getStatus() != null ? refreshedUser.getStatus().getDisplayName() : "Active",
             "mustChangePassword", false,
-            "message", "Password successfully changed. You can now log in with your new password."
+            "message", "Password successfully changed. You can now log in with your new password.",
+            "user", refreshedUser
         ));
+    }
+
+    /**
+     * POST /api/auth/heartbeat
+     * 5-minute heartbeat to maintain online status for active users.
+     */
+    @PostMapping("/heartbeat")
+    public ResponseEntity<?> heartbeat(@RequestBody(required = false) Map<String, String> payload,
+                                        @RequestHeader(value = "X-User-Id", required = false) String headerUserId,
+                                        @RequestHeader(value = "X-User-Email", required = false) String headerUserEmail) {
+        String userId = (payload != null && payload.get("userId") != null) ? payload.get("userId") : headerUserId;
+        String email = (payload != null && payload.get("email") != null) ? payload.get("email") : headerUserEmail;
+        String staffId = (payload != null) ? payload.get("staffId") : null;
+
+        UserAccount user = null;
+        if (userId != null && !userId.trim().isEmpty()) {
+            user = userRepository.findById(userId.trim()).orElse(null);
+        }
+        if (user == null && staffId != null && !staffId.trim().isEmpty()) {
+            user = userRepository.findByStaffIdIgnoreCase(staffId.trim()).orElse(null);
+        }
+        if (user == null && email != null && !email.trim().isEmpty()) {
+            user = userRepository.findByEmailIgnoreCase(email.trim()).orElse(null);
+        }
+
+        if (user != null) {
+            user.setLastLoginAt(java.time.LocalDateTime.now());
+            user.setLastLogin("Online Now");
+            userRepository.save(user);
+            return ResponseEntity.ok(Map.of("success", true, "online", true, "staffId", user.getStaffId()));
+        }
+        return ResponseEntity.ok(Map.of("success", false, "message", "User not found"));
+    }
+
+    /**
+     * POST /api/auth/logout
+     * Explicitly clears online presence and records logout audit event in security_events table.
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestBody(required = false) Map<String, String> payload,
+                                     @RequestHeader(value = "X-User-Id", required = false) String headerUserId,
+                                     @RequestHeader(value = "X-User-Email", required = false) String headerUserEmail) {
+        String userId = (payload != null && payload.get("userId") != null) ? payload.get("userId") : headerUserId;
+        String email = (payload != null && payload.get("email") != null) ? payload.get("email") : headerUserEmail;
+        String staffId = (payload != null) ? payload.get("staffId") : null;
+
+        UserAccount user = null;
+        if (userId != null && !userId.trim().isEmpty()) {
+            user = userRepository.findById(userId.trim()).orElse(null);
+        }
+        if (user == null && staffId != null && !staffId.trim().isEmpty()) {
+            user = userRepository.findByStaffIdIgnoreCase(staffId.trim()).orElse(null);
+        }
+        if (user == null && email != null && !email.trim().isEmpty()) {
+            user = userRepository.findByEmailIgnoreCase(email.trim()).orElse(null);
+        }
+
+        if (user != null) {
+            user.setLastLoginAt(null);
+            user.setLastLogin("Logged Out");
+            userRepository.save(user);
+
+            rbacSecurityService.recordSecurityEvent(new com.slcms.model.SecurityEvent(
+                "evt-" + System.currentTimeMillis(), user.getId(), user.getName(),
+                com.slcms.model.EventType.ACCOUNT_SECURITY, "Logged Out",
+                "Staff member " + user.getName() + " (" + user.getStaffId() + ") logged out. Online presence removed.",
+                "127.0.0.1"
+            ));
+
+            rbacSecurityService.recordAudit(user.getEmail(), user.getRole().getDisplayName(), "Logout successful", "Security Activity",
+                "User: " + user.getStaffId() + ", Online presence cleared");
+
+            return ResponseEntity.ok(Map.of("success", true, "message", "Logged out successfully. Online presence removed."));
+        }
+        return ResponseEntity.ok(Map.of("success", true, "message", "Logged out."));
     }
 }

@@ -690,3 +690,27 @@ Added a new administrative governance module in the Admin suite accessible via t
   - `http://127.0.0.1:8080/js/state.js` &rarr; `200 OK`
   - `http://127.0.0.1:8080/js/views/tasks.js` &rarr; `200 OK`
   - `http://127.0.0.1:8080/js/views/admin.js` &rarr; `200 OK`
+
+---
+
+## 6. Client Message Studio (Streamlined & Executive Redesign)
+
+The Client Message Generator has been overhauled into an **Executive Client Communications Studio**:
+1. **Simplified & Decluttered Layout**:
+   - Removed 10+ confusing micro-inputs (`Required Arrival Time`, `Items to Bring`, `Contact Person`, `Court location override`, `Dispatch timing radio`).
+   - Clean 2-column layout:
+     - **Left Column**: Client & Matter Selector, Interactive Client Dossier Card, 6 Message Purpose Cards, Language switch, Delivery channel tabs.
+     - **Right Column**: Superhuman-style modern email composer with live word/char count, variable chips toolbar (`+ Client Name`, `+ Case No`, `+ Court`, `+ Lawyer`, `+ Date`), spacious textarea, and delivery action dock.
+2. **Two-Way Client & Matter Binding**:
+   - Selecting a client automatically filters and loads their registered matters and auto-selects their primary case.
+   - The interactive dossier card shows avatar initials, client name & type, verified email address, phone, linked court, assigned advocate, and next hearing date.
+   - Selecting a case automatically detects and selects its corresponding client.
+   - Recipient email address automatically populates in the "To:" field and can be edited.
+3. **Smart Draft Generation (No Bracket Errors)**:
+   - Eliminated raw placeholder brackets like `[Hearing Date]` that previously triggered warning alerts.
+   - If a court date is scheduled, it formats naturally (`29 September 2026 at 09:00 AM`). If pending, it states `to be confirmed by the court registry (cause list pending)`.
+4. **Reliable 100% Email Delivery**:
+   - **Send Email Now**: Resolves API endpoint correctly via `apiBaseUrl` and dispatches via Gmail SMTP, records in communication history, and saves audit event.
+   - **Open in Gmail Web**: 1-click button opening `https://mail.google.com/mail/?view=cm&fs=1&to=...&su=...&body=...` directly in the browser with pre-filled content.
+   - **Open in Mail App**: Native `mailto:` link for desktop Outlook/Mail clients.
+   - **Preview Formal Letter**: Displays official law firm letterhead preview modal.

@@ -2,20 +2,28 @@ package com.slcms.controller;
 
 import com.slcms.model.SystemBackup;
 import com.slcms.service.SystemSettingService;
+import com.slcms.dto.BackupInfoDTO;
+import com.slcms.dto.BackupSummaryDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.FileNotFoundException;
+import java.nio.file.Path;
 import java.util.*;
 
 /**
  * REST Controller for System Settings, Governance Rules, and Disaster Recovery Backups.
  */
 @RestController
-@CrossOrigin(origins = "*")
+@CrossOrigin(originPatterns = "*")
 public class SystemSettingController {
 
     private final SystemSettingService settingService;
@@ -226,7 +234,7 @@ public class SystemSettingController {
     }
 
     /**
-     * Trigger immediate database snapshot backup.
+     * Trigger immediate real system backup ZIP archive generation.
      */
     @PostMapping("/api/admin/backups")
     public ResponseEntity<?> createBackup(
@@ -239,37 +247,104 @@ public class SystemSettingController {
 
         try {
             String adminName = userName != null ? userName : "Neema Joseph";
-            SystemBackup backup = settingService.createBackupNow(adminName);
+            BackupInfoDTO backup = settingService.createBackupNow(adminName, "MANUAL");
             Map<String, Object> response = new LinkedHashMap<>();
             response.put("success", true);
+            response.put("message", "Backup created successfully");
+            response.put("filename", backup.getFilename());
+            response.put("size", backup.getSizeBytes());
+            response.put("status", "HEALTHY");
             response.put("backup", backup);
-            response.put("message", "Backup created and verified successfully.");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, Object> error = new LinkedHashMap<>();
             error.put("success", false);
-            error.put("message", "Backup generation failed: " + e.getMessage());
+            error.put("message", "Backup failed: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 
     /**
-     * List all verified backups.
+     * List all real ZIP backups directly from disk with telemetry summary.
      */
     @GetMapping("/api/admin/backups")
     public ResponseEntity<?> listBackups(@RequestHeader(value = "X-User-Role", required = false) String role) {
         if (!isAdmin(role)) {
             return accessDeniedResponse();
         }
-        return ResponseEntity.ok(settingService.getAllAdminSettings().get("backups"));
+        BackupSummaryDTO summary = settingService.getBackupSummary();
+        return ResponseEntity.ok(summary);
     }
 
     /**
-     * Restore system snapshot.
+     * Download backup ZIP file.
      */
-    @PostMapping("/api/admin/backups/{id}/restore")
+    @GetMapping("/api/admin/backups/{filename}/download")
+    public ResponseEntity<?> downloadBackup(
+            @PathVariable("filename") String filename,
+            @RequestHeader(value = "X-User-Role", required = false) String role) {
+
+        if (!isAdmin(role)) {
+            return accessDeniedResponse();
+        }
+
+        try {
+            Path file = settingService.getBackupFile(filename);
+            Resource resource = new UrlResource(file.toUri());
+            if (!resource.exists() || !resource.isReadable()) {
+                throw new FileNotFoundException("Cannot read backup file: " + filename);
+            }
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFileName().toString() + "\"")
+                    .body(resource);
+        } catch (FileNotFoundException e) {
+            Map<String, Object> error = new LinkedHashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        } catch (Exception e) {
+            Map<String, Object> error = new LinkedHashMap<>();
+            error.put("success", false);
+            error.put("message", "Failed to prepare download: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * Delete a backup ZIP file from disk.
+     */
+    @DeleteMapping("/api/admin/backups/{filename}")
+    public ResponseEntity<?> deleteBackup(
+            @PathVariable("filename") String filename,
+            @RequestHeader(value = "X-User-Role", required = false) String role,
+            @RequestHeader(value = "X-User-Name", required = false) String userName) {
+
+        if (!isAdmin(role)) {
+            return accessDeniedResponse();
+        }
+
+        try {
+            boolean deleted = settingService.deleteBackup(filename);
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("success", deleted);
+            response.put("message", deleted ? "Backup " + filename + " deleted successfully." : "Backup file not found.");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new LinkedHashMap<>();
+            error.put("success", false);
+            error.put("message", "Failed to delete backup: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
+     * Restore system snapshot from ZIP archive.
+     */
+    @PostMapping("/api/admin/backups/{filename}/restore")
     public ResponseEntity<?> restoreBackup(
-            @PathVariable("id") Long backupId,
+            @PathVariable("filename") String filename,
             @RequestBody Map<String, String> payload,
             @RequestHeader(value = "X-User-Role", required = false) String role,
             @RequestHeader(value = "X-User-Name", required = false) String userName) {
@@ -286,18 +361,28 @@ public class SystemSettingController {
             return ResponseEntity.badRequest().body(error);
         }
 
+        String confirmation = payload.get("confirmation");
+        if (confirmation == null) {
+            confirmation = payload.get("confirmationText");
+        }
+
         try {
             String adminName = userName != null ? userName : "Neema Joseph";
-            boolean restored = settingService.restoreBackup(backupId, password, adminName);
+            boolean restored = settingService.restoreBackup(filename, password, confirmation, adminName);
             Map<String, Object> response = new LinkedHashMap<>();
             response.put("success", restored);
-            response.put("message", "Backup restored successfully. Verified database availability.");
+            response.put("message", "Backup " + filename + " restored successfully. Verified database availability.");
             return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            Map<String, Object> error = new LinkedHashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
         } catch (Exception e) {
             Map<String, Object> error = new LinkedHashMap<>();
             error.put("success", false);
             error.put("message", "Backup restoration failed: " + e.getMessage());
-            return ResponseEntity.badRequest().body(error);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 

@@ -77,7 +77,6 @@ public class SystemSettingRepository {
                 List<SystemBackup> loaded = objectMapper.readValue(bkpFile, new TypeReference<List<SystemBackup>>() {});
                 backupList.addAll(loaded);
             } else {
-                seedInitialBackupRecord();
                 flushBackups();
             }
         } catch (Exception e) {
@@ -104,18 +103,6 @@ public class SystemSettingRepository {
         addOrUpdateMemory(new SystemSetting(16L, "case_number_format", "CV/YYYY/####", "TEXT", 1L, LocalDateTime.now()));
         addOrUpdateMemory(new SystemSetting(17L, "case_categories", "Civil,Criminal,Land,Matrimonial,Probate,Commercial,Other", "TEXT", 1L, LocalDateTime.now()));
         addOrUpdateMemory(new SystemSetting(18L, "case_statuses", "Active,Pending,Closed,Archived", "TEXT", 1L, LocalDateTime.now()));
-    }
-
-    private void seedInitialBackupRecord() {
-        backupList.add(new SystemBackup(
-            1L,
-            "slcms_initial_snapshot_20260908.enc",
-            "backups/slcms_initial_snapshot_20260908.enc",
-            14829312L,
-            "Successful",
-            "System Automation",
-            true
-        ));
     }
 
     private void addOrUpdateMemory(SystemSetting s) {
@@ -189,9 +176,21 @@ public class SystemSettingRepository {
         if (backup.getId() == null) {
             backup.setId(System.currentTimeMillis());
         }
-        backupList.removeIf(b -> Objects.equals(b.getId(), backup.getId()));
+        backupList.removeIf(b -> Objects.equals(b.getId(), backup.getId()) || Objects.equals(b.getFilename(), backup.getFilename()));
         backupList.add(0, backup);
         flushBackups();
         return backup;
+    }
+
+    public synchronized boolean deleteBackup(Long id) {
+        boolean removed = backupList.removeIf(b -> Objects.equals(b.getId(), id));
+        if (removed) flushBackups();
+        return removed;
+    }
+
+    public synchronized boolean deleteBackupByFilename(String filename) {
+        boolean removed = backupList.removeIf(b -> Objects.equals(b.getFilename(), filename));
+        if (removed) flushBackups();
+        return removed;
     }
 }

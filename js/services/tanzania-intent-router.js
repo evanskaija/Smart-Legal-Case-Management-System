@@ -1110,6 +1110,36 @@ To help narrow this down, are you looking at a **specific type of crime** (like 
     this.context.lastCategory = cat;
     this.context.lastUserQuery = rawQuery;
 
+    // Check for Firm Case vs Case Library Judgment Disambiguation
+    const cleanQuery = clean.toLowerCase();
+    const isExplicitFirmCase = /\b(firm case|managed case|my case|client case|firm record)\b/i.test(cleanQuery);
+    const isExplicitLibrary = /\b(case library|judgment|precedent|tanzlii|court decision)\b/i.test(cleanQuery);
+
+    if (!isExplicitFirmCase && !isExplicitLibrary && (cleanQuery.includes('muwinge') || cleanQuery.includes('salum') || cleanQuery.includes('halima') || cleanQuery.includes('69 of 2018') || cleanQuery.includes('10045'))) {
+      const matchingFirmCase = (Array.isArray(SLCMS_STATE?.cases) ? SLCMS_STATE.cases : []).find(c => {
+        const t = (c.title || c.caseTitle || '').toLowerCase();
+        return t.includes('muwinge') || t.includes('halima');
+      });
+
+      const matchingJudgment = (Array.isArray(SLCMS_STATE?.tanzaniaJudgments) ? SLCMS_STATE.tanzaniaJudgments : []).find(j => {
+        const t = (j.title || j.case_title || '').toLowerCase();
+        return t.includes('muwinge') || t.includes('halima');
+      });
+
+      if (matchingFirmCase && matchingJudgment) {
+        return {
+          category: 'DISAMBIGUATION',
+          categoryCode: 'DISAMBIGUATION',
+          intent: 'DISAMBIGUATION',
+          response: `I found this title in two places. Which one do you want?\n\n1. **Firm Case Record** (Managed file for client ${matchingFirmCase.clientName || 'Halima Ismail'})\n2. **Case Library Judgment** (Appellate precedent ${matchingJudgment.citation || '[2020] TZHC 10045'})`,
+          guidedOptions: [
+            { icon: '📁', label: '1. Firm Case Record', desc: 'Managed client matter', action: `AICopilot.sendPresetPrompt('Summarize Firm Case Record for Abdallah Salum Muwinge')`, prompt: 'Summarize Firm Case Record for Abdallah Salum Muwinge' },
+            { icon: '🏛️', label: '2. Case Library Judgment', desc: 'Precedent judgment in Case Library', action: `AICopilot.sendPresetPrompt('Summarize Case Library Judgment for Abdallah Salum Muwinge')`, prompt: 'Summarize Case Library Judgment for Abdallah Salum Muwinge' }
+          ]
+        };
+      }
+    }
+
     // Dispatch to Category Handler
     switch (cat) {
       // -------------------------------------------------------------

@@ -17,7 +17,7 @@ import java.util.*;
  */
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "*")
+@CrossOrigin(originPatterns = "*")
 public class AdminSecurityAlertController {
 
     private final RBACSecurityService rbacSecurityService;

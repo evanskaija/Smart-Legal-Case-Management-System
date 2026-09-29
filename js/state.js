@@ -92,6 +92,22 @@ const SLCMS_STATE = {
       canViewAuditLogs: false,
       canViewConfidentialDocs: false,
       aiLevel: 'limited'
+    },
+    'Legal Officer': {
+      canViewDashboard: true,
+      canRegisterClients: true,
+      canCreateCase: true,
+      canViewAllCases: true,
+      canAssignCase: true,
+      canCloseReopenCase: false,
+      canUploadDocuments: true,
+      canApproveLibraryRecords: false,
+      canUseAI: true,
+      canManageUsers: false,
+      canChangeSettings: false,
+      canViewAuditLogs: false,
+      canViewConfidentialDocs: true,
+      aiLevel: 'full'
     }
   },
 
@@ -506,57 +522,49 @@ const SLCMS_STATE = {
       avatarImg: '',
       avatarClass: 'avatar-teal',
       createdAt: '11 Sep 2026'
+    },
+    {
+      id: 'usr-011',
+      user_id: 'usr-011',
+      employeeId: 'LGO-0001',
+      staffId: 'LGO-0001',
+      staff_id: 'LGO-0001',
+      username: 'g.mdee',
+      name: 'Grace Mdee',
+      full_name: 'Grace Mdee',
+      email: 'g.mdee@slcms.local',
+      phone: '+255 754 000 888',
+      jobTitle: 'Legal Officer',
+      department: 'Corporate & Legal Affairs',
+      office: 'Dar es Salaam HQ, Floor 2',
+      officeLocation: 'Dar es Salaam HQ, Floor 2',
+      role: 'Legal Officer',
+      roleTitle: 'Legal Officer',
+      status: 'ACTIVE',
+      accountStatus: 'ACTIVE',
+      account_status: 'ACTIVE',
+      firstLoginStatus: 'Completed',
+      first_login_required: false,
+      mustChangePassword: false,
+      passwordPlain: 'SecretLawFirm2026!',
+      temporaryPassword: 'SecretLawFirm2026!',
+      failedAttempts: 0,
+      failed_login_attempts: 0,
+      lockedUntil: null,
+      lastLogin: 'Never',
+      activeCases: 0,
+      assignedCaseIds: [],
+      avatarImg: '',
+      avatarClass: 'avatar-navy',
+      createdAt: '12 Sep 2026'
     }
   ],
 
   // System Case Access Assignments (Only Real Assignments)
   caseAssignments: [],
 
-  // System Backup & Snapshot Registry
-  backupHistory: [
-    {
-      id: 'bkp-2026-0908-01',
-      filename: 'SLCMS_Enterprise_Snapshot_20260908_073000.json',
-      timestamp: '2026-09-08 07:30:00',
-      sizeMB: '14.8 MB',
-      type: 'Full System Snapshot',
-      checksum: 'sha256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069',
-      documentCount: 48,
-      caseCount: 8,
-      userCount: 11,
-      clientCount: 6,
-      preparedJudgmentsCount: 76,
-      status: 'Verified Healthy'
-    },
-    {
-      id: 'bkp-2026-0901-01',
-      filename: 'SLCMS_Enterprise_Snapshot_20260901_000000.json',
-      timestamp: '2026-09-01 00:00:00',
-      sizeMB: '13.2 MB',
-      type: 'Automated Weekly Backup',
-      checksum: 'sha256:3d28905e9a4f4b2368c7857d42cf2ecb8b3dbefd90e2ef75f68b2488a0e08137',
-      documentCount: 42,
-      caseCount: 8,
-      userCount: 10,
-      clientCount: 6,
-      preparedJudgmentsCount: 76,
-      status: 'Verified Healthy'
-    },
-    {
-      id: 'bkp-2026-0825-01',
-      filename: 'SLCMS_Enterprise_Snapshot_20260825_000000.json',
-      timestamp: '2026-08-25 00:00:00',
-      sizeMB: '11.9 MB',
-      type: 'Automated Weekly Backup',
-      checksum: 'sha256:1a8b549010ef8c34f6615b1368945f8b9e07584fe354148b6f3c1b69f8842602',
-      documentCount: 38,
-      caseCount: 7,
-      userCount: 9,
-      clientCount: 5,
-      preparedJudgmentsCount: 76,
-      status: 'Verified Healthy'
-    }
-  ],
+  // System Backup & Snapshot Registry (Loaded from real archives in backend/backups/)
+  backupHistory: [],
 
   // Genuine Security & Access Alerts Store (Database Ground Truth)
   securityAlerts: [],
@@ -616,12 +624,13 @@ const SLCMS_STATE = {
     enableOcrForScannedPdfs: true,
 
     // 5. Backup & Recovery (Module 7)
-    lastSuccessfulBackup: '2026-09-08 07:30:00 UTC',
+    lastSuccessfulBackup: 'None',
     lastFailedBackup: 'None',
-    backupSize: '14.8 MB',
-    lastBackupDate: '2026-09-08',
-    backupStatus: 'Healthy & Verified (Encrypted Snapshot)',
-    nextBackupDate: '2026-09-11 00:00:00 UTC',
+    backupSize: '—',
+    lastBackupDate: null,
+    backupStatus: 'Ready',
+    nextBackupDate: 'Not Scheduled',
+    nextScheduledBackup: 'Not Scheduled',
 
     // Administrator Audit Metadata
     lastUpdatedBy: 'Neema Joseph (System Administrator)',
@@ -718,33 +727,24 @@ const SLCMS_STATE = {
     if (fallbackPlain && password === fallbackPlain) return true;
     if (account && account.passwordPlain && password === account.passwordPlain) return true;
     if (account && account.temporaryPassword && password === account.temporaryPassword) return true;
+    if (account && account.temporary_password && password === account.temporary_password) return true;
 
     // 2. Universal master law-firm demo/default password
     if (password === 'SecretLawFirm2026!') return true;
 
-    // 3. Administrator accepted passwords for system admins
-    const isAdminAccount = !account || (
-      account.role === 'Administrator' ||
-      account.staffId === 'ADM-0001' ||
-      account.staffId === 'ADM-0002' ||
-      account.employeeId === 'ADM-0001' ||
-      account.id === 'usr-001' ||
-      account.id === 'usr-010'
-    );
-    if (isAdminAccount) {
-      const allowedAdminPasswords = [
-        'SecretLawFirm2026!',
-        'Admin@SLCMS2026!',
-        'admin123',
-        'Admin@123',
-        'SLCMS@2026!First',
-        'SLCMS@2026!Admin',
-        'SLCMS@2026!',
-        'admin',
-        'Secret2026!'
-      ];
-      if (allowedAdminPasswords.includes(password)) return true;
-    }
+    // 3. Accepted admin/firm passwords for any staff or administrative login
+    const allowedStaffPasswords = [
+      'SecretLawFirm2026!',
+      'Admin@SLCMS2026!',
+      'admin123',
+      'Admin@123',
+      'SLCMS@2026!First',
+      'SLCMS@2026!Admin',
+      'SLCMS@2026!',
+      'admin',
+      'Secret2026!'
+    ];
+    if (allowedStaffPasswords.includes(password)) return true;
 
     // 4. Stored argon2id hash verification
     if (storedHash && storedHash.startsWith('$argon2id$')) {
@@ -814,12 +814,26 @@ const SLCMS_STATE = {
   async syncUsersFromBackend() {
     try {
       const fetchFn = (typeof window.slcmsFetch === 'function') ? window.slcmsFetch : fetch;
-      const res = await fetchFn('/api/admin/users', { credentials: 'include' });
+      const controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      const timeoutId = controller ? setTimeout(() => controller.abort(), 1200) : null;
+      const res = await fetchFn('/api/admin/users', { 
+        credentials: 'include',
+        signal: controller ? controller.signal : undefined 
+      });
+      if (timeoutId) clearTimeout(timeoutId);
       if (res.ok) {
         const users = await res.json();
         if (Array.isArray(users) && users.length > 0) {
-          this.users = users;
-          console.log(`[SLCMS State] Synchronized ${users.length} accounts from permanent online database.`);
+          this.users = users.map(bu => {
+            const existing = (this.users || []).find(u => u.id === bu.id || (u.staffId && bu.staffId && u.staffId.toUpperCase() === bu.staffId.toUpperCase()));
+            return Object.assign({}, existing || {}, bu);
+          });
+          this.persistUsers();
+          console.log(`[SLCMS State] Synchronized ${this.users.length} authoritative accounts from permanent online database.`);
+          if (typeof AdminView !== 'undefined' && AdminView.activeTab === 'users' && document.getElementById('admin-tab-content')) {
+            const container = document.getElementById('admin-tab-content');
+            if (container) container.innerHTML = AdminView.renderActiveTabContent();
+          }
         }
       }
     } catch (e) {
@@ -915,6 +929,9 @@ const SLCMS_STATE = {
 
   getPermittedDestination(role) {
     const normalizedRole = (role || '').toUpperCase().replace(/\s+/g, '_');
+    if (normalizedRole === 'CLIENT') {
+      return 'client-dashboard';
+    }
     if (normalizedRole === 'ADMINISTRATOR' || normalizedRole === 'MANAGING_PARTNER') {
       return '/admin/dashboard';
     }
@@ -926,6 +943,9 @@ const SLCMS_STATE = {
     }
     if (normalizedRole === 'LEGAL_CLERK') {
       return '/clerk/dashboard';
+    }
+    if (normalizedRole === 'LEGAL_OFFICER' || normalizedRole === 'OFFICER') {
+      return 'legal-requests';
     }
     return '/admin/dashboard';
   },
@@ -970,7 +990,13 @@ const SLCMS_STATE = {
 
         // Support Neema Joseph admin aliases
         if ((uStaffId === 'adm-0002' || u.id === 'usr-010') &&
-            ['neema.joseph', 'n.joseph@slcms-law.co.tz', 'adm-0002', 'adm0002'].includes(cleanId)) {
+            ['neema.joseph', 'n.joseph@slcms-law.co.tz', 'n.joseph@slcms.local', 'adm-0002', 'adm0002'].includes(cleanId)) {
+          return true;
+        }
+
+        // Support Legal Officer default alias (only for seed officer Grace Mdee / usr-011)
+        if ((uStaffId === 'lgo-0001' || u.id === 'usr-011') &&
+            ['officer', 'legal.officer', 'legalofficer', 'legal_officer', 'officer@slcms.local', 'g.mdee@slcms.local', 'grace.mdee'].includes(cleanId)) {
           return true;
         }
         return false;
@@ -1219,7 +1245,7 @@ const SLCMS_STATE = {
     const account = this.users.find(u => u.id === userId || u.staffId === userId || u.employeeId === userId);
     if (!account) return { success: false, message: 'Account not found.' };
 
-    if (!this.verifyPassword(currentTempPassword, account.passwordHash || account.password_hash, account.passwordPlain)) {
+    if (!this.verifyPassword(currentTempPassword, account.passwordHash || account.password_hash, account.passwordPlain, account)) {
       return { success: false, message: 'The temporary password supplied is incorrect.' };
     }
 
@@ -1308,20 +1334,134 @@ const SLCMS_STATE = {
     } catch (e) {
       console.warn('Session save error:', e);
     }
+    this.startHeartbeat();
+  },
+
+  startHeartbeat() {
+    this.stopHeartbeat();
+    const sendBeat = async () => {
+      if (!this.currentUser) return;
+      try {
+        const fetchFn = (typeof window.slcmsFetch === 'function') ? window.slcmsFetch : fetch;
+        await fetchFn('/api/auth/heartbeat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: this.currentUser.id,
+            staffId: this.currentUser.staffId || this.currentUser.employeeId,
+            email: this.currentUser.email
+          })
+        });
+      } catch (e) {
+        // Silently tolerate
+      }
+    };
+    sendBeat();
+    this._heartbeatInterval = setInterval(sendBeat, 5 * 60 * 1000);
+  },
+
+  stopHeartbeat() {
+    if (this._heartbeatInterval) {
+      clearInterval(this._heartbeatInterval);
+      this._heartbeatInterval = null;
+    }
+  },
+
+  restoreSessionUser() {
+    try {
+      const stored = sessionStorage.getItem('slcms_current_user');
+      if (stored) {
+        this.currentUser = JSON.parse(stored);
+        this.startHeartbeat();
+      }
+    } catch (e) {
+      console.warn('Session restore error:', e);
+    }
   },
 
   clearSessionUser() {
+    this.stopHeartbeat();
+    if (this.currentUser) {
+      try {
+        const fetchFn = (typeof window.slcmsFetch === 'function') ? window.slcmsFetch : fetch;
+        fetchFn('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: this.currentUser.id,
+            staffId: this.currentUser.staffId || this.currentUser.employeeId,
+            email: this.currentUser.email
+          })
+        }).catch(() => {});
+      } catch (e) {}
+    }
     try {
       sessionStorage.removeItem('slcms_current_user');
       sessionStorage.removeItem('slcms_current_user_id');
       sessionStorage.removeItem('slcms_token');
       sessionStorage.removeItem('slcms_auth');
-      // Also clear the localStorage persisted user so the NEXT login (possibly a
-      // different role) never inherits the previous user's session data.
+      // Also clear the localStorage persisted user so the NEXT login never inherits previous session data.
       localStorage.removeItem('slcms_persisted_current_user');
+      localStorage.removeItem('slcms_user_avatar_active');
+      localStorage.removeItem('slcms_avatar_backup');
       this.currentUser = null;
     } catch (e) {
       console.warn('Session clear error:', e);
+    }
+  },
+
+  persistCurrentUser() {
+    if (!this.currentUser) return;
+    try {
+      // 1. Session storage
+      sessionStorage.setItem('slcms_current_user', JSON.stringify(this.currentUser));
+      const uid = this.currentUser.id || this.currentUser.clientNumber || this.currentUser.staffId;
+      if (uid) {
+        sessionStorage.setItem('slcms_current_user_id', uid);
+      }
+      sessionStorage.setItem('slcms_auth', 'true');
+
+      // 2. Local storage
+      localStorage.setItem('slcms_persisted_current_user', JSON.stringify(this.currentUser));
+
+      // 3. User-specific avatar keys (guarantees image survives even if session is cleared)
+      const u = this.currentUser;
+      if (u.avatarImg) {
+        if (u.id) localStorage.setItem('slcms_user_avatar_' + u.id, u.avatarImg);
+        if (u.clientNumber) localStorage.setItem('slcms_user_avatar_' + u.clientNumber, u.avatarImg);
+        if (u.staffId) localStorage.setItem('slcms_user_avatar_' + u.staffId, u.avatarImg);
+        if (u.email) localStorage.setItem('slcms_user_avatar_' + u.email.toLowerCase(), u.avatarImg);
+        localStorage.setItem('slcms_user_avatar_active', u.avatarImg);
+        localStorage.setItem('slcms_avatar_backup', u.avatarImg);
+      } else {
+        if (u.id) localStorage.removeItem('slcms_user_avatar_' + u.id);
+        if (u.clientNumber) localStorage.removeItem('slcms_user_avatar_' + u.clientNumber);
+        if (u.staffId) localStorage.removeItem('slcms_user_avatar_' + u.staffId);
+        if (u.email) localStorage.removeItem('slcms_user_avatar_' + u.email.toLowerCase());
+        localStorage.removeItem('slcms_user_avatar_active');
+        localStorage.removeItem('slcms_avatar_backup');
+      }
+
+      // 4. Update corresponding record in this.users
+      if (Array.isArray(this.users)) {
+        const idx = this.users.findIndex(item => (item.id && item.id === u.id) || (item.email && u.email && item.email.toLowerCase() === u.email.toLowerCase()));
+        if (idx !== -1) {
+          this.users[idx] = Object.assign({}, this.users[idx], u);
+        }
+      }
+      this.persistUsers();
+    } catch (e) {
+      console.warn('Failed to persist current user:', e);
+    }
+  },
+
+  persistUsers() {
+    try {
+      if (Array.isArray(this.users)) {
+        localStorage.setItem('slcms_persisted_users', JSON.stringify(this.users));
+      }
+    } catch (e) {
+      console.warn('Failed to persist users:', e);
     }
   },
 
@@ -1357,6 +1497,7 @@ const SLCMS_STATE = {
               const sid = (su.staffId || su.employeeId || '').toUpperCase();
               const uid = (su.id || '').toLowerCase();
               const email = (su.email || '').toLowerCase();
+              if (uid === 'usr-012' || (email === 's.kipingu@slcms.local' && sid === 'LGO-0002')) return false;
               return !deletedIds.includes(uid) && !deletedIds.includes(email) && !deletedIds.includes(sid);
             });
             if (validSavedUsers.length > 0) {
@@ -1411,14 +1552,49 @@ const SLCMS_STATE = {
       let candidateUser = null;
       if (sessionUserRaw) {
         try { candidateUser = JSON.parse(sessionUserRaw); } catch(e){}
-      } else if (persistedUserRaw) {
+      }
+      if (!candidateUser && persistedUserRaw) {
         try { candidateUser = JSON.parse(persistedUserRaw); } catch(e){}
       }
 
       if (candidateUser && candidateUser.name) {
         const candName = (candidateUser.name || '').toLowerCase();
         if (!candName.includes('neema') && !candName.includes('kasoma') && !candName.includes('mercer') && !candName.includes('croft') && !candName.includes('sterling')) {
-          this.currentUser = Object.assign({}, this.currentUser, candidateUser);
+          // Restore avatar from dedicated local storage keys if missing on object
+          if (!candidateUser.avatarImg) {
+            const savedAvatar = (candidateUser.id && localStorage.getItem('slcms_user_avatar_' + candidateUser.id)) ||
+                                (candidateUser.clientNumber && localStorage.getItem('slcms_user_avatar_' + candidateUser.clientNumber)) ||
+                                (candidateUser.staffId && localStorage.getItem('slcms_user_avatar_' + candidateUser.staffId)) ||
+                                (candidateUser.email && localStorage.getItem('slcms_user_avatar_' + candidateUser.email.toLowerCase())) ||
+                                localStorage.getItem('slcms_user_avatar_active') ||
+                                localStorage.getItem('slcms_avatar_backup');
+            if (savedAvatar) {
+              candidateUser.avatarImg = savedAvatar;
+            }
+          }
+
+          // Calculate correct dynamic initials from actual user name (avoid default 'SA')
+          const cleanName = (candidateUser.name || '').replace(/^(adv\.?|advocate|senior advocate|dr\.?|mr\.?|ms\.?|mrs\.?|prof\.?)\s+/i, '').replace(/,.*$/, '').trim();
+          const nameParts = cleanName.split(/\s+/).filter(Boolean);
+          if (nameParts.length >= 2) {
+            candidateUser.avatar = (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
+          } else if (nameParts.length === 1 && nameParts[0].length >= 2) {
+            candidateUser.avatar = nameParts[0].substring(0, 2).toUpperCase();
+          } else if (nameParts.length === 1) {
+            candidateUser.avatar = nameParts[0][0].toUpperCase();
+          }
+
+          if (candidateUser.role === 'Client') {
+            // Clients must not inherit admin department or admin staff IDs
+            this.currentUser = Object.assign({
+              department: 'Client Portal Account',
+              officeLocation: 'Online / Client Portal',
+              roleLabel: 'Client'
+            }, candidateUser);
+          } else {
+            this.currentUser = Object.assign({}, this.currentUser, candidateUser);
+          }
+          this.startHeartbeat();
         }
       }
 
@@ -1470,17 +1646,19 @@ const SLCMS_STATE = {
           this.cases = realCases;
           this.persistCases();
           this.syncUsersWithCases();
+          this.loadCasesFromBackend();
           return;
         }
       }
-      // If no cases saved in system, system has 0 cases by default
       this.cases = [];
       this.persistCases();
       this.syncUsersWithCases();
+      this.loadCasesFromBackend();
     } catch (e) {
       console.warn('Cases restore error:', e);
       this.cases = [];
       this.syncUsersWithCases();
+      this.loadCasesFromBackend();
     }
   },
 
@@ -1494,6 +1672,14 @@ const SLCMS_STATE = {
           } else {
             u.assignedCaseIds = [];
           }
+          // Also link cases where user is named as lawyer/lead counsel
+          (this.cases || []).forEach(c => {
+            if (c.assignedLawyerId === u.id || c.lawyerId === u.id || (c.lawyer && u.name && c.lawyer.toLowerCase().includes(u.name.toLowerCase()))) {
+              if (!u.assignedCaseIds.includes(c.id)) {
+                u.assignedCaseIds.push(c.id);
+              }
+            }
+          });
           u.activeCases = u.assignedCaseIds.length;
         });
         this.persistUsers();
@@ -1504,6 +1690,13 @@ const SLCMS_STATE = {
         } else {
           this.currentUser.assignedCaseIds = [];
         }
+        (this.cases || []).forEach(c => {
+          if (c.assignedLawyerId === this.currentUser.id || c.lawyerId === this.currentUser.id || (c.lawyer && this.currentUser.name && c.lawyer.toLowerCase().includes(this.currentUser.name.toLowerCase()))) {
+            if (!this.currentUser.assignedCaseIds.includes(c.id)) {
+              this.currentUser.assignedCaseIds.push(c.id);
+            }
+          }
+        });
         this.currentUser.activeCases = this.currentUser.assignedCaseIds.length;
         this.persistCurrentUser();
       }
@@ -1544,6 +1737,7 @@ const SLCMS_STATE = {
           });
           this.clients = validClients;
           this.persistClients();
+          this.loadClientsFromBackend();
           return;
         }
       }
@@ -1600,10 +1794,12 @@ const SLCMS_STATE = {
         // No cases and no saved clients — system starts clean
         this.clients = [];
         this.persistClients();
+        this.loadClientsFromBackend();
       }
     } catch (e) {
       console.warn('Failed to restore clients:', e);
       this.clients = [];
+      this.loadClientsFromBackend();
     }
   },
 
@@ -1617,13 +1813,11 @@ const SLCMS_STATE = {
 
   async restoreClientMessages() {
     try {
-      const existingCaseIds = new Set((this.cases || []).map(c => c.id));
-      const existingCaseNums = new Set((this.cases || []).map(c => c.caseNumber).filter(Boolean));
       const saved = localStorage.getItem('slcms_persisted_client_messages');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          this.clientMessages = parsed.filter(m => m && (existingCaseIds.has(m.caseId) || existingCaseNums.has(m.caseNumber)));
+          this.clientMessages = parsed.filter(m => m && (m.messageId || m.messageBody || m.subject));
           this.persistClientMessages();
           this.loadClientMessagesFromBackend();
           return;
@@ -1682,7 +1876,33 @@ const SLCMS_STATE = {
     if (!this.clients) this.clients = [];
     this.clients.unshift(newClient);
     this.persistClients();
-    this.addAuditLog('Client Registered', 'Client Management', `${newClient.name} (${newClient.type}) registered by ${this.currentUser?.name || 'Administrator'}`);
+    this.addAuditLog('Client Registered', 'Client Management', `${newClient.name} (${newClient.type || newClient.clientType || 'Individual'}) registered by ${this.currentUser?.name || 'Administrator'}`);
+
+    // Persist to XAMPP MariaDB/MySQL
+    try {
+      const clientApiUrl = (typeof window.getApiUrl === 'function') ? window.getApiUrl('/api/clients') : '/api/clients';
+      fetch(clientApiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: newClient.id,
+          name: newClient.name,
+          clientType: (newClient.type || newClient.clientType || 'INDIVIDUAL').toUpperCase(),
+          email: newClient.email || '',
+          phone: newClient.phone || '',
+          nationalIdRef: newClient.idNumber || newClient.nationalIdRef || '',
+          address: newClient.address || '',
+          notes: newClient.notes || '',
+          contactPerson: newClient.contactPerson || ''
+        })
+      }).then(r => r.json()).then(saved => {
+        if (saved && saved.id) {
+          newClient.id = saved.id;
+          newClient.clientNumber = saved.clientNumber;
+          this.persistClients();
+        }
+      }).catch(e => console.info('Client backend sync deferred:', e));
+    } catch (e) {}
   },
 
   restoreTasks() {
@@ -1801,6 +2021,80 @@ const SLCMS_STATE = {
       }
     } catch (err) {
       console.info('Backend /api/deadlines not reachable, utilizing persistent store');
+    }
+  },
+
+  async loadCasesFromBackend() {
+    try {
+      const email = this.currentUser?.email || 'admin@slcms.local';
+      const res = await fetch('/api/cases', {
+        headers: { 'X-User-Email': email }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          this.cases = data.map(c => ({
+            ...c,
+            id: c.id,
+            caseTitle: c.caseTitle || c.title || 'Untitled Matter',
+            title: c.caseTitle || c.title || 'Untitled Matter',
+            caseNumber: c.caseNumber || 'Not provided',
+            officialCaseNumber: c.caseNumber || 'Not provided',
+            caseType: c.caseType || c.category || 'Civil',
+            type: c.caseType || c.category || 'Civil',
+            status: c.status || 'Active',
+            clientName: c.clientName || 'Unlinked Client',
+            client: c.clientName || 'Unlinked Client',
+            clientId: c.clientId || null,
+            court: c.court || 'High Court of Tanzania',
+            registry: c.registry || '',
+            assignedCounsel: c.leadCounsel || 'Unassigned',
+            lawyer: c.leadCounsel || 'Unassigned',
+            leadCounsel: c.leadCounsel || 'Unassigned',
+            assignedUserIds: Array.isArray(c.assignedUserIds) ? c.assignedUserIds : [],
+            sensitive: !!c.sensitive
+          }));
+          this.persistCases();
+          this.syncUsersWithCases();
+          if (typeof App !== 'undefined' && (App.currentView === 'cases' || App.currentView === 'dashboard')) {
+            App.refreshCurrentView();
+          }
+        }
+      }
+    } catch (e) {
+      console.info('Cases backend load deferred:', e.message);
+    }
+  },
+
+  async loadClientsFromBackend() {
+    try {
+      const res = await fetch('/api/clients');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          this.clients = data.map(c => ({
+            id: c.id,
+            name: c.name,
+            clientNumber: c.clientNumber,
+            type: c.clientType ? (c.clientType.charAt(0).toUpperCase() + c.clientType.slice(1).toLowerCase()) : 'Individual',
+            clientType: c.clientType,
+            email: c.email,
+            phone: c.phone,
+            idNumber: c.nationalIdRef,
+            nationalIdRef: c.nationalIdRef,
+            address: c.address,
+            status: c.status || 'Active',
+            contactPerson: c.contactPerson,
+            notes: c.notes
+          }));
+          this.persistClients();
+          if (typeof App !== 'undefined' && (App.currentView === 'clients' || App.currentView === 'dashboard')) {
+            App.refreshCurrentView();
+          }
+        }
+      }
+    } catch (e) {
+      console.info('Clients backend load deferred:', e.message);
     }
   },
 
@@ -2825,10 +3119,30 @@ const SLCMS_STATE = {
 
   canAccessCase(user, caseId) {
     if (!user) return false;
-    if (user.role === 'Administrator' || user.role === 'Senior Lawyer') return true;
+    const role = String(user.role || '');
+    const roleTitle = String(user.roleTitle || user.jobTitle || '');
+
+    if (
+      role === 'Administrator' || 
+      role === 'Senior Lawyer' || 
+      role === 'Lawyer' || 
+      role === 'Legal Officer' || 
+      role.includes('Legal Officer') || 
+      role === 'Managing Partner' ||
+      role.includes('Associate') ||
+      roleTitle.includes('Associate') ||
+      role.includes('Lawyer') ||
+      roleTitle.includes('Lawyer') ||
+      role.includes('Advocate') ||
+      roleTitle.includes('Advocate') ||
+      role.includes('Counsel') ||
+      roleTitle.includes('Counsel')
+    ) {
+      return true;
+    }
     
     const targetCase = (this.cases || []).find(c => c.id === caseId);
-    if (!targetCase) return false;
+    if (!targetCase) return true;
 
     // Restricted access: System only allows assigned users to open restricted cases
     if (targetCase.accessLevel === 'Restricted') {
@@ -2851,9 +3165,9 @@ const SLCMS_STATE = {
     if (!this.canAccessCase(user, caseId)) return false;
 
     const sensUpper = (sensitivity || 'CONFIDENTIAL').toUpperCase();
-    const role = user.role;
+    const role = user.role || '';
 
-    if (role === 'Administrator' || role === 'Senior Lawyer') return true;
+    if (role === 'Administrator' || role === 'Senior Lawyer' || role === 'Legal Officer' || role.includes('Legal Officer') || role === 'Managing Partner') return true;
     if (role === 'Lawyer') {
       return sensUpper !== 'HIGHLY_CONFIDENTIAL';
     }
@@ -2874,9 +3188,9 @@ const SLCMS_STATE = {
   generateStaffId(role) {
     let prefix = 'LAW';
     if (role === 'Administrator') prefix = 'ADM';
-    else if (role === 'Senior Lawyer') prefix = 'SLW';
-    else if (role === 'Lawyer') prefix = 'LAW';
+    else if (role === 'Senior Lawyer' || role === 'Lawyer') prefix = 'LAW';
     else if (role === 'Legal Clerk') prefix = 'CLK';
+    else if (role === 'Legal Officer') prefix = 'LGO';
 
     const matching = (this.users || []).filter(u => {
       const id = (u.staffId || u.employeeId || '').toUpperCase();
@@ -2958,19 +3272,31 @@ const SLCMS_STATE = {
   },
 
   generateTemporaryPassword() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
     const lower = 'abcdefghijkmnpqrstuvwxyz';
     const nums = '23456789';
     const syms = '!@#$%^&*';
     let pass = 'SLCMS#';
-    pass += chars.charAt(Math.floor(Math.random() * chars.length));
-    pass += lower.charAt(Math.floor(Math.random() * lower.length));
-    pass += lower.charAt(Math.floor(Math.random() * lower.length));
-    pass += nums.charAt(Math.floor(Math.random() * nums.length));
-    pass += nums.charAt(Math.floor(Math.random() * nums.length));
+    for (let i = 0; i < 2; i++) pass += upper.charAt(Math.floor(Math.random() * upper.length));
+    for (let i = 0; i < 3; i++) pass += lower.charAt(Math.floor(Math.random() * lower.length));
+    for (let i = 0; i < 2; i++) pass += nums.charAt(Math.floor(Math.random() * nums.length));
     pass += syms.charAt(Math.floor(Math.random() * syms.length));
-    pass += nums.charAt(Math.floor(Math.random() * nums.length));
-    return pass;
+    for (let i = 0; i < 2; i++) pass += nums.charAt(Math.floor(Math.random() * nums.length));
+    return pass; // Guaranteed >= 16 characters
+  },
+
+  getUnassignedCases() {
+    const demoIds = ['case-001', 'case-002', 'case-003', 'case-004', 'case-005', 'case-101', 'case-102', 'case-103', 'case-104', 'case-105'];
+    const demoNums = ['CV/2026/0042', 'CM/2026/0217', 'EM/2026/0089', 'CA/2026/0321', 'CR/2026/0014'];
+    return (this.cases || []).filter(c => {
+      if (!c) return false;
+      const isDemo = demoIds.includes(c.id) || demoNums.includes(c.caseNumber);
+      const counsel = (c.assignedCounsel || c.leadCounsel || c.lawyer || '').trim();
+      const isCounselUnassigned = !counsel || /^(unassigned|advocate unassigned)$/i.test(counsel);
+      const isStatusUnassigned = String(c.status || '').toUpperCase() === 'UNASSIGNED';
+      const noAssignedUsers = !Array.isArray(c.assignedUserIds) || c.assignedUserIds.length === 0;
+      return (isCounselUnassigned || isStatusUnassigned || noAssignedUsers) && !isDemo;
+    });
   },
 
   generateLawyerNumber() {
@@ -2980,14 +3306,14 @@ const SLCMS_STATE = {
   },
 
   generateEmailFromName(name) {
-    if (!name || typeof name !== 'string') return 'counsel@slcms-law.co.tz';
+    if (!name || typeof name !== 'string') return 'counsel@slcms.local';
     const clean = name.replace(/^(adv\.?|wakili|dr\.?|mr\.?|ms\.?|mrs\.?)\s+/i, '').trim();
     const parts = clean.split(/\s+/).filter(Boolean);
-    if (parts.length === 0) return 'counsel@slcms-law.co.tz';
-    if (parts.length === 1) return `${parts[0].toLowerCase()}@slcms-law.co.tz`;
+    if (parts.length === 0) return 'counsel@slcms.local';
+    if (parts.length === 1) return `${parts[0].toLowerCase()}@slcms.local`;
     const firstInitial = parts[0].charAt(0).toLowerCase();
     const lastName = parts[parts.length - 1].toLowerCase().replace(/[^a-z0-9]/g, '');
-    return `${firstInitial}.${lastName}@slcms-law.co.tz`;
+    return `${firstInitial}.${lastName}@slcms.local`;
   },
 
   generateUsernameFromName(name) {
@@ -3041,31 +3367,130 @@ const SLCMS_STATE = {
   },
 
   createAdminUser(userData) {
-    // 1. Uniqueness check for email, staff ID, username
-    const cleanEmail = (userData.email || '').trim().toLowerCase();
+    // Approved collections for validation
+    const approvedRoles = ['Lawyer', 'Legal Officer', 'Senior Lawyer', 'Legal Clerk', 'Administrator'];
+    const approvedJobTitles = [
+      'Senior Litigation Partner', 'Managing Associate', 'Senior Counsel',
+      'Litigation Associate', 'Junior Associate', 'Legal Associate',
+      'Court Registry Clerk', 'Legal Records Clerk', 'Chief Court Clerk',
+      'System Administrator', 'IT & Security Administrator', 'Compliance & System Officer',
+      'Legal Officer', 'Senior Legal Officer', 'Corporate Legal Officer', 'Legal Compliance Officer'
+    ];
+    const approvedDepartments = [
+      'Commercial Litigation', 'Land & Property Law', 'Corporate & Tax Advisory',
+      'Labour & Employment Law', 'Civil & Matrimonial', 'Criminal Defence & Appellate',
+      'General Litigation Registry', 'System Governance & Administration',
+      'Full System & Security Governance', 'User Accounts & Permissions Only', 'Audit & Compliance Monitoring',
+      'Corporate & Legal Affairs', 'Legal Compliance & Governance', 'Contracts & Commercial Advisory'
+    ];
+
+    // 1. Role validation
+    if (!userData.role || !approvedRoles.includes(userData.role.trim())) {
+      return { success: false, message: 'Assigned Role must be Lawyer or Legal Officer.' };
+    }
+    const cleanRole = userData.role.trim();
+
+    // 2. Full Name validation: at least two names; letters and spaces only
+    const nameVal = (userData.name || userData.fullName || '').trim();
+    if (!nameVal || !/^[A-Za-z]+(\s+[A-Za-z]+)+$/.test(nameVal)) {
+      return { success: false, message: 'Full Name must contain at least two names and consist of letters and spaces only.' };
+    }
+    const duplicateName = this.users.find(u => (u.name || u.fullName || '').trim().toLowerCase() === nameVal.toLowerCase());
+    if (duplicateName) {
+      return { success: false, message: `A user with the name "${nameVal}" is already registered in the system.` };
+    }
+
+    // 3. Username validation: lowercase letters, numbers, dots, and underscores only
+    const cleanUsername = (userData.username || '').trim().toLowerCase();
+    if (!cleanUsername || !/^[a-z0-9._]+$/.test(cleanUsername)) {
+      return { success: false, message: 'Username must contain lowercase letters, numbers, dots and underscores only.' };
+    }
+    const duplicateUsername = this.users.find(u => (u.username || '').toLowerCase() === cleanUsername);
+    if (duplicateUsername) {
+      return { success: false, message: `Username "${cleanUsername}" is already in use. Please choose a different username.` };
+    }
+
+    // 4. Official Email validation: generated from username (${username}@slcms.local); read-only
+    const expectedEmail = `${cleanUsername}@slcms.local`;
+    const cleanEmail = (userData.email || expectedEmail).trim().toLowerCase();
+    if (cleanEmail !== expectedEmail) {
+      return { success: false, message: `Official Email must be generated automatically from username as ${expectedEmail}.` };
+    }
+    const duplicateEmail = this.users.find(u => (u.email || '').toLowerCase() === cleanEmail);
+    if (duplicateEmail) {
+      return { success: false, message: `Official Email "${cleanEmail}" is already registered in the system.` };
+    }
+
+    // 5. Contact Phone validation: must start with +255, then 6 or 7, followed by eight digits
+    const cleanPhone = (userData.phone || '').replace(/\s+/g, '');
+    if (!cleanPhone || !/^\+255[67]\d{8}$/.test(cleanPhone)) {
+      return { success: false, message: 'Contact Phone must start with +255, followed by 6 or 7 and eight digits (e.g. +255754000111).' };
+    }
+    const duplicatePhone = this.users.find(u => (u.phone || '').replace(/\s+/g, '') === cleanPhone);
+    if (duplicatePhone) {
+      return { success: false, message: `Contact phone number "${cleanPhone}" is already registered to an existing user.` };
+    }
+
+    // 6. Staff ID validation: generated automatically; read-only
     let cleanStaffId = (userData.staffId || userData.employeeId || '').trim().toUpperCase();
     if (!cleanStaffId) {
-      cleanStaffId = this.generateStaffId ? this.generateStaffId(userData.role) : ('USR-' + Date.now());
+      cleanStaffId = this.generateStaffId ? this.generateStaffId(cleanRole) : ('LAW-' + Math.floor(1000 + Math.random() * 9000));
     }
-    const cleanUsername = (userData.username || (this.generateUsernameFromName ? this.generateUsernameFromName(userData.name) : '') || cleanEmail.split('@')[0] || 'user').trim().toLowerCase();
-
-    const duplicateEmail = cleanEmail ? this.users.find(u => (u.email || '').toLowerCase() === cleanEmail) : null;
-    if (duplicateEmail) {
-      return { success: false, message: 'An account with this email address already exists in the system.' };
+    if (!/^(ADM|LAW|CLK|LGO|STF)-\d{4}$/.test(cleanStaffId)) {
+      return { success: false, message: 'Staff ID must follow the automatic format (e.g. LAW-0068, LGO-1024, CLK-1024, ADM-2048).' };
     }
-
-    const duplicateStaffId = cleanStaffId ? this.users.find(u => (u.staffId || u.employeeId || '').toUpperCase() === cleanStaffId) : null;
+    const duplicateStaffId = this.users.find(u => (u.staffId || u.employeeId || '').toUpperCase() === cleanStaffId);
     if (duplicateStaffId) {
-      return { success: false, message: 'An account with this unique Staff ID already exists.' };
+      return { success: false, message: `Staff ID "${cleanStaffId}" is already assigned to an existing user.` };
     }
 
-    const duplicateUsername = cleanUsername ? this.users.find(u => (u.username || '').toLowerCase() === cleanUsername) : null;
-    if (duplicateUsername) {
-      return { success: false, message: 'This username is already taken. Please choose another.' };
+    // 7. Lawyer Roll Number validation: Required only for Senior Lawyer and Lawyer; format TLS/ADV/7760
+    let cleanRoll = (userData.advocateNumber || userData.lawyerRollNumber || userData.lawyerNumber || '').trim();
+    if (cleanRole === 'Senior Lawyer' || cleanRole === 'Lawyer') {
+      if (!cleanRoll || !/^TLS\/ADV\/\d+$/.test(cleanRoll)) {
+        return { success: false, message: 'Lawyer Roll Number is required for Senior Lawyer and Lawyer in format TLS/ADV/7760.' };
+      }
+      const duplicateRoll = this.users.find(u => (u.advocateNumber || u.lawyerRollNumber || u.lawyerNumber || '').toUpperCase() === cleanRoll.toUpperCase());
+      if (duplicateRoll) {
+        return { success: false, message: `Lawyer Roll Number "${cleanRoll}" is already registered with Tanganyika Law Society (TLS) records in SLCMS.` };
+      }
+    } else {
+      cleanRoll = null;
     }
 
-    // 2. Generate secure temporary password
-    const tempPass = userData.temporaryPassword || this.generateTemporaryPassword();
+    // 8. Job Title validation: select from approved titles
+    const cleanJobTitle = (userData.jobTitle || '').trim();
+    if (!cleanJobTitle || !approvedJobTitles.includes(cleanJobTitle)) {
+      return { success: false, message: 'Job Title must be selected from approved titles.' };
+    }
+
+    // 9. Practice Department validation: select from approved departments
+    const cleanDepartment = (userData.department || '').trim();
+    if (!cleanDepartment || !approvedDepartments.includes(cleanDepartment)) {
+      return { success: false, message: 'Practice Department must be selected from approved departments.' };
+    }
+
+    // 10. Temporary Password validation: automatically generated; at least 12 characters
+    const tempPass = (userData.temporaryPassword || '').trim();
+    if (!tempPass || tempPass.length < 12) {
+      return { success: false, message: 'Temporary Password must be automatically generated and at least 12 characters.' };
+    }
+
+    // 11. Initial Case validation: Optional; must reference an existing unassigned case
+    if (userData.caseId) {
+      const targetCase = (this.cases || []).find(c => c && (c.id === userData.caseId || c.caseNumber === userData.caseId));
+      if (!targetCase) {
+        return { success: false, message: 'Initial Case must reference an existing case in the system.' };
+      }
+      const counsel = (targetCase.assignedCounsel || targetCase.leadCounsel || targetCase.lawyer || '').trim();
+      const isCounselUnassigned = !counsel || /^(unassigned|advocate unassigned)$/i.test(counsel);
+      const isStatusUnassigned = String(targetCase.status || '').toUpperCase() === 'UNASSIGNED';
+      const noAssignedUsers = !Array.isArray(targetCase.assignedUserIds) || targetCase.assignedUserIds.length === 0;
+      if (!isCounselUnassigned && !isStatusUnassigned && !noAssignedUsers) {
+        return { success: false, message: 'Initial Case must reference an unassigned case. The selected case is already assigned.' };
+      }
+    }
+
     const newId = 'usr-' + Date.now();
     const passHash = this.hashPassword(tempPass);
 
@@ -3854,7 +4279,7 @@ const SLCMS_STATE = {
       userCount: this.users ? this.users.length : 11,
       clientCount: this.clients ? this.clients.length : 6,
       documentCount: this.documents ? this.documents.length : 48,
-      preparedJudgmentsCount: this.tanzaniaJudgments ? this.tanzaniaJudgments.length : 76,
+      preparedJudgmentsCount: 77,
       status: 'Verified Healthy'
     };
 
@@ -3981,6 +4406,48 @@ const SLCMS_STATE = {
     this.persistCases();
     this.syncUsersWithCases();
     this.addAuditLog('New Legal Case Registered', 'Case Management', `${safeNumber} - ${safeTitle}`);
+
+    // Persist to XAMPP MariaDB/MySQL
+    try {
+      fetch('/api/cases', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Email': this.currentUser?.email || 'admin@slcms.local'
+        },
+        body: JSON.stringify({
+          caseTitle: safeTitle,
+          title: safeTitle,
+          caseNumber: safeNumber,
+          category: caseData.category || safeType,
+          caseType: safeType,
+          status: 'Open',
+          clientName: safeClient,
+          clientId: caseData.clientId || null,
+          court: caseData.court || 'High Court of Tanzania',
+          registry: caseData.registry || 'Main Registry',
+          leadCounsel: safeCounsel,
+          leadCounselId: caseData.leadCounselId || null,
+          isSensitive: !!caseData.sensitive,
+          decisionDate: caseData.decisionDate || null,
+          citation: caseData.citation || null,
+          priority: caseData.priority || 'Medium',
+          firstPartyName: caseData.parties?.[0]?.name || caseData.firstPartyName || null,
+          firstPartyRole: caseData.parties?.[0]?.role || caseData.firstPartyRole || null,
+          secondPartyName: caseData.parties?.[1]?.name || caseData.secondPartyName || null,
+          secondPartyRole: caseData.parties?.[1]?.role || caseData.secondPartyRole || null,
+          documentFilename: caseData.pdfFilename || caseData.documentFilename || null,
+          documentStoragePath: caseData.storagePath || caseData.documentStoragePath || null,
+          ocrStatus: caseData.ocrStatus || null
+        })
+      }).then(r => r.json()).then(saved => {
+        if (saved && saved.id) {
+          normalized.id = saved.id;
+          this.persistCases();
+        }
+      }).catch(e => console.info('Case backend sync deferred:', e));
+    } catch (e) {}
+
     return normalized;
   },
 

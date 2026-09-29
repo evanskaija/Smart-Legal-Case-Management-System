@@ -11,10 +11,15 @@ const App = {
   inactivityWarningTimer: null,
   pendingRedirectRoute: null,
 
-  async init() {
+  init() {
+    // 1. Immediately apply cached/default settings synchronously for zero-latency render
     if (typeof AppSettings !== 'undefined') {
       try {
-        await AppSettings.load();
+        const cached = (typeof AppSettings.getCached === 'function') ? AppSettings.getCached() : {};
+        AppSettings.values = Object.assign({}, AppSettings.defaults, cached);
+        AppSettings.apply();
+        // Sync live settings in background without blocking initial DOM render
+        AppSettings.load().catch(e => console.warn('AppSettings background sync:', e));
       } catch (e) {
         console.warn('AppSettings load deferred:', e);
       }
@@ -43,8 +48,14 @@ const App = {
         sessionStorage.setItem('slcms_current_user_id', SLCMS_STATE.currentUser?.id);
       }
     }
-    if (typeof SLCMS_STATE !== 'undefined' && typeof SLCMS_STATE.restoreSessionUser === 'function') {
-      SLCMS_STATE.restoreSessionUser();
+    if (typeof SLCMS_STATE !== 'undefined') {
+      if (typeof SLCMS_STATE.restoreSessionUser === 'function') {
+        SLCMS_STATE.restoreSessionUser();
+      }
+      // Sync users in background without blocking initial DOM render
+      if (typeof SLCMS_STATE.syncUsersFromBackend === 'function') {
+        SLCMS_STATE.syncUsersFromBackend().catch(e => console.warn('Backend user sync deferred:', e));
+      }
     }
     this.isLoggedIn = sessionStorage.getItem('slcms_auth') === 'true' && (!!sessionStorage.getItem('slcms_current_user') || !!sessionStorage.getItem('slcms_current_user_id'));
     this.initTheme();
@@ -66,11 +77,27 @@ const App = {
 
     // Check if initial load is an unauthenticated attempt on a protected route
     if (!this.isLoggedIn) {
+      if (typeof AuthView !== 'undefined') {
+        const h = (window.location.hash || '').replace(/^#\/?/, '').trim();
+        if (h === 'client-portal' || h === 'client_entrance') {
+          AuthView.portalMode = 'client_entrance';
+        } else if (h === 'client-login') {
+          AuthView.portalMode = 'client_login';
+        } else if (h === 'client-register') {
+          AuthView.portalMode = 'client_register';
+        } else if (h === 'client-verify') {
+          AuthView.portalMode = 'client_verify';
+        } else if (h === 'staff-login' || h === 'staff') {
+          AuthView.portalMode = 'staff';
+        } else {
+          AuthView.portalMode = 'welcome_gate';
+        }
+      }
       document.getElementById('app-root').innerHTML = AuthView.render();
       if (typeof AppSettings !== 'undefined') {
         AppSettings.apply();
       }
-      if (window.location.hash && window.location.hash !== '#' && window.location.hash !== '#login') {
+      if (window.location.hash && window.location.hash !== '#' && window.location.hash !== '#login' && !window.location.hash.startsWith('#client') && !window.location.hash.startsWith('#staff')) {
         this.pendingRedirectRoute = window.location.hash.replace('#', '');
         this.showToast('Please sign in to continue.', 'info');
       }
@@ -181,7 +208,7 @@ const App = {
         <!-- Sidebar User Footer -->
         <div class="sidebar-footer">
           <div class="sidebar-user-card">
-            <div class="sidebar-user-header" onclick="App.openUserProfileModal()" title="View Profile">
+            <div class="sidebar-user-header">
               <div class="user-display-avatar avatar avatar-sm avatar-ring-gold"></div>
               <div class="user-details">
                 <div class="user-display-name user-name">Loading...</div>
@@ -193,14 +220,7 @@ const App = {
               </div>
             </div>
             <div class="sidebar-user-actions">
-              <button type="button" class="btn btn-sidebar-profile" onclick="App.openUserProfileModal()" title="View Profile">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
-                </svg>
-                <span class="sidebar-profile-btn-label">My Profile</span>
-              </button>
-              <button type="button" class="btn btn-sidebar-logout" onclick="App.logout()" title="Sign out of SLCMS">
+              <button type="button" class="btn btn-sidebar-logout" onclick="App.logout()" title="Sign out of SLCMS" style="width: 100%;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                   <polyline points="16 17 21 12 16 7"/>
@@ -236,72 +256,47 @@ const App = {
               <h2 id="topbar-page-title" class="page-title">Executive Dashboard</h2>
               <div class="breadcrumb-trail">
                 <a href="javascript:void(0)" onclick="App.navigate('dashboard')" data-setting="organizationName">SLCMS Law Firm</a>
-                <span>/</span>
-                <span id="topbar-breadcrumb-current" style="color: var(--color-gold);">Workspace</span>
+                <span class="breadcrumb-sep">/</span>
+                <span id="topbar-breadcrumb-current" class="breadcrumb-current">Workspace</span>
               </div>
             </div>
           </div>
 
-          <!-- Global Search Field -->
-          <div class="global-search-container" onclick="App.openGlobalSearch()">
-            <span class="input-icon" style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--color-text-muted);">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"/>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
-            </span>
-            <input type="text" class="global-search-input" placeholder="Search cases, clients, pleadings..." readonly>
-            <span class="search-shortcut-badge">Ctrl+K</span>
+          <!-- Executive Center Telemetry & Security Capsule (Replaces search bar) -->
+          <div class="topbar-center-telemetry">
+            <div class="topbar-telemetry-badge">
+              <span class="telemetry-live-dot"></span>
+              <span class="telemetry-live-text">SECURE CHAMBERS</span>
+              <span class="telemetry-sep">&bull;</span>
+              <span class="telemetry-meta">TLS 1.3 ENCRYPTED</span>
+            </div>
+            <div class="topbar-firm-pill">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span data-setting="organizationName">SLCMS Law Firm</span>
+            </div>
           </div>
 
           <!-- Topbar Right Actions -->
           <div class="topbar-right">
-            <!-- Quick "Add New" Button (Desktop Only) -->
-            <button class="btn btn-gold btn-sm topbar-add-new-btn topbar-btn-hide-mobile" onclick="CasesView.openNewCaseModal()" title="New Legal Case">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 5v14M5 12h14"/>
-              </svg>
-              <span>Add New</span>
-            </button>
-
-            <!-- Mobile Search Icon (visible on mobile) -->
-            <button class="topbar-icon-btn mobile-search-btn" onclick="App.openGlobalSearch()" title="Search (Ctrl+K)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
-            </button>
-
-            <!-- Calendar Icon (hidden on mobile) -->
-            <button class="topbar-icon-btn topbar-btn-hide-mobile" onclick="App.navigate('tasks')" title="Statutory Calendar">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
-              </svg>
-            </button>
-
-            <!-- Dark / Light Theme Toggle Button -->
-            <button id="theme-toggle-btn" class="topbar-icon-btn topbar-theme-btn" onclick="App.toggleTheme()" title="Toggle Dark / Light Mode (Ctrl+Shift+D)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-              </svg>
-            </button>
-
-            <!-- Notification Bell -->
-            <button class="topbar-icon-btn topbar-notif-btn" onclick="App.openNotifications()" title="Alerts & Deadlines">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <!-- Notification Bell with Pulsing Indicator -->
+            <button class="topbar-icon-btn topbar-notif-btn" onclick="App.openNotifications()" title="Security Alerts & Court Deadlines">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
                 <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
               </svg>
               <span class="notification-dot"></span>
             </button>
 
-            <!-- User Profile Dropdown Pill / Avatar (Desktop Only) -->
-            <div class="topbar-avatar-pill topbar-btn-hide-mobile flex items-center gap-2" style="cursor: pointer;" onclick="App.openUserProfileModal()" title="View Profile">
-              <div class="user-display-avatar avatar avatar-sm avatar-ring-gold">
+            <!-- Executive User Profile Pill (Desktop Only) -->
+            <div class="topbar-user-profile-pill topbar-btn-hide-mobile" onclick="App.openUserProfileModal()" title="View Profile & Credentials">
+              <div class="user-display-avatar avatar avatar-sm avatar-ring-seablue">
                 <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&q=80" alt="User Profile">
               </div>
+              <div class="topbar-user-meta">
+                <span class="user-display-name topbar-user-name">System Administrator</span>
+                <span class="user-display-role topbar-user-role">Administrator</span>
+              </div>
+              <svg class="topbar-user-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
           </div>
         </header>
@@ -385,12 +380,27 @@ const App = {
     
     // Restore route from URL hash on page refresh, or use pending/default route
     const hashRoute = window.location.hash ? window.location.hash.replace(/^[#\/]+/, '').trim() : '';
-    const role = SLCMS_STATE.currentUser?.role;
+    const rawRoleInit = SLCMS_STATE.currentUser?.role;
+    const roleInit = (function(r) {
+      if (!r) return 'Lawyer';
+      const up = String(r).toUpperCase().replace(/[\s_-]+/g, '');
+      if (up === 'CLIENT') return 'Client';
+      if (up === 'ADMINISTRATOR' || up === 'ADMIN' || up === 'SYSTEMADMINISTRATOR') return 'Administrator';
+      if (up === 'SENIORLAWYER' || up === 'MANAGINGPARTNER' || up === 'SENIORCOUNSEL') return 'Senior Lawyer';
+      if (up.includes('LEGALOFFICER') || up === 'LEGALOFFICER') return 'Legal Officer';
+      if (up === 'LAWYER' || up === 'ASSOCIATELAWYER' || up === 'JUNIORLAWYER') return 'Lawyer';
+      if (up === 'LEGALCLERK' || up === 'CLERK') return 'Legal Clerk';
+      return r;
+    })(rawRoleInit);
 
     // If no hash in URL (fresh load), pick the role-appropriate default dashboard
     let defaultRoute;
-    if (role === 'Administrator' || role === 'Managing Partner') {
+    if (roleInit === 'Client') {
+      defaultRoute = 'client-dashboard';
+    } else if (roleInit === 'Administrator' || roleInit === 'Managing Partner') {
       defaultRoute = 'admin-dashboard';
+    } else if (roleInit === 'Legal Officer') {
+      defaultRoute = 'legal-requests';
     } else {
       defaultRoute = 'dashboard';
     }
@@ -623,7 +633,7 @@ const App = {
     }
 
     const rawRoute = (route || '').trim();
-    const cleanRoute = rawRoute.replace(/^[\/#]+/, '');
+    let cleanRoute = rawRoute.replace(/^[\/#]+/, '');
 
     // 1. Strict Protected Pages Check (Section 13)
     if (!this.isLoggedIn) {
@@ -638,7 +648,33 @@ const App = {
     }
 
     // Check Role Restrictions (Direct URLs cannot bypass role restrictions - Section 13)
-    const role = SLCMS_STATE.currentUser?.role;
+    const navUser = SLCMS_STATE.currentUser || {};
+    const rawNavRole = navUser.role || navUser.jobTitle || navUser.roleLabel || navUser.roleTitle || '';
+    const role = (function(r) {
+      if (!r) return 'Lawyer';
+      const up = String(r).toUpperCase().replace(/[\s_-]+/g, '');
+      if (up === 'CLIENT') return 'Client';
+      if (up === 'ADMINISTRATOR' || up === 'ADMIN' || up === 'SYSTEMADMINISTRATOR') return 'Administrator';
+      if (up === 'SENIORLAWYER' || up === 'MANAGINGPARTNER' || up === 'SENIORCOUNSEL') return 'Senior Lawyer';
+      if (up.includes('LEGALOFFICER') || up === 'LEGALOFFICER') return 'Legal Officer';
+      if (up === 'LAWYER' || up === 'ASSOCIATELAWYER' || up === 'JUNIORLAWYER') return 'Lawyer';
+      if (up === 'LEGALCLERK' || up === 'CLERK') return 'Legal Clerk';
+      return r;
+    })(rawNavRole);
+
+    // Zero-Trust Client Portal Guard (Clients cannot access staff areas - Requirement 11)
+    if (role === 'Client') {
+      const allowedClientRoutes = [
+        'client-dashboard', 'client-requests', 'client-cases', 
+        'client-invoices', 'client-upload-proof', 'client-receipts',
+        'client-messages', 'client-documents', 'client-notifications',
+        'client-appointments', 'client-profile', 'client-billing'
+      ];
+      if (!allowedClientRoutes.includes(cleanRoute)) {
+        this.showToast('Access restricted: Law firm staff area is protected.', 'warning');
+        cleanRoute = 'client-requests';
+      }
+    }
 
     // Administrator Separation of Duties Guard (Legal practice documents, communications & AI drafting restricted)
     if (role === 'Administrator') {
@@ -761,8 +797,30 @@ const App = {
       'clients': 'clients',
       'tasks': 'tasks',
       'case-library': 'case-library',
-      'reports': 'reports'
+      'reports': 'reports',
+      'legal-requests': 'legal-requests',
+      'client-dashboard': 'client-dashboard',
+      'client-requests': 'client-requests',
+      'client-cases': 'client-cases',
+      'client-invoices': 'client-invoices',
+      'client-upload-proof': 'client-upload-proof',
+      'client-receipts': 'client-receipts',
+      'client-messages': 'client-messages',
+      'client-documents': 'client-documents',
+      'client-notifications': 'client-notifications',
+      'client-appointments': 'client-appointments',
+      'client-profile': 'client-profile',
+      'billing-create-invoice': 'billing-create-invoice',
+      'billing-proofs': 'billing-proofs',
+      'billing-verify': 'billing-verify',
+      'legal-officer-assign': 'legal-officer-assign',
+      'billing-receipts': 'billing-receipts',
+      'billing-record': 'billing-record',
+      'legal-officer-notifications': 'legal-officer-notifications'
     };
+    if (role === 'Legal Officer' && cleanRoute === 'dashboard') {
+      activeRouteMap['dashboard'] = 'legal-requests';
+    }
     const effectiveRoute = activeRouteMap[cleanRoute] || cleanRoute;
 
     const navLinks = document.querySelectorAll('.sidebar-nav .nav-item');
@@ -791,17 +849,41 @@ const App = {
       'senior-lawyer/dashboard': 'Senior Lawyer Dashboard',
       'lawyer/dashboard': 'Lawyer Dashboard',
       'clerk/dashboard': 'Legal Clerk Dashboard',
-      'admin-users': 'Users & Security',
+      'legal-requests': 'Legal Assistance Requests & Intake',
+      'client-dashboard': 'Client Dashboard',
+      'client-requests': 'My Legal Requests',
+      'client-cases': 'My Cases',
+      'client-invoices': 'Invoices',
+      'client-upload-proof': 'Upload Payment Proof',
+      'client-receipts': 'Payment Receipts',
+      'client-messages': 'Messages',
+      'client-documents': 'Documents Vault',
+      'client-notifications': 'Notifications & Activity Log',
+      'client-appointments': 'Appointments & Court Dates',
+      'client-profile': 'My Profile',
+      'billing-create-invoice': 'Create and Send Invoice',
+      'billing-proofs': 'Payment Proofs Verification',
+      'billing-verify': 'Verify or Reject Payment',
+      'legal-officer-assign': 'Assign Available Lawyer',
+      'billing-receipts': 'Payment Receipts',
+      'billing-record': 'Record Payment',
+      'legal-officer-notifications': 'Notifications & Alerts',
+      'admin-users': 'Users',
+      'users': 'Users',
+      'admin-security': 'Security',
+      'security': 'Security',
+      'system-reports': 'System Reports',
+      'admin-reports': 'System Reports',
       'case-assignments': 'Case Assignments',
-      'activity-logs': 'Users & Security',
-      'admin-security-activity': 'Users & Security',
+      'activity-logs': 'Security Activity',
+      'admin-security-activity': 'Security Activity',
       'admin-settings': 'System Settings',
       'admin-backup': 'Backup',
       'backup': 'Backup',
-      'user-management': 'Users & Security',
+      'user-management': 'Users',
       'settings': 'System Settings',
       'admin-cases-matters': 'Cases and Matters',
-      'dashboard': (role === 'Administrator' || role === 'Managing Partner') ? 'Admin Dashboard' : 'Dashboard',
+      'dashboard': (role === 'Administrator' || role === 'Managing Partner') ? 'Admin Dashboard' : ((role === 'Client') ? 'Client Dashboard' : 'Dashboard'),
       'cases': 'Cases and Matters',
       'clients': 'Clients Directory',
       'client-messages': 'Client Message Generator',
@@ -815,7 +897,7 @@ const App = {
       'legal-ai': 'Tanzania Legal AI',
       'ai-assistant': 'Tanzania Legal AI',
       'case-library': 'Case Library',
-      'reports': 'Generated Reports'
+      'reports': (role === 'Administrator') ? 'System Reports' : 'Executive Reports & Analytics'
     };
 
     const pageTitleElem = document.getElementById('topbar-page-title');
@@ -844,22 +926,221 @@ const App = {
     container.classList.toggle('ai-view-active', cleanRoute === 'ai-assistant');
     document.body.classList.toggle('ai-page-active', cleanRoute === 'ai-assistant');
     
-    // Ensure hanging AI Copilot FAB is visible and active
-    const copilotFab = document.getElementById('ai-copilot-fab');
-    if (copilotFab && !document.body.classList.contains('copilot-open')) {
-      copilotFab.style.display = '';
-      copilotFab.style.opacity = '';
-      copilotFab.style.pointerEvents = '';
+    // Strictly isolate AI Copilot FAB: ONLY active on the Lawyer Page / Lawyer Dashboard
+    const currentUser = (typeof SLCMS_STATE !== 'undefined' && SLCMS_STATE.currentUser) ? SLCMS_STATE.currentUser : null;
+    const isLawyerRole = (function(r, u) {
+      const roleStr = String(r || (u && u.role) || '').toLowerCase();
+      const titleStr = String((u && (u.jobTitle || u.roleLabel || u.roleTitle)) || '').toLowerCase();
+      return roleStr.includes('lawyer') || titleStr.includes('lawyer') || roleStr.includes('advocate') || titleStr.includes('advocate');
+    })(role, currentUser);
+
+    const isLawyerDashboardPage = isLawyerRole && (
+      cleanRoute === 'lawyer/dashboard' ||
+      cleanRoute === 'senior-lawyer/dashboard' ||
+      cleanRoute === 'lawyer-dashboard' ||
+      cleanRoute === 'senior-lawyer-dashboard' ||
+      cleanRoute === 'dashboard' ||
+      cleanRoute === ''
+    );
+
+    document.body.classList.toggle('is-lawyer-page', Boolean(isLawyerDashboardPage));
+
+    try {
+      if (typeof AICopilot !== 'undefined' && typeof AICopilot.updateFabVisibility === 'function') {
+        AICopilot.updateFabVisibility();
+      } else {
+        const copilotFab = document.getElementById('ai-copilot-fab');
+        if (copilotFab) {
+          if (!isLawyerDashboardPage) {
+            copilotFab.style.setProperty('display', 'none', 'important');
+            copilotFab.style.setProperty('opacity', '0', 'important');
+            copilotFab.style.setProperty('pointer-events', 'none', 'important');
+          } else if (!document.body.classList.contains('copilot-open')) {
+            copilotFab.style.setProperty('display', 'flex', 'important');
+            copilotFab.style.setProperty('opacity', '1', 'important');
+            copilotFab.style.setProperty('pointer-events', 'auto', 'important');
+          }
+        }
+      }
+    } catch (fabErr) {
+      console.warn('AI Copilot visibility check notice:', fabErr);
     }
 
     try {
       switch (cleanRoute) {
+        case 'client-dashboard':
+          container.innerHTML = typeof ClientPortalView !== 'undefined' ? ClientPortalView.render('dashboard') : '<div class="card p-6">Client Dashboard loading...</div>';
+          break;
+        case 'client-requests':
+          container.innerHTML = typeof ClientPortalView !== 'undefined' ? ClientPortalView.render('requests') : '<div class="card p-6">Client Requests loading...</div>';
+          break;
+        case 'client-cases':
+          container.innerHTML = typeof ClientPortalView !== 'undefined' ? ClientPortalView.render('cases') : '<div class="card p-6">Client Cases loading...</div>';
+          break;
+        case 'client-invoices':
+          container.innerHTML = typeof ClientPortalView !== 'undefined' ? ClientPortalView.render('invoices') : '<div class="card p-6">Client Invoices loading...</div>';
+          break;
+        case 'client-upload-proof':
+          container.innerHTML = typeof ClientPortalView !== 'undefined' ? ClientPortalView.render('upload-proof') : '<div class="card p-6">Upload Payment Proof loading...</div>';
+          break;
+        case 'client-receipts':
+          container.innerHTML = typeof ClientPortalView !== 'undefined' ? ClientPortalView.render('receipts') : '<div class="card p-6">Client Receipts loading...</div>';
+          break;
+        case 'client-notifications':
+          container.innerHTML = typeof ClientPortalView !== 'undefined' ? ClientPortalView.render('notifications') : '<div class="card p-6">Client Notifications loading...</div>';
+          break;
+        case 'client-messages':
+          // Role-aware routing: Clients see their portal chat; Staff see the message generator + inbox
+          if (role === 'Client') {
+            container.innerHTML = typeof ClientPortalView !== 'undefined' ? ClientPortalView.render('messages') : '<div class="card p-6">Client Messages loading...</div>';
+          } else {
+            // Staff (Lawyer, Senior Lawyer, Legal Officer, Legal Clerk) — render the message generator with client inbox
+            if (role === 'Administrator') {
+              App.showToast('Client Messaging is restricted to authorized legal staff.', 'info');
+              App.navigate('dashboard');
+              break;
+            }
+            if (params && typeof ClientMessagesView !== 'undefined') {
+              if (params.caseId) ClientMessagesView.selectedCaseId = params.caseId;
+              if (params.messageType) ClientMessagesView.selectedMessageType = params.messageType;
+              if (params.language) ClientMessagesView.selectedLanguage = params.language;
+              if (params.channel) ClientMessagesView.selectedChannel = params.channel;
+              ClientMessagesView.syncSelectedCaseDetails();
+              ClientMessagesView.generateDraft(false);
+              if (params.openConfirm) {
+                setTimeout(() => ClientMessagesView.promptSendConfirmation(), 250);
+              }
+            }
+            container.innerHTML = typeof ClientMessagesView !== 'undefined' ? ClientMessagesView.render() : '<div class="card p-6">Client Message Generator loading...</div>';
+            if (typeof ClientMessagesView !== 'undefined' && typeof ClientMessagesView.initListeners === 'function') {
+              setTimeout(() => ClientMessagesView.initListeners(), 50);
+            }
+          }
+          break;
+        case 'client-documents':
+          container.innerHTML = typeof ClientPortalView !== 'undefined' ? ClientPortalView.render('documents') : '<div class="card p-6">Client Documents loading...</div>';
+          break;
+        case 'client-appointments':
+          container.innerHTML = typeof ClientPortalView !== 'undefined' ? ClientPortalView.render('appointments') : '<div class="card p-6">Client Appointments loading...</div>';
+          break;
+        case 'client-profile':
+          container.innerHTML = typeof ClientPortalView !== 'undefined' ? ClientPortalView.render('profile') : '<div class="card p-6">Client Profile loading...</div>';
+          break;
+        case 'client-billing':
+          container.innerHTML = typeof ClientPortalView !== 'undefined' ? ClientPortalView.render('billing') : (typeof BillingView !== 'undefined' ? BillingView.renderClientView() : '<div class="card p-6">Client Billing loading...</div>');
+          break;
+        case 'billing':
+        case 'invoices':
+        case 'fee-statements':
+          if (role === 'Client') {
+            container.innerHTML = typeof ClientPortalView !== 'undefined' ? ClientPortalView.render('billing') : (typeof BillingView !== 'undefined' ? BillingView.renderClientView() : '<div class="card p-6">Client Billing loading...</div>');
+          } else {
+            container.innerHTML = typeof BillingView !== 'undefined' ? BillingView.render() : '<div class="card p-6">Billing Simulation loading...</div>';
+          }
+          break;
+        case 'legal-requests':
+          container.innerHTML = typeof LegalRequestsView !== 'undefined' ? LegalRequestsView.render() : '<div class="card p-6">Legal Requests loading...</div>';
+          break;
+        case 'billing-create-invoice':
+          if (typeof BillingView !== 'undefined') {
+            BillingView.currentTab = 'invoices';
+            container.innerHTML = BillingView.render();
+            setTimeout(() => {
+              if (this.currentRoute === 'billing-create-invoice') {
+                BillingView.openCreateInvoiceModal();
+              }
+            }, 60);
+          } else {
+            container.innerHTML = '<div class="card p-6">Billing loading...</div>';
+          }
+          break;
+        case 'billing-proofs':
+        case 'billing-verify':
+          if (typeof BillingView !== 'undefined') {
+            BillingView.currentTab = 'proofs';
+            container.innerHTML = BillingView.render();
+          } else {
+            container.innerHTML = '<div class="card p-6">Payment Proofs loading...</div>';
+          }
+          break;
+        case 'legal-officer-assign':
+          if (role !== 'Senior Lawyer' && role !== 'Administrator') {
+            App.showToast('Lawyer assignment is restricted to Senior Lawyers.', 'warning');
+            App.navigate('legal-requests');
+          } else if (typeof CasesView !== 'undefined' && typeof CasesView.renderCaseAssignmentsView === 'function') {
+            container.innerHTML = CasesView.renderCaseAssignmentsView();
+          } else if (typeof AdminView !== 'undefined') {
+            AdminView.activeTab = 'assignments';
+            container.innerHTML = AdminView.render();
+          }
+          break;
+        case 'billing-receipts':
+          if (typeof BillingView !== 'undefined') {
+            BillingView.currentTab = 'receipts';
+            container.innerHTML = BillingView.render();
+          } else {
+            container.innerHTML = '<div class="card p-6">Receipts loading...</div>';
+          }
+          break;
+        case 'billing-record':
+          if (typeof BillingView !== 'undefined') {
+            BillingView.currentTab = 'record';
+            container.innerHTML = BillingView.render();
+          } else {
+            container.innerHTML = '<div class="card p-6">Record Payment loading...</div>';
+          }
+          break;
+        case 'legal-officer-notifications':
+          container.innerHTML = `
+            <div class="legal-officer-notifs animate-fade" style="max-width: 900px; margin: 0 auto; padding-bottom: 2rem;">
+              <div class="view-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                  <h1 class="page-title">Notifications &amp; Workflow Alerts</h1>
+                  <p class="text-secondary" style="font-size: 0.88rem; margin: 0;">Operational updates for new client requests, payment proofs, and lawyer assignments.</p>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="App.markAllNotificationsRead(); App.refreshCurrentView();">Mark all read</button>
+              </div>
+              <div class="card" style="padding: 1.5rem;">
+                ${(SLCMS_STATE.notifications || []).length === 0 ? `
+                  <div style="text-align: center; padding: 2rem; color: var(--color-text-muted);">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔔</div>
+                    <h4>No new notifications</h4>
+                    <p style="font-size: 0.85rem;">System will alert you when clients submit requests or upload payment proofs.</p>
+                  </div>
+                ` : `
+                  <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    ${(SLCMS_STATE.notifications || []).map(n => `
+                      <div style="display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; border-radius: 8px; border: 1px solid var(--color-border); background: ${n.read ? 'var(--color-surface)' : 'rgba(245, 158, 11, 0.05)'}; border-left: 4px solid ${n.type === 'danger' ? '#EF4444' : (n.type === 'success' ? '#10B981' : 'var(--color-gold)')};">
+                        <div style="font-size: 1.3rem;">${n.icon || '📌'}</div>
+                        <div style="flex: 1;">
+                          <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <strong style="color: var(--color-primary); font-size: 0.92rem;">${n.title || 'System Notification'}</strong>
+                            <span style="font-size: 0.75rem; color: var(--color-text-muted);">${n.time || 'Recently'}</span>
+                          </div>
+                          <p style="font-size: 0.84rem; color: var(--color-text-secondary); margin: 0.35rem 0 0 0; line-height: 1.45;">${n.message || ''}</p>
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                `}
+              </div>
+            </div>
+          `;
+          break;
         case 'dashboard':
           // Always route based on the logged-in user's own role — never leak admin view to non-admins
-          if (role === 'Administrator' || role === 'Managing Partner') {
+          if (role === 'Client') {
+            container.innerHTML = typeof ClientPortalView !== 'undefined' ? ClientPortalView.render('dashboard') : '<div class="card p-6">Client Dashboard loading...</div>';
+          } else if (role === 'Administrator' || role === 'Managing Partner') {
             AdminView.activeTab = 'dashboard';
             container.innerHTML = AdminView.render();
-            setTimeout(() => { if (typeof AdminView.initDashboardCharts === 'function') AdminView.initDashboardCharts(); }, 60);
+            if (typeof loadAdminDashboard === 'function') {
+              loadAdminDashboard();
+            } else if (typeof AdminView.loadDashboardSummary === 'function') {
+              AdminView.loadDashboardSummary();
+            }
+          } else if (role === 'Legal Officer') {
+            container.innerHTML = typeof LegalRequestsView !== 'undefined' ? LegalRequestsView.render() : '<div class="card p-6">Legal Requests loading...</div>';
           } else {
             // Lawyers, Senior Lawyers, Legal Clerks all get their own dashboard
             container.innerHTML = DashboardView.render();
@@ -870,7 +1151,15 @@ const App = {
         case 'admin-dashboard':
           AdminView.activeTab = 'dashboard';
           container.innerHTML = AdminView.render();
-          setTimeout(() => { if (typeof AdminView.initDashboardCharts === 'function') AdminView.initDashboardCharts(); }, 60);
+          if (typeof loadAdminDashboard === 'function') {
+            loadAdminDashboard();
+          } else if (typeof AdminView.loadDashboardSummary === 'function') {
+            AdminView.loadDashboardSummary();
+          }
+          break;
+        case 'legal-officer/dashboard':
+        case 'legal-officer-dashboard':
+          container.innerHTML = typeof LegalRequestsView !== 'undefined' ? LegalRequestsView.render() : '<div class="card p-6">Legal Requests loading...</div>';
           break;
         case 'senior-lawyer/dashboard':
         case 'lawyer/dashboard':
@@ -888,11 +1177,16 @@ const App = {
           AdminView.activeTab = 'assignments';
           container.innerHTML = AdminView.render();
           break;
+        case 'admin-security':
         case 'activity-logs':
         case 'admin-security-activity':
-        case 'admin-security':
         case 'admin-logs':
-          AdminView.activeTab = 'logs';
+          AdminView.activeTab = 'security';
+          container.innerHTML = AdminView.render();
+          break;
+        case 'system-reports':
+        case 'admin-reports':
+          AdminView.activeTab = 'reports';
           container.innerHTML = AdminView.render();
           break;
         case 'admin-settings':
@@ -906,13 +1200,17 @@ const App = {
           container.innerHTML = AdminView.render();
           break;
         case 'admin-cases-matters':
-          AdminView.activeTab = 'cases-matters';
+          AdminView.activeTab = 'dashboard';
           container.innerHTML = AdminView.render();
           break;
+        case 'my-cases':
         case 'cases':
           try {
             if (params && params.filter === 'attention') {
               CasesView.selectedFilterStatus = 'Attention';
+            }
+            if (params && params.scope) {
+              CasesView.viewScope = params.scope;
             }
             container.innerHTML = CasesView.render();
           } catch (error) {
@@ -934,20 +1232,35 @@ const App = {
           }
           break;
         case 'clients':
+          if (role === 'Administrator') {
+            App.showToast('Clients Directory is managed by legal staff.', 'info');
+            App.navigate('dashboard');
+            break;
+          }
           container.innerHTML = ClientsView.render();
           break;
         case 'documents':
           container.innerHTML = typeof DocumentsView !== 'undefined' ? DocumentsView.render() : '<div class="card p-6">Documents module loading...</div>';
           break;
         case 'tasks':
+          if (role === 'Administrator') {
+            App.showToast('Tasks & Deadlines is managed by legal practitioners.', 'info');
+            App.navigate('dashboard');
+            break;
+          }
           container.innerHTML = TasksView.render();
           break;
         case 'communications':
         case 'case-tracking':
           container.innerHTML = typeof CommunicationsView !== 'undefined' ? CommunicationsView.render() : '<div class="card p-6">Communications and Tracking module loading...</div>';
           break;
-        case 'client-messages':
         case 'message-generator':
+          // Legacy route alias — handled identically to client-messages for staff
+          if (role === 'Administrator') {
+            App.showToast('Client Messaging is restricted to authorized legal staff.', 'info');
+            App.navigate('dashboard');
+            break;
+          }
           if (params && typeof ClientMessagesView !== 'undefined') {
             if (params.caseId) ClientMessagesView.selectedCaseId = params.caseId;
             if (params.messageType) ClientMessagesView.selectedMessageType = params.messageType;
@@ -960,13 +1273,25 @@ const App = {
             }
           }
           container.innerHTML = typeof ClientMessagesView !== 'undefined' ? ClientMessagesView.render() : '<div class="card p-6">Client Message Generator loading...</div>';
+          if (typeof ClientMessagesView !== 'undefined' && typeof ClientMessagesView.initListeners === 'function') {
+            setTimeout(() => ClientMessagesView.initListeners(), 50);
+          }
           break;
         case 'ai-drafting':
         case 'ai-draft-assistant':
+          if (role === 'Administrator' || role === 'Legal Officer' || role === 'Lawyer') {
+            App.navigate('dashboard');
+            break;
+          }
           container.innerHTML = typeof AIDraftAssistantView !== 'undefined' ? AIDraftAssistantView.render() : '<div class="card p-6">AI Drafting Studio loading...</div>';
           break;
+        case 'legal-research':
         case 'legal-ai':
         case 'ai-assistant':
+          if (role === 'Administrator' || role === 'Legal Officer') {
+            App.navigate('reports');
+            break;
+          }
           if (params) {
             if (params.mode) AIAssistantView.activeMode = params.mode;
             if (params.subPage) AIAssistantView.subPage = params.subPage;
@@ -983,21 +1308,34 @@ const App = {
                 AIAssistantView.subPage = 'preview';
               }
             }
-          } else if (cleanRoute === 'legal-ai') {
+          } else if (cleanRoute === 'legal-ai' || cleanRoute === 'legal-research') {
             AIAssistantView.activeMode = 'research';
           }
           container.innerHTML = AIAssistantView.render();
           break;
         case 'case-library':
+          if (role === 'Administrator' || role === 'Legal Officer') {
+            App.navigate('reports');
+            break;
+          }
           if (params && params.filter && typeof CaseLibraryView !== 'undefined') {
             CaseLibraryView.activeCategory = params.filter === 'ready' ? 'READY_FOR_AI' : 'ALL';
           }
           container.innerHTML = (typeof CaseLibraryView !== 'undefined') ? CaseLibraryView.render() : '<div class="card" style="padding:3rem;text-align:center;"><p>Case Library loading...</p></div>';
           break;
+        case 'my-profile':
+        case 'profile':
+          this.openUserProfileModal();
+          break;
         case 'reports':
-          container.innerHTML = typeof ReportsView !== 'undefined' ? ReportsView.render() : '<div class="card p-6">Generated Reports loading...</div>';
-          if (typeof ReportsView !== 'undefined' && typeof ReportsView.initCharts === 'function') {
-            setTimeout(() => ReportsView.initCharts(), 50);
+          if (role === 'Administrator') {
+            AdminView.activeTab = 'reports';
+            container.innerHTML = AdminView.render();
+          } else {
+            container.innerHTML = typeof ReportsView !== 'undefined' ? ReportsView.render() : '<div class="card p-6">Generated Reports loading...</div>';
+            if (typeof ReportsView !== 'undefined' && typeof ReportsView.initCharts === 'function') {
+              setTimeout(() => ReportsView.initCharts(), 50);
+            }
           }
           break;
         default:
@@ -1064,9 +1402,42 @@ const App = {
 
   // Role switching removed — role is always loaded from the database on login
 
+  getInitials(name) {
+    if (!name || typeof name !== 'string') return 'SA';
+    const clean = name.replace(/^(adv\.?|advocate|senior advocate|dr\.?|mr\.?|ms\.?|mrs\.?|prof\.?)\s+/i, '').replace(/,.*$/, '').trim();
+    const parts = clean.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    if (parts.length === 1 && parts[0].length >= 2) {
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+    if (parts.length === 1) {
+      return parts[0][0].toUpperCase();
+    }
+    return 'US';
+  },
+
   updateUserUI() {
     const u = SLCMS_STATE.currentUser;
     if (!u) return;
+
+    // Check dedicated avatar storage if avatarImg is missing on memory object
+    if (!u.avatarImg) {
+      const savedAvatar = (u.id && localStorage.getItem('slcms_user_avatar_' + u.id)) ||
+                          (u.clientNumber && localStorage.getItem('slcms_user_avatar_' + u.clientNumber)) ||
+                          (u.staffId && localStorage.getItem('slcms_user_avatar_' + u.staffId)) ||
+                          (u.email && localStorage.getItem('slcms_user_avatar_' + u.email.toLowerCase())) ||
+                          localStorage.getItem('slcms_user_avatar_active') ||
+                          localStorage.getItem('slcms_avatar_backup');
+      if (savedAvatar) {
+        u.avatarImg = savedAvatar;
+      }
+    }
+
+    const initials = this.getInitials(u.name);
+    u.avatar = initials;
+
     const nameElems = document.querySelectorAll('.user-display-name');
     const roleElems = document.querySelectorAll('.user-display-role');
     const avatarElems = document.querySelectorAll('.user-display-avatar');
@@ -1075,11 +1446,11 @@ const App = {
     roleElems.forEach(el => el.innerText = u.roleLabel || u.role);
     avatarElems.forEach(el => {
       if (u.avatarImg) {
-        el.innerHTML = `<img src="${u.avatarImg}" alt="${u.name}" onerror="this.parentElement.innerText='${u.avatar}'">`;
-        el.className = `user-display-avatar avatar avatar-sm avatar-ring-gold`;
+        el.innerHTML = `<img src="${u.avatarImg}" alt="${u.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;" onerror="this.onerror=null; this.parentElement.innerText='${initials}'">`;
+        el.className = 'user-display-avatar avatar avatar-sm';
       } else {
-        el.innerText = u.avatar;
-        el.className = `user-display-avatar avatar avatar-sm ${u.avatarClass || 'avatar-gold'}`;
+        el.innerHTML = `<span style="font-weight: 700; font-size: 11px; color: #FFFFFF;">${initials}</span>`;
+        el.className = 'user-display-avatar avatar avatar-sm avatar-navy';
       }
     });
 
@@ -1094,70 +1465,185 @@ const App = {
       this.closeMobileSidebar();
     }
     const u = SLCMS_STATE.currentUser || {};
+
+    // Recover avatar image from localStorage if not loaded in memory
+    if (!u.avatarImg) {
+      const savedAvatar = (u.id && localStorage.getItem('slcms_user_avatar_' + u.id)) ||
+                          (u.clientNumber && localStorage.getItem('slcms_user_avatar_' + u.clientNumber)) ||
+                          (u.staffId && localStorage.getItem('slcms_user_avatar_' + u.staffId)) ||
+                          (u.email && localStorage.getItem('slcms_user_avatar_' + u.email.toLowerCase())) ||
+                          localStorage.getItem('slcms_user_avatar_active') ||
+                          localStorage.getItem('slcms_avatar_backup');
+      if (savedAvatar) {
+        u.avatarImg = savedAvatar;
+      }
+    }
+
+    const initials = this.getInitials(u.name);
+    u.avatar = initials;
+
     const presets = [
-      { name: 'Grace Mdee, Adv.', role: 'Senior Advocate', url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=256&q=80' },
-      { name: 'Juma Mkwawa, Adv.', role: 'Litigation Partner', url: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=256&q=80' },
-      { name: 'Kaija Kiiguta, Adv.', role: 'Commercial Counsel', url: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=256&q=80' },
-      { name: 'Amina Salum, Adv.', role: 'IP Counsel', url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=256&q=80' },
-      { name: 'David Croft, Adv.', role: 'Associate Advocate', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&q=80' },
-      { name: 'Amara Okafor, Adv.', role: 'Arbitration Counsel', url: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=256&q=80' },
-      { name: 'Neema Joseph', role: 'System Administrator', url: 'https://images.unsplash.com/photo-1573496799652-408c2ac9fe98?auto=format&fit=crop&w=256&q=80' }
+      { name: 'Grace Mdee, Adv.', role: 'Senior Advocate', url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=384&q=80' },
+      { name: 'Juma Mkwawa, Adv.', role: 'Litigation Partner', url: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=384&q=80' },
+      { name: 'Kaija Kiiguta, Adv.', role: 'Commercial Counsel', url: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=384&q=80' },
+      { name: 'Amina Salum, Adv.', role: 'IP Counsel', url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=384&q=80' },
+      { name: 'David Croft, Adv.', role: 'Associate Advocate', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=384&q=80' },
+      { name: 'Amara Okafor, Adv.', role: 'Arbitration Counsel', url: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=384&q=80' },
+      { name: 'Executive Counsel', role: 'General Counsel', url: 'https://images.unsplash.com/photo-1573496799652-408c2ac9fe98?auto=format&fit=crop&w=384&q=80' }
     ];
 
-    const isLawyer = (u.role === 'Senior Lawyer' || u.role === 'Lawyer');
-    const isAdmin = (u.role === 'Administrator');
-    const roleTitle = isAdmin ? 'System Administrator Profile' : (isLawyer ? 'Advocate Profile & Practicing Dossier' : 'Legal Registry & Staff Profile');
-    const staffId = u.staffId || u.employeeId || (isAdmin ? 'ADM-0001' : 'EMP-1001');
-    const rollNo = u.advocateNumber || u.lawyerNumber || u.barNumber || (isLawyer ? 'TLS/ADV/4829' : (isAdmin ? 'SYS-SEC-ADMIN' : 'CLK-TZ-104'));
-    const department = u.department || (isAdmin ? 'System Governance & Administration' : 'Commercial Litigation');
-    const jurisdiction = isLawyer ? 'High Court of Tanzania' : (isAdmin ? 'Firm Security & Governance' : 'Court Filings & Registry');
+    const isClient = (u.role === 'Client' || u.roleLabel === 'Client');
+    const isLawyer = (u.role === 'Senior Lawyer' || u.role === 'Lawyer' || (u.role && u.role.toLowerCase().includes('lawyer')));
+    const isAdmin = (u.role === 'Administrator' || (u.role && u.role.toLowerCase().includes('admin')));
+
+    let modalTitle = 'Legal Staff Profile';
+    let modalSubtitle = 'SLCMS Registry Operations & Court Filings';
+    let heroChipHtml = '';
+    let sec1Title = '👤 Legal Staff Information';
+    let sec2Title = '🏛️ Registry Operations & Station Assignment';
+    let labelTitle = 'Official Position Title';
+    let valTitle = u.roleLabel || u.roleTitle || 'Legal Registry Clerk';
+    let labelId = 'Clerk Staff Identification';
+    let valId = u.staffId || u.employeeId || 'CLK-TZ-104';
+    let labelDept = 'Registry Division / Department';
+    let valDept = u.department || 'Court Filings & Document Registry';
+    let labelField3 = 'Assigned Court Registry';
+    let valField3 = u.admissions || 'Commercial Court Sub-Registry, Dar es Salaam';
+    let labelField4 = 'Operational Scope & Focus';
+    let valField4 = u.practiceAreas || 'Court Process Filing, Summons Service, Registry Docketing';
+    let complianceText = '🏛️ Authorized Legal Registry Officer • Designated for receipt, endorsement, and service of formal judicial documents.';
+
+    if (isClient) {
+      modalTitle = 'Client Profile & Identity';
+      modalSubtitle = 'SLCMS Client Portal • Protected by Attorney-Client Privilege';
+      const refId = u.clientNumber || u.clientId || u.staffId || 'CLT-0009';
+      heroChipHtml = `
+        <span>Reference ID: <strong style="color: #0F172A; font-family: var(--font-mono);">${refId}</strong></span>
+        <span>•</span>
+        <span>Account: <strong>${u.roleLabel || 'Individual Client'}</strong></span>
+        <span>•</span>
+        <span>Status: <strong style="color: #047857;">Privileged &amp; Verified</strong></span>
+      `;
+      sec1Title = '👤 Core Client Information';
+      sec2Title = '📋 Client Details &amp; Communication Preferences';
+      labelTitle = 'Account Category / Profile Type';
+      valTitle = u.roleLabel || 'Individual Client';
+      labelId = 'Client Reference Number';
+      valId = refId;
+      labelDept = 'Preferred Contact Method';
+      valDept = u.preferredContact || 'Email & Telephone';
+      labelField3 = 'Residential / Physical Address';
+      valField3 = u.address || u.officeLocation || 'Kinondoni, Dar es Salaam, Tanzania';
+      labelField4 = 'Legal Matter Interests / Service Scope';
+      valField4 = u.practiceAreas || 'Civil Litigation, Land Disputes, Commercial Contracts';
+      complianceText = '🔒 Attorney-Client Privilege Protection • All communications and matters within SLCMS are encrypted under TLS 1.3 and strictly privileged pursuant to Tanzanian Law.';
+    } else if (isLawyer) {
+      modalTitle = 'Advocate Profile & Practicing Dossier';
+      modalSubtitle = 'Tanganyika Law Society (TLS) Regulated Counsel';
+      const rollNo = u.barNumber || u.advocateNumber || u.lawyerNumber || 'TLS/ADV/4829';
+      const dept = u.department || 'Commercial Litigation';
+      const jurisdiction = u.admissions || 'High Court of Tanzania & Courts Subordinate Thereto';
+      heroChipHtml = `
+        <span>Roll No: <strong style="color: #0F172A; font-family: var(--font-mono);">${rollNo}</strong></span>
+        <span>•</span>
+        <span>Division: <strong>${dept}</strong></span>
+        <span>•</span>
+        <span>Jurisdiction: <strong>High Court</strong></span>
+      `;
+      sec1Title = '👤 Core Practitioner Information';
+      sec2Title = '⚖️ Professional Assignment &amp; Credentials';
+      labelTitle = 'Official Practicing Title';
+      valTitle = u.roleLabel || u.roleTitle || u.role;
+      labelId = 'TLS Lawyer Roll Number (Bar No.)';
+      valId = rollNo;
+      labelDept = 'Practice Department / Division';
+      valDept = dept;
+      labelField3 = 'Admitted Court Jurisdiction';
+      valField3 = jurisdiction;
+      labelField4 = 'Practice Focus / Specialization';
+      valField4 = u.practiceAreas || 'Commercial Litigation, Land Law, Civil Disputes';
+      complianceText = '⚖️ Tanganyika Law Society Compliance • Advocate duly admitted to the Roll and practicing in full compliance with the Advocates Act.';
+    } else if (isAdmin) {
+      modalTitle = 'System Administrator Profile';
+      modalSubtitle = 'SLCMS Identity & System Governance';
+      const admId = u.staffId || u.employeeId || 'ADM-0001';
+      const dept = u.department || 'System Governance & Administration';
+      heroChipHtml = `
+        <span>Admin ID: <strong style="color: #0F172A; font-family: var(--font-mono);">${admId}</strong></span>
+        <span>•</span>
+        <span>Division: <strong>${dept}</strong></span>
+        <span>•</span>
+        <span>Scope: <strong>System-Wide Governance</strong></span>
+      `;
+      sec1Title = '👤 Administrator Information';
+      sec2Title = '🛡️ System Governance &amp; Security Scope';
+      labelTitle = 'Official Administrative Title';
+      valTitle = u.roleLabel || u.roleTitle || 'System Administrator';
+      labelId = 'Admin Reference Identifier';
+      valId = admId;
+      labelDept = 'Governance Department';
+      valDept = dept;
+      labelField3 = 'Administrative Jurisdiction';
+      valField3 = u.admissions || 'Firm-Wide Identity & Security Governance';
+      labelField4 = 'Primary Governance Responsibilities';
+      valField4 = u.practiceAreas || 'User Provisioning, RBAC Security Audits, Infrastructure';
+      complianceText = '🛡️ Zero-Trust Security Enforcement • Multi-factor authentication enforced with tamper-evident cryptographic audit logs.';
+    } else {
+      // Official / Legal Clerk
+      heroChipHtml = `
+        <span>Staff ID: <strong style="color: #0F172A; font-family: var(--font-mono);">${valId}</strong></span>
+        <span>•</span>
+        <span>Division: <strong>${valDept}</strong></span>
+        <span>•</span>
+        <span>Registry: <strong>Court Filings</strong></span>
+      `;
+    }
 
     this.openModal(`
-      <div class="modal-header" style="background: linear-gradient(135deg, #102A43 0%, #0B1F33 100%); color: #FFFFFF; border-top-left-radius: var(--radius-lg); border-top-right-radius: var(--radius-lg); padding: 1.15rem 1.5rem;">
+      <div class="modal-header" style="background: #0F172A; color: #FFFFFF; border-top-left-radius: 12px; border-top-right-radius: 12px; padding: 1.15rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
         <div class="flex items-center gap-2.5">
-          <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(200, 155, 60, 0.2); border: 1.5px solid var(--color-gold); display: flex; align-items: center; justify-content: center; color: var(--color-gold);">
+          <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); display: flex; align-items: center; justify-content: center; color: #F8FAFC;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
               <circle cx="12" cy="7" r="4"/>
             </svg>
           </div>
           <div>
-            <h3 class="modal-title" style="color: #FFFFFF; margin: 0; font-size: 1.15rem; font-family: var(--font-heading);">
-              ${roleTitle}
+            <h3 class="modal-title" style="color: #FFFFFF; margin: 0; font-size: 1.15rem; font-family: var(--font-heading, 'Outfit', sans-serif); font-weight: 700;">
+              ${modalTitle}
             </h3>
-            <div style="font-size: 0.74rem; color: #CBD5E1; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.45rem;">
-              <span>SLCMS Personnel Identity</span>
-              <span>•</span>
-              <span style="color: var(--color-gold); font-weight: 600;">Tanganyika Law Society (TLS) Regulated</span>
+            <div style="font-size: 0.74rem; color: #94A3B8; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.45rem;">
+              <span>${modalSubtitle}</span>
             </div>
           </div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #CBD5E1; font-size: 1rem;" title="Close">✕</button>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #94A3B8; font-size: 1.1rem; line-height: 1;" title="Close">✕</button>
       </div>
 
-      <div class="modal-body" style="max-height: 75vh; overflow-y: auto; padding: 1.25rem 1.5rem;">
+      <div class="modal-body" style="max-height: 75vh; overflow-y: auto; padding: 1.25rem 1.5rem; background: #FAFBFD;">
         
         <!-- HERO IDENTITY CARD -->
-        <div style="background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%); border: 1.5px solid #CBD5E1; border-radius: var(--radius-lg); padding: 1.15rem; margin-bottom: 1.25rem;">
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem;">
           <div style="display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;">
             
             <!-- Headshot Avatar with Upload Actions -->
             <div class="avatar-upload-target" onclick="document.getElementById('edit-user-avatar-file').click()" title="Click to Upload Headshot"
                  ondragover="event.preventDefault(); this.classList.add('dragover');"
                  ondragleave="this.classList.remove('dragover');"
-                 ondrop="App.handleAvatarDrop(event)">
-              <div class="avatar avatar-xl avatar-ring-gold" style="width: 82px; height: 82px; background: #0B1F33; box-shadow: 0 4px 12px rgba(0,0,0,0.12);">
-                <img id="profile-modal-preview-img" src="${u.avatarImg || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=256&q=80'}" alt="${u.name}" style="${!u.avatarImg ? 'display:none;' : ''}">
-                <span id="profile-modal-preview-initials" style="${u.avatarImg ? 'display:none;' : ''}; font-size: 1.5rem; font-weight: 700; color: #FFFFFF;">${u.avatar || 'EV'}</span>
+                 ondrop="App.handleAvatarDrop(event)"
+                 style="position: relative; cursor: pointer;">
+              <div class="avatar avatar-xl" style="width: 84px; height: 84px; background: #0F172A; border: 2px solid #CBD5E1; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                <img id="profile-modal-preview-img" src="${u.avatarImg || ''}" alt="${u.name}" style="${!u.avatarImg ? 'display:none;' : 'display:block;'}; width: 100%; height: 100%; object-fit: cover;">
+                <span id="profile-modal-preview-initials" style="${u.avatarImg ? 'display:none;' : 'display:flex;'}; width: 100%; height: 100%; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 700; color: #FFFFFF;">${initials}</span>
               </div>
-              <div class="avatar-upload-overlay">
+              <div class="avatar-upload-overlay" style="border-radius: 50%;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
                   <circle cx="12" cy="13" r="4"/>
                 </svg>
-                <span>Upload</span>
+                <span style="font-size: 0.68rem; margin-top: 2px;">Change</span>
               </div>
-              <div class="avatar-camera-badge" title="Change Headshot">
+              <div class="avatar-camera-badge" title="Change Photo" style="position: absolute; right: 0; bottom: 0; background: #0F172A; color: #FFFFFF; width: 26px; height: 26px; border-radius: 50%; border: 2px solid #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.15);">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
                   <circle cx="12" cy="13" r="4"/>
@@ -1165,155 +1651,152 @@ const App = {
               </div>
             </div>
 
-            <!-- Identity Summary & Quick Badges -->
-            <div style="flex: 1; min-width: 260px;">
+            <!-- Identity Summary & Meta Chips -->
+            <div style="flex: 1; min-width: 250px;">
               <div class="flex items-center gap-2 flex-wrap">
-                <h3 id="profile-modal-header-name" style="font-size: 1.22rem; color: var(--color-primary); font-weight: 700; margin: 0;">
+                <h3 id="profile-modal-header-name" style="font-size: 1.25rem; color: #0F172A; font-weight: 700; margin: 0;">
                   ${u.name}
                 </h3>
-                <span class="badge badge-confidential" style="font-size: 0.72rem; padding: 2px 8px;">
+                <span style="background: #E2E8F0; color: #1E293B; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; text-transform: uppercase;">
                   ${u.roleLabel || u.role}
                 </span>
-                <span class="badge badge-active" style="font-size: 0.68rem; padding: 2px 7px;">
-                  Active Account
+                <span style="background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 9999px;">
+                  ● Active Account
                 </span>
               </div>
 
-              <!-- Quick Meta Chips: Staff ID, Department, Jurisdiction -->
-              <div style="font-size: 0.8rem; color: #475569; margin-top: 0.4rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                <span>🆔 Staff ID: <strong style="color: #0F172A; font-family: var(--font-mono);">${staffId}</strong></span>
-                <span>•</span>
-                <span>🏛️ <strong id="profile-modal-header-dept">${department}</strong></span>
-                <span>•</span>
-                <span>⚖️ <strong style="color: var(--color-gold);">${jurisdiction}</strong></span>
+              <!-- Quick Meta Row -->
+              <div style="font-size: 0.8rem; color: #64748B; margin-top: 0.4rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                ${heroChipHtml}
               </div>
 
-              <!-- Photo Controls -->
-              <div style="margin-top: 0.65rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+              <!-- Photo Action Buttons -->
+              <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
                 <input type="file" id="edit-user-avatar-file" accept="image/*" style="display:none;" onchange="App.handleAvatarFileUpload(event)">
-                <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('edit-user-avatar-file').click()" style="padding: 0.28rem 0.65rem; font-size: 0.74rem;">
+                <button type="button" class="btn btn-sm" onclick="document.getElementById('edit-user-avatar-file').click()" style="background: #0F172A; color: #FFFFFF; font-size: 0.76rem; padding: 0.35rem 0.85rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 600;">
                   📷 Upload Photo
                 </button>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="App.togglePresetsGallery()" style="padding: 0.28rem 0.65rem; font-size: 0.74rem;">
+                <button type="button" class="btn btn-sm" onclick="App.togglePresetsGallery()" style="background: #FFFFFF; border: 1px solid #CBD5E1; color: #334155; font-size: 0.76rem; padding: 0.35rem 0.85rem; border-radius: 6px; cursor: pointer;">
                   Presets ▾
                 </button>
-                <button type="button" class="btn btn-ghost btn-sm" onclick="App.removeAvatarPhoto()" style="padding: 0.28rem 0.55rem; font-size: 0.72rem; color: #EF4444;" title="Use Initials Badge">
-                  Remove Photo
-                </button>
-                <button type="button" class="btn btn-ghost btn-sm" onclick="App.toggleCustomUrlInput()" style="padding: 0.28rem 0.55rem; font-size: 0.72rem; color: #64748B;" title="Paste direct image link">
+                <button type="button" class="btn btn-sm" onclick="App.toggleCustomUrlInput()" style="background: #FFFFFF; border: 1px solid #CBD5E1; color: #334155; font-size: 0.76rem; padding: 0.35rem 0.85rem; border-radius: 6px; cursor: pointer;">
                   Image URL
+                </button>
+                <button type="button" class="btn btn-sm" onclick="App.removeAvatarPhoto()" style="background: transparent; border: none; color: #DC2626; font-size: 0.74rem; padding: 0.35rem 0.55rem; cursor: pointer;" title="Reset to initials badge">
+                  Remove Photo
                 </button>
               </div>
 
               <!-- Presets Grid Container -->
-              <div id="avatar-presets-container" style="display: none; margin-top: 0.65rem;">
-                <div style="font-size: 0.7rem; font-weight: 700; color: #64748B; text-transform: uppercase; margin-bottom: 0.3rem;">
-                  Select Official Headshot:
+              <div id="avatar-presets-container" style="display: none; margin-top: 0.75rem; padding: 0.75rem; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px;">
+                <div style="font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 0.45rem;">
+                  Select Professional Headshot:
                 </div>
-                <div class="avatar-presets-grid">
+                <div class="avatar-presets-grid" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                   ${presets.map((p) => `
-                    <button type="button" class="avatar-preset-btn ${(u.avatarImg === p.url) ? 'active' : ''}" onclick="App.selectPresetAvatar('${p.url}')" title="${p.name} (${p.role})">
-                      <img src="${p.url}" alt="${p.name}">
+                    <button type="button" class="avatar-preset-btn ${(u.avatarImg === p.url) ? 'active' : ''}" onclick="App.selectPresetAvatar('${p.url}')" title="${p.name} (${p.role})" style="width: 44px; height: 44px; border-radius: 50%; overflow: hidden; border: 2px solid #E2E8F0; padding: 0; cursor: pointer; transition: transform 0.15s, border-color 0.15s;">
+                      <img src="${p.url}" alt="${p.name}" style="width: 100%; height: 100%; object-fit: cover;">
                     </button>
                   `).join('')}
                 </div>
               </div>
 
               <!-- Custom URL Input -->
-              <div id="avatar-url-container" style="display: none; margin-top: 0.65rem;">
-                <input type="text" id="edit-user-avatar-url" class="form-control" style="font-size: 0.75rem; padding: 0.35rem 0.65rem; height: 30px;" value="${u.avatarImg || ''}" placeholder="Paste high-resolution image URL..." oninput="App.previewAvatarUrl(this.value)">
+              <div id="avatar-url-container" style="display: none; margin-top: 0.75rem;">
+                <input type="text" id="edit-user-avatar-url" class="form-control" style="font-size: 0.78rem; padding: 0.4rem 0.75rem; height: 32px;" value="${u.avatarImg || ''}" placeholder="Paste direct image link (https://...)..." oninput="App.previewAvatarUrl(this.value)">
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 1. ESSENTIAL PERSONAL & CONTACT INFORMATION -->
-        <div style="background: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 8px; padding: 1.1rem; margin-bottom: 1rem;">
-          <div style="font-size: 0.8rem; font-weight: 700; color: #1E293B; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.75rem; border-bottom: 1px solid #E2E8F0; padding-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
-            <span style="color: var(--color-gold);">👤</span> Core Practitioner Information
+        <!-- SECTION 1: ESSENTIAL IDENTITY & CONTACT -->
+        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 1.15rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+          <div style="font-size: 0.8rem; font-weight: 700; color: #0F172A; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.85rem; border-bottom: 1px solid #F1F5F9; padding-bottom: 0.45rem; display: flex; align-items: center; gap: 0.4rem;">
+            ${sec1Title}
           </div>
           
           <div class="grid grid-cols-2 gap-3" style="margin-bottom: 0.75rem;">
-            <div class="form-group">
-              <label class="form-label required">Full Legal Name</label>
-              <input type="text" id="edit-user-name" class="form-control" value="${u.name}" required oninput="document.getElementById('profile-modal-header-name').innerText = this.value || 'Practitioner'">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label required" style="font-size: 0.78rem; font-weight: 600; color: #334155; margin-bottom: 0.25rem;">Full Legal Name</label>
+              <input type="text" id="edit-user-name" class="form-control" value="${u.name || ''}" placeholder="e.g. John Doe" oninput="document.getElementById('profile-modal-header-name').innerText = this.value.trim() || 'User'">
+              <div class="form-error-msg" id="err-edit-user-name" style="display: none;"></div>
             </div>
-            <div class="form-group">
-              <label class="form-label required">Official Position Title</label>
-              <input type="text" id="edit-user-role-label" class="form-control" value="${u.roleLabel || u.roleTitle || u.role}" required>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label required" style="font-size: 0.78rem; font-weight: 600; color: #334155; margin-bottom: 0.25rem;">${labelTitle}</label>
+              <input type="text" id="edit-user-role-label" class="form-control" value="${valTitle}">
+              <div class="form-error-msg" id="err-edit-user-role-label" style="display: none;"></div>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
-            <div class="form-group">
-              <label class="form-label required">Official Firm Email</label>
-              <input type="email" id="edit-user-email" class="form-control" value="${u.email}" required style="font-family: var(--font-mono);">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label required" style="font-size: 0.78rem; font-weight: 600; color: #334155; margin-bottom: 0.25rem;">Contact Email Address</label>
+              <input type="email" id="edit-user-email" class="form-control" value="${u.email || ''}" placeholder="name@domain.com" style="font-family: var(--font-mono);">
+              <div class="form-error-msg" id="err-edit-user-email" style="display: none;"></div>
             </div>
-            <div class="form-group">
-              <label class="form-label required">Contact Telephone Line</label>
-              <input type="tel" id="edit-user-phone" class="form-control" value="${u.phone || '+255 754 000 111'}" required>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label required" style="font-size: 0.78rem; font-weight: 600; color: #334155; margin-bottom: 0.25rem;">Contact Telephone Line</label>
+              <input type="tel" id="edit-user-phone" class="form-control" value="${u.phone || ''}" placeholder="+255 700 000 000">
+              <div class="form-error-msg" id="err-edit-user-phone" style="display: none;"></div>
             </div>
           </div>
         </div>
 
-        <!-- 2. PROFESSIONAL CREDENTIALS & PRACTICE FOCUS -->
-        <div style="background: #FFFBEB; border: 1.5px solid #FDE68A; border-radius: 8px; padding: 1.1rem; margin-bottom: 1rem;">
-          <div style="font-size: 0.8rem; font-weight: 700; color: #92400E; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.75rem; border-bottom: 1px solid #FDE68A; padding-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
-            <span style="color: #D97706;">⚖️</span> Professional Assignment &amp; Credentials
+        <!-- SECTION 2: CREDENTIALS & SPECIFICATIONS -->
+        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 1.15rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+          <div style="font-size: 0.8rem; font-weight: 700; color: #0F172A; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.85rem; border-bottom: 1px solid #F1F5F9; padding-bottom: 0.45rem; display: flex; align-items: center; gap: 0.4rem;">
+            ${sec2Title}
           </div>
 
           <div class="grid grid-cols-2 gap-3" style="margin-bottom: 0.75rem;">
-            <div class="form-group">
-              <label class="form-label required">${isLawyer ? 'TLS Lawyer Roll Number (Bar No.)' : (isAdmin ? 'Admin Governance Reference' : 'Clerk Staff Identification')}</label>
-              <input type="text" id="edit-user-bar-no" class="form-control" value="${rollNo}" style="font-family: var(--font-mono); font-weight: 700; color: #B45309;" required>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label required" style="font-size: 0.78rem; font-weight: 600; color: #334155; margin-bottom: 0.25rem;">${labelId}</label>
+              <input type="text" id="edit-user-bar-no" class="form-control" value="${valId}" ${isClient ? 'readonly style="background:#F8FAFC; color:#64748B; font-family: var(--font-mono); font-weight:600;"' : 'style="font-family: var(--font-mono); font-weight: 600;"'}>
+              <div class="form-error-msg" id="err-edit-user-bar-no" style="display: none;"></div>
             </div>
-            <div class="form-group">
-              <label class="form-label required">Practice Department / Division</label>
-              <input type="text" id="edit-user-dept" class="form-control" value="${department}" required oninput="document.getElementById('profile-modal-header-dept').innerText = this.value">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label required" style="font-size: 0.78rem; font-weight: 600; color: #334155; margin-bottom: 0.25rem;">${labelDept}</label>
+              <input type="text" id="edit-user-dept" class="form-control" value="${valDept}">
+              <div class="form-error-msg" id="err-edit-user-dept" style="display: none;"></div>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
-            <div class="form-group">
-              <label class="form-label">${isLawyer ? 'Admitted Court Jurisdiction' : 'Administrative Jurisdiction'}</label>
-              <input type="text" id="edit-user-admissions" class="form-control" value="${u.admissions || (isLawyer ? 'High Court of Tanzania & Courts Subordinate Thereto' : 'System-Wide SLCMS Access')}">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 0.78rem; font-weight: 600; color: #334155; margin-bottom: 0.25rem;">${labelField3}</label>
+              <input type="text" id="edit-user-admissions" class="form-control" value="${valField3}">
             </div>
-            <div class="form-group">
-              <label class="form-label">Practice Focus / Specialization</label>
-              <input type="text" id="edit-user-practice-areas" class="form-control" value="${u.practiceAreas || (isAdmin ? 'User Provisioning, RBAC, Security Audits' : 'Commercial Litigation, Land Law, Civil Disputes')}" placeholder="e.g. Commercial Litigation, Land Law">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 0.78rem; font-weight: 600; color: #334155; margin-bottom: 0.25rem;">${labelField4}</label>
+              <input type="text" id="edit-user-practice-areas" class="form-control" value="${valField4}">
             </div>
           </div>
         </div>
 
-        <!-- 3. SECURITY & COMPLIANCE BADGE STRIP -->
-        <div style="background: #F0FDF4; border: 1.5px solid #BBF7D0; border-radius: 8px; padding: 0.85rem 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
-          <div>
-            <div style="font-size: 0.8rem; font-weight: 700; color: #166534; display: flex; align-items: center; gap: 0.35rem;">
-              <span>🔒</span> Zero-Trust Security &amp; Audit Compliance
-            </div>
-            <div style="font-size: 0.74rem; color: #15803D; margin-top: 0.2rem;">
-              Authentication: <strong>Argon2id Hash Verified</strong> • Role Access: <strong>${u.role}</strong> • Assigned Matters: <strong>${(SLCMS_STATE.cases || []).filter(c => c.assignedLawyerId === u.id || (u.name && c.lawyer && c.lawyer.toLowerCase().includes(u.name.toLowerCase()))).length} Active Cases</strong>
-            </div>
+        <!-- SECTION 3: COMPLIANCE STRIP -->
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 0.85rem 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+          <div style="font-size: 0.76rem; color: #475569; line-height: 1.45; max-width: 650px;">
+            ${complianceText}
           </div>
-          <span class="badge" style="background: #DCFCE7; color: #15803D; font-weight: 700; border: 1px solid #86EFAC; font-size: 0.7rem;">
-            Verified &amp; Active
+          <span style="background: #E2E8F0; color: #334155; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; white-space: nowrap;">
+            Verified Active
           </span>
         </div>
 
-        <!-- Hidden input elements preserving backward compatibility with existing profile persistence -->
+        <!-- Hidden input elements preserving backward compatibility -->
         <input type="hidden" id="edit-user-rate" value="${u.hourlyRate || ''}">
         <input type="hidden" id="edit-user-education" value="${u.education || ''}">
-        <input type="hidden" id="edit-user-office" value="${u.officeLocation || 'Dar es Salaam HQ'}">
+        <input type="hidden" id="edit-user-office" value="${u.officeLocation || u.address || 'Dar es Salaam HQ'}">
         <input type="hidden" id="edit-user-assistant" value="${u.assistantContact || ''}">
         <input type="hidden" id="edit-user-languages" value="${u.languages || 'English, Swahili'}">
         <input type="hidden" id="edit-user-bio" value="${u.bio || ''}">
 
       </div>
 
-      <div class="modal-footer" style="padding: 0.9rem 1.5rem; border-top: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between; background: #FAFBFD;">
-        <button type="button" class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
-        <button type="button" class="btn btn-gold" onclick="App.saveUserProfile()" style="font-weight: 700; padding: 0.55rem 1.25rem;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.35rem;">
+      <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between; background: #FFFFFF; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+        <button type="button" class="btn btn-secondary" onclick="App.closeModal()" style="font-size: 0.88rem; padding: 0.55rem 1.25rem;">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="App.saveUserProfile()" style="background: #0F172A; color: #FFFFFF; font-weight: 600; padding: 0.55rem 1.35rem; font-size: 0.88rem; border-radius: 8px; border: none; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 2px 6px rgba(15,23,42,0.18);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
             <polyline points="17 21 17 13 7 13 7 21"/>
             <polyline points="7 3 7 8 15 8"/>
@@ -1322,6 +1805,134 @@ const App = {
         </button>
       </div>
     `, 'modal-lg');
+
+    // Attach real-time validation listeners to instantly clear errors upon typing
+    setTimeout(() => {
+      this.attachProfileValidationListeners();
+    }, 50);
+  },
+
+  attachProfileValidationListeners() {
+    const fieldIds = ['edit-user-name', 'edit-user-role-label', 'edit-user-email', 'edit-user-phone', 'edit-user-bar-no', 'edit-user-dept'];
+    fieldIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const clearErrorState = () => {
+        el.classList.remove('is-invalid');
+        const errEl = document.getElementById('err-' + id);
+        if (errEl) {
+          errEl.innerText = '';
+          errEl.style.display = 'none';
+        }
+      };
+      el.addEventListener('input', clearErrorState);
+      el.addEventListener('change', clearErrorState);
+    });
+  },
+
+  validateProfileForm() {
+    let isValid = true;
+    let firstInvalidField = null;
+
+    const clearError = (fieldId) => {
+      const field = document.getElementById(fieldId);
+      const errEl = document.getElementById('err-' + fieldId);
+      if (field) field.classList.remove('is-invalid');
+      if (errEl) {
+        errEl.innerText = '';
+        errEl.style.display = 'none';
+      }
+    };
+
+    const setError = (fieldId, message) => {
+      const field = document.getElementById(fieldId);
+      const errEl = document.getElementById('err-' + fieldId);
+      if (field) {
+        field.classList.add('is-invalid');
+        if (!firstInvalidField) firstInvalidField = field;
+      }
+      if (errEl) {
+        errEl.innerText = message;
+        errEl.style.display = 'block';
+      }
+      isValid = false;
+    };
+
+    // 1. Full Legal Name
+    const nameVal = document.getElementById('edit-user-name')?.value?.trim();
+    if (!nameVal) {
+      setError('edit-user-name', 'Full legal name is required.');
+    } else if (nameVal.length < 2) {
+      setError('edit-user-name', 'Name must contain at least 2 characters.');
+    } else if (/^[^a-zA-Z\u00C0-\u024F]+$/.test(nameVal)) {
+      setError('edit-user-name', 'Please enter a valid legal name.');
+    } else {
+      clearError('edit-user-name');
+    }
+
+    // 2. Position / Role Label
+    const roleVal = document.getElementById('edit-user-role-label')?.value?.trim();
+    if (!roleVal) {
+      setError('edit-user-role-label', 'Position title / account type is required.');
+    } else if (roleVal.length < 2) {
+      setError('edit-user-role-label', 'Title must be at least 2 characters.');
+    } else {
+      clearError('edit-user-role-label');
+    }
+
+    // 3. Email
+    const emailVal = document.getElementById('edit-user-email')?.value?.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailVal) {
+      setError('edit-user-email', 'Email address is required.');
+    } else if (!emailRegex.test(emailVal)) {
+      setError('edit-user-email', 'Please enter a valid email address (e.g. name@domain.com).');
+    } else {
+      clearError('edit-user-email');
+    }
+
+    // 4. Telephone
+    const phoneVal = document.getElementById('edit-user-phone')?.value?.trim();
+    const phoneDigits = (phoneVal || '').replace(/\D/g, '');
+    if (!phoneVal) {
+      setError('edit-user-phone', 'Contact telephone number is required.');
+    } else if (phoneDigits.length < 7) {
+      setError('edit-user-phone', 'Phone number must contain at least 7 digits.');
+    } else {
+      clearError('edit-user-phone');
+    }
+
+    // 5. Reference / Bar No / Staff ID
+    const barNoField = document.getElementById('edit-user-bar-no');
+    if (barNoField && !barNoField.hasAttribute('readonly')) {
+      const barVal = barNoField.value?.trim();
+      if (!barVal) {
+        setError('edit-user-bar-no', 'Identification reference is required.');
+      } else if (barVal.length < 2) {
+        setError('edit-user-bar-no', 'Identifier must be at least 2 characters.');
+      } else {
+        clearError('edit-user-bar-no');
+      }
+    }
+
+    // 6. Department / Contact Preference
+    const deptVal = document.getElementById('edit-user-dept')?.value?.trim();
+    if (!deptVal) {
+      setError('edit-user-dept', 'Department / preference is required.');
+    } else if (deptVal.length < 2) {
+      setError('edit-user-dept', 'Field must be at least 2 characters.');
+    } else {
+      clearError('edit-user-dept');
+    }
+
+    if (!isValid && firstInvalidField) {
+      firstInvalidField.focus();
+      try {
+        firstInvalidField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch(e) {}
+    }
+
+    return isValid;
   },
 
   handleAvatarFileUpload(event) {
@@ -1343,8 +1954,8 @@ const App = {
       const rawDataUrl = e.target.result;
       const img = new Image();
       img.onload = () => {
-        // High-DPI canvas downscaling (max 512x512) for fast persistence & retina crispness
-        const maxDim = 512;
+        // High-DPI canvas downscaling (max 384x384) for fast persistence & crisp display
+        const maxDim = 384;
         let w = img.width;
         let h = img.height;
         if (w > maxDim || h > maxDim) {
@@ -1361,7 +1972,7 @@ const App = {
         canvas.height = h;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.90);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
 
         const previewImg = document.getElementById('profile-modal-preview-img');
         const initialsSpan = document.getElementById('profile-modal-preview-initials');
@@ -1377,7 +1988,7 @@ const App = {
         // Clear active states on presets
         document.querySelectorAll('.avatar-preset-btn').forEach(b => b.classList.remove('active'));
 
-        this.showToast('Photo loaded and optimized! Click "Save Profile Changes" to save permanently.', 'success');
+        this.showToast('Photo loaded! Click "Save Profile Changes" to save permanently.', 'success');
       };
       img.onerror = () => {
         const previewImg = document.getElementById('profile-modal-preview-img');
@@ -1462,7 +2073,7 @@ const App = {
     const initialsSpan = document.getElementById('profile-modal-preview-initials');
     if (!url || !url.trim()) {
       if (previewImg) previewImg.style.display = 'none';
-      if (initialsSpan) initialsSpan.style.display = 'block';
+      if (initialsSpan) initialsSpan.style.display = 'flex';
       return;
     }
     if (previewImg) {
@@ -1482,7 +2093,7 @@ const App = {
       previewImg.src = '';
       previewImg.style.display = 'none';
     }
-    if (initialsSpan) initialsSpan.style.display = 'block';
+    if (initialsSpan) initialsSpan.style.display = 'flex';
     if (urlInput) urlInput.value = '';
     if (fileInput) fileInput.value = '';
 
@@ -1491,41 +2102,53 @@ const App = {
   },
 
   saveUserProfile() {
-    const name = document.getElementById('edit-user-name')?.value?.trim();
-    if (!name) {
-      this.showToast('Please provide a legal name.', 'error');
-      document.getElementById('edit-user-name')?.focus();
-      return;
-    }
-
-    const email = document.getElementById('edit-user-email')?.value?.trim();
-    if (!email || !email.includes('@')) {
-      this.showToast('Please provide a valid direct firm email.', 'error');
-      document.getElementById('edit-user-email')?.focus();
+    if (!this.validateProfileForm()) {
+      this.showToast('Please correct the highlighted fields before saving.', 'error');
       return;
     }
 
     const u = SLCMS_STATE.currentUser;
-    u.name = name;
-    u.roleLabel = document.getElementById('edit-user-role-label')?.value?.trim() || u.roleLabel;
+    if (!u) return;
+
+    const name = document.getElementById('edit-user-name')?.value?.trim();
+    const roleLabel = document.getElementById('edit-user-role-label')?.value?.trim();
+    const email = document.getElementById('edit-user-email')?.value?.trim();
+    const phone = document.getElementById('edit-user-phone')?.value?.trim();
     const barNo = document.getElementById('edit-user-bar-no')?.value?.trim();
-    if (barNo) {
+    const dept = document.getElementById('edit-user-dept')?.value?.trim();
+    const admissions = document.getElementById('edit-user-admissions')?.value?.trim();
+    const practiceAreas = document.getElementById('edit-user-practice-areas')?.value?.trim();
+    const officeLocation = document.getElementById('edit-user-office')?.value?.trim();
+
+    u.name = name;
+    u.roleLabel = roleLabel;
+    u.email = email;
+    u.phone = phone;
+    if (dept) u.department = dept;
+    if (officeLocation) {
+      u.officeLocation = officeLocation;
+      u.address = officeLocation;
+    }
+    if (practiceAreas) u.practiceAreas = practiceAreas;
+    if (admissions) u.admissions = admissions;
+
+    if (u.role === 'Senior Lawyer' || u.role === 'Lawyer') {
       u.barNumber = barNo;
       u.advocateNumber = barNo;
       u.lawyerNumber = barNo;
+    } else if (u.role === 'Administrator') {
+      u.staffId = barNo;
+      u.employeeId = barNo;
+    } else if (u.role === 'Client') {
+      u.preferredContact = dept;
+      u.clientId = barNo || u.clientId || u.clientNumber;
+      u.clientNumber = barNo || u.clientNumber || u.clientId;
+    } else {
+      u.staffId = barNo;
+      u.employeeId = barNo;
     }
-    u.hourlyRate = document.getElementById('edit-user-rate')?.value?.trim() || u.hourlyRate;
-    u.admissions = document.getElementById('edit-user-admissions')?.value?.trim() || u.admissions;
-    u.practiceAreas = document.getElementById('edit-user-practice-areas')?.value?.trim() || u.practiceAreas;
-    u.education = document.getElementById('edit-user-education')?.value?.trim() || u.education;
-    u.email = email;
-    u.phone = document.getElementById('edit-user-phone')?.value?.trim() || u.phone;
-    u.department = document.getElementById('edit-user-dept')?.value?.trim() || u.department;
-    u.officeLocation = document.getElementById('edit-user-office')?.value?.trim() || u.officeLocation;
-    u.assistantContact = document.getElementById('edit-user-assistant')?.value?.trim() || u.assistantContact;
-    u.languages = document.getElementById('edit-user-languages')?.value?.trim() || u.languages;
-    u.bio = document.getElementById('edit-user-bio')?.value?.trim() || u.bio;
 
+    // Avatar image resolution
     const previewImg = document.getElementById('profile-modal-preview-img');
     const avatarVal = document.getElementById('edit-user-avatar-url')?.value?.trim();
     if (avatarVal) {
@@ -1536,54 +2159,72 @@ const App = {
       u.avatarImg = '';
     }
 
-    // Compute initials for fallback badge
-    const parts = u.name.replace(/,.*$/, '').trim().split(/\s+/);
-    if (parts.length >= 2) {
-      u.avatar = (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    } else if (parts.length === 1 && parts[0].length > 0) {
-      u.avatar = parts[0].substring(0, 2).toUpperCase();
+    // Compute dynamic 2-letter initials
+    u.avatar = this.getInitials(u.name);
+
+    // Multi-layer permanent persistence across SessionStorage and LocalStorage
+    if (typeof SLCMS_STATE.persistCurrentUser === 'function') {
+      SLCMS_STATE.persistCurrentUser();
     } else {
-      u.avatar = 'AT';
+      sessionStorage.setItem('slcms_current_user', JSON.stringify(u));
+      localStorage.setItem('slcms_persisted_current_user', JSON.stringify(u));
     }
 
-    // Update corresponding user in users directory
-    const foundUser = SLCMS_STATE.users.find(item => item.id === u.id || (item.email && u.email && item.email.toLowerCase() === u.email.toLowerCase()));
-    if (foundUser) {
-      foundUser.name = u.name;
-      foundUser.email = u.email;
-      foundUser.phone = u.phone;
-      foundUser.department = u.department;
-      foundUser.jobTitle = u.roleLabel;
-      foundUser.roleTitle = u.roleLabel;
-      foundUser.avatarImg = u.avatarImg;
-      foundUser.avatar = u.avatar;
-      if (barNo) {
-        foundUser.barNumber = barNo;
-        foundUser.advocateNumber = barNo;
-        foundUser.lawyerNumber = barNo;
+    // Also persist dedicated avatar keys for 100% guarantee across refresh & session restore
+    if (u.avatarImg) {
+      if (u.id) localStorage.setItem('slcms_user_avatar_' + u.id, u.avatarImg);
+      if (u.clientNumber) localStorage.setItem('slcms_user_avatar_' + u.clientNumber, u.avatarImg);
+      if (u.staffId) localStorage.setItem('slcms_user_avatar_' + u.staffId, u.avatarImg);
+      if (u.email) localStorage.setItem('slcms_user_avatar_' + u.email.toLowerCase(), u.avatarImg);
+      localStorage.setItem('slcms_user_avatar_active', u.avatarImg);
+      localStorage.setItem('slcms_avatar_backup', u.avatarImg);
+    } else {
+      if (u.id) localStorage.removeItem('slcms_user_avatar_' + u.id);
+      if (u.clientNumber) localStorage.removeItem('slcms_user_avatar_' + u.clientNumber);
+      if (u.staffId) localStorage.removeItem('slcms_user_avatar_' + u.staffId);
+      if (u.email) localStorage.removeItem('slcms_user_avatar_' + u.email.toLowerCase());
+      localStorage.removeItem('slcms_user_avatar_active');
+      localStorage.removeItem('slcms_avatar_backup');
+    }
+
+    // Update corresponding record in SLCMS_STATE.users
+    if (Array.isArray(SLCMS_STATE.users)) {
+      const foundUser = SLCMS_STATE.users.find(item => item.id === u.id || (item.email && u.email && item.email.toLowerCase() === u.email.toLowerCase()));
+      if (foundUser) {
+        foundUser.name = u.name;
+        foundUser.email = u.email;
+        foundUser.phone = u.phone;
+        foundUser.department = u.department;
+        foundUser.jobTitle = u.roleLabel;
+        foundUser.roleTitle = u.roleLabel;
+        foundUser.avatarImg = u.avatarImg;
+        foundUser.avatar = u.avatar;
+        if (barNo) {
+          foundUser.barNumber = barNo;
+          foundUser.advocateNumber = barNo;
+          foundUser.staffId = barNo;
+        }
+      }
+      if (typeof SLCMS_STATE.persistUsers === 'function') {
+        SLCMS_STATE.persistUsers();
       }
     }
 
-    // Permanently persist to localStorage and sessionStorage
-    if (typeof SLCMS_STATE.persistCurrentUser === 'function') {
-      SLCMS_STATE.persistCurrentUser();
-    }
-    if (typeof SLCMS_STATE.persistUsers === 'function') {
-      SLCMS_STATE.persistUsers();
-    }
-
-    // Permanently persist to localStorage and sessionStorage
-    if (typeof SLCMS_STATE.persistCurrentUser === 'function') {
-      SLCMS_STATE.persistCurrentUser();
-    }
-    if (typeof SLCMS_STATE.persistUsers === 'function') {
-      SLCMS_STATE.persistUsers();
+    // If client, also update in SLCMS_STATE.clients if exists
+    if (u.role === 'Client' && Array.isArray(SLCMS_STATE.clients)) {
+      const cIdx = SLCMS_STATE.clients.findIndex(c => (c.id && c.id === u.id) || (c.email && c.email.toLowerCase() === u.email.toLowerCase()));
+      if (cIdx !== -1) {
+        SLCMS_STATE.clients[cIdx].name = u.name;
+        SLCMS_STATE.clients[cIdx].email = u.email;
+        SLCMS_STATE.clients[cIdx].phone = u.phone;
+        if (u.avatarImg) SLCMS_STATE.clients[cIdx].avatarImg = u.avatarImg;
+      }
     }
 
-    SLCMS_STATE.addAuditLog('Attorney Profile Updated', 'Security & Personnel', `${u.name} (${u.roleLabel}) - Dossier & Licensure updated`);
+    SLCMS_STATE.addAuditLog('User Profile Updated', 'Security & Personnel', `${u.name} (${u.roleLabel || u.role}) - Profile & avatar saved permanently`);
     this.updateUserUI();
     this.closeModal();
-    this.showToast('Attorney profile, photo, and licensure details saved permanently!', 'success');
+    this.showToast('Profile and photo saved permanently!', 'success');
     this.refreshCurrentView();
   },
 
@@ -1637,7 +2278,19 @@ const App = {
   },
 
   renderSidebarNav() {
-    const role = SLCMS_STATE.currentUser?.role;
+    const sbUser = SLCMS_STATE.currentUser || {};
+    const rawRole = sbUser.role || sbUser.jobTitle || sbUser.roleLabel || sbUser.roleTitle || '';
+    const role = (function(r) {
+      if (!r) return 'Lawyer';
+      const up = String(r).toUpperCase().replace(/[\s_-]+/g, '');
+      if (up === 'CLIENT') return 'Client';
+      if (up === 'ADMINISTRATOR' || up === 'ADMIN' || up === 'SYSTEMADMINISTRATOR') return 'Administrator';
+      if (up === 'SENIORLAWYER' || up === 'MANAGINGPARTNER' || up === 'SENIORCOUNSEL') return 'Senior Lawyer';
+      if (up.includes('LEGALOFFICER') || up === 'LEGALOFFICER') return 'Legal Officer';
+      if (up === 'LAWYER' || up === 'ASSOCIATELAWYER' || up === 'JUNIORLAWYER') return 'Lawyer';
+      if (up === 'LEGALCLERK' || up === 'CLERK') return 'Legal Clerk';
+      return r;
+    })(rawRole);
     const navContainer = document.getElementById('sidebar-nav-list');
     if (!navContainer) return;
 
@@ -1663,14 +2316,18 @@ const App = {
         }
       }
       const isActive = this.currentRoute === route || 
-        (route === 'dashboard' && this.currentRoute === 'admin-dashboard') ||
+        (route === 'dashboard' && (this.currentRoute === 'admin-dashboard' || (role === 'Legal Officer' && this.currentRoute === 'legal-requests'))) ||
+        (route === 'legal-requests' && this.currentRoute === 'dashboard' && role === 'Legal Officer') ||
         (route === 'admin-users' && this.currentRoute === 'user-management') ||
         (route === 'admin-settings' && this.currentRoute === 'settings') ||
         (route === 'admin-security-activity' && (this.currentRoute === 'admin-security' || this.currentRoute === 'admin-logs')) ||
-        (route === 'admin-cases-matters' && this.currentRoute === 'admin-cases-matters');
+        (route === 'admin-cases-matters' && this.currentRoute === 'admin-cases-matters') ||
+        ((route === 'billing-proofs' || route === 'billing-verify') && (this.currentRoute === 'billing-proofs' || this.currentRoute === 'billing-verify'));
+
+      const clickHandler = badgeAction ? badgeAction : `App.navigate('${route}'); App.closeMobileSidebar();`;
 
       return `
-        <a class="nav-item ${isActive ? 'active' : ''}" data-route="${route}" onclick="App.navigate('${route}'); App.closeMobileSidebar();" title="${label}">
+        <a class="nav-item ${isActive ? 'active' : ''}" data-route="${route}" onclick="${clickHandler}" title="${label}">
           <span class="nav-icon">${icon}</span>
           <span>${label}</span>
           ${badgeHtml}
@@ -1688,82 +2345,173 @@ const App = {
       aiDrafting: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`,
       legalAi: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
       library: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 7h8M8 11h6"/></svg>`,
-      reports: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+      reports: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="8" y1="18" x2="8" y2="15"/><line x1="16" y1="18" x2="16" y2="9"/></svg>`,
       users: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
       assignments: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>`,
       activityLogs: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>`,
       settings: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
-      backup: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`
+      backup: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`,
+      security: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+      billing: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+      logout: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`
     };
 
     const isAdmin = (role === 'Administrator');
 
-    let html = `
-      ${sectionLabel('CORE OPERATIONS')}
-      ${navItem('dashboard', icons.dashboard, 'Dashboard')}
-      ${navItem('clients', icons.clients, 'Clients')}
-      ${!isAdmin ? navItem('cases', icons.cases, 'Cases and Matters', casesAttentionCount, "App.navigate('cases', { filter: 'attention' })", 'danger') : ''}
-      ${navItem('client-messages', icons.clientMessages, 'Client Messages')}
-      ${navItem('tasks', icons.tasks, 'Tasks and Deadlines')}
+    const isLawyer = (role === 'Lawyer' || role === 'Senior Lawyer');
 
-      ${sectionLabel('LEGAL ASSISTANCE')}
-      ${navItem('legal-ai', icons.legalAi, 'Tanzania Legal AI')}
-      ${navItem('case-library', icons.library, 'Case Library', judgmentsCount, null, 'info')}
-      ${!isAdmin ? navItem('reports', icons.reports, 'Generated Reports') : ''}
-    `;
+    const isClerk = (role === 'Legal Clerk');
 
-    // ADMINISTRATION section for Administrator & Managing Partner, plus Case Assignments for Senior Lawyer
-    if (role === 'Administrator') {
-      html += `
+    let html = '';
+    if (isAdmin) {
+      html = `
         ${sectionLabel('ADMINISTRATION')}
-        ${navItem('admin-users', icons.users, 'Users & Security')}
-        ${navItem('admin-cases-matters', icons.cases, 'Cases and Matters', (SLCMS_STATE.cases || []).length || null, null, 'info')}
+        ${navItem('dashboard', icons.dashboard, 'Dashboard')}
+        ${navItem('admin-users', icons.users, 'Users')}
+        ${navItem('admin-security', icons.security, 'Security')}
+        ${navItem('system-reports', icons.reports, 'System Reports')}
         ${navItem('admin-settings', icons.settings, 'System Settings')}
         ${navItem('admin-backup', icons.backup, 'Backup')}
       `;
-    } else if (role === 'Managing Partner') {
-      html += `
-        ${sectionLabel('ADMINISTRATION')}
-        ${navItem('admin-users', icons.users, 'Users & Security')}
-        ${navItem('case-assignments', icons.assignments, 'Case Assignments')}
-        ${navItem('admin-settings', icons.settings, 'System Settings')}
-        ${navItem('admin-backup', icons.backup, 'Backup')}
+    } else if (isLawyer) {
+      html = `
+        ${sectionLabel('LAWYER PRACTICE')}
+        ${navItem('cases', icons.cases, 'Assigned Cases', casesAttentionCount, "App.navigate('cases', { scope: 'assigned' })", 'danger')}
+        ${navItem('clients', icons.clients, 'Client Details')}
+        ${navItem('documents', icons.documents, 'Case Documents')}
+        ${navItem('tasks', icons.tasks, 'Tasks and Deadlines')}
+        ${navItem('client-messages', icons.clientMessages, 'Client Messages')}
+        ${navItem('case-tracking', icons.communications, 'Case Progress')}
+
+        ${sectionLabel('LEGAL AI & RESEARCH')}
+        ${navItem('case-library', icons.library, 'TanzLII Cases', 77, null, 'info')}
+        ${navItem('legal-ai', icons.legalAi, 'Legal Research', judgmentsCount, null, 'info')}
+        ${navItem('reports', icons.reports, 'Reports')}
+
+        ${role === 'Senior Lawyer' ? `
+          ${sectionLabel('ADMINISTRATION')}
+          ${navItem('case-assignments', icons.assignments, 'Case Assignments')}
+        ` : ''}
       `;
-    } else if (role === 'Senior Lawyer') {
-      html += `
-        ${sectionLabel('ADMINISTRATION')}
-        ${navItem('case-assignments', icons.assignments, 'Case Assignments')}
+    } else if (isClerk) {
+      html = `
+        ${sectionLabel('REGISTRY & CLERKSHIP')}
+        ${navItem('dashboard', icons.dashboard, 'Registry Dashboard')}
+        ${navItem('cases', icons.cases, 'Cases and Matters', casesAttentionCount, "App.navigate('cases', { filter: 'attention' })", 'danger')}
+        ${navItem('documents', icons.documents, 'Documents')}
+        ${navItem('tasks', icons.tasks, 'Court Dates & Deadlines')}
+        ${navItem('reports', icons.reports, 'Reports')}
+      `;
+    } else if (role === 'Legal Officer') {
+      const storedReqs = (typeof LegalRequestsView !== 'undefined' && LegalRequestsView.getRequests)
+        ? LegalRequestsView.getRequests()
+        : (JSON.parse(localStorage.getItem('slcms_client_legal_requests') || '[]'));
+      const pendingReqCount = Array.isArray(storedReqs)
+        ? storedReqs.filter(r => r && (r.status === 'Submitted' || r.status === 'Under Review' || r.status === 'More Information Required')).length
+        : 0;
+      
+      const invs = (typeof BillingView !== 'undefined' && BillingView.getInvoices)
+        ? BillingView.getInvoices()
+        : (SLCMS_STATE.invoices || []);
+      const pendingProofCount = invs.filter(i => i.status === 'VERIFICATION_PENDING' || i.status === 'DEMO_VERIFICATION_PENDING').length;
+      const readyForAssignCount = (SLCMS_STATE.cases || []).filter(c => c.status === 'READY_FOR_ASSIGNMENT').length;
+
+      html = `
+        ${sectionLabel('LEGAL OFFICER DASHBOARD')}
+        ${navItem('legal-requests', icons.cases, 'New Client Requests', pendingReqCount > 0 ? pendingReqCount : null, null, 'warning')}
+        ${navItem('billing-create-invoice', icons.billing, 'Create and Send Invoice')}
+        ${navItem('billing-proofs', icons.backup, 'Payment Proofs', pendingProofCount > 0 ? pendingProofCount : null, null, 'warning')}
+        ${navItem('billing-verify', icons.reports, 'Verify or Reject Payment')}
+        ${navItem('cases', icons.clients, 'Clients and Cases')}
+        ${navItem('legal-officer-notifications', icons.communications, 'Notifications')}
+      `;
+    } else if (role === 'Client') {
+      html = `
+        ${sectionLabel('CLIENT DASHBOARD')}
+        ${navItem('client-requests', icons.cases, 'My Requests')}
+        ${navItem('client-cases', icons.documents, 'My Cases')}
+        ${navItem('client-invoices', icons.billing, 'Invoices')}
+        ${navItem('client-upload-proof', icons.backup, 'Upload Payment Proof')}
+        ${navItem('client-receipts', icons.reports, 'Receipts')}
+        ${navItem('client-messages', icons.clientMessages, 'Messages')}
+        ${navItem('client-documents', icons.documents, 'Documents')}
+        ${navItem('client-notifications', icons.communications, 'Notifications')}
+      `;
+    } else {
+      // General Administration / Fallback View
+      html = `
+        ${sectionLabel('CORE OPERATIONS')}
+        ${navItem('dashboard', icons.dashboard, 'Dashboard')}
+
+        ${sectionLabel('LEGAL ASSISTANCE')}
+        ${navItem('reports', icons.reports, 'Generated Reports')}
+
+        ${role === 'Managing Partner' ? `
+          ${sectionLabel('ADMINISTRATION')}
+          ${navItem('admin-users', icons.users, 'Users & Security')}
+          ${navItem('case-assignments', icons.assignments, 'Case Assignments')}
+          ${navItem('admin-settings', icons.settings, 'System Settings')}
+          ${navItem('admin-backup', icons.backup, 'Backup')}
+        ` : ''}
       `;
     }
 
     navContainer.innerHTML = html;
 
     // Synchronize Mobile Bottom Nav for RBAC
-    const aiTab = document.getElementById('mobile-nav-ai-tab');
-    if (aiTab) {
-      if (role === 'Administrator') {
-        aiTab.setAttribute('data-route', 'admin-users');
-        aiTab.setAttribute('onclick', "App.navigate('admin-users')");
-        aiTab.innerHTML = `
-          <span class="mobile-bottom-nav-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
-          </span>
-          <span>Users</span>
-        `;
-      } else {
-        aiTab.setAttribute('data-route', 'case-library');
-        aiTab.setAttribute('onclick', "App.navigate('case-library')");
-        aiTab.innerHTML = `
-          <span class="mobile-bottom-nav-icon" style="color: var(--color-gold);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-            </svg>
-          </span>
-          <span>Library</span>
-        `;
+    const mobCases = document.getElementById('mob-nav-cases');
+    const mobClients = document.getElementById('mob-nav-clients');
+    const mobTasks = document.getElementById('mob-nav-tasks');
+
+    if (role === 'Administrator') {
+      if (mobCases) {
+        mobCases.style.display = '';
+        mobCases.setAttribute('onclick', "App.navigate('admin-users');");
+        const lbl = mobCases.querySelector('.mobile-nav-label');
+        if (lbl) lbl.innerText = 'Users';
+        const icn = mobCases.querySelector('.mobile-nav-icon');
+        if (icn) icn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
+      }
+      if (mobClients) {
+        mobClients.style.display = '';
+        mobClients.setAttribute('onclick', "App.navigate('admin-settings');");
+        const lbl = mobClients.querySelector('.mobile-nav-label');
+        if (lbl) lbl.innerText = 'Settings';
+        const icn = mobClients.querySelector('.mobile-nav-icon');
+        if (icn) icn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
+      }
+      if (mobTasks) {
+        mobTasks.style.display = '';
+        mobTasks.setAttribute('onclick', "App.navigate('admin-backup');");
+        const lbl = mobTasks.querySelector('.mobile-nav-label');
+        if (lbl) lbl.innerText = 'Backup';
+        const icn = mobTasks.querySelector('.mobile-nav-icon');
+        if (icn) icn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`;
+      }
+    } else if (role === 'Legal Officer') {
+      if (mobCases) {
+        mobCases.style.display = '';
+        mobCases.setAttribute('onclick', "App.navigate('cases');");
+        const lbl = mobCases.querySelector('.mobile-nav-label');
+        if (lbl) lbl.innerText = 'Cases';
+        const icn = mobCases.querySelector('.mobile-nav-icon');
+        if (icn) icn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+      }
+      if (mobClients) {
+        mobClients.style.display = '';
+        mobClients.setAttribute('onclick', "App.navigate('clients');");
+        const lbl = mobClients.querySelector('.mobile-nav-label');
+        if (lbl) lbl.innerText = 'Clients';
+        const icn = mobClients.querySelector('.mobile-nav-icon');
+        if (icn) icn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
+      }
+      if (mobTasks) {
+        mobTasks.style.display = '';
+        mobTasks.setAttribute('onclick', "App.navigate('tasks');");
+        const lbl = mobTasks.querySelector('.mobile-nav-label');
+        if (lbl) lbl.innerText = 'Tasks';
+        const icn = mobTasks.querySelector('.mobile-nav-icon');
+        if (icn) icn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
       }
     }
   },
@@ -1820,10 +2568,22 @@ const App = {
 
     // Find best match
     let activeId = null;
-    for (const [key, id] of Object.entries(navMap)) {
-      if (route && route.startsWith(key)) {
-        activeId = id;
-        break;
+    const isAdm = (SLCMS_STATE.currentUser?.role === 'Administrator');
+    if (isAdm) {
+      if (route && (route.startsWith('admin-users') || route.startsWith('user-management'))) {
+        activeId = 'mob-nav-cases';
+      } else if (route && (route.startsWith('admin-settings') || route.startsWith('settings'))) {
+        activeId = 'mob-nav-clients';
+      } else if (route && (route.startsWith('admin-backup') || route.startsWith('backup'))) {
+        activeId = 'mob-nav-tasks';
+      }
+    }
+    if (!activeId) {
+      for (const [key, id] of Object.entries(navMap)) {
+        if (route && route.startsWith(key)) {
+          activeId = id;
+          break;
+        }
       }
     }
     if (!activeId) activeId = 'mob-nav-dashboard';
@@ -1851,117 +2611,1096 @@ const App = {
         } else {
           sessionStorage.removeItem('slcms_auth');
         }
+        if (typeof AuthView !== 'undefined') {
+          AuthView.portalMode = 'welcome_gate';
+        }
+        window.location.hash = '';
         this.isLoggedIn = false;
+        document.body.classList.remove('is-lawyer-page');
+        if (typeof AICopilot !== 'undefined') {
+          if (typeof AICopilot.closeDrawer === 'function') AICopilot.closeDrawer();
+          if (typeof AICopilot.updateFabVisibility === 'function') AICopilot.updateFabVisibility();
+        }
         document.getElementById('app-root').innerHTML = AuthView.render();
         this.showToast('You have securely signed out.', 'info');
       }
     });
   },
 
-  // --- GLOBAL SEARCH MODAL ---
+  // --- SMART GLOBAL SEARCH SYSTEM ---
+  globalSearchState: {
+    query: '',
+    activeFilter: 'all',
+    selectedIndex: -1,
+    debounceTimer: null,
+    renderedItems: []
+  },
+
+  escapeSearchHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
+
+  highlightSearchMatch(text, query) {
+    if (!text) return '';
+    const s = String(text);
+    if (!query || !query.trim()) return this.escapeSearchHtml(s);
+    const qClean = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const safe = this.escapeSearchHtml(s);
+    try {
+      const regex = new RegExp(`(${qClean})`, 'gi');
+      return safe.replace(regex, '<mark style="background: rgba(200,155,60,0.3); color: inherit; padding: 0.05rem 0.25rem; border-radius: 3px; font-weight: 700;">$1</mark>');
+    } catch (e) {
+      return safe;
+    }
+  },
+
   openGlobalSearch() {
+    this.globalSearchState.query = '';
+    this.globalSearchState.activeFilter = 'all';
+    this.globalSearchState.selectedIndex = -1;
+    this.globalSearchState.renderedItems = [];
+
+    const role = SLCMS_STATE.currentUser?.role || '';
+    const isLawyer = (function(u) {
+      if (!u) return false;
+      const r = String(u.role || '').toLowerCase();
+      const t = String(u.jobTitle || u.roleLabel || u.roleTitle || '').toLowerCase();
+      return r.includes('lawyer') || t.includes('lawyer') || r.includes('advocate') || t.includes('advocate');
+    })(SLCMS_STATE.currentUser);
+    const canUseAIDrafting = role !== 'Lawyer' && role !== 'Administrator' && role !== 'Legal Officer' && role !== 'Client';
+    const activeCases = (SLCMS_STATE.cases || []).slice(0, 4);
+    const upcomingDeadlines = (typeof TasksView !== 'undefined' && Array.isArray(TasksView.courtEvents) && TasksView.courtEvents.length > 0)
+      ? TasksView.courtEvents.slice(0, 3)
+      : (SLCMS_STATE.deadlines || []).slice(0, 3);
+
     this.openModal(`
-      <div class="modal-header" style="padding: 0.85rem 1.25rem;">
-        <div class="input-with-icon w-full">
-          <span class="input-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-          </span>
-          <input type="text" id="global-modal-search-input" class="form-control" placeholder="Search legal matters, client dossiers, depositions, filings... (Esc to exit)"
-                 style="font-size: 1rem; border: none; box-shadow: none;" oninput="App.handleGlobalSearchInput(this.value)" autofocus>
+      <div class="global-search-modal-wrap" style="display: flex; flex-direction: column; max-height: 85vh;">
+        <!-- Search Input Bar -->
+        <div class="modal-header" style="padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--color-border, #E2E8F0); background: var(--color-surface, #FFFFFF);">
+          <div class="input-with-icon w-full" style="display: flex; align-items: center; position: relative;">
+            <span class="input-icon" style="position: absolute; left: 0.6rem; color: var(--color-gold, #C89B3C); display: flex; align-items: center;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </span>
+            <input type="text" id="global-modal-search-input" class="form-control"
+                   placeholder="Search cases, clients, documents, hearings, precedents, tasks, staff... (Esc to exit)"
+                   style="font-size: 1.02rem; padding: 0.65rem 4.5rem 0.65rem 2.65rem; border: 1px solid transparent; background: transparent; box-shadow: none; width: 100%; outline: none;"
+                   oninput="App.handleGlobalSearchInput(this.value)" autofocus>
+            <div style="position: absolute; right: 0.5rem; display: flex; align-items: center; gap: 0.35rem;">
+              <span class="badge" style="font-size: 0.68rem; font-family: var(--font-mono, monospace); background: var(--color-surface-subtle, #F1F5F9); color: var(--color-text-muted, #64748B); padding: 0.15rem 0.4rem; border: 1px solid var(--color-border, #CBD5E1); border-radius: 4px;">ESC</span>
+              <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="padding: 0.3rem 0.5rem; color: var(--color-text-muted, #64748B);" title="Close">✕</button>
+            </div>
+          </div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
-      </div>
-      <div class="modal-body" id="global-search-results" style="max-height: 440px; padding: 1rem 1.25rem;">
-        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); font-weight: 700; margin-bottom: 0.75rem;">
-          Quick Jump Recommendations
+
+        <!-- Filter Category Tabs -->
+        <div id="global-search-filter-bar" style="display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1.25rem; border-bottom: 1px solid var(--color-border, #E2E8F0); background: var(--color-surface-subtle, #F8FAFC); overflow-x: auto; white-space: nowrap; scrollbar-width: none;">
+          <button class="btn-search-filter active" onclick="App.setGlobalSearchFilter('all')" data-filter="all" style="padding: 0.25rem 0.65rem; font-size: 0.76rem; border-radius: 20px; font-weight: 700; border: 1px solid var(--color-border, #CBD5E1); background: var(--color-primary, #0A192F); color: #FFFFFF; cursor: pointer; transition: all 0.15s;">
+            All
+          </button>
+          <button class="btn-search-filter" onclick="App.setGlobalSearchFilter('cases')" data-filter="cases" style="padding: 0.25rem 0.65rem; font-size: 0.76rem; border-radius: 20px; font-weight: 600; border: 1px solid var(--color-border, #CBD5E1); background: var(--color-surface, #FFFFFF); color: var(--color-text-secondary, #475569); cursor: pointer;">
+            ⚖️ Cases
+          </button>
+          <button class="btn-search-filter" onclick="App.setGlobalSearchFilter('clients')" data-filter="clients" style="padding: 0.25rem 0.65rem; font-size: 0.76rem; border-radius: 20px; font-weight: 600; border: 1px solid var(--color-border, #CBD5E1); background: var(--color-surface, #FFFFFF); color: var(--color-text-secondary, #475569); cursor: pointer;">
+            👥 Clients
+          </button>
+          <button class="btn-search-filter" onclick="App.setGlobalSearchFilter('documents')" data-filter="documents" style="padding: 0.25rem 0.65rem; font-size: 0.76rem; border-radius: 20px; font-weight: 600; border: 1px solid var(--color-border, #CBD5E1); background: var(--color-surface, #FFFFFF); color: var(--color-text-secondary, #475569); cursor: pointer;">
+            📁 Documents
+          </button>
+          <button class="btn-search-filter" onclick="App.setGlobalSearchFilter('tasks')" data-filter="tasks" style="padding: 0.25rem 0.65rem; font-size: 0.76rem; border-radius: 20px; font-weight: 600; border: 1px solid var(--color-border, #CBD5E1); background: var(--color-surface, #FFFFFF); color: var(--color-text-secondary, #475569); cursor: pointer;">
+            ✅ Tasks
+          </button>
+          <button class="btn-search-filter" onclick="App.setGlobalSearchFilter('hearings')" data-filter="hearings" style="padding: 0.25rem 0.65rem; font-size: 0.76rem; border-radius: 20px; font-weight: 600; border: 1px solid var(--color-border, #CBD5E1); background: var(--color-surface, #FFFFFF); color: var(--color-text-secondary, #475569); cursor: pointer;">
+            🏛️ Hearings &amp; Deadlines
+          </button>
+          <button class="btn-search-filter" onclick="App.setGlobalSearchFilter('precedents')" data-filter="precedents" style="padding: 0.25rem 0.65rem; font-size: 0.76rem; border-radius: 20px; font-weight: 600; border: 1px solid var(--color-border, #CBD5E1); background: var(--color-surface, #FFFFFF); color: var(--color-text-secondary, #475569); cursor: pointer;">
+            📚 Precedents
+          </button>
+          ${canUseAIDrafting ? `
+          <button class="btn-search-filter" onclick="App.setGlobalSearchFilter('drafts')" data-filter="drafts" style="padding: 0.25rem 0.65rem; font-size: 0.76rem; border-radius: 20px; font-weight: 600; border: 1px solid var(--color-border, #CBD5E1); background: var(--color-surface, #FFFFFF); color: var(--color-text-secondary, #475569); cursor: pointer;">
+            ⚡ AI Drafts
+          </button>
+          ` : ''}
+          <button class="btn-search-filter" onclick="App.setGlobalSearchFilter('staff')" data-filter="staff" style="padding: 0.25rem 0.65rem; font-size: 0.76rem; border-radius: 20px; font-weight: 600; border: 1px solid var(--color-border, #CBD5E1); background: var(--color-surface, #FFFFFF); color: var(--color-text-secondary, #475569); cursor: pointer;">
+            👤 Staff
+          </button>
         </div>
-        <div class="flex flex-col gap-2">
-          ${SLCMS_STATE.cases.slice(0, 3).map(c => `
-            <div class="p-2 flex items-center justify-between" style="background: var(--color-surface-subtle); border-radius: var(--radius-sm); cursor: pointer;" onclick="App.closeModal(); CasesView.openCaseDetails('${c.id}')">
-              <div class="flex items-center gap-2">
-                <span class="badge" style="font-family: var(--font-mono); font-size: 0.7rem;">CASE</span>
+
+        <!-- Search Results Container -->
+        <div class="modal-body" id="global-search-results" style="max-height: 520px; overflow-y: auto; padding: 1rem 1.25rem; background: var(--color-surface, #FFFFFF);">
+          <!-- Quick Actions Grid -->
+          <div style="margin-bottom: 1.25rem;">
+            <div style="font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted, #64748B); font-weight: 700; margin-bottom: 0.65rem; display: flex; align-items: center; justify-content: space-between;">
+              <span>Quick Actions &amp; Workflows</span>
+              <span style="font-size: 0.7rem; color: var(--color-text-muted);">Navigate instantly</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.5rem;">
+              ${isLawyer ? '' : `
+              <div class="p-2.5 flex items-center gap-2.5" style="background: var(--color-surface-subtle, #F8FAFC); border: 1px solid var(--color-border, #E2E8F0); border-radius: var(--radius-sm, 6px); cursor: pointer; transition: all 0.15s;"
+                   onclick="App.closeModal(); if (typeof CasesView !== 'undefined' && CasesView.openNewCaseModal) CasesView.openNewCaseModal(); else App.navigate('cases');">
+                <span style="font-size: 1.15rem; background: rgba(200,155,60,0.15); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--color-gold, #C89B3C);">➕</span>
                 <div>
-                  <strong style="font-size: 0.85rem; color: var(--color-primary);">${c.title}</strong>
-                  <div style="font-size: 0.72rem; color: var(--color-text-secondary);">${c.caseNumber} • ${c.client}</div>
+                  <strong style="font-size: 0.82rem; color: var(--color-primary, #0A192F); display: block;">New Legal Case</strong>
+                  <span style="font-size: 0.7rem; color: var(--color-text-muted, #64748B);">Register active matter</span>
                 </div>
               </div>
-              <span class="badge badge-${c.status.toLowerCase().replace(' ', '')}">${c.status}</span>
+
+              <div class="p-2.5 flex items-center gap-2.5" style="background: var(--color-surface-subtle, #F8FAFC); border: 1px solid var(--color-border, #E2E8F0); border-radius: var(--radius-sm, 6px); cursor: pointer; transition: all 0.15s;"
+                   onclick="App.closeModal(); if (typeof TasksView !== 'undefined' && TasksView.openNewTaskModal) TasksView.openNewTaskModal(); else App.navigate('tasks');">
+                <span style="font-size: 1.15rem; background: rgba(139,92,246,0.15); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #8B5CF6;">📝</span>
+                <div>
+                  <strong style="font-size: 0.82rem; color: var(--color-primary, #0A192F); display: block;">Create Task</strong>
+                  <span style="font-size: 0.7rem; color: var(--color-text-muted, #64748B);">Assign deliverable</span>
+                </div>
+              </div>
+              `}
+
+              <div class="p-2.5 flex items-center gap-2.5" style="background: var(--color-surface-subtle, #F8FAFC); border: 1px solid var(--color-border, #E2E8F0); border-radius: var(--radius-sm, 6px); cursor: pointer; transition: all 0.15s;"
+                   onclick="App.closeModal(); if (typeof TasksView !== 'undefined' && TasksView.openAddDeadlineModal) TasksView.openAddDeadlineModal(); else App.navigate('tasks');">
+                <span style="font-size: 1.15rem; background: rgba(245,158,11,0.15); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #F59E0B;">🏛️</span>
+                <div>
+                  <strong style="font-size: 0.82rem; color: var(--color-primary, #0A192F); display: block;">Court Hearing</strong>
+                  <span style="font-size: 0.7rem; color: var(--color-text-muted, #64748B);">Schedule appearance</span>
+                </div>
+              </div>
+
+              ${canUseAIDrafting ? `
+              <div class="p-2.5 flex items-center gap-2.5" style="background: var(--color-surface-subtle, #F8FAFC); border: 1px solid var(--color-border, #E2E8F0); border-radius: var(--radius-sm, 6px); cursor: pointer; transition: all 0.15s;"
+                   onclick="App.closeModal(); App.navigate('ai-drafting');">
+                <span style="font-size: 1.15rem; background: rgba(16,185,129,0.15); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #10B981;">⚡</span>
+                <div>
+                  <strong style="font-size: 0.82rem; color: var(--color-primary, #0A192F); display: block;">AI Legal Drafting</strong>
+                  <span style="font-size: 0.7rem; color: var(--color-text-muted, #64748B);">Pleadings &amp; summons</span>
+                </div>
+              </div>
+              ` : ''}
+
+              <div class="p-2.5 flex items-center gap-2.5" style="background: var(--color-surface-subtle, #F8FAFC); border: 1px solid var(--color-border, #E2E8F0); border-radius: var(--radius-sm, 6px); cursor: pointer; transition: all 0.15s;"
+                   onclick="App.closeModal(); App.navigate('case-library');">
+                <span style="font-size: 1.15rem; background: rgba(239,68,68,0.15); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #EF4444;">📚</span>
+                <div>
+                  <strong style="font-size: 0.82rem; color: var(--color-primary, #0A192F); display: block;">Tanzania Precedents</strong>
+                  <span style="font-size: 0.7rem; color: var(--color-text-muted, #64748B);">77+ judgments</span>
+                </div>
+              </div>
             </div>
-          `).join('')}
+          </div>
+
+          <!-- Active Cases Quick Jump -->
+          ${activeCases.length ? `
+            <div style="margin-bottom: 1.25rem;">
+              <div style="font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted, #64748B); font-weight: 700; margin-bottom: 0.5rem;">
+                Active Legal Matters
+              </div>
+              <div class="flex flex-col gap-1.5">
+                ${activeCases.map(c => `
+                  <div class="p-2 flex items-center justify-between" style="background: var(--color-surface-subtle, #F8FAFC); border-left: 3px solid var(--color-gold, #C89B3C); border-radius: var(--radius-sm, 6px); cursor: pointer; transition: all 0.15s;"
+                       onclick="App.closeModal(); CasesView.openCaseDetails('${c.id}')">
+                    <div class="flex items-center gap-2.5" style="min-width: 0;">
+                      <span class="badge" style="font-family: var(--font-mono, monospace); font-size: 0.68rem; background: rgba(200,155,60,0.15); color: var(--color-gold, #C89B3C);">CASE</span>
+                      <div style="min-width: 0;">
+                        <strong style="font-size: 0.85rem; color: var(--color-primary, #0A192F); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${c.title}</strong>
+                        <div style="font-size: 0.72rem; color: var(--color-text-secondary, #475569); display: flex; align-items: center; gap: 0.4rem;">
+                          <span style="font-family: var(--font-mono); color: var(--color-gold); font-weight: 600;">${c.caseNumber}</span>
+                          <span>•</span>
+                          <span>${c.client || 'Client N/A'}</span>
+                          ${c.court ? `<span>•</span><span>${c.court}</span>` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2" style="flex-shrink: 0;">
+                      <span class="badge badge-priority-${(c.priority || 'medium').toLowerCase()}">${c.priority || 'Normal'}</span>
+                      <span class="badge badge-${(c.status || 'active').toLowerCase().replace(/\s+/g, '')}">${c.status || 'Active'}</span>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Upcoming Hearings Quick Jump -->
+          ${upcomingDeadlines.length ? `
+            <div style="margin-bottom: 1.25rem;">
+              <div style="font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted, #64748B); font-weight: 700; margin-bottom: 0.5rem;">
+                Upcoming Statutory Deadlines &amp; Hearings
+              </div>
+              <div class="flex flex-col gap-1.5">
+                ${upcomingDeadlines.map(h => `
+                  <div class="p-2 flex items-center justify-between" style="background: var(--color-surface-subtle, #F8FAFC); border-left: 3px solid #F59E0B; border-radius: var(--radius-sm, 6px); cursor: pointer; transition: all 0.15s;"
+                       onclick="App.closeModal(); if (typeof TasksView !== 'undefined' && TasksView.openEventDetails) TasksView.openEventDetails('${h.id}'); else App.navigate('tasks');">
+                    <div class="flex items-center gap-2.5">
+                      <span class="badge" style="font-family: var(--font-mono, monospace); font-size: 0.68rem; background: rgba(245,158,11,0.15); color: #B45309;">HEARING</span>
+                      <div>
+                        <strong style="font-size: 0.85rem; color: var(--color-primary, #0A192F);">${h.title}</strong>
+                        <div style="font-size: 0.72rem; color: var(--color-text-secondary, #475569);">${h.caseNumber || 'Matter Docket'} • ${h.court || 'Court Room'}</div>
+                      </div>
+                    </div>
+                    <span class="badge" style="background: rgba(245,158,11,0.15); color: #B45309; font-weight: 700; font-family: var(--font-mono); font-size: 0.75rem;">
+                      ${h.date || h.time || 'Scheduled'}
+                    </span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Search Guide Footer -->
+          <div style="padding: 0.65rem 0.85rem; background: var(--color-surface-subtle, #F8FAFC); border-radius: var(--radius-sm, 6px); border: 1px dashed var(--color-border, #CBD5E1); font-size: 0.75rem; color: var(--color-text-muted, #64748B); display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              💡 <strong>Instant Search:</strong> Type any case # (e.g. <code>CV/2026</code>), client name, advocate, legal citation, document title, or task.
+            </div>
+            <div style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--color-text-muted);">
+              Use ↑ ↓ to navigate • Enter to select
+            </div>
+          </div>
         </div>
       </div>
     `, 'modal-lg');
 
+    // Attach keyboard event handler for up/down navigation and auto-focus
     setTimeout(() => {
-      document.getElementById('global-modal-search-input')?.focus();
-    }, 100);
+      const input = document.getElementById('global-modal-search-input');
+      if (input) {
+        input.focus();
+        input.addEventListener('keydown', (e) => this.handleGlobalSearchKeyDown(e));
+      }
+    }, 80);
   },
 
-  handleGlobalSearchInput(val) {
+  setGlobalSearchFilter(category) {
+    this.globalSearchState.activeFilter = category;
+    const filterBar = document.getElementById('global-search-filter-bar');
+    if (filterBar) {
+      filterBar.querySelectorAll('.btn-search-filter').forEach(btn => {
+        if (btn.dataset.filter === category) {
+          btn.style.background = 'var(--color-primary, #0A192F)';
+          btn.style.color = '#FFFFFF';
+          btn.style.fontWeight = '700';
+          btn.classList.add('active');
+        } else {
+          btn.style.background = 'var(--color-surface, #FFFFFF)';
+          btn.style.color = 'var(--color-text-secondary, #475569)';
+          btn.style.fontWeight = '600';
+          btn.classList.remove('active');
+        }
+      });
+    }
+
+    const input = document.getElementById('global-modal-search-input');
+    if (input) {
+      this.executeGlobalSearch(input.value);
+    }
+  },
+
+  handleGlobalSearchKeyDown(e) {
+    const items = this.globalSearchState.renderedItems || [];
+    if (!items.length) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      this.globalSearchState.selectedIndex = (this.globalSearchState.selectedIndex + 1) % items.length;
+      this.updateGlobalSearchSelection();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      this.globalSearchState.selectedIndex = (this.globalSearchState.selectedIndex - 1 + items.length) % items.length;
+      this.updateGlobalSearchSelection();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const idx = this.globalSearchState.selectedIndex >= 0 ? this.globalSearchState.selectedIndex : 0;
+      const target = items[idx];
+      if (target && target.action) {
+        target.action();
+      }
+    }
+  },
+
+  updateGlobalSearchSelection() {
     const container = document.getElementById('global-search-results');
     if (!container) return;
 
+    container.querySelectorAll('.global-search-item').forEach((el, idx) => {
+      if (idx === this.globalSearchState.selectedIndex) {
+        el.style.backgroundColor = 'var(--color-surface-subtle, #F1F5F9)';
+        el.style.borderColor = 'var(--color-gold, #C89B3C)';
+        el.style.boxShadow = '0 0 0 1px var(--color-gold, #C89B3C)';
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } else {
+        el.style.backgroundColor = 'var(--color-surface-subtle, #F8FAFC)';
+        el.style.boxShadow = 'none';
+      }
+    });
+  },
+
+  handleGlobalSearchInput(val) {
+    if (this.globalSearchState.debounceTimer) {
+      clearTimeout(this.globalSearchState.debounceTimer);
+    }
+    this.globalSearchState.debounceTimer = setTimeout(() => {
+      this.executeGlobalSearch(val);
+    }, 120);
+  },
+
+  executeGlobalSearch(val) {
+    const container = document.getElementById('global-search-results');
+    if (!container) return;
+
+    this.globalSearchState.query = val || '';
+    this.globalSearchState.selectedIndex = -1;
+    this.globalSearchState.renderedItems = [];
+
+    // Empty query fallback: return to dashboard recommendations
     if (!val || val.trim() === '') {
-      container.innerHTML = `<div style="font-size: 0.82rem; color: var(--color-text-muted); text-align: center; padding: 2rem;">Type to search across cases, clients and documents...</div>`;
+      this.openGlobalSearch();
       return;
     }
 
-    const q = val.toLowerCase();
-    const matchCases = SLCMS_STATE.cases.filter(c => c.title.toLowerCase().includes(q) || c.caseNumber.toLowerCase().includes(q));
-    const matchClients = SLCMS_STATE.clients.filter(cl => cl.name.toLowerCase().includes(q));
-    const matchDocs = SLCMS_STATE.documents.filter(d => d.title.toLowerCase().includes(q) || d.fileName.toLowerCase().includes(q));
+    const q = val.trim().toLowerCase();
+    const activeFilter = this.globalSearchState.activeFilter || 'all';
+    const role = SLCMS_STATE.currentUser?.role || '';
+    const isLawyer = (function(u) {
+      if (!u) return false;
+      const r = String(u.role || '').toLowerCase();
+      const t = String(u.jobTitle || u.roleLabel || u.roleTitle || '').toLowerCase();
+      return r.includes('lawyer') || t.includes('lawyer') || r.includes('advocate') || t.includes('advocate');
+    })(SLCMS_STATE.currentUser);
+    const canSearchAIDrafting = role !== 'Lawyer' && role !== 'Administrator' && role !== 'Legal Officer' && role !== 'Client';
 
-    let resHTML = '';
+    // Helper: Relevance Scorer
+    const scoreItem = (primaryVals, secondaryVals, snippetVal = '') => {
+      let score = 0;
+      let matchedSnippet = '';
+      const tokens = q.split(/\s+/).filter(Boolean);
 
+      primaryVals.forEach(v => {
+        if (!v) return;
+        const str = String(v).toLowerCase();
+        if (str === q) score += 150;
+        else if (str.startsWith(q)) score += 90;
+        else if (str.includes(q)) score += 50;
+        tokens.forEach(t => { if (str.includes(t)) score += 15; });
+      });
+
+      secondaryVals.forEach(v => {
+        if (!v) return;
+        const str = String(v).toLowerCase();
+        if (str === q) score += 40;
+        else if (str.startsWith(q)) score += 25;
+        else if (str.includes(q)) score += 15;
+        tokens.forEach(t => { if (str.includes(t)) score += 8; });
+        if (!matchedSnippet && str.includes(q)) {
+          matchedSnippet = String(v);
+        }
+      });
+
+      if (snippetVal && !matchedSnippet) {
+        const sStr = String(snippetVal).toLowerCase();
+        if (sStr.includes(q)) {
+          score += 12;
+          const matchPos = sStr.indexOf(q);
+          const start = Math.max(0, matchPos - 40);
+          const end = Math.min(sStr.length, matchPos + q.length + 60);
+          matchedSnippet = (start > 0 ? '...' : '') + snippetVal.substring(start, end) + (end < sStr.length ? '...' : '');
+        }
+      }
+
+      return { score, matchedSnippet };
+    };
+
+    // 1. CASES
+    const matchCases = [];
+    if (activeFilter === 'all' || activeFilter === 'cases') {
+      (SLCMS_STATE.cases || []).forEach(c => {
+        const primary = [c.title, c.caseNumber, c.client];
+        const secondary = [c.court, c.judge, c.status, c.priority, c.category, c.assignedAdvocate || c.advocateName, c.filingDate];
+        const { score, matchedSnippet } = scoreItem(primary, secondary, c.description);
+        if (score > 0) {
+          matchCases.push({ item: c, score, snippet: matchedSnippet });
+        }
+      });
+      matchCases.sort((a, b) => b.score - a.score);
+    }
+
+    // 2. CLIENTS
+    const matchClients = [];
+    if (activeFilter === 'all' || activeFilter === 'clients') {
+      (SLCMS_STATE.clients || []).forEach(cl => {
+        const primary = [cl.name, cl.company, cl.email];
+        const secondary = [cl.phone, cl.type, cl.tin, cl.contactPerson, cl.address, cl.notes];
+        const { score, matchedSnippet } = scoreItem(primary, secondary, cl.address || cl.notes);
+        if (score > 0) {
+          matchClients.push({ item: cl, score, snippet: matchedSnippet });
+        }
+      });
+      matchClients.sort((a, b) => b.score - a.score);
+    }
+
+    // 3. DOCUMENTS
+    const matchDocs = [];
+    if (activeFilter === 'all' || activeFilter === 'documents') {
+      (SLCMS_STATE.documents || []).forEach(d => {
+        const primary = [d.title, d.fileName, d.caseNumber];
+        const secondary = [d.clientName, d.fileType, d.category, d.accessLevel, d.uploadedBy, d.tags];
+        const { score, matchedSnippet } = scoreItem(primary, secondary, d.description || d.tags);
+        if (score > 0) {
+          matchDocs.push({ item: d, score, snippet: matchedSnippet });
+        }
+      });
+      matchDocs.sort((a, b) => b.score - a.score);
+    }
+
+    // 4. TASKS
+    const matchTasks = [];
+    if (activeFilter === 'all' || activeFilter === 'tasks') {
+      (SLCMS_STATE.tasks || []).forEach(t => {
+        const primary = [t.title, t.caseNumber, t.assignedTo];
+        const secondary = [t.caseTitle, t.priority, t.status, t.dueDate, t.category];
+        const { score, matchedSnippet } = scoreItem(primary, secondary, t.description);
+        if (score > 0) {
+          matchTasks.push({ item: t, score, snippet: matchedSnippet });
+        }
+      });
+      matchTasks.sort((a, b) => b.score - a.score);
+    }
+
+    // 5. HEARINGS & STATUTORY DEADLINES
+    const matchHearings = [];
+    if (activeFilter === 'all' || activeFilter === 'hearings') {
+      const allHearings = (typeof TasksView !== 'undefined' && Array.isArray(TasksView.courtEvents) && TasksView.courtEvents.length > 0)
+        ? TasksView.courtEvents
+        : ((SLCMS_STATE.deadlines || []).concat(SLCMS_STATE.courtAttendances || []));
+
+      allHearings.forEach(h => {
+        const primary = [h.title, h.caseNumber, h.court];
+        const secondary = [h.presiding || h.judge, h.advocate || h.assignedTo, h.type, h.date, h.time, h.statute || h.statutoryReference];
+        const { score, matchedSnippet } = scoreItem(primary, secondary, h.description || h.instructions);
+        if (score > 0) {
+          matchHearings.push({ item: h, score, snippet: matchedSnippet });
+        }
+      });
+      matchHearings.sort((a, b) => b.score - a.score);
+    }
+
+    // 6. TANZANIAN PRECEDENTS & JUDICIAL REPOSITORY
+    const matchPrecedents = [];
+    if (activeFilter === 'all' || activeFilter === 'precedents') {
+      (SLCMS_STATE.tanzaniaJudgments || []).forEach(j => {
+        const primary = [j.title, j.citation, j.caseNumber];
+        const secondary = [j.court, j.category, j.year, j.judge || j.coram, j.tier];
+        const snippetText = (typeof j.ratio === 'string' ? j.ratio : '') ||
+                            (typeof j.bindingPrinciple === 'string' ? j.bindingPrinciple : '') ||
+                            (typeof j.summary === 'string' ? j.summary : '');
+        const { score, matchedSnippet } = scoreItem(primary, secondary, snippetText);
+        if (score > 0) {
+          matchPrecedents.push({ item: j, score, snippet: matchedSnippet });
+        }
+      });
+      matchPrecedents.sort((a, b) => b.score - a.score);
+    }
+
+    // 7. AI DRAFTS & SAVED AI DOCUMENTS
+    const matchDrafts = [];
+    if (canSearchAIDrafting && (activeFilter === 'all' || activeFilter === 'drafts')) {
+      const aiDocs = (typeof AIAssistantView !== 'undefined' && Array.isArray(AIAssistantView.myDocuments))
+        ? AIAssistantView.myDocuments
+        : [];
+      const draftsCombined = [...(SLCMS_STATE.legalDrafts || [])];
+      aiDocs.forEach(ad => {
+        if (!draftsCombined.some(d => d.id === ad.id)) draftsCombined.push(ad);
+      });
+
+      draftsCombined.forEach(drf => {
+        const primary = [drf.title, drf.documentType || drf.docType, drf.caseNumber];
+        const secondary = [drf.clientName, drf.court, drf.status, drf.draftingLawyer, drf.language];
+        const { score, matchedSnippet } = scoreItem(primary, secondary, drf.content || drf.preview);
+        if (score > 0) {
+          matchDrafts.push({ item: drf, score, snippet: matchedSnippet });
+        }
+      });
+      matchDrafts.sort((a, b) => b.score - a.score);
+    }
+
+    // 8. STAFF & ADVOCATES
+    const matchStaff = [];
+    if (activeFilter === 'all' || activeFilter === 'staff') {
+      (SLCMS_STATE.users || []).forEach(u => {
+        const primary = [u.name || u.full_name, u.username, u.email];
+        const secondary = [u.phone, u.role, u.jobTitle, u.department, u.advocateNumber, u.practisingCertNo, u.staffId || u.employeeId];
+        const { score, matchedSnippet } = scoreItem(primary, secondary, u.department || u.bio);
+        if (score > 0) {
+          matchStaff.push({ item: u, score, snippet: matchedSnippet });
+        }
+      });
+      matchStaff.sort((a, b) => b.score - a.score);
+    }
+
+    // 9. MATCHING SYSTEM QUICK ACTIONS (Smart Navigation Commands)
+    const quickActions = [
+      ...(!isLawyer ? [{
+        title: 'Register New Legal Matter (Case)',
+        keywords: ['new case', 'add case', 'create case', 'file case', 'matter', 'register case'],
+        action: () => { App.closeModal(); if (typeof CasesView !== 'undefined' && CasesView.openNewCaseModal) CasesView.openNewCaseModal(); else App.navigate('cases'); },
+        badge: 'ACTION',
+        icon: '⚖️'
+      }] : []),
+      ...(!isLawyer ? [{
+        title: 'Create Statutory Task / Deliverable',
+        keywords: ['new task', 'add task', 'create task', 'assign task', 'todo', 'deliverable'],
+        action: () => { App.closeModal(); if (typeof TasksView !== 'undefined' && TasksView.openNewTaskModal) TasksView.openNewTaskModal(); else App.navigate('tasks'); },
+        badge: 'ACTION',
+        icon: '📝'
+      }] : []),
+      {
+        title: 'Schedule Court Appearance / Deadline',
+        keywords: ['hearing', 'schedule hearing', 'court date', 'deadline', 'appearance', 'docket'],
+        action: () => { App.closeModal(); if (typeof TasksView !== 'undefined' && TasksView.openAddDeadlineModal) TasksView.openAddDeadlineModal(); else App.navigate('tasks'); },
+        badge: 'ACTION',
+        icon: '🏛️'
+      },
+      ...(canSearchAIDrafting ? [{
+        title: 'Launch AI Legal Drafting Studio',
+        keywords: ['ai draft', 'draft', 'pleading', 'affidavit', 'plaint', 'summons', 'chamber', 'generate document'],
+        action: () => { App.closeModal(); App.navigate('ai-drafting'); },
+        badge: 'AI STUDIO',
+        icon: '⚡'
+      }] : []),
+      {
+        title: 'Search Judicial Precedents & Judgments',
+        keywords: ['precedent', 'judgment', 'case library', 'law report', 'coram', 'case law', 'ratio'],
+        action: () => { App.closeModal(); App.navigate('case-library'); },
+        badge: 'LIBRARY',
+        icon: '📚'
+      },
+      {
+        title: 'Open Clients Management Directory',
+        keywords: ['client', 'client directory', 'customer', 'corporate client'],
+        action: () => { App.closeModal(); App.navigate('clients'); },
+        badge: 'DIRECTORY',
+        icon: '👥'
+      },
+      {
+        title: 'Upload Legal Document to Vault',
+        keywords: ['upload document', 'add document', 'upload file', 'vault', 'filing upload'],
+        action: () => { App.closeModal(); if (typeof DocumentsView !== 'undefined' && DocumentsView.openUploadModal) DocumentsView.openUploadModal(); else App.navigate('documents'); },
+        badge: 'ACTION',
+        icon: '📁'
+      },
+      {
+        title: 'System Settings & Firm Configuration',
+        keywords: ['settings', 'config', 'configuration', 'firm settings', 'security settings'],
+        action: () => { App.closeModal(); App.navigate('admin-settings'); },
+        badge: 'ADMIN',
+        icon: '⚙️'
+      },
+      {
+        title: 'Security Audit & Activity Logs',
+        keywords: ['audit', 'logs', 'activity logs', 'security audit', 'access log'],
+        action: () => { App.closeModal(); App.navigate('activity-logs'); },
+        badge: 'AUDIT',
+        icon: '🛡️'
+      },
+      {
+        title: 'Database Backup & System Snapshots',
+        keywords: ['backup', 'database backup', 'snapshot', 'restore', 'export database'],
+        action: () => { App.closeModal(); App.navigate('admin-backup'); },
+        badge: 'BACKUP',
+        icon: '💾'
+      }
+    ];
+
+    const matchQuickActions = quickActions.filter(qa => {
+      return qa.keywords.some(k => k.includes(q) || q.includes(k)) || qa.title.toLowerCase().includes(q);
+    });
+
+    // Total Count
+    const totalCount = matchQuickActions.length + matchCases.length + matchClients.length + matchDocs.length +
+                       matchTasks.length + matchHearings.length + matchPrecedents.length + matchDrafts.length + matchStaff.length;
+
+    if (totalCount === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 3rem 1.5rem; background: var(--color-surface, #FFFFFF);">
+          <div style="width: 56px; height: 56px; margin: 0 auto 1rem auto; border-radius: 50%; background: var(--color-surface-subtle, #F1F5F9); display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: var(--color-text-muted, #64748B);">
+            🔍
+          </div>
+          <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary, #0A192F); margin-bottom: 0.35rem;">
+            No records found for "${this.escapeSearchHtml(val)}"
+          </h3>
+          <p style="font-size: 0.84rem; color: var(--color-text-muted, #64748B); max-width: 480px; margin: 0 auto 1.5rem auto; line-height: 1.5;">
+            We searched across all active matters, clients, documents, statutory tasks, court hearings, judicial precedents, and staff profiles.
+          </p>
+          <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="App.setGlobalSearchFilter('all')">Switch to "All" Category</button>
+            ${isLawyer ? '' : `<button class="btn btn-gold btn-sm" onclick="App.closeModal(); if (typeof CasesView !== 'undefined' && CasesView.openNewCaseModal) CasesView.openNewCaseModal(); else App.navigate('cases');">Register New Matter</button>`}
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    // Build Rendered HTML
+    let resHTML = `
+      <div style="font-size: 0.74rem; font-weight: 700; color: var(--color-text-muted, #64748B); margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between;">
+        <span>Found <strong>${totalCount}</strong> matching result${totalCount !== 1 ? 's' : ''} across firm records</span>
+        <span style="font-size: 0.7rem; color: var(--color-gold, #C89B3C); font-weight: 600;">Ranked by relevance</span>
+      </div>
+    `;
+
+    // Render Quick Actions
+    if (matchQuickActions.length) {
+      resHTML += `
+        <div style="margin-bottom: 1.25rem;">
+          <div style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-gold, #C89B3C); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.3rem;">
+            <span>⚡ QUICK WORKFLOW ACTIONS</span>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            ${matchQuickActions.map(qa => {
+              const itemIdx = this.globalSearchState.renderedItems.length;
+              this.globalSearchState.renderedItems.push({ action: qa.action });
+              return `
+                <div class="global-search-item p-2 flex items-center justify-between"
+                     style="background: var(--color-surface-subtle, #F8FAFC); border-left: 3px solid var(--color-gold, #C89B3C); border-radius: var(--radius-sm, 6px); cursor: pointer; transition: all 0.15s;"
+                     onclick="App.navigateToGlobalSearchResult(${itemIdx})">
+                  <div class="flex items-center gap-2.5">
+                    <span style="font-size: 1.2rem;">${qa.icon}</span>
+                    <div>
+                      <strong style="font-size: 0.86rem; color: var(--color-primary, #0A192F);">${this.highlightSearchMatch(qa.title, val)}</strong>
+                      <div style="font-size: 0.72rem; color: var(--color-text-secondary, #475569);">Instant platform action</div>
+                    </div>
+                  </div>
+                  <span class="badge badge-gold" style="font-size: 0.68rem; font-weight: 700;">${qa.badge}</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Render Cases
     if (matchCases.length) {
       resHTML += `
-        <div style="font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted); margin-bottom: 0.35rem;">CASES (${matchCases.length})</div>
-        <div class="flex flex-col gap-1.5" style="margin-bottom: 1rem;">
-          ${matchCases.map(c => `
-            <div class="p-2 flex items-center justify-between" style="background: var(--color-surface-subtle); border-radius: var(--radius-sm); cursor: pointer;" onclick="App.closeModal(); CasesView.openCaseDetails('${c.id}')">
-              <div><strong>${c.title}</strong> <span style="font-size: 0.72rem; color: var(--color-gold); font-family: var(--font-mono);">${c.caseNumber}</span></div>
-              <span class="badge badge-priority-${c.priority.toLowerCase()}">${c.priority}</span>
-            </div>
-          `).join('')}
+        <div style="margin-bottom: 1.25rem;">
+          <div style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-primary, #0A192F); margin-bottom: 0.4rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>⚖️ LEGAL CASES &amp; MATTERS (${matchCases.length})</span>
+            <span style="font-size: 0.7rem; color: var(--color-gold, #C89B3C); cursor: pointer;" onclick="App.closeModal(); App.navigate('cases')">View Cases →</span>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            ${matchCases.slice(0, 5).map(({ item: c, snippet }) => {
+              const itemIdx = this.globalSearchState.renderedItems.length;
+              this.globalSearchState.renderedItems.push({
+                action: () => { App.closeModal(); CasesView.openCaseDetails(c.id); }
+              });
+              return `
+                <div class="global-search-item p-2 flex items-center justify-between"
+                     style="background: var(--color-surface-subtle, #F8FAFC); border-left: 3px solid var(--color-gold, #C89B3C); border-radius: var(--radius-sm, 6px); cursor: pointer; transition: all 0.15s;"
+                     onclick="App.navigateToGlobalSearchResult(${itemIdx})">
+                  <div style="min-width: 0; padding-right: 0.75rem;">
+                    <div class="flex items-center gap-2">
+                      <strong style="font-size: 0.86rem; color: var(--color-primary, #0A192F); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        ${this.highlightSearchMatch(c.title, val)}
+                      </strong>
+                    </div>
+                    <div style="font-size: 0.73rem; color: var(--color-text-secondary, #475569); display: flex; align-items: center; gap: 0.4rem; margin-top: 0.15rem; flex-wrap: wrap;">
+                      <span style="font-family: var(--font-mono); color: var(--color-gold); font-weight: 700;">
+                        ${this.highlightSearchMatch(c.caseNumber, val)}
+                      </span>
+                      <span>•</span>
+                      <span>Client: ${this.highlightSearchMatch(c.client, val)}</span>
+                      ${c.court ? `<span>•</span><span>${this.highlightSearchMatch(c.court, val)}</span>` : ''}
+                      ${c.judge ? `<span>•</span><span>Coram: ${this.highlightSearchMatch(c.judge, val)}</span>` : ''}
+                    </div>
+                    ${snippet ? `
+                      <div style="font-size: 0.71rem; color: var(--color-text-muted, #64748B); margin-top: 0.2rem; font-style: italic; background: rgba(0,0,0,0.02); padding: 0.15rem 0.4rem; border-radius: 3px;">
+                        ${this.highlightSearchMatch(snippet, val)}
+                      </div>
+                    ` : ''}
+                  </div>
+                  <div class="flex items-center gap-2" style="flex-shrink: 0;">
+                    <span class="badge badge-priority-${(c.priority || 'medium').toLowerCase()}">${c.priority || 'Normal'}</span>
+                    <span class="badge badge-${(c.status || 'active').toLowerCase().replace(/\s+/g, '')}">${c.status || 'Active'}</span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
         </div>
       `;
     }
 
+    // Render Clients
     if (matchClients.length) {
       resHTML += `
-        <div style="font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted); margin-bottom: 0.35rem;">CLIENTS (${matchClients.length})</div>
-        <div class="flex flex-col gap-1.5" style="margin-bottom: 1rem;">
-          ${matchClients.map(cl => `
-            <div class="p-2 flex items-center justify-between" style="background: var(--color-surface-subtle); border-radius: var(--radius-sm); cursor: pointer;" onclick="App.closeModal(); ClientsView.openClientProfile('${cl.id}')">
-              <div><strong>${cl.name}</strong> <span style="font-size: 0.72rem; color: var(--color-text-muted);">(${cl.type})</span></div>
-              <span style="font-size: 0.75rem;">$${cl.totalBilled.toLocaleString()} Billed</span>
-            </div>
-          `).join('')}
+        <div style="margin-bottom: 1.25rem;">
+          <div style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #2563EB; margin-bottom: 0.4rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>👥 CLIENTS DIRECTORY (${matchClients.length})</span>
+            <span style="font-size: 0.7rem; color: #2563EB; cursor: pointer;" onclick="App.closeModal(); App.navigate('clients')">View Clients →</span>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            ${matchClients.slice(0, 5).map(({ item: cl, snippet }) => {
+              const itemIdx = this.globalSearchState.renderedItems.length;
+              this.globalSearchState.renderedItems.push({
+                action: () => { App.closeModal(); ClientsView.openClientProfile(cl.id); }
+              });
+              return `
+                <div class="global-search-item p-2 flex items-center justify-between"
+                     style="background: var(--color-surface-subtle, #F8FAFC); border-left: 3px solid #3B82F6; border-radius: var(--radius-sm, 6px); cursor: pointer; transition: all 0.15s;"
+                     onclick="App.navigateToGlobalSearchResult(${itemIdx})">
+                  <div style="min-width: 0; padding-right: 0.75rem;">
+                    <strong style="font-size: 0.86rem; color: var(--color-primary, #0A192F);">
+                      ${this.highlightSearchMatch(cl.name, val)}
+                    </strong>
+                    <div style="font-size: 0.73rem; color: var(--color-text-secondary, #475569); display: flex; align-items: center; gap: 0.4rem; margin-top: 0.15rem; flex-wrap: wrap;">
+                      <span class="badge" style="background: rgba(59,130,246,0.12); color: #2563EB; font-size: 0.68rem;">${cl.type || 'Individual'}</span>
+                      ${cl.email ? `<span>•</span><span>${this.highlightSearchMatch(cl.email, val)}</span>` : ''}
+                      ${cl.phone ? `<span>•</span><span>${this.highlightSearchMatch(cl.phone, val)}</span>` : ''}
+                      ${cl.company ? `<span>•</span><span>Company: ${this.highlightSearchMatch(cl.company, val)}</span>` : ''}
+                    </div>
+                    ${snippet ? `
+                      <div style="font-size: 0.71rem; color: var(--color-text-muted, #64748B); margin-top: 0.2rem; font-style: italic;">
+                        ${this.highlightSearchMatch(snippet, val)}
+                      </div>
+                    ` : ''}
+                  </div>
+                  <div style="text-align: right; flex-shrink: 0;">
+                    <div style="font-size: 0.78rem; font-weight: 700; color: var(--color-primary, #0A192F);">
+                      ${cl.totalBilled ? `$${cl.totalBilled.toLocaleString()}` : 'Active Client'}
+                    </div>
+                    <span style="font-size: 0.7rem; color: var(--color-text-muted, #64748B);">${cl.activeCases || 0} active matter(s)</span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
         </div>
       `;
     }
 
+    // Render Documents
     if (matchDocs.length) {
       resHTML += `
-        <div style="font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted); margin-bottom: 0.35rem;">DOCUMENTS (${matchDocs.length})</div>
-        <div class="flex flex-col gap-1.5">
-          ${matchDocs.map(d => `
-            <div class="p-2 flex items-center justify-between" style="background: var(--color-surface-subtle); border-radius: var(--radius-sm); cursor: pointer;" onclick="App.closeModal(); DocumentsView.previewDocument('${d.id}')">
-              <div><strong>${d.title}</strong> <div style="font-size: 0.7rem; color: var(--color-text-muted);">${d.fileName}</div></div>
-              <span class="badge badge-confidential">${d.accessLevel}</span>
-            </div>
-          `).join('')}
+        <div style="margin-bottom: 1.25rem;">
+          <div style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #0284C7; margin-bottom: 0.4rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>📁 DOCUMENT VAULT (${matchDocs.length})</span>
+            <span style="font-size: 0.7rem; color: #0284C7; cursor: pointer;" onclick="App.closeModal(); App.navigate('documents')">View Vault →</span>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            ${matchDocs.slice(0, 5).map(({ item: d, snippet }) => {
+              const itemIdx = this.globalSearchState.renderedItems.length;
+              this.globalSearchState.renderedItems.push({
+                action: () => { App.closeModal(); DocumentsView.previewDocument(d.id); }
+              });
+              return `
+                <div class="global-search-item p-2 flex items-center justify-between"
+                     style="background: var(--color-surface-subtle, #F8FAFC); border-left: 3px solid #0EA5E9; border-radius: var(--radius-sm, 6px); cursor: pointer; transition: all 0.15s;"
+                     onclick="App.navigateToGlobalSearchResult(${itemIdx})">
+                  <div style="min-width: 0; padding-right: 0.75rem;">
+                    <strong style="font-size: 0.86rem; color: var(--color-primary, #0A192F);">
+                      ${this.highlightSearchMatch(d.title, val)}
+                    </strong>
+                    <div style="font-size: 0.73rem; color: var(--color-text-secondary, #475569); display: flex; align-items: center; gap: 0.4rem; margin-top: 0.15rem; flex-wrap: wrap;">
+                      <span style="font-family: var(--font-mono); color: var(--color-text-muted); font-size: 0.7rem;">${this.highlightSearchMatch(d.fileName, val)}</span>
+                      ${d.caseNumber ? `<span>•</span><span style="color: var(--color-gold); font-family: var(--font-mono); font-weight: 600;">${this.highlightSearchMatch(d.caseNumber, val)}</span>` : ''}
+                      ${d.uploadedBy ? `<span>•</span><span>Uploaded by ${this.highlightSearchMatch(d.uploadedBy, val)}</span>` : ''}
+                    </div>
+                    ${snippet ? `
+                      <div style="font-size: 0.71rem; color: var(--color-text-muted, #64748B); margin-top: 0.2rem; font-style: italic;">
+                        ${this.highlightSearchMatch(snippet, val)}
+                      </div>
+                    ` : ''}
+                  </div>
+                  <div class="flex items-center gap-2" style="flex-shrink: 0;">
+                    <span class="badge badge-confidential" style="font-size: 0.68rem;">${d.accessLevel || 'CONFIDENTIAL'}</span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
         </div>
       `;
     }
 
-    if (!matchCases.length && !matchClients.length && !matchDocs.length) {
-      resHTML = `<div style="text-align: center; padding: 2rem; color: var(--color-text-muted);">No records found matching "${val}"</div>`;
+    // Render Tasks
+    if (matchTasks.length) {
+      resHTML += `
+        <div style="margin-bottom: 1.25rem;">
+          <div style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #7C3AED; margin-bottom: 0.4rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>✅ TASKS &amp; DELIVERABLES (${matchTasks.length})</span>
+            <span style="font-size: 0.7rem; color: #7C3AED; cursor: pointer;" onclick="App.closeModal(); App.navigate('tasks')">View Tasks →</span>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            ${matchTasks.slice(0, 5).map(({ item: t, snippet }) => {
+              const itemIdx = this.globalSearchState.renderedItems.length;
+              this.globalSearchState.renderedItems.push({
+                action: () => {
+                  App.closeModal();
+                  if (typeof TasksView !== 'undefined' && TasksView.openTaskDetailsModal) {
+                    TasksView.openTaskDetailsModal(t.id);
+                  } else {
+                    App.navigate('tasks');
+                  }
+                }
+              });
+              return `
+                <div class="global-search-item p-2 flex items-center justify-between"
+                     style="background: var(--color-surface-subtle, #F8FAFC); border-left: 3px solid #8B5CF6; border-radius: var(--radius-sm, 6px); cursor: pointer; transition: all 0.15s;"
+                     onclick="App.navigateToGlobalSearchResult(${itemIdx})">
+                  <div style="min-width: 0; padding-right: 0.75rem;">
+                    <strong style="font-size: 0.86rem; color: var(--color-primary, #0A192F);">
+                      ${this.highlightSearchMatch(t.title, val)}
+                    </strong>
+                    <div style="font-size: 0.73rem; color: var(--color-text-secondary, #475569); display: flex; align-items: center; gap: 0.4rem; margin-top: 0.15rem; flex-wrap: wrap;">
+                      <span>Assigned: ${this.highlightSearchMatch(t.assignedTo, val)}</span>
+                      ${t.caseNumber ? `<span>•</span><span style="font-family: var(--font-mono); color: var(--color-gold); font-weight: 600;">${this.highlightSearchMatch(t.caseNumber, val)}</span>` : ''}
+                      ${t.dueDate ? `<span>•</span><span style="color: var(--color-danger); font-family: var(--font-mono); font-weight: 600;">Due: ${t.dueDate}</span>` : ''}
+                    </div>
+                    ${snippet ? `
+                      <div style="font-size: 0.71rem; color: var(--color-text-muted, #64748B); margin-top: 0.2rem; font-style: italic;">
+                        ${this.highlightSearchMatch(snippet, val)}
+                      </div>
+                    ` : ''}
+                  </div>
+                  <div class="flex items-center gap-2" style="flex-shrink: 0;">
+                    <span class="badge badge-priority-${(t.priority || 'medium').toLowerCase()}">${t.priority || 'Medium'}</span>
+                    <span class="badge ${t.status === 'completed' ? 'badge-active' : 'badge-onhold'}" style="font-size: 0.68rem;">${t.status}</span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Render Hearings & Statutory Appearances
+    if (matchHearings.length) {
+      resHTML += `
+        <div style="margin-bottom: 1.25rem;">
+          <div style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #D97706; margin-bottom: 0.4rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>🏛️ COURT HEARINGS &amp; STATUTORY DEADLINES (${matchHearings.length})</span>
+            <span style="font-size: 0.7rem; color: #D97706; cursor: pointer;" onclick="App.closeModal(); App.navigate('tasks')">Open Calendar →</span>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            ${matchHearings.slice(0, 5).map(({ item: h, snippet }) => {
+              const itemIdx = this.globalSearchState.renderedItems.length;
+              this.globalSearchState.renderedItems.push({
+                action: () => {
+                  App.closeModal();
+                  if (typeof TasksView !== 'undefined' && TasksView.openEventDetails) {
+                    TasksView.openEventDetails(h.id);
+                  } else {
+                    App.navigate('tasks');
+                  }
+                }
+              });
+              return `
+                <div class="global-search-item p-2 flex items-center justify-between"
+                     style="background: var(--color-surface-subtle, #F8FAFC); border-left: 3px solid #F59E0B; border-radius: var(--radius-sm, 6px); cursor: pointer; transition: all 0.15s;"
+                     onclick="App.navigateToGlobalSearchResult(${itemIdx})">
+                  <div style="min-width: 0; padding-right: 0.75rem;">
+                    <strong style="font-size: 0.86rem; color: var(--color-primary, #0A192F);">
+                      ${this.highlightSearchMatch(h.title, val)}
+                    </strong>
+                    <div style="font-size: 0.73rem; color: var(--color-text-secondary, #475569); display: flex; align-items: center; gap: 0.4rem; margin-top: 0.15rem; flex-wrap: wrap;">
+                      <span style="font-family: var(--font-mono); color: var(--color-gold); font-weight: 600;">${this.highlightSearchMatch(h.caseNumber, val)}</span>
+                      ${h.court ? `<span>•</span><span>${this.highlightSearchMatch(h.court, val)}</span>` : ''}
+                      ${h.presiding ? `<span>•</span><span>Judge: ${this.highlightSearchMatch(h.presiding, val)}</span>` : ''}
+                      ${h.statute ? `<span>•</span><span style="color: #B45309; font-weight: 600;">${this.highlightSearchMatch(h.statute, val)}</span>` : ''}
+                    </div>
+                    ${snippet ? `
+                      <div style="font-size: 0.71rem; color: var(--color-text-muted, #64748B); margin-top: 0.2rem; font-style: italic;">
+                        ${this.highlightSearchMatch(snippet, val)}
+                      </div>
+                    ` : ''}
+                  </div>
+                  <div style="text-align: right; flex-shrink: 0;">
+                    <span class="badge" style="background: rgba(245,158,11,0.15); color: #B45309; font-weight: 700; font-family: var(--font-mono); font-size: 0.72rem;">
+                      ${h.date || h.time || 'Scheduled'}
+                    </span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Render Tanzanian Precedents & Judgments
+    if (matchPrecedents.length) {
+      resHTML += `
+        <div style="margin-bottom: 1.25rem;">
+          <div style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #DC2626; margin-bottom: 0.4rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>📚 TANZANIAN JUDICIAL PRECEDENTS (${matchPrecedents.length})</span>
+            <span style="font-size: 0.7rem; color: #DC2626; cursor: pointer;" onclick="App.closeModal(); App.navigate('case-library')">Browse Library →</span>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            ${matchPrecedents.slice(0, 5).map(({ item: j, snippet }) => {
+              const itemIdx = this.globalSearchState.renderedItems.length;
+              this.globalSearchState.renderedItems.push({
+                action: () => {
+                  App.closeModal();
+                  if (typeof CaseLibraryView !== 'undefined' && CaseLibraryView.openDetail) {
+                    CaseLibraryView.openDetail(j.id);
+                  } else {
+                    App.navigate('case-library');
+                  }
+                }
+              });
+              return `
+                <div class="global-search-item p-2 flex items-center justify-between"
+                     style="background: var(--color-surface-subtle, #F8FAFC); border-left: 3px solid #EF4444; border-radius: var(--radius-sm, 6px); cursor: pointer; transition: all 0.15s;"
+                     onclick="App.navigateToGlobalSearchResult(${itemIdx})">
+                  <div style="min-width: 0; padding-right: 0.75rem;">
+                    <strong style="font-size: 0.86rem; color: var(--color-primary, #0A192F);">
+                      ${this.highlightSearchMatch(j.title, val)}
+                    </strong>
+                    <div style="font-size: 0.73rem; color: var(--color-text-secondary, #475569); display: flex; align-items: center; gap: 0.4rem; margin-top: 0.15rem; flex-wrap: wrap;">
+                      <span class="badge badge-gold" style="font-size: 0.68rem; font-family: var(--font-mono);">${this.highlightSearchMatch(j.citation || j.year, val)}</span>
+                      <span>•</span>
+                      <span>${this.highlightSearchMatch(j.court || 'Court of Appeal', val)}</span>
+                      ${j.judge || j.coram ? `<span>•</span><span>Coram: ${this.highlightSearchMatch(j.judge || j.coram, val)}</span>` : ''}
+                      ${j.category ? `<span>•</span><span>${j.category}</span>` : ''}
+                    </div>
+                    ${snippet ? `
+                      <div style="font-size: 0.71rem; color: var(--color-text-muted, #64748B); margin-top: 0.2rem; font-style: italic; background: rgba(0,0,0,0.02); padding: 0.2rem 0.4rem; border-radius: 3px;">
+                        Ratio / Principle: ${this.highlightSearchMatch(snippet, val)}
+                      </div>
+                    ` : ''}
+                  </div>
+                  <div class="flex items-center gap-1.5" style="flex-shrink: 0;">
+                    <span class="badge" style="background: rgba(239,68,68,0.12); color: #DC2626; font-size: 0.68rem; font-weight: 700;">PRECEDENT</span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Render AI Drafts
+    if (matchDrafts.length) {
+      resHTML += `
+        <div style="margin-bottom: 1.25rem;">
+          <div style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #059669; margin-bottom: 0.4rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>⚡ AI LEGAL DRAFTS &amp; DOCUMENTS (${matchDrafts.length})</span>
+            <span style="font-size: 0.7rem; color: #059669; cursor: pointer;" onclick="App.closeModal(); App.navigate('ai-drafting')">Drafting Studio →</span>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            ${matchDrafts.slice(0, 5).map(({ item: d, snippet }) => {
+              const itemIdx = this.globalSearchState.renderedItems.length;
+              this.globalSearchState.renderedItems.push({
+                action: () => {
+                  App.closeModal();
+                  if (typeof AIAssistantView !== 'undefined' && AIAssistantView.openSavedDocument && d.docType) {
+                    AIAssistantView.openSavedDocument(d.id);
+                  } else if (typeof AIDraftAssistantView !== 'undefined' && AIDraftAssistantView.loadArchivedDraft) {
+                    AIDraftAssistantView.loadArchivedDraft(d.id);
+                  } else {
+                    App.navigate('ai-drafting');
+                  }
+                }
+              });
+              return `
+                <div class="global-search-item p-2 flex items-center justify-between"
+                     style="background: var(--color-surface-subtle, #F8FAFC); border-left: 3px solid #10B981; border-radius: var(--radius-sm, 6px); cursor: pointer; transition: all 0.15s;"
+                     onclick="App.navigateToGlobalSearchResult(${itemIdx})">
+                  <div style="min-width: 0; padding-right: 0.75rem;">
+                    <strong style="font-size: 0.86rem; color: var(--color-primary, #0A192F);">
+                      ${this.highlightSearchMatch(d.title, val)}
+                    </strong>
+                    <div style="font-size: 0.73rem; color: var(--color-text-secondary, #475569); display: flex; align-items: center; gap: 0.4rem; margin-top: 0.15rem; flex-wrap: wrap;">
+                      <span class="badge" style="background: rgba(16,185,129,0.12); color: #059669; font-size: 0.68rem; font-weight: 700;">${d.documentType || d.docType || 'AI Draft'}</span>
+                      ${d.caseNumber ? `<span>•</span><span style="font-family: var(--font-mono); color: var(--color-gold); font-weight: 600;">${this.highlightSearchMatch(d.caseNumber, val)}</span>` : ''}
+                      ${d.clientName ? `<span>•</span><span>Client: ${this.highlightSearchMatch(d.clientName, val)}</span>` : ''}
+                      ${d.court ? `<span>•</span><span>${d.court}</span>` : ''}
+                    </div>
+                    ${snippet ? `
+                      <div style="font-size: 0.71rem; color: var(--color-text-muted, #64748B); margin-top: 0.2rem; font-style: italic;">
+                        ${this.highlightSearchMatch(snippet, val)}
+                      </div>
+                    ` : ''}
+                  </div>
+                  <span class="badge ${d.status === 'Approved' ? 'badge-active' : 'badge-gold'}" style="font-size: 0.68rem;">
+                    ${d.status || 'Draft'}
+                  </span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Render Staff & Advocates
+    if (matchStaff.length) {
+      resHTML += `
+        <div style="margin-bottom: 1.25rem;">
+          <div style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #4F46E5; margin-bottom: 0.4rem; display: flex; align-items: center; justify-content: space-between;">
+            <span>👤 ADVOCATES &amp; STAFF MEMBERS (${matchStaff.length})</span>
+            <span style="font-size: 0.7rem; color: #4F46E5; cursor: pointer;" onclick="App.closeModal(); if (SLCMS_STATE.currentUser?.role === 'Administrator') App.navigate('admin-users');">View Directory →</span>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            ${matchStaff.slice(0, 5).map(({ item: u, snippet }) => {
+              const itemIdx = this.globalSearchState.renderedItems.length;
+              this.globalSearchState.renderedItems.push({
+                action: () => {
+                  App.closeModal();
+                  if (SLCMS_STATE.currentUser?.role === 'Administrator') {
+                    App.navigate('admin-users');
+                  } else {
+                    App.showToast(`Advocate: ${u.name || u.full_name} (${u.role || u.jobTitle})`, 'info');
+                  }
+                }
+              });
+              return `
+                <div class="global-search-item p-2 flex items-center justify-between"
+                     style="background: var(--color-surface-subtle, #F8FAFC); border-left: 3px solid #6366F1; border-radius: var(--radius-sm, 6px); cursor: pointer; transition: all 0.15s;"
+                     onclick="App.navigateToGlobalSearchResult(${itemIdx})">
+                  <div style="min-width: 0; padding-right: 0.75rem;">
+                    <div class="flex items-center gap-2">
+                      <strong style="font-size: 0.86rem; color: var(--color-primary, #0A192F);">
+                        ${this.highlightSearchMatch(u.name || u.full_name, val)}
+                      </strong>
+                      <span class="badge" style="background: rgba(99,102,241,0.12); color: #4F46E5; font-size: 0.68rem;">${u.role || 'Staff'}</span>
+                    </div>
+                    <div style="font-size: 0.73rem; color: var(--color-text-secondary, #475569); display: flex; align-items: center; gap: 0.4rem; margin-top: 0.15rem; flex-wrap: wrap;">
+                      <span>${this.highlightSearchMatch(u.email, val)}</span>
+                      ${u.phone ? `<span>•</span><span>${this.highlightSearchMatch(u.phone, val)}</span>` : ''}
+                      ${u.advocateNumber ? `<span>•</span><span style="font-family: var(--font-mono); color: var(--color-gold);">${this.highlightSearchMatch(u.advocateNumber, val)}</span>` : ''}
+                      ${u.department ? `<span>•</span><span>${u.department}</span>` : ''}
+                    </div>
+                    ${snippet ? `
+                      <div style="font-size: 0.71rem; color: var(--color-text-muted, #64748B); margin-top: 0.2rem; font-style: italic;">
+                        ${this.highlightSearchMatch(snippet, val)}
+                      </div>
+                    ` : ''}
+                  </div>
+                  <span class="badge ${u.status === 'ACTIVE' ? 'badge-active' : 'badge-danger'}" style="font-size: 0.68rem;">
+                    ${u.status || 'ACTIVE'}
+                  </span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
     }
 
     container.innerHTML = resHTML;
+  },
+
+  navigateToGlobalSearchResult(index) {
+    const item = (this.globalSearchState.renderedItems || [])[index];
+    if (item && typeof item.action === 'function') {
+      item.action();
+    }
   },
 
   // --- NOTIFICATIONS & ALERTS PANEL ---
@@ -2140,6 +3879,9 @@ const App = {
     const overlay = document.getElementById('global-modal-overlay');
     if (overlay) overlay.classList.remove('active');
     document.body.classList.remove('modal-open');
+    if (typeof AICopilot !== 'undefined' && typeof AICopilot.updateFabVisibility === 'function') {
+      AICopilot.updateFabVisibility();
+    }
   },
 
   // --- CONFIRMATION MODAL ---

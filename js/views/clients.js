@@ -17,6 +17,10 @@ const ClientsView = {
     const indivCount = allClients.filter(c => c.type === 'Individual').length;
     const activeCount = allClients.filter(c => c.status !== 'Deactivated').length;
 
+    const allRequests = (typeof ClientPortalService !== 'undefined') ? ClientPortalService.getStoredRequests() : [];
+    const requestsCount = allRequests.length;
+    const pendingRequestsCount = allRequests.filter(r => r.status === 'Submitted' || r.status === 'Under Review' || r.status === 'More Information Required').length;
+
     const filteredClients = allClients.filter(c => {
       const matchSearch = !this.searchQuery ||
         c.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
@@ -129,6 +133,10 @@ const ClientsView = {
             <button class="client-tab-pill ${this.currentTab === 'individual' ? 'active' : ''}" onclick="ClientsView.filterTab('individual')">
               Individuals (${indivCount})
             </button>
+            <button class="client-tab-pill ${this.currentTab === 'requests' ? 'active' : ''}" onclick="ClientsView.filterTab('requests')" style="position: relative;">
+              Legal Requests
+              ${pendingRequestsCount > 0 ? `<span class="badge" style="background:#EF4444; color:#fff; font-size:0.68rem; margin-left:6px; border-radius:999px; padding:2px 7px;">${pendingRequestsCount}</span>` : `<span class="badge" style="background:#E2E8F0; color:#475569; font-size:0.68rem; margin-left:6px; border-radius:999px; padding:2px 7px;">${requestsCount}</span>`}
+            </button>
           </div>
 
           <!-- View Mode Switcher: Horizontal Rows (Default), Carousel, Grid -->
@@ -154,8 +162,8 @@ const ClientsView = {
           </div>
         </div>
 
-        <!-- 4. CLIENTS DOSSIER DISPLAY (Horizontal Rows / Carousel / Grid) -->
-        ${filteredClients.length === 0 ? `
+        <!-- 4. CLIENTS DOSSIER DISPLAY (Horizontal Rows / Carousel / Grid / Legal Requests) -->
+        ${this.currentTab === 'requests' ? this.renderRequestsTab(allRequests, isAdmin) : filteredClients.length === 0 ? `
           <div class="card empty-state" style="padding: 3.5rem 1.5rem; text-align: center; margin-top: 1rem; border-radius: 16px; border: 1px dashed var(--color-border);">
             <div class="empty-icon" style="font-size: 2.8rem; margin-bottom: 0.85rem;">👥</div>
             <h3 class="empty-title" style="font-size: 1.25rem; color: var(--color-primary); font-weight: 700;">No clients match your filter</h3>
@@ -222,7 +230,8 @@ const ClientsView = {
     const maskedId = isAdmin 
       ? (cleanId ? `TIN-***-${lastDigits}` : 'N/A')
       : (cleanId || 'N/A');
-    const isActive = (c.status !== 'Deactivated');
+    const isLocked = (c.status === 'Locked' || c.locked === true);
+    const isActive = (c.status !== 'Deactivated' && !isLocked);
     const initials = (c.name || 'CL').substring(0, 2).toUpperCase();
 
     return `
@@ -237,10 +246,22 @@ const ClientsView = {
             <h3 class="client-name-heading" onclick="ClientsView.openClientProfile('${c.id}')" title="Click to open client dossier">${c.name}</h3>
             <div class="client-badges-strip">
               <span class="client-type-tag">${c.type}</span>
-              <span class="client-status-tag ${isActive ? 'active' : 'deactivated'}">
-                <span class="${isActive ? 'pulse-dot-green' : 'pulse-dot-red'}"></span>
-                ${isActive ? 'Active' : 'Deactivated'}
-              </span>
+              ${isLocked ? `
+                <span class="client-status-tag" style="background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5;">
+                  <span class="pulse-dot-red" style="background: #DC2626;"></span>
+                  Locked
+                </span>
+              ` : (c.verificationStatus === 'PENDING_VERIFICATION' ? `
+                <span class="client-status-tag" style="background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A;">
+                  <span class="pulse-dot-red" style="background: #D97706;"></span>
+                  Pending Verification
+                </span>
+              ` : `
+                <span class="client-status-tag ${isActive ? 'active' : 'deactivated'}">
+                  <span class="${isActive ? 'pulse-dot-green' : 'pulse-dot-red'}"></span>
+                  ${isActive ? 'Active' : 'Deactivated'}
+                </span>
+              `)}
             </div>
             <div class="c-horiz-id-row">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -301,11 +322,23 @@ const ClientsView = {
             <button class="client-btn-dock-pill" onclick="ClientsView.openWhoCanAccessClientModal('${c.id}')" title="Review Staff Access Roster">
               👥 Access
             </button>
+            <button class="client-btn-dock-pill" onclick="ClientsView.openResetClientPasswordModal('${c.id}')" title="Reset Client Portal Password">
+              🔑 Pass
+            </button>
           </div>
           <div class="c-horiz-actions-bottom">
-            <button class="client-btn-dock-pill ${isActive ? 'danger' : ''}" onclick="ClientsView.toggleClientStatus('${c.id}')" title="${isActive ? 'Deactivate Client Account' : 'Activate Client Account'}">
-              ${isActive ? '🚫 Deactivate' : '🟢 Activate'}
+            <button class="client-btn-dock-pill ${isLocked ? 'danger' : ''}" onclick="ClientsView.toggleClientLock('${c.id}')" title="${isLocked ? 'Unlock Client Account' : 'Lock Client Account'}">
+              ${isLocked ? '🔓 Unlock' : '🔒 Lock'}
             </button>
+            ${c.verificationStatus === 'PENDING_VERIFICATION' ? `
+              <button class="client-btn-dock-pill" style="background: #059669; color: #FFFFFF; font-weight: 600;" onclick="ClientsView.verifyClientManual('${c.id}')" title="Verify Client ID & Activate Account">
+                ✓ Verify ID
+              </button>
+            ` : `
+              <button class="client-btn-dock-pill ${isActive ? 'danger' : ''}" onclick="ClientsView.toggleClientStatus('${c.id}')" title="${isActive ? 'Deactivate Client Account' : 'Activate Client Account'}">
+                ${isActive ? '🚫 Deact.' : '🟢 Act.'}
+              </button>
+            `}
             <button class="client-btn-dock-icon" onclick="ClientsView.openEditClientModal('${c.id}')" title="Edit Client Information">
               ✏️
             </button>
@@ -327,7 +360,8 @@ const ClientsView = {
     const maskedId = isAdmin 
       ? (cleanId ? `TIN-***-${lastDigits}` : 'N/A')
       : (cleanId || 'N/A');
-    const isActive = (c.status !== 'Deactivated');
+    const isLocked = (c.status === 'Locked' || c.locked === true);
+    const isActive = (c.status !== 'Deactivated' && !isLocked);
     const initials = (c.name || 'CL').substring(0, 2).toUpperCase();
 
     return `
@@ -343,10 +377,22 @@ const ClientsView = {
               <h3 class="client-name-heading" onclick="ClientsView.openClientProfile('${c.id}')" title="Click to open client dossier">${c.name}</h3>
               <div class="client-badges-strip">
                 <span class="client-type-tag">${c.type}</span>
-                <span class="client-status-tag ${isActive ? 'active' : 'deactivated'}">
-                  <span class="${isActive ? 'pulse-dot-green' : 'pulse-dot-red'}"></span>
-                  ${isActive ? 'Active' : 'Deactivated'}
-                </span>
+                ${isLocked ? `
+                  <span class="client-status-tag" style="background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5;">
+                    <span class="pulse-dot-red" style="background: #DC2626;"></span>
+                    Locked
+                  </span>
+                ` : (c.verificationStatus === 'PENDING_VERIFICATION' ? `
+                  <span class="client-status-tag" style="background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A;">
+                    <span class="pulse-dot-red" style="background: #D97706;"></span>
+                    Pending Verification
+                  </span>
+                ` : `
+                  <span class="client-status-tag ${isActive ? 'active' : 'deactivated'}">
+                    <span class="${isActive ? 'pulse-dot-green' : 'pulse-dot-red'}"></span>
+                    ${isActive ? 'Active' : 'Deactivated'}
+                  </span>
+                `)}
               </div>
             </div>
           </div>
@@ -421,11 +467,23 @@ const ClientsView = {
               <button class="client-btn-dock-pill" onclick="ClientsView.openWhoCanAccessClientModal('${c.id}')" title="Review Staff Access Roster">
                 👥 Access
               </button>
+              <button class="client-btn-dock-pill" onclick="ClientsView.openResetClientPasswordModal('${c.id}')" title="Reset Client Portal Password">
+                🔑 Pass
+              </button>
             </div>
             <div class="client-dock-right">
-              <button class="client-btn-dock-pill ${isActive ? 'danger' : ''}" onclick="ClientsView.toggleClientStatus('${c.id}')" title="${isActive ? 'Deactivate Client Account' : 'Activate Client Account'}">
-                ${isActive ? '🚫 Deactivate' : '🟢 Activate'}
+              <button class="client-btn-dock-pill ${isLocked ? 'danger' : ''}" onclick="ClientsView.toggleClientLock('${c.id}')" title="${isLocked ? 'Unlock Client Account' : 'Lock Client Account'}">
+                ${isLocked ? '🔓 Unlock' : '🔒 Lock'}
               </button>
+              ${c.verificationStatus === 'PENDING_VERIFICATION' ? `
+                <button class="client-btn-dock-pill" style="background: #059669; color: #FFFFFF; font-weight: 600;" onclick="ClientsView.verifyClientManual('${c.id}')" title="Verify Client ID & Activate Account">
+                  ✓ Verify ID
+                </button>
+              ` : `
+                <button class="client-btn-dock-pill ${isActive ? 'danger' : ''}" onclick="ClientsView.toggleClientStatus('${c.id}')" title="${isActive ? 'Deactivate Client Account' : 'Activate Client Account'}">
+                  ${isActive ? '🚫 Deact.' : '🟢 Act.'}
+                </button>
+              `}
               <button class="client-btn-dock-icon" onclick="ClientsView.openEditClientModal('${c.id}')" title="Edit Client Information">
                 ✏️
               </button>
@@ -492,8 +550,14 @@ const ClientsView = {
     const c = SLCMS_STATE.clients.find(item => item.id === clientId);
     if (!c) return;
 
+    const role = SLCMS_STATE.currentUser?.role || '';
+    const isAdmin = (role === 'Administrator' || role === 'System Administrator');
+    const isLegalOfficer = (role === 'Legal Officer');
+
     const clientCases = SLCMS_STATE.cases.filter(cs => cs.clientId === c.id || cs.client === c.name);
     const lawyer = c.assignedLawyer || (clientCases[0] ? clientCases[0].lawyer : 'Advocate Unassigned');
+    const isLocked = (c.status === 'Locked' || c.locked === true);
+    const isDeactivated = (c.status === 'Deactivated');
 
     App.openModal(`
       <div class="modal-header" style="background: linear-gradient(135deg, #102A43, #0B1F33); color: #FFFFFF;">
@@ -582,8 +646,21 @@ const ClientsView = {
         </div>
       </div>
 
-      <div class="modal-footer" style="display: flex; justify-content: space-between;">
-        <button class="btn btn-secondary" onclick="ClientsView.openEditClientModal('${c.id}')">✏️ Edit Administrative Info</button>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+        <div class="flex items-center gap-2">
+          <button class="btn btn-secondary" onclick="ClientsView.openEditClientModal('${c.id}')">✏️ Edit Info</button>
+          ${isLegalOfficer ? `
+            <button class="btn ${isLocked ? 'btn-danger' : 'btn-secondary'}" onclick="App.closeModal(); ClientsView.toggleClientLock('${c.id}');">
+              ${isLocked ? '🔓 Unlock Account' : '🔒 Lock Account'}
+            </button>
+            <button class="btn ${isDeactivated ? 'btn-primary' : 'btn-secondary'}" onclick="App.closeModal(); ClientsView.toggleClientStatus('${c.id}');">
+              ${isDeactivated ? '🟢 Activate' : '🚫 Deactivate'}
+            </button>
+            <button class="btn btn-gold" onclick="App.closeModal(); ClientsView.openResetClientPasswordModal('${c.id}');">
+              🔑 Reset Password
+            </button>
+          ` : ''}
+        </div>
         <div class="flex items-center gap-2">
           <button class="btn btn-secondary" onclick="App.closeModal()">Close Dossier</button>
           ${!isAdmin ? `
@@ -601,103 +678,242 @@ const ClientsView = {
     const lawyers = SLCMS_STATE.getActiveStaffUsers(['Senior Lawyer', 'Lawyer']);
 
     App.openModal(`
-      <div class="modal-header">
-        <h3 class="modal-title">Register Client</h3>
-        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()">✕</button>
+      <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 14px;">
+        <div>
+          <h3 class="modal-title" style="font-size: 1.15rem; font-weight: 600; color: #F8FAFC;">Register New Client</h3>
+          <p style="font-size: 0.8rem; color: #94A3B8; margin-top: 2px;">Enter client contact details to establish an active retainer file.</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="font-size: 1.1rem; color: #94A3B8;">✕</button>
       </div>
-      <div class="modal-body">
+      <div class="modal-body" style="padding-top: 16px;">
         <div class="grid grid-cols-2 gap-4">
-          <div class="form-group">
-            <label class="form-label required">Client Name (Individual or Organization)</label>
-            <input type="text" id="nc-name" class="form-control" placeholder="e.g. Tanzania Petroleum Dev Corp / John Doe" required>
+          <div class="form-group mb-3">
+            <label class="form-label required" style="font-weight: 600; font-size: 0.82rem; color: #E2E8F0;">Client Full Name</label>
+            <input type="text" id="nc-name" class="form-control" placeholder="e.g. Deogratius Peter Shayo or CRDB Bank PLC" maxlength="150" required
+              oninput="ClientsView.validateField('name')" onblur="ClientsView.validateField('name')">
+            <div id="err-nc-name" class="client-err-msg text-xs mt-1" style="color: #F87171; display: none;"></div>
           </div>
-          <div class="form-group">
-            <label class="form-label required">Client Type</label>
-            <select id="nc-type" class="form-control">
+          <div class="form-group mb-3">
+            <label class="form-label required" style="font-weight: 600; font-size: 0.82rem; color: #E2E8F0;">Client Type</label>
+            <select id="nc-type" class="form-control" onchange="ClientsView.validateField('type')">
               <option value="Individual">Individual Person</option>
               <option value="Corporate">Corporate / Organization</option>
-              <option value="NGO">Non-Governmental Organization (NGO)</option>
-              <option value="Government">Government Entity / Parastatal</option>
             </select>
+            <div id="err-nc-type" class="client-err-msg text-xs mt-1" style="color: #F87171; display: none;"></div>
           </div>
         </div>
+
         <div class="grid grid-cols-2 gap-4">
-          <div class="form-group">
-            <label class="form-label required">Contact Phone Number</label>
-            <input type="tel" id="nc-phone" class="form-control" placeholder="+255 700 000 000" required>
+          <div class="form-group mb-3">
+            <label class="form-label required" style="font-weight: 600; font-size: 0.82rem; color: #E2E8F0;">Contact Phone Number</label>
+            <input type="tel" id="nc-phone" class="form-control" placeholder="+255 754 112 233 or 0754 112 233" required
+              oninput="ClientsView.validateField('phone')" onblur="ClientsView.validateField('phone')">
+            <div id="err-nc-phone" class="client-err-msg text-xs mt-1" style="color: #F87171; display: none;"></div>
           </div>
-          <div class="form-group">
-            <label class="form-label">Email Address <span style="font-weight: 400; color: var(--color-text-muted);">(Optional)</span></label>
-            <input type="email" id="nc-email" class="form-control" placeholder="client@domain.co.tz">
+          <div class="form-group mb-3">
+            <label class="form-label" style="font-weight: 600; font-size: 0.82rem; color: #E2E8F0;">Email Address <span style="font-weight: 400; color: #94A3B8;">(Optional)</span></label>
+            <input type="email" id="nc-email" class="form-control" placeholder="client@domain.co.tz" maxlength="150"
+              oninput="ClientsView.validateField('email')" onblur="ClientsView.validateField('email')">
+            <div id="err-nc-email" class="client-err-msg text-xs mt-1" style="color: #F87171; display: none;"></div>
           </div>
         </div>
+
         <div class="grid grid-cols-2 gap-4">
-          <div class="form-group">
-            <label class="form-label">Physical / Registered Office Address <span style="font-weight: 400; color: var(--color-text-muted);">(Optional)</span></label>
-            <input type="text" id="nc-address" class="form-control" placeholder="Plot 42, Samora Avenue, Dar es Salaam">
+          <div class="form-group mb-3">
+            <label class="form-label" style="font-weight: 600; font-size: 0.82rem; color: #E2E8F0;">Identification / TIN / Reg Ref <span style="font-weight: 400; color: #94A3B8;">(Optional)</span></label>
+            <input type="text" id="nc-idnum" class="form-control" placeholder="NIDA-19850101-1001-11 / BRELA-1002341" maxlength="50">
           </div>
-          <div class="form-group">
-            <label class="form-label">Assigned Legal Counsel</label>
+          <div class="form-group mb-3">
+            <label class="form-label" style="font-weight: 600; font-size: 0.82rem; color: #E2E8F0;">Assigned Legal Counsel</label>
             <select id="nc-lawyer" class="form-control">
-              ${lawyers.length === 0 ? `<option value="Unassigned">Unassigned</option>` : lawyers.map(l => `<option value="${l.name}">${l.name} (${l.role})</option>`).join('')}
+              <option value="Unassigned">Unassigned (General Pool)</option>
+              ${lawyers.map(l => `<option value="${l.name}">${l.name} (${l.role})</option>`).join('')}
             </select>
           </div>
         </div>
+
         <div class="form-group mb-0">
-          <label class="form-label">Identification / TIN Reference <span style="font-weight: 400; color: var(--color-text-muted);">(Optional)</span></label>
-          <input type="text" id="nc-idnum" class="form-control" placeholder="TIN-100-245-890 / NIDA...">
+          <label class="form-label" style="font-weight: 600; font-size: 0.82rem; color: #E2E8F0;">Physical / Registered Office Address <span style="font-weight: 400; color: #94A3B8;">(Optional)</span></label>
+          <input type="text" id="nc-address" class="form-control" placeholder="Plot 42, Samora Avenue, Dar es Salaam">
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
-        <button class="btn btn-gold" onclick="ClientsView.saveNewClient()">Register Client</button>
+      <div class="modal-footer" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 14px;">
+        <button type="button" class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+        <button type="button" id="btn-save-client" class="btn btn-gold" onclick="ClientsView.saveNewClient()">
+          <span>Register Client</span>
+        </button>
       </div>
     `);
   },
 
-  saveNewClient() {
+  validateField(fieldName) {
+    const el = document.getElementById(`nc-${fieldName}`);
+    const errEl = document.getElementById(`err-nc-${fieldName}`);
+    if (!el || !errEl) return true;
+
+    const val = el.value.trim();
+    let errorMsg = '';
+
+    if (fieldName === 'name') {
+      if (!val) {
+        errorMsg = 'Client name is required.';
+      } else if (val.length < 2 || val.length > 150) {
+        errorMsg = 'Client name must be between 2 and 150 characters.';
+      } else if (!/^[a-zA-Z\s.'’\-]+$/.test(val)) {
+        errorMsg = 'Client name may only contain letters, spaces, apostrophes, hyphens and dots.';
+      } else if (!/[a-zA-Z]/.test(val)) {
+        errorMsg = 'Client name cannot be made only of numbers.';
+      } else {
+        const existing = (SLCMS_STATE.clients || []).some(c => c.name && c.name.toLowerCase() === val.toLowerCase());
+        if (existing) {
+          errorMsg = 'A client with this name already exists in the system.';
+        }
+      }
+    } else if (fieldName === 'phone') {
+      if (!val) {
+        errorMsg = 'Contact phone number is required.';
+      } else {
+        let clean = val.replace(/[\s\-\(\)]+/g, '');
+        if (clean.startsWith('0') && clean.length === 10) clean = '+255' + clean.substring(1);
+        if (clean.startsWith('255') && clean.length === 12) clean = '+' + clean;
+        const tzPattern = /^(\+255)[67]\d{8}$/;
+        const intlPattern = /^\+?[0-9]{9,15}$/;
+        if (!tzPattern.test(clean) && !intlPattern.test(clean)) {
+          errorMsg = 'Provide a valid Tanzanian number (+255 7XX XXX XXX or 07XXXXXXXX) or international format.';
+        }
+      }
+    } else if (fieldName === 'email') {
+      if (val) {
+        const emailPattern = /^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+        if (!emailPattern.test(val)) {
+          errorMsg = 'Please enter a valid email address (e.g. client@domain.co.tz).';
+        }
+      }
+    }
+
+    if (errorMsg) {
+      el.classList.add('is-invalid');
+      errEl.textContent = errorMsg;
+      errEl.style.display = 'block';
+      return false;
+    } else {
+      el.classList.remove('is-invalid');
+      errEl.textContent = '';
+      errEl.style.display = 'none';
+      return true;
+    }
+  },
+
+  async saveNewClient() {
+    const isNameValid = this.validateField('name');
+    const isPhoneValid = this.validateField('phone');
+    const isEmailValid = this.validateField('email');
+
+    if (!isNameValid || !isPhoneValid || !isEmailValid) {
+      const firstInvalid = document.querySelector('#nc-name.is-invalid, #nc-phone.is-invalid, #nc-email.is-invalid');
+      if (firstInvalid) firstInvalid.focus();
+      App.showToast('Please correct the highlighted validation errors.', 'error');
+      return;
+    }
+
     const name = document.getElementById('nc-name')?.value?.trim();
-    if (!name) {
-      App.showToast('Please provide a Client Name', 'error');
-      return;
-    }
-    const phone = document.getElementById('nc-phone')?.value?.trim();
-    if (!phone) {
-      App.showToast('Please provide a Contact Phone Number', 'error');
-      return;
-    }
+    let phone = document.getElementById('nc-phone')?.value?.trim().replace(/[\s\-\(\)]+/g, '') || '';
+    if (phone.startsWith('0') && phone.length === 10) phone = '+255' + phone.substring(1);
+    if (phone.startsWith('255') && phone.length === 12) phone = '+' + phone;
 
     const type = document.getElementById('nc-type')?.value || 'Individual';
     const email = document.getElementById('nc-email')?.value?.trim() || '';
     const address = document.getElementById('nc-address')?.value?.trim() || '';
     const idNumber = document.getElementById('nc-idnum')?.value?.trim() || '';
-    const lawyer = document.getElementById('nc-lawyer')?.value || '';
+    const lawyer = document.getElementById('nc-lawyer')?.value || 'Unassigned';
 
-    const newClient = {
-      id: 'cli-' + Date.now(),
+    const saveBtn = document.getElementById('btn-save-client');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span>Registering...</span>';
+    }
+
+    const newId = 'cli-' + Date.now();
+    const payload = {
+      id: newId,
+      name: name,
+      clientType: type.toUpperCase(),
+      email: email,
+      phone: phone,
+      nationalIdRef: idNumber,
+      address: address,
+      assignedLawyer: lawyer,
+      contactPerson: name,
+      notes: 'Client registered in SLCMS with verified KYC.'
+    };
+
+    // Try API POST to persist in Spring Boot & MySQL database
+    try {
+      const apiUrl = (typeof window.getApiUrl === 'function') ? window.getApiUrl('/api/clients') : '/api/clients';
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        if (errData.errors) {
+          Object.keys(errData.errors).forEach(field => {
+            const el = document.getElementById(`nc-${field}`);
+            const errEl = document.getElementById(`err-nc-${field}`);
+            if (el && errEl) {
+              el.classList.add('is-invalid');
+              errEl.textContent = errData.errors[field];
+              errEl.style.display = 'block';
+            }
+          });
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<span>Register Client</span>';
+          }
+          App.showToast(Object.values(errData.errors)[0] || 'Registration failed.', 'error');
+          return;
+        }
+      } else {
+        const resData = await response.json();
+        if (resData && resData.id) {
+          payload.id = resData.id;
+          payload.clientNumber = resData.clientNumber;
+        }
+      }
+    } catch (e) {
+      console.info('Client backend sync deferred, saving locally:', e);
+    }
+
+    const stateClient = {
+      id: payload.id,
+      clientNumber: payload.clientNumber || ('CLI-TZ-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000)),
       name: name,
       type: type,
+      clientType: type.toUpperCase(),
       contactPerson: name,
       email: email,
       phone: phone,
       address: address,
       idNumber: idNumber,
+      nationalIdRef: idNumber,
       assignedLawyer: lawyer,
       activeCases: 0,
       totalCases: 0,
       status: 'Active',
       confidential: true,
-      notes: 'Client newly registered in SLCMS.'
+      notes: payload.notes
     };
 
-    SLCMS_STATE.addClient(newClient);
+    SLCMS_STATE.addClient(stateClient);
     App.closeModal();
-    App.showToast(`Client "${newClient.name}" registered successfully!`, 'success');
+    App.showToast(`Client "${stateClient.name}" registered successfully!`, 'success');
 
     if (typeof this._clientCreationCallback === 'function') {
       const cb = this._clientCreationCallback;
       this._clientCreationCallback = null;
-      cb(newClient);
+      cb(stateClient);
     } else {
       App.refreshCurrentView();
     }
@@ -789,8 +1005,15 @@ const ClientsView = {
   },
 
   createCaseForClient(clientIdentifier) {
-    if (SLCMS_STATE.currentUser?.role === 'Administrator') {
+    const currentUser = SLCMS_STATE.currentUser;
+    if (currentUser?.role === 'Administrator') {
       App.showToast('Administrators do not have permission to register legal cases.', 'warning');
+      return;
+    }
+    const r = String(currentUser?.role || '').toLowerCase();
+    const t = String(currentUser?.jobTitle || currentUser?.roleLabel || '').toLowerCase();
+    if (r.includes('lawyer') || t.includes('lawyer') || r.includes('advocate') || t.includes('advocate')) {
+      App.showToast('Access restricted: Lawyers do not have permission to register new cases.', 'warning');
       return;
     }
     App.closeModal();
@@ -862,13 +1085,152 @@ const ClientsView = {
   },
 
   toggleClientStatus(clientId) {
-    const c = SLCMS_STATE.clients.find(item => item.id === clientId);
+    const c = (SLCMS_STATE.clients || []).find(item => item.id === clientId);
     if (!c) return;
     const isDeactivating = (c.status !== 'Deactivated');
     c.status = isDeactivating ? 'Deactivated' : 'Active';
-    SLCMS_STATE.addAuditLog(`Client Record ${isDeactivating ? 'Deactivated' : 'Reactivated'}`, 'Clients', `${c.name} (${c.id})`);
+    if (!isDeactivating) c.locked = false;
+    if (typeof SLCMS_STATE.addAuditLog === 'function') {
+      SLCMS_STATE.addAuditLog(`Client Record ${isDeactivating ? 'Deactivated' : 'Reactivated'}`, 'Client Portal', `${c.name} (${c.id}) by ${SLCMS_STATE.currentUser?.name || 'Legal Officer'}`, isDeactivating ? 'Deactivated' : 'Success', { role: 'Client', userName: c.name });
+    }
     SLCMS_STATE.persistClients();
-    App.showToast(`Client ${c.name} is now ${c.status}.`, isDeactivating ? 'warning' : 'success');
+    App.showToast(`Client "${c.name}" is now ${c.status}.`, isDeactivating ? 'warning' : 'success');
+    App.refreshCurrentView();
+  },
+
+  toggleClientLock(clientId) {
+    const c = (SLCMS_STATE.clients || []).find(item => item.id === clientId);
+    if (!c) return;
+    const isCurrentlyLocked = (c.status === 'Locked' || c.locked === true);
+    if (isCurrentlyLocked) {
+      c.locked = false;
+      c.status = 'Active';
+      if (typeof SLCMS_STATE.addAuditLog === 'function') {
+        SLCMS_STATE.addAuditLog('Client Account Unlocked', 'Client Portal', `Client ${c.name} (${c.clientNumber || c.id}) unlocked by ${SLCMS_STATE.currentUser?.name || 'Legal Officer'}`, 'Success', { role: 'Client', userName: c.name });
+      }
+      App.showToast(`Client account for "${c.name}" has been unlocked.`, 'success');
+    } else {
+      c.locked = true;
+      c.status = 'Locked';
+      if (typeof SLCMS_STATE.addAuditLog === 'function') {
+        SLCMS_STATE.addAuditLog('Client Account Locked', 'Client Portal', `Client ${c.name} (${c.clientNumber || c.id}) locked by ${SLCMS_STATE.currentUser?.name || 'Legal Officer'}`, 'Locked', { role: 'Client', userName: c.name });
+      }
+      App.showToast(`Client account for "${c.name}" has been locked. Portal access disabled.`, 'warning');
+    }
+    SLCMS_STATE.persistClients();
+    App.refreshCurrentView();
+  },
+
+  openResetClientPasswordModal(clientId) {
+    const c = (SLCMS_STATE.clients || []).find(item => item.id === clientId);
+    if (!c) return;
+
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    let suggestedPass = 'Clt';
+    for (let i = 0; i < 6; i++) {
+      suggestedPass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    suggestedPass += '!26';
+
+    App.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #0F172A, #1E293B); color: #FFFFFF;">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <span style="font-size: 1.25rem;">🔑</span>
+          <div>
+            <h3 class="modal-title" style="color: #FFFFFF; font-size: 1.15rem; margin: 0;">Reset Client Portal Password</h3>
+            <p style="font-size: 0.78rem; color: #94A3B8; margin: 0.2rem 0 0 0;">Legal Officer Client Credential Provisioning</p>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #94A3B8;">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem;">
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-size: 0.72rem; font-weight: 700; color: #64748B; text-transform: uppercase;">Client Name</div>
+              <div style="font-size: 1.05rem; font-weight: 800; color: #0F172A;">${c.name}</div>
+              <div style="font-size: 0.8rem; color: #64748B; margin-top: 0.2rem;">ID: <span class="mono">${c.clientNumber || c.id}</span> &bull; ${c.email || c.phone || 'No direct contact'}</div>
+            </div>
+            <span class="badge ${c.status === 'Locked' || c.locked ? 'badge-danger' : (c.status === 'Deactivated' ? 'badge-secondary' : 'badge-active')}">${c.status || 'Active'}</span>
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label required" style="font-weight: 700; font-size: 0.84rem; color: #1E293B;">
+            New Temporary Client Password
+          </label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="rcp-password" class="form-control mono" value="${suggestedPass}" style="font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px;" required>
+            <button type="button" class="btn btn-secondary" onclick="ClientsView.regenerateRandomPassword()" title="Generate new secure password">
+              🎲 Random
+            </button>
+          </div>
+          <small style="color: #64748B; font-size: 0.75rem; margin-top: 0.3rem; display: block;">
+            The client can use this password to immediately log in to the Client Portal.
+          </small>
+        </div>
+
+        <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between;">
+          <div style="font-size: 0.8rem; color: #166534;">
+            📋 <strong>Quick Share:</strong> Copy credentials to provide to the client securely.
+          </div>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="ClientsView.copyClientPasswordCredentials('${c.name.replace(/'/g, "\\'")}', '${(c.email || c.clientNumber || c.id).replace(/'/g, "\\'")}')">
+            Copy Credentials
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 1rem 1.5rem;">
+        <button type="button" class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="ClientsView.saveResetClientPassword('${c.id}')" style="font-weight: 700;">
+          Save &amp; Apply Password
+        </button>
+      </div>
+    `);
+  },
+
+  regenerateRandomPassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    let p = 'Clt';
+    for (let i = 0; i < 6; i++) p += chars.charAt(Math.floor(Math.random() * chars.length));
+    p += '!26';
+    const el = document.getElementById('rcp-password');
+    if (el) el.value = p;
+  },
+
+  copyClientPasswordCredentials(clientName, identifier) {
+    const pass = document.getElementById('rcp-password')?.value || '';
+    const text = `SLCMS Client Portal Credentials:\nClient: ${clientName}\nLogin ID: ${identifier}\nTemporary Password: ${pass}\nPortal: ${window.location.origin}${window.location.pathname}#client-portal`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        App.showToast('Client credentials copied to clipboard!', 'success');
+      }).catch(() => {
+        App.showToast('Credentials ready. Password: ' + pass, 'info');
+      });
+    } else {
+      App.showToast('Credentials ready. Password: ' + pass, 'info');
+    }
+  },
+
+  saveResetClientPassword(clientId) {
+    const c = (SLCMS_STATE.clients || []).find(item => item.id === clientId);
+    if (!c) return;
+    const pass = document.getElementById('rcp-password')?.value?.trim();
+    if (!pass) {
+      App.showToast('Please provide a password.', 'error');
+      return;
+    }
+    c.clientPassword = pass;
+    // Also unlock if locked
+    if (c.status === 'Locked' || c.locked) {
+      c.locked = false;
+      c.status = 'Active';
+    }
+    SLCMS_STATE.persistClients();
+    if (typeof SLCMS_STATE.addAuditLog === 'function') {
+      SLCMS_STATE.addAuditLog('Client Password Reset', 'Client Portal', `Password reset for ${c.name} (${c.clientNumber || c.id}) by ${SLCMS_STATE.currentUser?.name || 'Legal Officer'}`, 'Success', { role: 'Client', userName: c.name });
+    }
+    App.closeModal();
+    App.showToast(`Password for client "${c.name}" has been successfully updated.`, 'success');
     App.refreshCurrentView();
   },
 
@@ -998,5 +1360,382 @@ const ClientsView = {
         <button class="btn btn-secondary w-full" onclick="App.closeModal()">Close</button>
       </div>
     `, 'modal-md');
+  },
+
+  // --- CLIENT PORTAL & LEGAL OFFICER ASSISTANCE REQUESTS ---
+  async verifyClientManual(clientId) {
+    const c = (SLCMS_STATE.clients || []).find(item => item.id === clientId || item.clientNumber === clientId);
+    if (!c) {
+      App.showToast('Client record not found', 'error');
+      return;
+    }
+
+    const confirmed = confirm(`Verify client identification for:\n\n• Legal Name: ${c.name}\n• Contact: ${c.phone || c.email}\n• Ref: ${c.clientNumber || c.idNumber || 'Pending'}\n\nThis will manually activate the client account and permit access to the Client Portal.`);
+    if (!confirmed) return;
+
+    if (typeof ClientPortalService !== 'undefined') {
+      const res = await ClientPortalService.officerVerifyClient(clientId);
+      if (res && res.success) {
+        c.verificationStatus = 'MANUALLY_VERIFIED';
+        c.status = 'Active';
+        const userMatch = (SLCMS_STATE.users || []).find(u => u.email === c.email || u.staffId === c.clientNumber);
+        if (userMatch) {
+          userMatch.accountStatus = 'ACTIVE';
+          userMatch.status = 'Active';
+        }
+        App.showToast(`Client ${c.name} verified and activated successfully!`, 'success');
+        App.refreshCurrentView();
+      } else {
+        App.showToast(res ? res.message : 'Verification failed', 'error');
+      }
+    } else {
+      c.verificationStatus = 'MANUALLY_VERIFIED';
+      c.status = 'Active';
+      App.showToast(`Client ${c.name} verified manually.`, 'success');
+      App.refreshCurrentView();
+    }
+  },
+
+  renderRequestsTab(allRequests, isAdmin) {
+    const filteredRequests = allRequests.filter(r => {
+      if (!this.searchQuery) return true;
+      const q = this.searchQuery.toLowerCase();
+      return (r.clientName && r.clientName.toLowerCase().includes(q)) ||
+             (r.issueType && r.issueType.toLowerCase().includes(q)) ||
+             (r.description && r.description.toLowerCase().includes(q)) ||
+             (r.opposingParty && r.opposingParty.toLowerCase().includes(q)) ||
+             (r.status && r.status.toLowerCase().includes(q));
+    });
+
+    const submittedCount = allRequests.filter(r => r.status === 'Submitted').length;
+    const underReviewCount = allRequests.filter(r => r.status === 'Under Review').length;
+    const moreInfoCount = allRequests.filter(r => r.status === 'More Information Required').length;
+    const acceptedCount = allRequests.filter(r => r.status === 'Accepted').length;
+    const convertedCount = allRequests.filter(r => r.status === 'Converted to Case').length;
+
+    const getStatusBadge = (st) => {
+      switch (st) {
+        case 'Submitted':
+          return '<span class="badge" style="background:#E0F2FE; color:#0369A1; font-weight:600; padding:3px 8px; border-radius:999px;">Submitted</span>';
+        case 'Under Review':
+          return '<span class="badge" style="background:#FEF3C7; color:#B45309; font-weight:600; padding:3px 8px; border-radius:999px;">Under Review</span>';
+        case 'More Information Required':
+          return '<span class="badge" style="background:#FFEDD5; color:#C2410C; font-weight:600; padding:3px 8px; border-radius:999px;">More Info Required</span>';
+        case 'Accepted':
+          return '<span class="badge" style="background:#D1FAE5; color:#065F46; font-weight:600; padding:3px 8px; border-radius:999px;">Accepted</span>';
+        case 'Declined':
+          return '<span class="badge" style="background:#FEE2E2; color:#991B1B; font-weight:600; padding:3px 8px; border-radius:999px;">Declined</span>';
+        case 'Converted to Case':
+          return '<span class="badge" style="background:#EDE9FE; color:#5B21B6; font-weight:600; padding:3px 8px; border-radius:999px;">Converted to Case</span>';
+        default:
+          return `<span class="badge badge-neutral">${st || 'Submitted'}</span>`;
+      }
+    };
+
+    return `
+      <div class="animate-fade">
+        <!-- Telemetry Summary Cards -->
+        <div class="grid grid-cols-5 gap-3" style="margin-bottom: 1.25rem;">
+          <div class="card" style="padding: 0.85rem; border-left: 3px solid #0284C7; background: var(--color-surface, #FFFFFF);">
+            <div style="font-size: 0.72rem; color: var(--color-text-secondary, #64748B); font-weight: 600; text-transform: uppercase;">Submitted</div>
+            <div style="font-size: 1.35rem; font-weight: 700; color: #0284C7; margin-top: 0.2rem;">${submittedCount}</div>
+          </div>
+          <div class="card" style="padding: 0.85rem; border-left: 3px solid #D97706; background: var(--color-surface, #FFFFFF);">
+            <div style="font-size: 0.72rem; color: var(--color-text-secondary, #64748B); font-weight: 600; text-transform: uppercase;">Under Review</div>
+            <div style="font-size: 1.35rem; font-weight: 700; color: #D97706; margin-top: 0.2rem;">${underReviewCount}</div>
+          </div>
+          <div class="card" style="padding: 0.85rem; border-left: 3px solid #EA580C; background: var(--color-surface, #FFFFFF);">
+            <div style="font-size: 0.72rem; color: var(--color-text-secondary, #64748B); font-weight: 600; text-transform: uppercase;">More Info Needed</div>
+            <div style="font-size: 1.35rem; font-weight: 700; color: #EA580C; margin-top: 0.2rem;">${moreInfoCount}</div>
+          </div>
+          <div class="card" style="padding: 0.85rem; border-left: 3px solid #059669; background: var(--color-surface, #FFFFFF);">
+            <div style="font-size: 0.72rem; color: var(--color-text-secondary, #64748B); font-weight: 600; text-transform: uppercase;">Accepted</div>
+            <div style="font-size: 1.35rem; font-weight: 700; color: #059669; margin-top: 0.2rem;">${acceptedCount}</div>
+          </div>
+          <div class="card" style="padding: 0.85rem; border-left: 3px solid #7C3AED; background: var(--color-surface, #FFFFFF);">
+            <div style="font-size: 0.72rem; color: var(--color-text-secondary, #64748B); font-weight: 600; text-transform: uppercase;">Converted Cases</div>
+            <div style="font-size: 1.35rem; font-weight: 700; color: #7C3AED; margin-top: 0.2rem;">${convertedCount}</div>
+          </div>
+        </div>
+
+        ${filteredRequests.length === 0 ? `
+          <div class="card empty-state" style="padding: 3.5rem 1.5rem; text-align: center; border-radius: 14px; border: 1px dashed var(--color-border, #CBD5E1);">
+            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📥</div>
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--color-primary, #0F172A); margin: 0 0 0.5rem 0;">No Legal Assistance Requests</h3>
+            <p style="font-size: 0.85rem; color: var(--color-text-secondary, #64748B); max-width: 440px; margin: 0 auto; line-height: 1.5;">
+              There are currently no legal assistance requests matching your search query. Requests submitted via the Client Portal will appear here for Legal Officer assessment.
+            </p>
+          </div>
+        ` : `
+          <div class="card" style="padding: 0; overflow: hidden; border: 1px solid var(--color-border, #E2E8F0); border-radius: 12px;">
+            <div class="table-container" style="margin: 0;">
+              <table class="data-table" style="min-width: 900px; width: 100%;">
+                <thead style="background: #F8FAFC;">
+                  <tr>
+                    <th style="padding: 10px 14px; font-size: 0.75rem;">Ref / Date</th>
+                    <th style="padding: 10px 14px; font-size: 0.75rem;">Client Details</th>
+                    <th style="padding: 10px 14px; font-size: 0.75rem;">Issue Category</th>
+                    <th style="padding: 10px 14px; font-size: 0.75rem;">Request Description</th>
+                    <th style="padding: 10px 14px; font-size: 0.75rem;">Contact Method</th>
+                    <th style="padding: 10px 14px; font-size: 0.75rem;">Status</th>
+                    <th style="padding: 10px 14px; font-size: 0.75rem; text-align: right;">Officer Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${filteredRequests.map(r => {
+                    const shortDesc = (r.description || '').length > 70 ? (r.description || '').substring(0, 70) + '...' : (r.description || 'No description');
+                    const reqDate = r.createdAt ? new Date(r.createdAt).toLocaleDateString() : 'Today';
+                    const hasDocs = r.files && r.files.length > 0;
+                    return `
+                      <tr style="transition: background 0.15s ease;">
+                        <td style="padding: 12px 14px; vertical-align: top;">
+                          <div style="font-family: var(--font-mono, monospace); font-weight: 700; color: #0284C7; font-size: 0.8rem;">
+                            ${r.id ? (r.id.length > 12 ? r.id.substring(0, 12) + '..' : r.id) : 'REQ'}
+                          </div>
+                          <div style="font-size: 0.72rem; color: #64748B; margin-top: 2px;">${reqDate}</div>
+                        </td>
+                        <td style="padding: 12px 14px; vertical-align: top;">
+                          <div style="font-weight: 600; color: #0F172A; font-size: 0.85rem;">${r.clientName || 'Client'}</div>
+                          <div style="font-size: 0.75rem; color: #64748B;">${r.clientPhone || r.clientEmail || 'No contact'}</div>
+                          ${r.clientId ? `<div style="font-size: 0.7rem; font-family: monospace; color: #059669;">${r.clientId}</div>` : ''}
+                        </td>
+                        <td style="padding: 12px 14px; vertical-align: top;">
+                          <span class="badge" style="background: #F1F5F9; color: #334155; font-weight: 600; font-size: 0.75rem; padding: 2px 7px; border-radius: 6px;">
+                            ${r.issueType || 'General'}
+                          </span>
+                          ${r.opposingParty ? `<div style="font-size: 0.72rem; color: #64748B; margin-top: 4px;">v. ${r.opposingParty}</div>` : ''}
+                        </td>
+                        <td style="padding: 12px 14px; vertical-align: top; max-width: 280px;">
+                          <div style="font-size: 0.8rem; color: #334155; line-height: 1.4;">${shortDesc}</div>
+                          ${hasDocs ? `<span style="display:inline-block; font-size: 0.7rem; background: #EEF2FF; color: #4F46E5; padding: 1px 6px; border-radius: 4px; margin-top: 4px;">📎 ${r.files.length} Document(s)</span>` : ''}
+                        </td>
+                        <td style="padding: 12px 14px; vertical-align: top;">
+                          <span style="font-size: 0.78rem; color: #475569; font-weight: 500;">
+                            ${r.preferredContactMethod === 'Phone' ? '📞 Phone' : r.preferredContactMethod === 'Office Visit' ? '🏢 Office Visit' : '✉️ Email'}
+                          </span>
+                        </td>
+                        <td style="padding: 12px 14px; vertical-align: top;">
+                          ${getStatusBadge(r.status)}
+                          ${r.caseId ? `<div style="font-size: 0.7rem; color: #7C3AED; font-family: monospace; margin-top: 4px;">Case Linked</div>` : ''}
+                        </td>
+                        <td style="padding: 12px 14px; vertical-align: top; text-align: right;">
+                          <div style="display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end;">
+                            <button class="btn btn-secondary btn-sm" onclick="ClientsView.openRequestDossier('${r.id}')" title="Review Client Request Dossier" style="font-size: 0.75rem; padding: 4px 9px;">
+                              Review
+                            </button>
+                            ${r.status !== 'Converted to Case' ? `
+                              <button class="btn btn-sm" onclick="ClientsView.convertRequestToCase('${r.id}')" style="background: #0F172A; color: #FFFFFF; font-size: 0.75rem; padding: 4px 9px; border-radius: 6px; border: none; cursor: pointer;" title="Convert to Official Court Matter">
+                                + Convert to Case
+                              </button>
+                            ` : `
+                              <span style="font-size: 0.72rem; color: #059669; font-weight: 600;">✓ Converted</span>
+                            `}
+                          </div>
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `}
+      </div>
+    `;
+  },
+
+  openRequestDossier(requestId) {
+    const allRequests = (typeof ClientPortalService !== 'undefined') ? ClientPortalService.getStoredRequests() : [];
+    const r = allRequests.find(item => item.id === requestId);
+    if (!r) {
+      App.showToast('Request record not found', 'error');
+      return;
+    }
+
+    const client = (SLCMS_STATE.clients || []).find(c => c.id === r.clientId || c.name === r.clientName) || {
+      name: r.clientName || 'Client',
+      phone: r.clientPhone || 'N/A',
+      email: r.clientEmail || 'N/A',
+      type: 'Individual',
+      address: 'N/A'
+    };
+
+    const hasDocs = r.files && r.files.length > 0;
+
+    App.openModal(`
+      <div class="modal-header" style="background: linear-gradient(135deg, #0F172A, #1E293B); color: #FFFFFF; padding: 1.1rem 1.4rem;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <h3 style="color: #FFFFFF; margin: 0; font-size: 1.15rem; font-weight: 700;">Legal Assistance Request Dossier</h3>
+            <span class="badge" style="background: rgba(255,255,255,0.18); color: #FFFFFF; font-size: 0.72rem; padding: 2px 7px; border-radius: 6px;">${r.issueType || 'General'}</span>
+          </div>
+          <div style="font-size: 0.78rem; color: #94A3B8; margin-top: 3px;">
+            Ref: <strong>${r.id}</strong> &middot; Submitted on: <strong>${r.createdAt ? new Date(r.createdAt).toLocaleString() : 'Recent'}</strong>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="App.closeModal()" style="color: #94A3B8; font-size: 1.2rem;">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.25rem 1.4rem; max-height: 75vh; overflow-y: auto;">
+        <!-- Client Profile Summary -->
+        <div class="card" style="background: #F8FAFC; border: 1px solid #E2E8F0; padding: 1rem; border-radius: 10px; margin-bottom: 1.2rem;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <div style="font-size: 0.7rem; text-transform: uppercase; color: #64748B; font-weight: 600;">Client Identity</div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: #0F172A; margin-top: 2px;">${client.name}</div>
+              <div style="font-size: 0.8rem; color: #475569; margin-top: 2px;">
+                Client Type: <strong>${client.type || 'Individual'}</strong> ${r.clientId ? `&middot; Client ID: <strong style="color: #0284C7; font-family: monospace;">${r.clientId}</strong>` : ''}
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 0.8rem; color: #0F172A; font-weight: 600;">${r.clientPhone || client.phone || 'Phone unlisted'}</div>
+              <div style="font-size: 0.78rem; color: #64748B;">${r.clientEmail || client.email || 'Email unlisted'}</div>
+              <div style="font-size: 0.74rem; color: #0284C7; font-weight: 500; margin-top: 2px;">Prefers: ${r.preferredContactMethod || 'Email'}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Issue Details -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.2rem;">
+          <div class="card" style="background: #FFFFFF; border: 1px solid #E2E8F0; padding: 0.9rem; border-radius: 8px;">
+            <div style="font-size: 0.72rem; color: #64748B; font-weight: 600;">Legal Issue Category</div>
+            <div style="font-size: 0.95rem; font-weight: 600; color: #0F172A; margin-top: 2px;">${r.issueType || 'General'}</div>
+          </div>
+          <div class="card" style="background: #FFFFFF; border: 1px solid #E2E8F0; padding: 0.9rem; border-radius: 8px;">
+            <div style="font-size: 0.72rem; color: #64748B; font-weight: 600;">Opposing Party (Optional)</div>
+            <div style="font-size: 0.95rem; font-weight: 600; color: #0F172A; margin-top: 2px;">${r.opposingParty || 'None specified'}</div>
+          </div>
+        </div>
+
+        <!-- Short Description -->
+        <div class="card" style="background: #FFFFFF; border: 1px solid #E2E8F0; padding: 1rem; border-radius: 10px; margin-bottom: 1.2rem;">
+          <div style="font-size: 0.75rem; text-transform: uppercase; color: #64748B; font-weight: 600; margin-bottom: 0.4rem;">
+            Matter Narrative &amp; Client Description
+          </div>
+          <div style="font-size: 0.86rem; color: #1E293B; line-height: 1.55; white-space: pre-wrap; background: #F8FAFC; padding: 0.85rem; border-radius: 8px; border: 1px solid #E2E8F0;">${r.description || 'No description provided.'}</div>
+        </div>
+
+        <!-- Supporting Documents -->
+        <div class="card" style="background: #FFFFFF; border: 1px solid #E2E8F0; padding: 1rem; border-radius: 10px; margin-bottom: 1.2rem;">
+          <div style="font-size: 0.75rem; text-transform: uppercase; color: #64748B; font-weight: 600; margin-bottom: 0.4rem;">
+            Supporting Documents (${r.files ? r.files.length : 0})
+          </div>
+          ${hasDocs ? `
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              ${r.files.map((f, i) => `
+                <div style="display: flex; justify-content: space-between; align-items: center; background: #F1F5F9; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem;">
+                  <span style="color: #0F172A; font-weight: 500;">📄 ${typeof f === 'string' ? f : (f.name || 'Attachment ' + (i+1))}</span>
+                  <span style="color: #0284C7; cursor: pointer; font-size: 0.75rem;" onclick="App.showToast('Document securely stored in firm vault.', 'info')">View File</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : `
+            <div style="font-size: 0.8rem; color: #94A3B8; font-style: italic;">No supporting documents attached with this request.</div>
+          `}
+        </div>
+
+        <!-- Legal Officer Assessment & Communication Notes -->
+        <div class="card" style="background: #FFFFFF; border: 1px solid #E2E8F0; padding: 1rem; border-radius: 10px; margin-bottom: 0.5rem;">
+          <div style="font-size: 0.75rem; text-transform: uppercase; color: #64748B; font-weight: 600; margin-bottom: 0.4rem;">
+            Legal Officer Notes &amp; Client Feedback
+          </div>
+          <textarea id="officer-feedback-notes" class="form-control" rows="3" placeholder="Enter notes or specific instructions for the client (e.g., requested documents, meeting date, or reason for status update)..." style="font-size: 0.82rem; margin-bottom: 0.5rem;">${r.officerNotes || ''}</textarea>
+          <div style="display: flex; gap: 8px; justify-content: flex-end;">
+            <button class="btn btn-secondary btn-sm" onclick="ClientsView.saveOfficerNotes('${r.id}')" style="font-size: 0.75rem;">
+              💾 Save Notes
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.4rem; background: #F8FAFC; border-top: 1px solid #E2E8F0;">
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <span style="font-size: 0.78rem; color: #64748B; font-weight: 600;">Status:</span>
+          <button class="btn btn-secondary btn-sm" onclick="ClientsView.updateRequestStatusQuick('${r.id}', 'Under Review')" style="font-size: 0.75rem;">
+            Under Review
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="ClientsView.updateRequestStatusQuick('${r.id}', 'More Information Required')" style="font-size: 0.75rem; color: #C2410C;">
+            Request Info
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="ClientsView.updateRequestStatusQuick('${r.id}', 'Accepted')" style="font-size: 0.75rem; color: #059669;">
+            Accept
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="ClientsView.updateRequestStatusQuick('${r.id}', 'Declined')" style="font-size: 0.75rem; color: #DC2626;">
+            Decline
+          </button>
+        </div>
+
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="btn btn-secondary" onclick="App.closeModal()">Close</button>
+          ${r.status !== 'Converted to Case' ? `
+            <button class="btn" onclick="ClientsView.convertRequestToCase('${r.id}')" style="background: #0284C7; color: #FFFFFF; font-weight: 600; font-size: 0.82rem; padding: 0.5rem 1rem; border-radius: 8px; border: none; cursor: pointer;">
+              ⚡ Convert to Official Case
+            </button>
+          ` : `
+            <span style="font-size: 0.82rem; color: #7C3AED; font-weight: 700;">✓ Case Already Registered</span>
+          `}
+        </div>
+      </div>
+    `, 'modal-lg');
+  },
+
+  async saveOfficerNotes(requestId) {
+    const el = document.getElementById('officer-feedback-notes');
+    const notes = el ? el.value.trim() : '';
+    if (typeof ClientPortalService !== 'undefined') {
+      const all = ClientPortalService.getStoredRequests();
+      const target = all.find(r => r.id === requestId);
+      if (target) {
+        target.officerNotes = notes;
+        target.updatedAt = new Date().toISOString();
+        localStorage.setItem(ClientPortalService.STORAGE_KEY_REQUESTS, JSON.stringify(all));
+        await ClientPortalService.officerUpdateRequestStatus(requestId, target.status, notes);
+      }
+    }
+    App.showToast('Officer review notes saved successfully.', 'success');
+  },
+
+  async updateRequestStatusQuick(requestId, newStatus) {
+    let notes = '';
+    if (newStatus === 'More Information Required') {
+      const input = prompt('Please specify what additional information or documents the client needs to submit:');
+      if (input === null) return;
+      notes = input.trim();
+    }
+
+    if (typeof ClientPortalService !== 'undefined') {
+      await ClientPortalService.officerUpdateRequestStatus(requestId, newStatus, notes);
+    }
+
+    App.showToast(`Request status updated to: ${newStatus}`, 'success');
+    App.closeModal();
+    App.refreshCurrentView();
+  },
+
+  async convertRequestToCase(requestId) {
+    const allRequests = (typeof ClientPortalService !== 'undefined') ? ClientPortalService.getStoredRequests() : [];
+    const r = allRequests.find(item => item.id === requestId);
+    if (!r) {
+      App.showToast('Request not found', 'error');
+      return;
+    }
+
+    const confirmed = confirm(`Convert Request into Official Case?\n\n• Client: ${r.clientName}\n• Matter: ${r.issueType}\n• Opposing: ${r.opposingParty || 'In Re Matter'}\n\nClient information will be automatically reused without retyping.`);
+    if (!confirmed) return;
+
+    if (typeof ClientPortalService !== 'undefined') {
+      const res = await ClientPortalService.officerConvertToCase(requestId, {
+        lawyer: 'Adv. Asha Mrema',
+        court: 'High Court of Tanzania (' + r.issueType + ' Division)'
+      });
+
+      if (res && res.success) {
+        App.closeModal();
+        App.showToast(`Case successfully registered for client ${r.clientName}!`, 'success');
+        App.refreshCurrentView();
+      } else {
+        App.showToast(res ? res.message : 'Conversion failed', 'error');
+      }
+    }
   }
 };

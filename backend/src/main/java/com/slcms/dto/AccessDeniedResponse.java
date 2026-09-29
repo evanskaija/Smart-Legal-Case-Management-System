@@ -19,6 +19,16 @@ public class AccessDeniedResponse {
         }
     }
 
+    public static AccessDeniedResponse of(String error, String message) {
+        AccessDeniedResponse resp = new AccessDeniedResponse(message);
+        if (error != null) resp.setError(error);
+        return resp;
+    }
+
+    public static AccessDeniedResponse defaultAccessDenied(String reason) {
+        return new AccessDeniedResponse(reason);
+    }
+
     public int getStatus() { return status; }
     public void setStatus(int status) { this.status = status; }
 

@@ -951,8 +951,15 @@ const DesignSystemView = {
 
   executeStageAction(actionRoute) {
     if (actionRoute === 'cases-new') {
-      if (SLCMS_STATE.currentUser?.role === 'Administrator') {
+      const currentUser = SLCMS_STATE.currentUser;
+      if (currentUser?.role === 'Administrator') {
         App.showToast('Administrators do not have access to register legal cases.', 'warning');
+        return;
+      }
+      const r = String(currentUser?.role || '').toLowerCase();
+      const t = String(currentUser?.jobTitle || currentUser?.roleLabel || '').toLowerCase();
+      if (r.includes('lawyer') || t.includes('lawyer') || r.includes('advocate') || t.includes('advocate')) {
+        App.showToast('Access restricted: Lawyers do not have permission to register new cases.', 'warning');
         return;
       }
       App.navigate('cases');

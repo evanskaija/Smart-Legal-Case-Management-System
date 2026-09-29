@@ -19,18 +19,39 @@
   <!-- Chart.js for Legal Analytics -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Core Stylesheets -->
-  <link rel="stylesheet" href="css/main.css">
-  <link rel="stylesheet" href="css/components.css">
-  <link rel="stylesheet" href="css/layout.css">
-  <link rel="stylesheet" href="css/views.css">
-  <link rel="stylesheet" href="css/responsive.css">
-  <link rel="stylesheet" href="css/document-generator.css">
-  <link rel="stylesheet" href="css/tasks-luxury.css">
-</head>
-<body>
+  <!-- SockJS & STOMP for Real-time WebSocket Case Chat -->
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 
-  <div id="app-root"></div>
+  <!-- Core Stylesheets -->
+  <link rel="stylesheet" href="css/main.css?v=20260925_v6">
+  <link rel="stylesheet" href="css/components.css?v=20260928_lawyer_ai">
+  <link rel="stylesheet" href="css/layout.css?v=20260928_lawyer_ai">
+  <link rel="stylesheet" href="css/views.css?v=20260928_lawyer_ai">
+  <link rel="stylesheet" href="css/responsive.css?v=20260928_lawyer_ai">
+  <link rel="stylesheet" href="css/document-generator.css?v=20260925_v6">
+  <link rel="stylesheet" href="css/tasks-luxury.css?v=20260925_v6">
+</head>
+<body style="background-color: #0B1F33;">
+
+  <div id="app-root">
+    <!-- Immediate Branded Pre-loader (eliminates blank white screen on page refresh) -->
+    <div id="initial-page-loader" style="position: fixed; inset: 0; background: #0B1F33; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 99999; font-family: 'Inter', -apple-system, sans-serif; color: #FFFFFF; user-select: none;">
+      <div style="position: relative; width: 68px; height: 68px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem;">
+        <div style="position: absolute; inset: -5px; border-radius: 50%; border: 2px solid rgba(200, 155, 60, 0.2); border-top-color: #C89B3C; animation: slcms-spin 0.9s cubic-bezier(0.5, 0.1, 0.5, 0.9) infinite;"></div>
+        <img src="assets/SLCMS.png" alt="SLCMS" style="width: 54px; height: 54px; border-radius: 50%; object-fit: contain; box-shadow: 0 0 24px rgba(200, 155, 60, 0.35);">
+      </div>
+      <div style="font-size: 1.2rem; font-weight: 800; letter-spacing: 0.08em; color: #FFFFFF; font-family: 'Outfit', sans-serif;">SLCMS<span style="color: #C89B3C;">.</span></div>
+      <div style="font-size: 0.72rem; letter-spacing: 0.08em; color: #94A3B8; margin-top: 0.35rem; text-transform: uppercase;">Smart Legal Case Management</div>
+      <div style="width: 140px; height: 3px; background: rgba(255, 255, 255, 0.1); border-radius: 9999px; margin-top: 1.5rem; overflow: hidden; position: relative;">
+        <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 45%; background: linear-gradient(90deg, #C89B3C, #FDE68A); border-radius: 9999px; animation: slcms-bar 1.2s ease-in-out infinite alternate;"></div>
+      </div>
+      <style>
+        @keyframes slcms-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes slcms-bar { 0% { transform: translateX(-30%); width: 30%; } 100% { transform: translateX(200%); width: 60%; } }
+      </style>
+    </div>
+  </div>
 
   <!-- Global Modal Dialog Container -->
   <div id="global-modal-overlay" class="modal-overlay" onclick="if(event.target === this) App.closeModal()">
@@ -41,28 +62,34 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Application Configuration & State Scripts -->
-  <script src="js/config.js"></script>
-  <script src="js/services/app-settings.js"></script>
-  <script src="js/services/tanzania-intent-router.js"></script>
-  <script src="js/services/system-logs-data.js"></script>
-  <script src="js/state.js"></script>
-  <script src="js/views/auth.js"></script>
-  <script src="js/views/dashboard.js"></script>
-  <script src="js/views/cases.js"></script>
-  <script src="js/views/clients.js"></script>
-  <script src="js/views/documents.js"></script>
-  <script src="js/services/client-message-templates.js"></script>
-  <script src="js/views/tasks.js"></script>
-  <script src="js/views/communications.js"></script>
-  <script src="js/views/client-messages.js"></script>
-  <script src="js/views/ai-assistant.js"></script>
-  <script src="js/views/ai-draft-assistant.js"></script>
-  <script src="js/views/case-library.js"></script>
-  <script src="js/views/reports.js"></script>
-  <script src="js/views/admin.js"></script>
-  <script src="js/views/settings.js"></script>
-  <script src="js/components/ai-copilot.js"></script>
-  <script src="js/components/case-registration-modal.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/config.js?v=20260925_v6"></script>
+  <script src="js/services/app-settings.js?v=20260925_v6"></script>
+  <script src="js/services/tanzania-intent-router.js?v=20260925_v6"></script>
+  <script src="js/services/system-logs-data.js?v=20260925_v6"></script>
+  <script src="js/state.js?v=20260926_v11"></script>
+  <script src="js/views/auth.js?v=20260926_v11"></script>
+  <script src="js/views/dashboard.js?v=20260925_v6"></script>
+  <script src="js/views/cases.js?v=20260927_workflow_v12"></script>
+  <script src="js/views/clients.js?v=20260925_v6"></script>
+  <script src="js/views/documents.js?v=20260925_v6"></script>
+  <script src="js/services/client-message-templates.js?v=20260925_v6"></script>
+  <script src="js/views/tasks.js?v=20260925_v6"></script>
+  <script src="js/views/communications.js?v=20260925_v6"></script>
+  <script src="js/views/client-messages.js?v=20260925_v6"></script>
+  <script src="js/views/ai-assistant.js?v=20260925_v6"></script>
+  <script src="js/views/ai-draft-assistant.js?v=20260925_v6"></script>
+  <script src="js/views/case-library.js?v=20260925_v6"></script>
+  <script src="js/views/reports.js?v=20260925_v6"></script>
+  <script src="js/views/admin.js?v=20260926_v12"></script>
+  <script src="js/views/settings.js?v=20260925_v6"></script>
+  <script src="js/components/ai-copilot.js?v=20260928_fix_content"></script>
+  <script src="js/components/case-registration-modal.js?v=20260925_v6"></script>
+  <script src="js/services/client-portal-service.js?v=20260927_workflow_v18"></script>
+  <script src="js/views/client-portal.js?v=20260927_workflow_v18"></script>
+  <script src="js/views/billing.js?v=20260927_workflow_v18"></script>
+  <script src="js/views/legal-requests.js?v=20260927_workflow_v18"></script>
+  <script src="js/views/case-chat.js?v=20260928_chat_replies"></script>
+  <script src="js/app.js?v=20260928_fix_content"></script>
+
 </body>
 </html>

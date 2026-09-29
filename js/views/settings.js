@@ -102,16 +102,10 @@ const SettingsView = {
           </div>
         </div>
 
-        <!-- 2. SUB-TABS -->
+        <!-- 2. SUB-TABS (Security and Backup are managed via dedicated top-level modules) -->
         <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; border-bottom: 2px solid #E2E8F0; padding-bottom: 0.6rem;">
-          <button type="button" class="btn btn-sm ${this.activeTab === 'firm' ? 'btn-gold' : 'btn-secondary'}" onclick="SettingsView.setTab('firm')" style="font-weight: 700; border-radius: 8px;">
+          <button type="button" class="btn btn-sm btn-gold" onclick="SettingsView.setTab('firm')" style="font-weight: 700; border-radius: 8px;">
             🏛️ Firm Profile
-          </button>
-          <button type="button" class="btn btn-sm ${this.activeTab === 'security' ? 'btn-gold' : 'btn-secondary'}" onclick="SettingsView.setTab('security')" style="font-weight: 700; border-radius: 8px;">
-            🔒 Security
-          </button>
-          <button type="button" class="btn btn-sm ${this.activeTab === 'storage' ? 'btn-gold' : 'btn-secondary'}" onclick="SettingsView.setTab('storage')" style="font-weight: 700; border-radius: 8px;">
-            💾 Backup &amp; Data
           </button>
         </div>
 
@@ -304,36 +298,31 @@ const SettingsView = {
     App.showToast(`Security rule updated: ${key} = ${checked ? 'Enabled' : 'Disabled'}`, 'info');
   },
 
-  downloadBackup() {
-    const backupData = {
-      system: 'SLCMS - Smart Legal Case Management System',
-      exportDate: new Date().toISOString(),
-      firm: this.firmProfile,
-      casesCount: SLCMS_STATE.cases.length,
-      clientsCount: SLCMS_STATE.clients.length,
-      documentsCount: SLCMS_STATE.documents.length,
-      judgmentsCount: SLCMS_STATE.tanzaniaJudgments.length,
-      tasksCount: SLCMS_STATE.tasks.length,
-      usersCount: SLCMS_STATE.users.length,
-      cases: SLCMS_STATE.cases,
-      clients: SLCMS_STATE.clients,
-      documents: SLCMS_STATE.documents,
-      tasks: SLCMS_STATE.tasks,
-      users: SLCMS_STATE.users.map(u => ({ id: u.id, name: u.name, role: u.role, email: u.email, status: u.status }))
-    };
-
-    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `slcms_backup_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    SLCMS_STATE.addAuditLog('System Backup Downloaded', 'Administration', 'Full JSON database export');
-    App.showToast('Full system backup file successfully generated & downloaded!', 'success');
+  async downloadBackup() {
+    App.showToast('Generating XAMPP MySQL database backup...', 'info');
+    try {
+      if (typeof AppSettings !== 'undefined' && AppSettings.createBackupNow) {
+        const bkp = await AppSettings.createBackupNow();
+        SLCMS_STATE.addAuditLog('System Backup Downloaded', 'Administration', `MySQL database dump: ${bkp.filename}`);
+        App.showToast(`MySQL database backup successfully generated (${bkp.sizeFormatted || 'Ready'})!`, 'success');
+      } else {
+        const url = '/api/admin/backups';
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-Role': 'Administrator'
+          }
+        });
+        const data = await res.json();
+        if (data.filename) {
+          window.location.href = `/api/admin/backups/${encodeURIComponent(data.filename)}/download`;
+          App.showToast(`MySQL backup created: ${data.filename}`, 'success');
+        }
+      }
+    } catch(err) {
+      App.showToast(`Backup failed: ${err.message}`, 'error');
+    }
   },
 
   saveBackendApiUrl() {

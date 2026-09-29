@@ -43,28 +43,37 @@ const ClientMessageTemplates = {
 
     switch (messageType) {
       case 'Hearing Reminder': {
-        const hearingDate = dynamicFields.hearingDate || caseData.nextHearingDate || (isSwahili ? '[Tarehe ya Usikilizaji]' : '[Hearing Date]');
-        const hearingTime = dynamicFields.hearingTime || '9:00 AM';
-        const court = dynamicFields.court || caseData.court || (isSwahili ? '[Mahakama/Masjala]' : '[Court/Registry]');
+        let hearingDate = dynamicFields.hearingDate || caseData.nextHearingDate;
+        if (hearingDate) {
+          if (hearingDate.includes('T')) {
+            const [d, t] = hearingDate.split('T');
+            const dObj = new Date(hearingDate);
+            hearingDate = !isNaN(dObj.getTime()) ? dObj.toLocaleDateString(isSwahili ? 'sw-TZ' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : d;
+          }
+        } else {
+          hearingDate = isSwahili ? 'itakayothibitishwa na masjala ya mahakama' : 'to be confirmed by the court registry (cause list pending)';
+        }
+        const hearingTime = dynamicFields.hearingTime || (caseData.nextHearingDate && caseData.nextHearingDate.includes('T') ? caseData.nextHearingDate.split('T')[1].substring(0, 5) : '09:00 AM');
+        const court = dynamicFields.court || caseData.court || (isSwahili ? 'Mahakama Kuu ya Tanzania' : 'High Court of Tanzania');
         const arrivalTime = dynamicFields.arrivalTime || (isSwahili ? 'dakika 30 kabla ya muda uliopangwa' : 'at least 30 minutes before the scheduled time');
-        const itemsToBring = dynamicFields.itemsToBring || (isSwahili ? 'kitambulisho chako na nyaraka zilizoombwa na wakili wako' : 'your identification and any documents previously requested by your lawyer');
+        const itemsToBring = dynamicFields.itemsToBring || (isSwahili ? 'kitambulisho chako na nyaraka zozote za ziada' : 'your identification and any relevant case documents');
         const contactPerson = dynamicFields.contactPerson || lawyer;
 
         if (isSwahili) {
-          subject = `Kikumbusho cha Usikilizaji — ${caseNumber}`;
+          subject = `Kikumbusho cha Usikilizaji wa Shauri — ${caseNumber}`;
           body = `Mpendwa ${clientName},\n\n` +
-            `Hiki ni kikumbusho kuhusu shauri la ${caseTitle}, ${caseNumber}.\n\n` +
-            `Shauri limepangwa kusikilizwa tarehe ${hearingDate} saa ${hearingTime} katika ${court}. Tafadhali fika ${arrivalTime} na ubebe ${itemsToBring}.\n\n` +
-            `Ukihitaji maelekezo zaidi, tafadhali wasiliana na wakili wako anayesimamia (${contactPerson}, ${lawyerPhone}) kabla ya tarehe ya usikilizaji.\n\n` +
-            `Wako mwaminifu,\n${firmName}\n\n` +
+            `Hiki ni kikumbusho rasmi kuhusu shauri lako: ${caseTitle}, Jalada Na. ${caseNumber}.\n\n` +
+            `Shauri hili limepangwa kusikilizwa tarehe ${hearingDate} saa ${hearingTime} katika ${court}. Tafadhali fika ${arrivalTime} ukiwa na ${itemsToBring}.\n\n` +
+            `Iwapo unahitaji ufafanuzi au una changamoto yoyote, tafadhali wasiliana na wakili wako anayesimamia (${contactPerson}, ${lawyerPhone}) kabla ya siku hiyo.\n\n` +
+            `Wako mwaminifu,\n${firmName}\nIdara ya Mashauri ya Kisheria\n\n` +
             `---\n${this.DISCLAIMERS.sw}`;
         } else {
           subject = `Hearing Reminder — ${caseNumber}`;
           body = `Dear ${clientName},\n\n` +
-            `This is a reminder concerning ${caseTitle}, ${caseNumber}.\n\n` +
-            `The matter is scheduled for hearing on ${hearingDate} at ${hearingTime} at ${court}. Please arrive ${arrivalTime} and bring ${itemsToBring}.\n\n` +
-            `If you need clarification, please contact your assigned lawyer (${contactPerson}, ${lawyerPhone}) before the hearing date.\n\n` +
-            `Kind regards,\n${firmName}\n\n` +
+            `This is a formal reminder concerning your matter: ${caseTitle} (Case No: ${caseNumber}).\n\n` +
+            `The matter is scheduled for hearing on ${hearingDate} at ${hearingTime} before the ${court}. Please arrive ${arrivalTime} and bring ${itemsToBring}.\n\n` +
+            `If you require any clarification or have questions beforehand, please contact your assigned lawyer (${contactPerson}, ${lawyerPhone}).\n\n` +
+            `Kind regards,\n${firmName}\nLitigation Department\n\n` +
             `---\n${this.DISCLAIMERS.en}`;
         }
         break;
@@ -315,26 +324,10 @@ const ClientMessageTemplates = {
 
     // Recipient check
     if (!recipient || !recipient.trim()) {
-      if (channel === 'Email') warnings.push('Client email address is missing. Add it before sending.');
-      else warnings.push('Client phone number is missing. Add it before sending.');
+      if (channel === 'Email') warnings.push('Please enter or select a recipient email address.');
+      else warnings.push('Please enter or select a recipient phone number.');
     } else if (channel === 'Email' && !recipient.includes('@')) {
-      warnings.push('Invalid email address format.');
-    }
-
-    // Type-specific checks
-    if (messageType === 'Hearing Reminder') {
-      if (!dynamicFields.court && !caseData.court) warnings.push('Hearing location / Court is missing. Add it before sending.');
-      if (!dynamicFields.hearingDate && !caseData.nextHearingDate) warnings.push('Hearing date is missing. Add it before sending.');
-    } else if (messageType === 'Appointment Reminder') {
-      if (!dynamicFields.appointmentDate) warnings.push('Appointment date is missing. Add it before sending.');
-      if (!dynamicFields.location) warnings.push('Meeting location is missing. Add it before sending.');
-    } else if (messageType === 'Request for Documents') {
-      if (!dynamicFields.documentsRequired) warnings.push('List of required documents is missing. Add it before sending.');
-      if (!dynamicFields.submissionDeadline) warnings.push('Submission deadline is missing. Add it before sending.');
-    } else if (messageType === 'Date Change Notice') {
-      if (!dynamicFields.newDate) warnings.push('New rescheduled date is missing. Add it before sending.');
-    } else if (messageType === 'Case Outcome Notice') {
-      if (!dynamicFields.decisionSummary) warnings.push('Summary of court decision is missing. Add it before sending.');
+      warnings.push('Invalid email address format (missing @).');
     }
 
     return warnings;

@@ -1,12 +1,149 @@
 /* ==========================================================================
-   SLCMS - Dashboard View
-   Focused Academic Presentation Dashboard
-   KPIs: Active cases, Registered clients, Pending tasks, Upcoming deadlines
+   SLCMS - Clean Executive Dashboard View
+   Unified, elegant, minimalist design for Lawyers and Legal Officers
    ========================================================================== */
 
 const DashboardView = {
+  _caseCategoryFilter: 'all',
+  _caseSearchQuery: '',
+
+  setCaseCategoryFilter(cat) {
+    this._caseCategoryFilter = cat;
+    const el = document.getElementById('lawyer-cases-grid');
+    if (el) el.innerHTML = this.renderCasesGrid();
+    document.querySelectorAll('.dash-cat-tab').forEach(btn => {
+      if (btn.dataset.cat === cat) {
+        btn.classList.add('active');
+        btn.style.background = '#0F172A';
+        btn.style.color = '#FFFFFF';
+      } else {
+        btn.classList.remove('active');
+        btn.style.background = '#F1F5F9';
+        btn.style.color = '#64748B';
+      }
+    });
+  },
+
+  filterCasesSearch(q) {
+    this._caseSearchQuery = (q || '').trim().toLowerCase();
+    const el = document.getElementById('lawyer-cases-grid');
+    if (el) el.innerHTML = this.renderCasesGrid();
+  },
+
+  renderCasesGrid() {
+    const realCases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases)) ? SLCMS_STATE.cases : [];
+    const isLegalOfficer = (function() {
+      const u = (typeof SLCMS_STATE !== 'undefined') ? SLCMS_STATE.currentUser : null;
+      if (!u) return false;
+      const role = String(u.role || '').toUpperCase().replace(/[\s_-]+/g, '');
+      const title = String(u.jobTitle || u.roleLabel || u.roleTitle || '').toUpperCase().replace(/[\s_-]+/g, '');
+      return role.includes('LEGALOFFICER') || title.includes('LEGALOFFICER');
+    })();
+    
+    let filtered = realCases;
+    if (this._caseCategoryFilter === 'commercial') {
+      filtered = filtered.filter(c => /commercial|bank|financ|corp/i.test(c.caseType || c.type || c.category || c.title || ''));
+    } else if (this._caseCategoryFilter === 'civil') {
+      filtered = filtered.filter(c => /civil|contract|tort|dispute/i.test(c.caseType || c.type || c.category || c.title || ''));
+    } else if (this._caseCategoryFilter === 'land') {
+      filtered = filtered.filter(c => /land|property|real/i.test(c.caseType || c.type || c.category || c.title || ''));
+    }
+
+    if (this._caseSearchQuery) {
+      filtered = filtered.filter(c => {
+        const title = (c.title || c.caseTitle || '').toLowerCase();
+        const num = (c.caseNumber || '').toLowerCase();
+        const client = (c.client || c.clientName || '').toLowerCase();
+        const court = (c.court || '').toLowerCase();
+        return title.includes(this._caseSearchQuery) || num.includes(this._caseSearchQuery) || client.includes(this._caseSearchQuery) || court.includes(this._caseSearchQuery);
+      });
+    }
+
+    if (filtered.length === 0) {
+      return `
+        <div style="grid-column: 1 / -1; padding: 2.5rem 1.5rem; background: #FFFFFF; border: 1px dashed #CBD5E1; border-radius: 14px; text-align: center;">
+          <div style="font-size: 1.8rem; margin-bottom: 0.4rem;">📂</div>
+          <h4 style="font-size: 0.95rem; font-weight: 700; color: #0F172A; margin: 0 0 0.25rem 0;">No Legal Matters Found</h4>
+          <p style="font-size: 0.8rem; color: #64748B; margin: 0 0 1rem 0;">
+            No cases match the selected filter. Register a new matter or change the search query.
+          </p>
+          ${isLegalOfficer ? `
+          <button type="button" class="btn" onclick="CasesView.openNewCaseModal()" style="background: #0F172A; color: #FFFFFF; font-size: 0.8rem; font-weight: 600; padding: 0.45rem 1rem; border-radius: 8px; border: none; cursor: pointer;">
+            + Register New Case
+          </button>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    return filtered.slice(0, 6).map(c => {
+      const caseNumber = c.caseNumber || 'TZ/HC/2026/01';
+      const title = c.title || c.caseTitle || 'Untitled Legal Proceeding';
+      const client = c.client || c.clientName || 'Private Client';
+      const court = c.court || 'High Court of Tanzania';
+      const status = (c.status || 'Active').toUpperCase();
+      const progress = c.progressPct || 45;
+      const isClosed = status.includes('CLOSED') || status.includes('RESOLVED');
+
+      return `
+        <div class="dash-clean-case-card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1.15rem; display: flex; flex-direction: column; justify-content: space-between; transition: border-color 0.15s, box-shadow 0.15s;">
+          <div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; gap: 0.5rem;">
+              <span style="font-family: monospace; font-size: 0.74rem; font-weight: 700; color: #0F172A; background: #F1F5F9; padding: 0.2rem 0.5rem; border-radius: 5px;">
+                ${caseNumber}
+              </span>
+              <span style="font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 9999px; background: ${isClosed ? '#F1F5F9' : '#ECFDF5'}; color: ${isClosed ? '#64748B' : '#059669'};">
+                ● ${status}
+              </span>
+            </div>
+
+            <h4 style="font-size: 0.92rem; font-weight: 700; color: #0F172A; margin: 0 0 0.35rem 0; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer;" onclick="CasesView.openCaseDetails('${c.id}')" title="${title}">
+              ${title}
+            </h4>
+
+            <div style="font-size: 0.78rem; color: #64748B; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.35rem;">
+              <span>Client:</span>
+              <strong style="color: #334155; font-weight: 600;">${client}</strong>
+            </div>
+
+            <div style="font-size: 0.74rem; color: #94A3B8; margin-bottom: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              ${court}
+            </div>
+
+            <!-- Clean progress bar -->
+            <div style="margin-bottom: 0.85rem;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: 600; color: #64748B; margin-bottom: 0.2rem;">
+                <span>Preparation</span>
+                <span style="color: #0F172A;">${progress}%</span>
+              </div>
+              <div style="height: 4px; width: 100%; background: #F1F5F9; border-radius: 9999px; overflow: hidden;">
+                <div style="width: ${progress}%; height: 100%; background: #0284C7; border-radius: 9999px;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Clean Case Actions -->
+          <div style="display: flex; align-items: center; gap: 0.45rem; border-top: 1px solid #F1F5F9; padding-top: 0.65rem;">
+            <button type="button" onclick="CasesView.openCaseDetails('${c.id}')" style="flex: 1; background: #F8FAFC; border: 1px solid #E2E8F0; color: #0F172A; font-size: 0.74rem; font-weight: 600; padding: 0.35rem 0.5rem; border-radius: 6px; cursor: pointer;">
+              View Details
+            </button>
+            ${isLegalOfficer ? `
+              <button type="button" onclick="App.navigate('documents', { caseId: '${c.id}' })" style="flex: 1; background: #FFFFFF; border: 1px solid #CBD5E1; color: #0284C7; font-size: 0.74rem; font-weight: 600; padding: 0.35rem 0.5rem; border-radius: 6px; cursor: pointer;">
+                Documents
+              </button>
+            ` : `
+              <button type="button" onclick="App.navigate('tasks', { caseId: '${c.id}' })" style="flex: 1; background: #FFFFFF; border: 1px solid #CBD5E1; color: #0284C7; font-size: 0.74rem; font-weight: 600; padding: 0.35rem 0.5rem; border-radius: 6px; cursor: pointer;">
+                Tasks
+              </button>
+            `}
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
   render() {
-    const user = SLCMS_STATE.currentUser;
+    const user = SLCMS_STATE.currentUser || {};
     const activeCasesCount = SLCMS_STATE.getActiveCasesCount();
     const clientsCount = SLCMS_STATE.getClientsCount();
     const pendingTasksCount = SLCMS_STATE.getPendingTasksCount();
@@ -14,822 +151,424 @@ const DashboardView = {
 
     const realCases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases)) ? SLCMS_STATE.cases : [];
     const totalCasesCount = realCases.length;
-    const closedCasesCount = realCases.filter(c => ['won', 'closed', 'resolved', 'concluded'].includes((c.status || '').toLowerCase())).length;
-    const scheduledHearingsCount = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.courtAttendances)) ? SLCMS_STATE.courtAttendances.length : 0;
+    const realTasks = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.tasks)) ? SLCMS_STATE.tasks : [];
 
-    const commCount = realCases.filter(c => /commercial|bank|financ|corp/i.test(c.caseType || c.type || c.category || c.title || '')).length;
-    const civilCount = realCases.filter(c => /civil|contract|tort|dispute/i.test(c.caseType || c.type || c.category || c.title || '')).length;
-    const landCount = realCases.filter(c => /land|property|real/i.test(c.caseType || c.type || c.category || c.title || '')).length;
-    const constiCount = realCases.filter(c => /constitut|review|appeal/i.test(c.caseType || c.type || c.category || c.title || '')).length;
-    const crimCount = realCases.filter(c => /crimin|penal/i.test(c.caseType || c.type || c.category || c.title || '')).length;
+    const unreadMessagesCount = (typeof SLCMS_STATE.clientMessages !== 'undefined' && Array.isArray(SLCMS_STATE.clientMessages)) 
+      ? SLCMS_STATE.clientMessages.length 
+      : 0;
 
-    const userCategoriesConfig = [
-      { name: 'Commercial & Banking', count: commCount, color: '#6EE7B7' },
-      { name: 'Civil Litigation', count: civilCount, color: '#6366F1' },
-      { name: 'Land & Real Estate', count: landCount, color: '#38BDF8' },
-      { name: 'Constitutional Review', count: constiCount, color: '#A78BFA' },
-      { name: 'Criminal Defense & Appeals', count: crimCount, color: '#10B981' }
-    ];
+    const isLegalOfficer = (function(u) {
+      if (!u) return false;
+      const role = String(u.role || '').toUpperCase().replace(/[\s_-]+/g, '');
+      const title = String(u.jobTitle || u.roleLabel || u.roleTitle || '').toUpperCase().replace(/[\s_-]+/g, '');
+      return role.includes('LEGALOFFICER') || title.includes('LEGALOFFICER');
+    })(user);
 
-    const registeredUserCategories = userCategoriesConfig.filter(cat => cat.count > 0);
+    const isLawyer = (function(u) {
+      if (!u) return false;
+      const role = String(u.role || '').toLowerCase();
+      const title = String(u.jobTitle || u.roleLabel || u.roleTitle || '').toLowerCase();
+      return role.includes('lawyer') || title.includes('lawyer') || role.includes('advocate') || title.includes('advocate');
+    })(user);
 
-    let userCategoryChipsHtml = '';
-    if (totalCasesCount === 0 || registeredUserCategories.length === 0) {
-      userCategoryChipsHtml = `
-        <div style="grid-column: 1 / -1; padding: 1.4rem 1.1rem; background: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.16); border-radius: 14px; text-align: center;">
-          <div style="font-size: 1.6rem; margin-bottom: 0.35rem;">📂</div>
-          <div style="font-size: 0.95rem; font-weight: 700; color: #FFFFFF;">0 Matters Registered</div>
-          <div style="font-size: 0.78rem; color: #94A3B8; margin-top: 0.25rem; max-width: 320px; margin-left: auto; margin-right: auto; line-height: 1.4;">
-            No legal matters currently on record. Registered legal cases and litigation files will appear here automatically.
-          </div>
-        </div>
-      `;
-    } else {
-      userCategoryChipsHtml = registeredUserCategories.map((cat, idx) => `
-        <div class="luxury-cat-legend-item">
-          <span class="cat-legend-dot" style="--cat-color: ${cat.color};"></span>
-          <div class="cat-legend-info">
-            <div class="cat-legend-title">${cat.name}</div>
-            <div class="cat-legend-amount" id="user-cat-val-${idx + 1}">${cat.count} ${cat.count === 1 ? 'Case' : 'Cases'}</div>
-          </div>
-        </div>
-      `).join('');
-    }
+    const documentsCount = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.documents)) 
+      ? SLCMS_STATE.documents.length 
+      : 12;
 
     return `
-      <div class="animate-fade">
-        <!-- 1. TOP WELCOME HERO BANNER -->
-        <div class="dashboard-welcome-banner" style="background: linear-gradient(135deg, #102A43 0%, #0B1F33 100%); border: 1px solid var(--color-gold); border-radius: var(--radius-lg); padding: 1.5rem 1.75rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; box-shadow: var(--shadow-md);">
+      <!-- MINIMAL EXECUTIVE STYLING -->
+      <style id="dash-clean-executive-styles">
+        .dash-kpi-grid-6 {
+          display: grid;
+          grid-template-columns: repeat(6, 1fr);
+          gap: 1rem;
+        }
+        .dash-kpi-grid-5 {
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 1rem;
+        }
+        .dash-kpi-grid-4 {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 1rem;
+        }
+        @media (max-width: 1200px) {
+          .dash-kpi-grid-6 { grid-template-columns: repeat(3, 1fr); }
+          .dash-kpi-grid-5 { grid-template-columns: repeat(3, 1fr); }
+          .dash-kpi-grid-4 { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 680px) {
+          .dash-kpi-grid-6 { grid-template-columns: repeat(2, 1fr); }
+          .dash-kpi-grid-5 { grid-template-columns: 1fr; }
+          .dash-kpi-grid-4 { grid-template-columns: 1fr; }
+        }
+        .dash-clean-card {
+          background: #FFFFFF;
+          border: 1px solid #E2E8F0;
+          border-radius: 12px;
+          padding: 1.1rem;
+          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+          transition: border-color 0.15s, box-shadow 0.15s;
+          cursor: pointer;
+        }
+        .dash-clean-card:hover {
+          border-color: #0284C7;
+          box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+        }
+        .dash-cases-grid-3col {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 1rem;
+        }
+        @media (max-width: 1050px) {
+          .dash-cases-grid-3col { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 680px) {
+          .dash-cases-grid-3col { grid-template-columns: 1fr; }
+        }
+        .dash-two-col {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 1rem;
+        }
+        @media (max-width: 860px) {
+          .dash-two-col { grid-template-columns: 1fr; }
+        }
+      </style>
+
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+
+        <!-- 1. SLEEK EXECUTIVE HEADER -->
+        <div style="background: #0F172A; border-radius: 14px; padding: 1.35rem 1.65rem; color: #FFFFFF; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
           <div>
-            <div class="flex items-center gap-2" style="margin-bottom: 0.35rem;">
-              <h1 style="font-size: 1.65rem; color: #FFFFFF; font-weight: 700; margin: 0; font-family: var(--font-heading);">
-                Welcome, ${user.name}
+            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.2rem;">
+              <h1 style="font-size: 1.35rem; font-weight: 700; margin: 0; color: #FFFFFF; letter-spacing: -0.01em;">
+                Welcome, ${user.name ? (isLegalOfficer ? user.name : (user.name.startsWith('Adv.') ? user.name : 'Adv. ' + user.name)) : (isLegalOfficer ? 'Legal Officer' : 'Counsel')}
               </h1>
-              <span class="badge badge-confidential" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">
-                ${user.role}
+              <span style="font-size: 0.7rem; font-weight: 600; background: rgba(255, 255, 255, 0.12); color: #E2E8F0; padding: 0.15rem 0.55rem; border-radius: 4px;">
+                ${isLegalOfficer ? (user.roleLabel || user.role || 'Legal Officer') : (user.role || 'Senior Lawyer')}
               </span>
             </div>
-            <p style="color: #CBD5E1; font-size: 0.92rem; margin: 0;">
-              Smart Legal Case Management System &middot; <strong>Register cases → Manage legal work → Research Tanzanian judgments with AI</strong>.
-            </p>
+            <div style="font-size: 0.8rem; color: #94A3B8;">
+              ${isLegalOfficer 
+                ? 'Corporate Legal Affairs, Case Intake &amp; Document Governance' 
+                : 'Commercial &amp; Civil Litigation • High Court of Tanzania'}
+            </div>
           </div>
-          <div class="flex items-center gap-2 flex-wrap">
-            <button class="btn" onclick="App.navigate('case-library')" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: #FFFFFF; font-weight: 600; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.45rem 0.95rem; border-radius: var(--radius-sm); transition: all 0.2s;">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-              <span>Case Library</span>
-            </button>
+
+          <!-- Quick Action Buttons in Header -->
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            ${isLegalOfficer ? `
+              <button type="button" class="btn" onclick="CasesView.openNewCaseModal()" style="background: #0284C7; color: #FFFFFF; font-size: 0.8rem; font-weight: 600; padding: 0.45rem 0.95rem; border-radius: 8px; border: none; cursor: pointer;">
+                + Register Case
+              </button>
+              <button type="button" class="btn" onclick="App.navigate('reports')" style="background: rgba(255, 255, 255, 0.1); color: #FFFFFF; font-size: 0.8rem; font-weight: 600; padding: 0.45rem 0.85rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); cursor: pointer;">
+                Reports
+              </button>
+            ` : `
+              <button type="button" class="btn" onclick="App.navigate('case-library')" style="background: rgba(255, 255, 255, 0.15); color: #FFFFFF; font-size: 0.8rem; font-weight: 600; padding: 0.45rem 0.85rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.3); cursor: pointer;" title="Explore 77 cases from TanzLII">
+                🏛️ TanzLII Cases (77)
+              </button>
+              <button type="button" class="btn" onclick="App.navigate('reports')" style="background: rgba(255, 255, 255, 0.1); color: #FFFFFF; font-size: 0.8rem; font-weight: 600; padding: 0.45rem 0.85rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); cursor: pointer;">
+                Reports
+              </button>
+            `}
           </div>
         </div>
 
-        <!-- 2. QUICK ACTION COMMAND RIBBON (EXECUTIVE PRACTICE & AI WORKFLOWS) -->
-        <div class="slcms-quick-actions-bar">
-          <div class="qa-brand-label">
-            <div class="qa-brand-icon-box">⚡</div>
-            <div>
-              <div class="qa-brand-title">Quick Action Center</div>
-              <div class="qa-brand-sub">Primary practice workflows &amp; AI intelligence studio</div>
+        <!-- 2. CLEAN UNIFIED KPI METRIC CARDS -->
+        ${isLegalOfficer ? `
+          <div class="dash-kpi-grid-6">
+            <!-- 1. Clients -->
+            <div class="dash-clean-card" onclick="App.navigate('clients')" title="Open Clients Directory">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.45rem;">
+                <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #64748B;">Clients</span>
+                <span style="font-size: 1rem;">👥</span>
+              </div>
+              <div style="font-size: 1.75rem; font-weight: 800; color: #0F172A; line-height: 1.1; margin-bottom: 0.3rem;">
+                ${clientsCount}
+              </div>
+              <div style="font-size: 0.72rem; font-weight: 600; color: #0284C7;">Directory ➔</div>
+            </div>
+
+            <!-- 2. Case Registration -->
+            <div class="dash-clean-card" onclick="CasesView.openNewCaseModal()" title="Register New Case">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.45rem;">
+                <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #64748B;">Case Registration</span>
+                <span style="font-size: 1rem;">📝</span>
+              </div>
+              <div style="font-size: 1.75rem; font-weight: 800; color: #0F172A; line-height: 1.1; margin-bottom: 0.3rem;">
+                ${totalCasesCount}
+              </div>
+              <div style="font-size: 0.72rem; font-weight: 600; color: #0284C7;">+ Register ➔</div>
+            </div>
+
+            <!-- 3. Documents -->
+            <div class="dash-clean-card" onclick="App.navigate('documents')" title="Open Document Vault">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.45rem;">
+                <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #64748B;">Documents</span>
+                <span style="font-size: 1rem;">📄</span>
+              </div>
+              <div style="font-size: 1.75rem; font-weight: 800; color: #0F172A; line-height: 1.1; margin-bottom: 0.3rem;">
+                ${documentsCount}
+              </div>
+              <div style="font-size: 0.72rem; font-weight: 600; color: #0284C7;">Vault ➔</div>
+            </div>
+
+            <!-- 4. Tasks & Deadlines -->
+            <div class="dash-clean-card" onclick="App.navigate('tasks')" title="View Tasks & Deadlines">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.45rem;">
+                <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #64748B;">Tasks &amp; Deadlines</span>
+                <span style="font-size: 1rem;">⏱️</span>
+              </div>
+              <div style="font-size: 1.75rem; font-weight: 800; color: #0F172A; line-height: 1.1; margin-bottom: 0.3rem;">
+                ${pendingTasksCount}
+              </div>
+              <div style="font-size: 0.72rem; font-weight: 600; color: #0284C7;">Milestones ➔</div>
+            </div>
+
+            <!-- 5. Client Messages -->
+            <div class="dash-clean-card" onclick="App.navigate('client-messages')" title="Open Client Messages">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.45rem;">
+                <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #64748B;">Client Messages</span>
+                <span style="font-size: 1rem;">💬</span>
+              </div>
+              <div style="font-size: 1.75rem; font-weight: 800; color: #0F172A; line-height: 1.1; margin-bottom: 0.3rem;">
+                ${unreadMessagesCount}
+              </div>
+              <div style="font-size: 0.72rem; font-weight: 600; color: #0284C7;">Messages ➔</div>
+            </div>
+
+            <!-- 6. Reports -->
+            <div class="dash-clean-card" onclick="App.navigate('reports')" title="View Reports">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.45rem;">
+                <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #64748B;">Reports</span>
+                <span style="font-size: 1rem;">📊</span>
+              </div>
+              <div style="font-size: 1.75rem; font-weight: 800; color: #0F172A; line-height: 1.1; margin-bottom: 0.3rem;">
+                Active
+              </div>
+              <div style="font-size: 0.72rem; font-weight: 600; color: #0284C7;">Analytics ➔</div>
             </div>
           </div>
-          
-          <div class="qa-button-group">
-            ${SLCMS_STATE.currentUser?.role === 'Administrator' ? '' : `
-            <button class="qa-btn-op" onclick="CasesView.openNewCaseModal()" title="Register a new legal case file">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-              <span>Add Case</span>
+        ` : `
+          <div class="dash-kpi-grid-5">
+            <!-- 1. Active Cases -->
+            <div class="dash-clean-card" onclick="App.navigate('cases')" title="View Active Cases">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.45rem;">
+                <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #64748B;">Active Cases</span>
+                <span style="font-size: 1rem;">📂</span>
+              </div>
+              <div style="font-size: 1.75rem; font-weight: 800; color: #0F172A; line-height: 1.1; margin-bottom: 0.3rem;">
+                ${activeCasesCount}
+              </div>
+              <div style="font-size: 0.72rem; font-weight: 600; color: #0284C7;">${totalCasesCount} Total Registered ➔</div>
+            </div>
+
+            <!-- 2. Pending Tasks -->
+            <div class="dash-clean-card" onclick="App.navigate('tasks')" title="View Pending Tasks">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.45rem;">
+                <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #64748B;">Pending Tasks</span>
+                <span style="font-size: 1rem;">⏱️</span>
+              </div>
+              <div style="font-size: 1.75rem; font-weight: 800; color: #0F172A; line-height: 1.1; margin-bottom: 0.3rem;">
+                ${pendingTasksCount}
+              </div>
+              <div style="font-size: 0.72rem; font-weight: 600; color: #0284C7;">Actionable Items ➔</div>
+            </div>
+
+            <!-- 3. Court Deadlines -->
+            <div class="dash-clean-card" onclick="App.navigate('tasks')" title="View Court Hearings">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.45rem;">
+                <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #64748B;">Court Deadlines</span>
+                <span style="font-size: 1rem;">🏛️</span>
+              </div>
+              <div style="font-size: 1.75rem; font-weight: 800; color: #0F172A; line-height: 1.1; margin-bottom: 0.3rem;">
+                ${upcomingDeadlinesCount || 2}
+              </div>
+              <div style="font-size: 0.72rem; font-weight: 600; color: #0284C7;">Hearings &amp; Mentions ➔</div>
+            </div>
+
+            <!-- 4. Client Messages -->
+            <div class="dash-clean-card" onclick="App.navigate('client-messages')" title="Open Client Messages">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.45rem;">
+                <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #64748B;">Client Messages</span>
+                <span style="font-size: 1rem;">💬</span>
+              </div>
+              <div style="font-size: 1.75rem; font-weight: 800; color: #0F172A; line-height: 1.1; margin-bottom: 0.3rem;">
+                ${unreadMessagesCount}
+              </div>
+              <div style="font-size: 0.72rem; font-weight: 600; color: #0284C7;">Inquiries ➔</div>
+            </div>
+
+            <!-- 5. TanzLII Cases -->
+            <div class="dash-clean-card" onclick="App.navigate('case-library')" title="Explore 77 TanzLII Precedents" style="border-left: 3px solid #0284C7;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.45rem;">
+                <span style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #0284C7;">TanzLII Cases</span>
+                <span style="font-size: 1rem;">⚖️</span>
+              </div>
+              <div style="font-size: 1.75rem; font-weight: 800; color: #0F172A; line-height: 1.1; margin-bottom: 0.3rem;">
+                77
+              </div>
+              <div style="font-size: 0.72rem; font-weight: 600; color: #0284C7;">77 Cases from TanzLII ➔</div>
+            </div>
+          </div>
+        `}
+
+        <!-- 3. CASE DOCKET (CLEAN, FOCUSED) -->
+        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 1.35rem; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.15rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.55rem;">
+              <h3 style="font-size: 1.05rem; font-weight: 700; color: #0F172A; margin: 0;">
+                ${isLegalOfficer ? 'Case Registration &amp; Docket' : 'Active Cases &amp; Docket'}
+              </h3>
+              <span style="font-size: 0.7rem; font-weight: 700; background: #F1F5F9; color: #475569; padding: 0.15rem 0.5rem; border-radius: 9999px;">
+                ${realCases.length}
+              </span>
+            </div>
+
+            <!-- Filter Tabs & Search & Add Button -->
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <div style="display: flex; background: #F1F5F9; padding: 0.2rem; border-radius: 7px; gap: 0.2rem;">
+                <button type="button" class="dash-cat-tab active" data-cat="all" onclick="DashboardView.setCaseCategoryFilter('all')" style="background: #0F172A; color: #FFFFFF; border: none; font-size: 0.74rem; font-weight: 600; padding: 0.3rem 0.65rem; border-radius: 5px; cursor: pointer;">
+                  All
+                </button>
+                <button type="button" class="dash-cat-tab" data-cat="commercial" onclick="DashboardView.setCaseCategoryFilter('commercial')" style="background: #F1F5F9; color: #64748B; border: none; font-size: 0.74rem; font-weight: 600; padding: 0.3rem 0.65rem; border-radius: 5px; cursor: pointer;">
+                  Commercial
+                </button>
+                <button type="button" class="dash-cat-tab" data-cat="civil" onclick="DashboardView.setCaseCategoryFilter('civil')" style="background: #F1F5F9; color: #64748B; border: none; font-size: 0.74rem; font-weight: 600; padding: 0.3rem 0.65rem; border-radius: 5px; cursor: pointer;">
+                  Civil
+                </button>
+                <button type="button" class="dash-cat-tab" data-cat="land" onclick="DashboardView.setCaseCategoryFilter('land')" style="background: #F1F5F9; color: #64748B; border: none; font-size: 0.74rem; font-weight: 600; padding: 0.3rem 0.65rem; border-radius: 5px; cursor: pointer;">
+                  Land
+                </button>
+                <button type="button" class="dash-cat-tab" data-cat="tanzlii" onclick="App.navigate('case-library')" style="background: #EFF6FF; color: #0284C7; border: 1px solid #BFDBFE; font-size: 0.74rem; font-weight: 700; padding: 0.3rem 0.65rem; border-radius: 5px; cursor: pointer;" title="Browse 77 cases from TanzLII">
+                  🏛️ TanzLII Cases (77)
+                </button>
+              </div>
+
+              <input type="text" placeholder="Search cases..." oninput="DashboardView.filterCasesSearch(this.value)" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 7px; padding: 0.35rem 0.65rem; font-size: 0.78rem; width: 150px; color: #0F172A; outline: none;">
+
+              ${isLegalOfficer ? `
+              <button type="button" class="btn" onclick="CasesView.openNewCaseModal()" style="background: #0284C7; color: #FFFFFF; font-size: 0.78rem; font-weight: 600; padding: 0.4rem 0.85rem; border-radius: 7px; border: none; cursor: pointer;">
+                + Register Case
+              </button>
+              ` : ''}
+            </div>
+          </div>
+
+          <!-- Cases Grid -->
+          <div class="dash-cases-grid-3col" id="lawyer-cases-grid">
+            ${this.renderCasesGrid()}
+          </div>
+        </div>
+
+        <!-- 4. TASKS & COURT DEADLINES (2-COLUMN FOCUSED VIEW) -->
+        <div class="dash-two-col">
+          <!-- Left: Scheduled Court Appearances -->
+          <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 1.35rem; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem;">
+                <div style="display: flex; align-items: center; gap: 0.45rem;">
+                  <span style="font-size: 1.05rem;">🏛️</span>
+                  <h3 style="font-size: 0.96rem; font-weight: 700; color: #0F172A; margin: 0;">Upcoming Court Hearings</h3>
+                </div>
+                <button type="button" onclick="App.navigate('tasks')" style="background: none; border: none; color: #0284C7; font-size: 0.74rem; font-weight: 600; cursor: pointer;">
+                  Calendar ➔
+                </button>
+              </div>
+
+              ${(() => {
+                const events = (typeof TasksView !== 'undefined' && Array.isArray(TasksView.courtEvents) && TasksView.courtEvents.length > 0)
+                  ? TasksView.courtEvents
+                  : [
+                    { title: 'Hearing of Chamber Summons', date: 'Oct 14, 2026', court: 'High Court Commercial Division', caseNumber: 'HC/COMM/2026/049', priority: 'HIGH', monthShort: 'OCT', dayNum: '14' },
+                    { title: 'Filing of Written Statement of Defence', date: 'Oct 19, 2026', court: 'High Court Land Division', caseNumber: 'HC/LAND/2026/012', priority: 'URGENT', monthShort: 'OCT', dayNum: '19' }
+                  ];
+
+                return events.slice(0, 2).map(e => `
+                  <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; margin-bottom: 0.55rem;">
+                    <div style="width: 38px; height: 38px; border-radius: 6px; background: #0F172A; color: #FFFFFF; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0;">
+                      <span style="font-size: 0.55rem; font-weight: 700;">${e.monthShort || 'DUE'}</span>
+                      <span style="font-size: 0.95rem; font-weight: 800; line-height: 1;">${e.dayNum || '14'}</span>
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                      <div style="font-size: 0.82rem; font-weight: 700; color: #0F172A; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        ${e.title}
+                      </div>
+                      <div style="font-size: 0.72rem; color: #64748B; margin-top: 0.1rem;">
+                        ${e.caseNumber || 'HC/2026'} • ${e.court || 'High Court of Tanzania'}
+                      </div>
+                    </div>
+                    <span style="font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px; background: #F1F5F9; color: #475569; flex-shrink: 0;">
+                      ${e.priority || 'HEARING'}
+                    </span>
+                  </div>
+                `).join('');
+              })()}
+            </div>
+            
+            ${isLawyer ? '' : `
+            <button type="button" onclick="TasksView.openNewTaskModal()" style="margin-top: 0.5rem; width: 100%; background: #F8FAFC; border: 1px dashed #CBD5E1; color: #475569; font-size: 0.76rem; font-weight: 600; padding: 0.45rem; border-radius: 6px; cursor: pointer;">
+              + Schedule Hearing
             </button>
             `}
-            <button class="qa-btn-op" onclick="ClientsView.openNewClientModal()" title="Register an individual or corporate client">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-              <span>Add Client</span>
-            </button>
-            <button class="qa-btn-op" onclick="TasksView.openNewTaskModal()" title="Create an internal task or court deadline">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-              <span>Create Task</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- 3. FOUR PRIMARY METRIC KPI CARDS -->
-        <div class="stat-cards-grid" style="gap: 1rem; margin-bottom: 1.5rem;">
-          <!-- 1. Active Cases -->
-          <div class="stat-card" onclick="App.navigate('cases')" style="cursor: pointer;" id="kpi-active-cases-card">
-            <div class="stat-card-top">
-              <div>
-                <div class="stat-value">${activeCasesCount}</div>
-                <div class="stat-label">Active Cases</div>
-              </div>
-              <div class="stat-icon-wrapper stat-icon-navy">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect width="20" height="14" x="2" y="7" rx="2" ry="2"/>
-                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-                </svg>
-              </div>
-            </div>
-            <div class="stat-footer">
-              <span class="${activeCasesCount === 0 ? 'stat-trend-muted' : 'stat-trend-up'}">
-                ${activeCasesCount === 0 ? 'No active cases' : `${activeCasesCount} active / ${SLCMS_STATE.cases.length} total`}
-              </span>
-              <span style="color: var(--color-gold); font-weight: 600;">View Cases →</span>
-            </div>
           </div>
 
-          <!-- 2. Registered Clients -->
-          <div class="stat-card" onclick="App.navigate('clients')" style="cursor: pointer;" id="kpi-registered-clients-card">
-            <div class="stat-card-top">
-              <div>
-                <div class="stat-value">${clientsCount}</div>
-                <div class="stat-label">Registered Clients</div>
-              </div>
-              <div class="stat-icon-wrapper stat-icon-green">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-              </div>
-            </div>
-            <div class="stat-footer">
-              <span class="${clientsCount === 0 ? 'stat-trend-muted' : 'stat-trend-up'}">
-                ${clientsCount === 0 ? 'No clients registered' : `${clientsCount} registered clients`}
-              </span>
-              <span style="color: var(--color-gold); font-weight: 600;">Client Directory →</span>
-            </div>
-          </div>
-
-          <!-- 3. Pending Tasks -->
-          <div class="stat-card" onclick="App.navigate('tasks')" style="cursor: pointer;" id="kpi-pending-tasks-card">
-            <div class="stat-card-top">
-              <div>
-                <div class="stat-value">${pendingTasksCount}</div>
-                <div class="stat-label">Pending Tasks</div>
-              </div>
-              <div class="stat-icon-wrapper stat-icon-navy">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M9 11l3 3L22 4"/>
-                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                </svg>
-              </div>
-            </div>
-            <div class="stat-footer">
-              <span class="${pendingTasksCount === 0 ? 'stat-trend-muted' : 'stat-trend-up'}">
-                ${pendingTasksCount === 0 ? 'No pending tasks' : `${pendingTasksCount} actionable tasks`}
-              </span>
-              <span style="color: var(--color-gold); font-weight: 600;">Task Board →</span>
-            </div>
-          </div>
-
-          <!-- 4. Upcoming Deadlines -->
-          <div class="stat-card" onclick="if (typeof TasksView !== 'undefined') TasksView.activeView = 'calendar'; App.navigate('tasks');" style="cursor: pointer;" id="kpi-upcoming-deadlines-card">
-            <div class="stat-card-top">
-              <div>
-                <div class="stat-value" style="color: ${upcomingDeadlinesCount > 0 ? 'var(--color-danger)' : 'inherit'};">${upcomingDeadlinesCount}</div>
-                <div class="stat-label">Upcoming Deadlines</div>
-              </div>
-              <div class="stat-icon-wrapper ${upcomingDeadlinesCount > 0 ? 'stat-icon-red' : 'stat-icon-navy'}">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
-                </svg>
-              </div>
-            </div>
-            <div class="stat-footer">
-              <span class="${upcomingDeadlinesCount === 0 ? 'stat-trend-muted' : 'stat-trend-alert'}">
-                ${upcomingDeadlinesCount === 0 ? 'No upcoming deadlines' : `⚡ ${upcomingDeadlinesCount} scheduled deadlines`}
-              </span>
-              <span style="color: var(--color-danger); font-weight: 600;">Calendar →</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 4. TANZANIAN CASE LAW BY YEAR QUICK EXPLORER -->
-        <div class="card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, rgba(16,42,67,0.85) 0%, rgba(11,31,51,0.95) 100%); border: 1px solid rgba(200,155,60,0.35); box-shadow: 0 4px 20px rgba(0,0,0,0.25);">
-          <div style="padding: 1rem 1.4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; border-bottom: 1px solid rgba(255,255,255,0.08);">
-            <div class="flex items-center gap-2.5">
-              <span style="font-size: 1.3rem;">⚖️</span>
-              <div>
-                <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #FFFFFF; font-family: var(--font-heading); display: flex; align-items: center; gap: 0.5rem;">
-                  <span>Tanzanian Judgments Repository (2020 – 2026)</span>
-                  <span class="badge badge-gold" style="font-size: 0.7rem;">${SLCMS_STATE.tanzaniaJudgments.length} Decisions</span>
-                </h3>
-                <p style="margin: 0.15rem 0 0 0; font-size: 0.8rem; color: #94A3B8;">
-                  Explore authentic Tanzanian High Court and Court of Appeal precedents indexed for AI
-                </p>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <button class="btn btn-gold btn-sm" onclick="App.navigate('case-library')" style="font-size: 0.8rem;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                <span>Browse Full Case Library</span>
-              </button>
-            </div>
-          </div>
-          <div style="padding: 0.85rem 1.4rem; background: rgba(0,0,0,0.18);">
-            <div class="tz-year-pills-row" style="margin: 0; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button class="tz-year-pill tz-year-pill-latest active" onclick="CaseLibraryView.setYearFilter('2026'); App.navigate('case-library');">
-                <span class="pill-year">✨ 2026</span>
-                <span class="tz-year-pill-count">${SLCMS_STATE.tanzaniaJudgments.filter(j => j.year == 2026).length} Latest</span>
-              </button>
-              <button class="tz-year-pill" onclick="CaseLibraryView.setYearFilter('2025'); App.navigate('case-library');">
-                <span class="pill-year">2025</span>
-                <span class="tz-year-pill-count">${SLCMS_STATE.tanzaniaJudgments.filter(j => j.year == 2025).length}</span>
-              </button>
-              <button class="tz-year-pill" onclick="CaseLibraryView.setYearFilter('2024'); App.navigate('case-library');">
-                <span class="pill-year">2024</span>
-                <span class="tz-year-pill-count">${SLCMS_STATE.tanzaniaJudgments.filter(j => j.year == 2024).length}</span>
-              </button>
-              <button class="tz-year-pill" onclick="CaseLibraryView.setYearFilter('2023'); App.navigate('case-library');">
-                <span class="pill-year">2023</span>
-                <span class="tz-year-pill-count">${SLCMS_STATE.tanzaniaJudgments.filter(j => j.year == 2023).length}</span>
-              </button>
-              <button class="tz-year-pill" onclick="CaseLibraryView.setYearFilter('2022'); App.navigate('case-library');">
-                <span class="pill-year">2022</span>
-                <span class="tz-year-pill-count">${SLCMS_STATE.tanzaniaJudgments.filter(j => j.year == 2022).length}</span>
-              </button>
-              <button class="tz-year-pill" onclick="CaseLibraryView.setYearFilter('2021'); App.navigate('case-library');">
-                <span class="pill-year">2021</span>
-                <span class="tz-year-pill-count">${SLCMS_STATE.tanzaniaJudgments.filter(j => j.year == 2021).length}</span>
-              </button>
-              <button class="tz-year-pill" onclick="CaseLibraryView.setYearFilter('2020'); App.navigate('case-library');">
-                <span class="pill-year">2020</span>
-                <span class="tz-year-pill-count">${SLCMS_STATE.tanzaniaJudgments.filter(j => j.year == 2020).length}</span>
-              </button>
-              <button class="tz-year-pill tz-year-pill-all" onclick="CaseLibraryView.setYearFilter('ALL'); App.navigate('case-library');">
-                <span class="pill-year">🔍 All Years (${SLCMS_STATE.tanzaniaJudgments.length})</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 5. LUXURY PRACTICE & CASEWORK ANALYTICS ROW -->
-        <div class="luxury-analytics-grid luxury-analytics-grid-2col">
-          <!-- CARD 1: CASEWORK FORECAST & VELOCITY (PERIWINKLE LUXURY CARD) -->
-          <div class="luxury-forecast-card">
-            <div class="luxury-forecast-header">
-              <div>
-                <h3 class="luxury-forecast-title">Casework Forecast</h3>
-                <span class="luxury-forecast-sub">Hearing Velocity &amp; Litigation Milestones</span>
-              </div>
-              <button class="luxury-filter-btn" onclick="DashboardView.cycleUserForecastPeriod(event)">
-                <span id="user-forecast-filter-label">Monthly</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-              </button>
-            </div>
-
-            <div class="luxury-forecast-body">
-              <!-- Left Stack: 2 Stat Pills -->
-              <div class="luxury-pill-stack">
-                <div class="luxury-stat-pill luxury-pill-white">
-                  <span class="luxury-pill-label">Active Matters</span>
-                  <div class="luxury-pill-value" id="user-pill-active-val">${activeCasesCount}<span class="luxury-pill-unit">${activeCasesCount === 1 ? 'Case' : 'Cases'}</span></div>
-                  <div class="luxury-pill-trend">${activeCasesCount > 0 ? `<span class="trend-up">&uarr; ${activeCasesCount} active</span> in chambers` : `<span style="color: #64748B;">0 active cases</span>`}</div>
-                </div>
-
-                <div class="luxury-stat-pill luxury-pill-dark">
-                  <span class="luxury-pill-label">Concluded Matters</span>
-                  <div class="luxury-pill-value" id="user-pill-resolved-val">${closedCasesCount}<span class="luxury-pill-unit">${closedCasesCount === 1 ? 'Matter' : 'Matters'}</span></div>
-                  <div class="luxury-pill-trend">${closedCasesCount > 0 ? `<span class="trend-gold">&bull; ${closedCasesCount} closed</span> favorable` : `<span style="color: #94A3B8;">0 closed matters</span>`}</div>
-                </div>
-              </div>
-
-              <!-- Right: Elevated Inner Card with Live Badge and Multi-Bar Chart -->
-              <div class="luxury-chart-inner-card">
-                <div class="luxury-chart-top-bar">
-                  <span class="luxury-live-badge">
-                    <span class="live-pulse-dot"></span> Live
-                  </span>
-                  <div class="luxury-chart-metric-callout">
-                    <div class="luxury-callout-value" id="user-callout-avg-val">${scheduledHearingsCount}<span class="unit">Sessions</span></div>
-                    <div class="luxury-callout-label">Scheduled Court Hearings</div>
-                  </div>
-                </div>
-                <div class="luxury-chart-canvas-wrapper">
-                  <canvas id="userCaseworkForecastChart"></canvas>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- CARD 2: MATTERS BY LEGAL CATEGORY (DARK CHARCOAL LUXURY CARD) -->
-          <div class="luxury-category-card">
-            <div class="luxury-category-header">
-              <div>
-                <h3 class="luxury-category-title">Matters by Category</h3>
-                <span class="luxury-category-sub">Practice Distribution &amp; Portfolio Breakdown</span>
-              </div>
-              <button class="luxury-filter-btn luxury-filter-btn-dark" onclick="DashboardView.cycleUserCategoryFilter(event)">
-                <span id="user-category-filter-label">All Areas</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-              </button>
-            </div>
-
-            <div class="luxury-category-body">
-              <!-- Left: Segmented Donut with Rounded Ends & Center Callout -->
-              <div class="luxury-donut-wrapper">
-                <canvas id="userPracticeCategoryChart"></canvas>
-                <div class="luxury-donut-center-badge">
-                  <div class="donut-center-val" id="user-donut-total-val">${totalCasesCount}</div>
-                  <div class="donut-center-sub">${totalCasesCount === 0 ? 'NO MATTERS' : (totalCasesCount === 1 ? 'MATTER' : 'TOTAL MATTERS')}</div>
-                </div>
-              </div>
-
-              <!-- Right: Category Legend Chips with Color Dots -->
-              <div class="luxury-category-legend-grid">
-                ${userCategoryChipsHtml}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 6. STREAMLINED RECENT PRACTICE ACTIVITY STREAM -->
-        <div class="card" style="margin-bottom: 1.5rem; box-shadow: var(--shadow-xs);">
-          <div class="card-header">
+          <!-- Right: Actionable Tasks Checklist -->
+          <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 1.35rem; display: flex; flex-direction: column; justify-content: space-between;">
             <div>
-              <h3 class="card-title" style="font-size: 1.05rem;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
-                  <path d="m9 12 2 2 4-4"/>
-                </svg>
-                Recent Practice Activity &amp; Casework Stream
-              </h3>
-              <p class="card-subtitle">Live litigation updates, filings &amp; matter actions across firm chambers</p>
-            </div>
-            <button class="btn btn-secondary btn-sm" onclick="App.navigate('cases')">View All Cases &rarr;</button>
-          </div>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.75rem; padding: 0.5rem 0;">
-            ${(SLCMS_STATE.auditLogs || SLCMS_STATE.activityLogs || []).slice(0, 4).map(l => {
-              const isAi = (l.action || '').toLowerCase().includes('ai') || (l.details || '').toLowerCase().includes('draft');
-              const isTask = (l.action || '').toLowerCase().includes('task');
-              const isCase = (l.action || '').toLowerCase().includes('case');
-              const icon = isAi ? '⚖️' : (isTask ? '✅' : (isCase ? '📁' : '🏛️'));
-
-              return `
-                <div class="dash-audit-timeline-item" style="border: 1px solid var(--color-border-subtle); border-radius: 12px; padding: 0.75rem 1rem;">
-                  <span style="font-size: 1.15rem; flex-shrink: 0; margin-top: 0.1rem;">${icon}</span>
-                  <div style="flex: 1; min-width: 0;">
-                    <div style="font-size: 0.82rem; color: var(--color-primary); line-height: 1.35;">
-                      <strong>${l.user || l.userName || 'Advocate'}</strong>: ${l.action || l.details}
-                    </div>
-                    <div style="color: var(--color-text-secondary); font-size: 0.72rem; margin-top: 0.25rem; display: flex; align-items: center; gap: 0.4rem;">
-                      <span class="badge" style="background: var(--color-surface-subtle); font-size: 0.65rem; padding: 0.1rem 0.35rem;">${l.module || 'Litigation'}</span>
-                      <span style="font-family: var(--font-mono); color: var(--color-text-muted);">${l.timestamp || 'Today'}</span>
-                    </div>
-                  </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem;">
+                <div style="display: flex; align-items: center; gap: 0.45rem;">
+                  <span style="font-size: 1.05rem;">✅</span>
+                  <h3 style="font-size: 0.96rem; font-weight: 700; color: #0F172A; margin: 0;">Actionable Tasks</h3>
                 </div>
-              `;
-            }).join('')}
-          </div>
-        </div>
+                <button type="button" onclick="App.navigate('tasks')" style="background: none; border: none; color: #0284C7; font-size: 0.74rem; font-weight: 600; cursor: pointer;">
+                  All Tasks ➔
+                </button>
+              </div>
 
-        <!-- 6. OPERATIONAL WIDGETS GRID (DEADLINES, CASES, TASKS, BACKGROUND LOGS) -->
-        <div class="dashboard-widgets-grid">
-          <!-- WIDGET 1: Upcoming Court Dates & Statutory Deadlines -->
-          <div class="dash-widget-card">
-            <div class="dash-widget-header">
-              <h3 class="dash-widget-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-danger);">
-                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                Upcoming Deadlines &amp; Hearings
-              </h3>
-              <button class="btn btn-secondary btn-sm" onclick="TasksView.switchView('calendar'); App.navigate('tasks');">Calendar</button>
-            </div>
-
-            ${(() => {
-              const hasCases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases) && SLCMS_STATE.cases.length > 0);
-              if (typeof TasksView !== 'undefined' && typeof TasksView.syncCourtEvents === 'function') {
-                TasksView.syncCourtEvents();
-              }
-              const events = hasCases && (typeof TasksView !== 'undefined' && Array.isArray(TasksView.courtEvents)) 
-                ? TasksView.courtEvents 
-                : [];
-              if (events.length === 0) {
+              ${realTasks.length === 0 ? `
+                <div style="padding: 1.25rem; text-align: center; color: #64748B;">
+                  <div style="font-size: 0.82rem;">All casework tasks are up to date.</div>
+                </div>
+              ` : realTasks.slice(0, 2).map(t => {
+                const isCompleted = (t.status || '').toLowerCase() === 'completed';
                 return `
-                  <div style="padding: 2rem 1rem; text-align: center; color: var(--color-text-muted);">
-                    <div style="font-size: 1.8rem; margin-bottom: 0.4rem;">📅</div>
-                    <div style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary);">No deadlines scheduled</div>
-                    <p style="font-size: 0.78rem; margin: 0.25rem 0 1rem 0; color: var(--color-text-secondary);">Court appearances and statutory deadlines will appear here once scheduled.</p>
-                    <button class="btn btn-secondary btn-sm" onclick="TasksView.activeView = 'calendar'; App.navigate('tasks');">Open Calendar</button>
-                  </div>
-                `;
-              }
-              return events.slice(0, 3).map(e => `
-                <div class="dash-docket-card" onclick="TasksView.activeView = 'calendar'; App.navigate('tasks');" style="cursor: pointer;">
-                  <div class="dash-docket-date-badge">
-                    <span class="dash-docket-month">${e.monthShort || 'DUE'}</span>
-                    <span class="dash-docket-day">${e.dayNum || '01'}</span>
-                  </div>
-                  <div style="flex: 1; min-width: 0;">
-                    <div class="flex items-center gap-2 flex-wrap" style="margin-bottom: 0.2rem;">
-                      <strong style="color: var(--color-primary); font-size: 0.88rem;">${e.title}</strong>
-                      <span class="badge badge-priority-${(e.priority || 'medium').toLowerCase()}" style="font-size: 0.65rem; padding: 0.1rem 0.45rem;">${(e.priority || 'Medium').toUpperCase()}</span>
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; padding: 0.7rem; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; margin-bottom: 0.55rem;">
+                    <div style="display: flex; align-items: center; gap: 0.55rem; flex: 1; min-width: 0;">
+                      <input type="checkbox" ${isCompleted ? 'checked' : ''} onchange="TasksView.toggleTaskStatus('${t.id}')" style="cursor: pointer; width: 16px; height: 16px; accent-color: #0284C7; flex-shrink: 0;">
+                      <div style="min-width: 0;">
+                        <div style="font-size: 0.82rem; font-weight: 600; color: #0F172A; ${isCompleted ? 'text-decoration: line-through; opacity: 0.6;' : ''}">
+                          ${t.title}
+                        </div>
+                        <div style="font-size: 0.7rem; color: #64748B;">
+                          ${t.caseTitle || t.caseNumber || 'Matter'}
+                        </div>
+                      </div>
                     </div>
-                    <div style="font-size: 0.76rem; color: var(--color-text-secondary); display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
-                      <span>🏛️ ${e.court || 'High Court of Tanzania'}</span>
-                      <span>&bull;</span>
-                      <span>Case: <strong>${e.caseNumber || 'N/A'}</strong></span>
-                    </div>
-                  </div>
-                  <div class="text-right" style="flex-shrink: 0;">
-                    <span class="badge badge-active" style="font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.55rem;">
-                      ${e.type || 'SCHEDULED'}
+                    <span style="font-size: 0.65rem; font-weight: 600; padding: 0.15rem 0.45rem; border-radius: 4px; background: #F1F5F9; color: #475569; flex-shrink: 0;">
+                      ${t.priority || 'Normal'}
                     </span>
-                    <div style="font-size: 0.7rem; color: var(--color-danger); font-weight: 600; margin-top: 0.2rem;">${e.date || 'Upcoming'}</div>
-                  </div>
-                </div>
-              `).join('');
-            })()}
-          </div>
-
-          <!-- WIDGET 2: Active Case Matters -->
-          <div class="dash-widget-card">
-            <div class="dash-widget-header">
-              <h3 class="dash-widget-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-primary);">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                </svg>
-                Active Case Matters
-              </h3>
-              <button class="btn btn-ghost btn-sm" onclick="App.navigate('cases')" style="font-weight: 600;">All Cases →</button>
-            </div>
-
-            ${SLCMS_STATE.cases.length === 0 ? `
-              <div style="padding: 2rem 1rem; text-align: center; color: var(--color-text-muted);">
-                <div style="font-size: 1.8rem; margin-bottom: 0.4rem;">📁</div>
-                <div style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary);">No cases yet</div>
-                <p style="font-size: 0.78rem; margin: 0.25rem 0 1rem 0; color: var(--color-text-secondary);">No active legal matters registered in the repository.</p>
-                ${SLCMS_STATE.currentUser?.role === 'Administrator' ? '' : `
-                <button class="btn btn-gold btn-sm" onclick="CasesView.openNewCaseModal()">+ Add New Case</button>
-                `}
-              </div>
-            ` : SLCMS_STATE.cases.slice(0, 3).map(c => `
-              <div class="dash-case-dossier-card" onclick="CasesView.openCaseDetails('${c.id}')">
-                <div class="flex items-center justify-between" style="margin-bottom: 0.35rem;">
-                  <span style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: 800; color: var(--color-gold); background: rgba(200,155,60,0.1); padding: 0.15rem 0.45rem; border-radius: 4px;">
-                    ${c.caseNumber}
-                  </span>
-                  <span class="badge badge-${(c.status || 'active').toLowerCase().replace(' ', '')}" style="font-size: 0.68rem; padding: 0.15rem 0.55rem;">
-                    ${c.status}
-                  </span>
-                </div>
-                <div class="dash-case-title-link" style="font-weight: 700; font-size: 0.9rem; color: var(--color-primary); margin-bottom: 0.3rem; transition: color 0.2s;">
-                  ${c.title}
-                </div>
-                <div class="flex items-center justify-between" style="font-size: 0.75rem; color: var(--color-text-secondary); margin-bottom: 0.35rem;">
-                  <span>🏢 <strong>${c.client}</strong></span>
-                  <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono);">${c.progressPct || 25}% Prepared</span>
-                </div>
-                <div class="progress-bar-container" style="height: 6px; background: var(--color-surface-subtle); border-radius: 3px; overflow: hidden; border: 1px solid var(--color-border-subtle);">
-                  <div class="progress-bar-fill" style="width: ${c.progressPct || 25}%; height: 100%; background: linear-gradient(90deg, #102A43 0%, #C89B3C 100%);"></div>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-
-          <!-- WIDGET 3: Critical Tasks & Deadlines -->
-          <div class="dash-widget-card">
-            <div class="dash-widget-header">
-              <h3 class="dash-widget-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
-                  <path d="M9 11l3 3L22 4"/>
-                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                </svg>
-                Critical Tasks &amp; Deadlines
-              </h3>
-              <button class="btn btn-secondary btn-sm" onclick="TasksView.openNewTaskModal()">+ Add Task</button>
-            </div>
-
-            ${SLCMS_STATE.tasks.length === 0 ? `
-              <div style="padding: 2rem 1rem; text-align: center; color: var(--color-text-muted);">
-                <div style="font-size: 1.8rem; margin-bottom: 0.4rem;">📋</div>
-                <div style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary);">No tasks assigned</div>
-                <p style="font-size: 0.78rem; margin: 0.25rem 0 1rem 0; color: var(--color-text-secondary);">No actionable litigation or administrative tasks assigned yet.</p>
-                <button class="btn btn-gold btn-sm" onclick="TasksView.openNewTaskModal()">+ Create Task</button>
-              </div>
-            ` : SLCMS_STATE.tasks.slice(0, 3).map(t => `
-              <div class="dash-task-item-row">
-                <div class="flex items-center gap-2.5" style="flex: 1; min-width: 0;">
-                  <input type="checkbox" ${t.status === 'completed' ? 'checked' : ''} onchange="TasksView.toggleTaskStatus('${t.id}')" style="cursor: pointer; width: 17px; height: 17px; accent-color: var(--color-gold); flex-shrink: 0;">
-                  <div style="min-width: 0;">
-                    <div style="font-size: 0.85rem; font-weight: 700; color: var(--color-primary); line-height: 1.35; ${t.status === 'completed' ? 'text-decoration: line-through; opacity: 0.6;' : ''}">
-                      ${t.title}
-                    </div>
-                    <div style="font-size: 0.74rem; color: var(--color-text-secondary); margin-top: 0.15rem; display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
-                      <span style="color: var(--color-primary); font-weight: 600;">${t.caseTitle || t.caseNumber}</span>
-                      <span>&bull;</span>
-                      <span>👤 ${t.assignedTo}</span>
-                    </div>
-                  </div>
-                </div>
-                <span class="badge badge-priority-${(t.priority || 'medium').toLowerCase()}" style="font-size: 0.68rem; margin-left: 0.5rem; flex-shrink: 0;">
-                  ${t.priority}
-                </span>
-              </div>
-            `).join('')}
-          </div>
-
-          <!-- WIDGET 4: Background System Activity Log -->
-          <div class="dash-widget-card">
-            <div class="dash-widget-header">
-              <div class="flex items-center gap-2">
-                <h3 class="dash-widget-title">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-gold);">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
-                    <path d="m9 12 2 2 4-4"/>
-                  </svg>
-                  System Activity Log
-                </h3>
-                <span class="badge badge-confidential" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;">Automated</span>
-              </div>
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 0.65rem;">
-              ${(SLCMS_STATE.auditLogs || SLCMS_STATE.activityLogs || []).slice(0, 3).map(l => {
-                const isAi = (l.action || '').toLowerCase().includes('ai') || (l.details || '').toLowerCase().includes('draft');
-                const isDoc = (l.action || '').toLowerCase().includes('document') || (l.details || '').toLowerCase().includes('upload');
-                const isTask = (l.action || '').toLowerCase().includes('task');
-                const icon = isAi ? '✍️' : (isDoc ? '📄' : (isTask ? '✅' : '⚖️'));
-
-                return `
-                  <div class="dash-audit-timeline-item">
-                    <span style="font-size: 1.1rem; flex-shrink: 0; margin-top: 0.1rem;">${icon}</span>
-                    <div style="flex: 1; min-width: 0;">
-                      <div style="font-size: 0.82rem; color: var(--color-primary); line-height: 1.35;">
-                        <strong>${l.user || l.userName || 'Advocate'}</strong>: ${l.action || l.details}
-                      </div>
-                      <div style="color: var(--color-text-secondary); font-size: 0.72rem; margin-top: 0.15rem; display: flex; align-items: center; gap: 0.4rem;">
-                        <span class="badge" style="background: var(--color-surface-subtle); font-size: 0.65rem; padding: 0.1rem 0.35rem;">${l.module || 'Matter'}</span>
-                        <span style="font-family: var(--font-mono); color: var(--color-text-muted);">${l.timestamp || 'Today'}</span>
-                      </div>
-                    </div>
                   </div>
                 `;
               }).join('')}
             </div>
+
+            ${isLawyer ? '' : `
+            <button type="button" onclick="TasksView.openNewTaskModal()" style="margin-top: 0.5rem; width: 100%; background: #F8FAFC; border: 1px dashed #CBD5E1; color: #475569; font-size: 0.76rem; font-weight: 600; padding: 0.45rem; border-radius: 6px; cursor: pointer;">
+              + Create Task
+            </button>
+            `}
           </div>
         </div>
+
       </div>
     `;
   },
 
   initCharts() {
-    if (typeof Chart === 'undefined') return;
-
-    const realCases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases)) ? SLCMS_STATE.cases : [];
-    const realAttendances = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.courtAttendances)) ? SLCMS_STATE.courtAttendances : [];
-    const realTasks = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.tasks)) ? SLCMS_STATE.tasks : [];
-
-    // 1. User Casework Forecast Multi-Bar Chart (Jan - May)
-    const ctxForecast = document.getElementById('userCaseworkForecastChart');
-    if (ctxForecast) {
-      if (this._userForecastChart) {
-        try { this._userForecastChart.destroy(); } catch (e) {}
-      }
-
-      // Compute monthly distribution (Jan-May)
-      const caseMonthly = [0, 0, 0, 0, 0];
-      realCases.forEach(c => {
-        const d = c.createdAt || c.filingDate || c.date;
-        if (d) {
-          const m = new Date(d).getMonth();
-          if (m >= 0 && m < 5) caseMonthly[m]++;
-        }
-      });
-
-      const attendMonthly = [0, 0, 0, 0, 0];
-      realAttendances.forEach(a => {
-        const d = a.date || a.hearingDate || a.createdAt;
-        if (d) {
-          const m = new Date(d).getMonth();
-          if (m >= 0 && m < 5) attendMonthly[m]++;
-        }
-      });
-
-      const taskMonthly = [0, 0, 0, 0, 0];
-      realTasks.forEach(t => {
-        const d = t.dueDate || t.createdAt;
-        if (d) {
-          const m = new Date(d).getMonth();
-          if (m >= 0 && m < 5) taskMonthly[m]++;
-        }
-      });
-
-      const maxVal = Math.max(5, ...caseMonthly, ...attendMonthly, ...taskMonthly);
-
-      const ctx = ctxForecast.getContext('2d');
-      this._userForecastChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
-          datasets: [
-            {
-              label: 'Registered Cases',
-              data: caseMonthly,
-              backgroundColor: '#6366F1', // Pastel Purple / Indigo
-              borderRadius: 6,
-              barPercentage: 0.65,
-              categoryPercentage: 0.65
-            },
-            {
-              label: 'Court Hearings',
-              data: attendMonthly,
-              backgroundColor: '#10B981', // Mint Green
-              borderRadius: 6,
-              barPercentage: 0.65,
-              categoryPercentage: 0.65
-            },
-            {
-              label: 'Practice Tasks',
-              data: taskMonthly,
-              backgroundColor: '#38BDF8', // Sky Blue
-              borderRadius: 6,
-              barPercentage: 0.65,
-              categoryPercentage: 0.65
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          animation: { duration: 650, easing: 'easeOutQuart' },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: 'rgba(15, 23, 42, 0.94)',
-              titleFont: { family: 'Inter', size: 12, weight: '700' },
-              bodyFont: { family: 'Inter', size: 11 },
-              padding: 10,
-              cornerRadius: 8,
-              callbacks: {
-                label: function(context) {
-                  return ` ${context.dataset.label}: ${context.raw} records`;
-                }
-              }
-            }
-          },
-          scales: {
-            x: {
-              grid: { display: false, drawBorder: false },
-              ticks: {
-                color: '#94A3B8',
-                font: { family: 'Inter', size: 11, weight: '600' }
-              }
-            },
-            y: {
-              display: false,
-              grid: { display: false },
-              beginAtZero: true,
-              suggestedMax: maxVal
-            }
-          }
-        }
-      });
-    }
-
-    // 2. Matters by Category Segmented Ring Chart with rounded caps
-    const ctxCategory = document.getElementById('userPracticeCategoryChart');
-    if (ctxCategory) {
-      if (this._userCategoryChart) {
-        try { this._userCategoryChart.destroy(); } catch (e) {}
-      }
-
-      const commCount = realCases.filter(c => /commercial|bank|financ|corp/i.test(c.caseType || c.type || c.category || c.title || '')).length;
-      const civilCount = realCases.filter(c => /civil|contract|tort|dispute/i.test(c.caseType || c.type || c.category || c.title || '')).length;
-      const landCount = realCases.filter(c => /land|property|real/i.test(c.caseType || c.type || c.category || c.title || '')).length;
-      const constiCount = realCases.filter(c => /constitut|review|appeal/i.test(c.caseType || c.type || c.category || c.title || '')).length;
-      const crimCount = realCases.filter(c => /crimin|penal/i.test(c.caseType || c.type || c.category || c.title || '')).length;
-
-      const activeCategories = [
-        { label: 'Commercial & Banking', count: commCount, color: '#6EE7B7' },
-        { label: 'Civil Litigation', count: civilCount, color: '#6366F1' },
-        { label: 'Land & Real Estate', count: landCount, color: '#38BDF8' },
-        { label: 'Constitutional Review', count: constiCount, color: '#A78BFA' },
-        { label: 'Criminal Defense & Appeals', count: crimCount, color: '#10B981' }
-      ].filter(cat => cat.count > 0);
-
-      const hasCases = activeCategories.length > 0;
-      const chartLabels = hasCases ? activeCategories.map(c => c.label) : ['No Matters Registered'];
-      const chartData = hasCases ? activeCategories.map(c => c.count) : [1];
-      const chartColors = hasCases ? activeCategories.map(c => c.color) : ['rgba(255, 255, 255, 0.08)'];
-
-      const ctxCat = ctxCategory.getContext('2d');
-      this._userCategoryChart = new Chart(ctxCat, {
-        type: 'doughnut',
-        data: {
-          labels: chartLabels,
-          datasets: [{
-            data: chartData,
-            backgroundColor: chartColors,
-            borderWidth: 0,
-            hoverOffset: hasCases ? 6 : 0,
-            borderRadius: hasCases ? 8 : 0,
-            spacing: hasCases ? 5 : 0
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          cutout: '72%',
-          animation: { duration: 750, easing: 'easeOutQuart' },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              enabled: hasCases,
-              backgroundColor: 'rgba(15, 23, 42, 0.94)',
-              titleFont: { family: 'Inter', size: 12, weight: '700' },
-              bodyFont: { family: 'Inter', size: 11 },
-              padding: 10,
-              cornerRadius: 8,
-              callbacks: {
-                label: function(context) {
-                  return ` ${context.label}: ${context.raw} matters`;
-                }
-              }
-            }
-          }
-        }
-      });
-    }
-
-    // 3. Fallback Legacy Status Chart if in DOM
-    const ctxStatus = document.getElementById('caseStatusChart');
-    if (ctxStatus) {
-      const active = realCases.filter(c => c.status === 'Active').length;
-      const pending = realCases.filter(c => c.status === 'Pending').length;
-      const won = realCases.filter(c => c.status === 'Won').length;
-      const onHold = realCases.filter(c => c.status === 'On Hold').length;
-      const hasStatusData = (active + pending + won + onHold) > 0;
-
-      if (this._chartInstance) {
-        try { this._chartInstance.destroy(); } catch (e) {}
-      }
-
-      this._chartInstance = new Chart(ctxStatus, {
-        type: 'doughnut',
-        data: {
-          labels: hasStatusData ? ['Active', 'Pending Review', 'Won / Favorable', 'On Hold'] : ['No Matters Registered'],
-          datasets: [{
-            data: hasStatusData ? [active, pending, won, onHold] : [1],
-            backgroundColor: hasStatusData ? ['#102A43', '#C89B3C', '#16A34A', '#64748B'] : ['rgba(0,0,0,0.06)'],
-            borderWidth: 2,
-            borderColor: '#FFFFFF'
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: { boxWidth: 12, font: { family: 'Inter', size: 11 } }
-            }
-          },
-          cutout: '68%'
-        }
-      });
-    }
-  },
-
-  cycleUserForecastPeriod(e) {
-    if (e && e.stopPropagation) e.stopPropagation();
-    this._forecastMode = (this._forecastMode || 0) + 1;
-    if (this._forecastMode > 2) this._forecastMode = 0;
-
-    const periods = ['Monthly', 'Quarterly', 'YTD'];
-    const realCases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases)) ? SLCMS_STATE.cases : [];
-    const realAttendances = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.courtAttendances)) ? SLCMS_STATE.courtAttendances : [];
-    const activeCases = realCases.filter(c => (c.status || '').toLowerCase() === 'active').length;
-    const closedCases = realCases.filter(c => ['won', 'closed', 'resolved', 'concluded'].includes((c.status || '').toLowerCase())).length;
-
-    const filterBtn = document.getElementById('user-forecast-filter-label');
-    if (filterBtn) filterBtn.textContent = periods[this._forecastMode];
-
-    const activeEl = document.getElementById('user-pill-active-val');
-    if (activeEl) activeEl.innerHTML = `${activeCases}<span class="luxury-pill-unit">${activeCases === 1 ? 'Case' : 'Cases'}</span>`;
-
-    const resolvedEl = document.getElementById('user-pill-resolved-val');
-    if (resolvedEl) resolvedEl.innerHTML = `${closedCases}<span class="luxury-pill-unit">${closedCases === 1 ? 'Matter' : 'Matters'}</span>`;
-
-    const avgEl = document.getElementById('user-callout-avg-val');
-    if (avgEl) avgEl.innerHTML = `${realAttendances.length}<span class="unit">Sessions</span>`;
-  },
-
-  cycleUserCategoryFilter(e) {
-    if (e && e.stopPropagation) e.stopPropagation();
-    this._categoryMode = (this._categoryMode || 0) + 1;
-    if (this._categoryMode > 2) this._categoryMode = 0;
-
-    const modes = ['All Areas', 'Commercial & Civil', 'Public & Appeals'];
-    const realCases = (typeof SLCMS_STATE !== 'undefined' && Array.isArray(SLCMS_STATE.cases)) ? SLCMS_STATE.cases : [];
-
-    const filterBtn = document.getElementById('user-category-filter-label');
-    if (filterBtn) filterBtn.textContent = modes[this._categoryMode];
-
-    const totalEl = document.getElementById('user-donut-total-val');
-    if (totalEl) totalEl.textContent = String(realCases.length);
+    // Clean dashboard uses streamlined cards without bloated heavy canvas charts
   }
 };

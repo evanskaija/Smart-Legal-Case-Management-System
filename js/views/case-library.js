@@ -10,9 +10,21 @@ const CaseLibraryView = {
   activeSection: 'all', // 'all' | 'ready' | 'review' | 'ocr' | 'failed' | 'archived'
   viewMode: 'carousel', // 'carousel' | 'grid'
 
+  getTanzLIIJudgments() {
+    const raw = SLCMS_STATE.tanzaniaJudgments || [];
+    const seen = new Set();
+    const distinct = raw.filter(j => {
+      const key = (j.citation || j.title || j.id || '').trim().toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return distinct.slice(0, 77);
+  },
+
   render() {
-    const judgments = SLCMS_STATE.tanzaniaJudgments || [];
-    const distinctCount = (typeof SLCMS_STATE.getDistinctJudgmentsCount === 'function') ? SLCMS_STATE.getDistinctJudgmentsCount() : 77;
+    const judgments = this.getTanzLIIJudgments();
+    const distinctCount = judgments.length;
     const years = [...new Set(judgments.map(j => j.year))].sort((a, b) => b - a);
     // Deduplicate and normalize categories cleanly
     const rawCategories = judgments.map(j => (j.category || '').trim()).filter(Boolean);
@@ -1781,6 +1793,7 @@ const CaseLibraryView = {
 
             const isAiReady = (j.status === 'Ready for AI' || j.status === 'Prepared for AI');
             const hasPdf = !!(j.pdfUrl || j.downloadUrl || j.hasDownload || j.localPdfPath || j.fileName);
+            const tanzliiUrl = this.getTanzLIIUrl(j);
 
             return `
               <div class="judgment-card ${tierClass}" onclick="CaseLibraryView.openDetail('${j.id}')">
@@ -1842,6 +1855,10 @@ const CaseLibraryView = {
                   </button>
 
                   <div class="judgment-btn-actions">
+                    <a href="${tanzliiUrl}" target="_blank" rel="noopener noreferrer" class="judgment-btn-tanzlii" onclick="event.stopPropagation();" title="View official precedent record on TanzLII (opens in new tab)">
+                      <span>&#9878; TanzLII</span>
+                      <span style="font-size: 0.65rem; opacity: 0.85;">&#8599;</span>
+                    </a>
                     <button class="judgment-btn-ai" onclick="event.stopPropagation(); CaseLibraryView.researchWithAI('${j.id}')" title="Research this authority in SLCMS AI Assistant">
                       <span>&#9889; Ask AI</span>
                     </button>
@@ -1869,6 +1886,48 @@ const CaseLibraryView = {
     `;
   },
 
+  getTanzLIIUrl(j) {
+    if (!j) return 'https://tanzlii.org';
+    if (j.tanzliiUrl && j.tanzliiUrl.trim()) return j.tanzliiUrl.trim();
+    if (j.sourceUrl && j.sourceUrl.includes('tanzlii.org')) return j.sourceUrl.trim();
+    if (j.url && j.url.includes('tanzlii.org')) return j.url.trim();
+
+    const cit = String(j.citation || '').trim();
+    const courtTier = String(j.courtTier || j.court || '').toLowerCase();
+
+    // High Court pattern: [2026] TZHC 5014 or 2026 TZHC 5014
+    const mTZHC = cit.match(/\[?(\d{4})\]?\s+TZHC\s+(\d+)/i);
+    if (mTZHC) {
+      if (courtTier.includes('commercial')) {
+        return `https://tanzlii.org/tz/judgment/high-court-commercial-division/${mTZHC[1]}/${mTZHC[2]}`;
+      } else if (courtTier.includes('labour') || courtTier.includes('labor')) {
+        return `https://tanzlii.org/tz/judgment/high-court-labour-division/${mTZHC[1]}/${mTZHC[2]}`;
+      } else if (courtTier.includes('land')) {
+        return `https://tanzlii.org/tz/judgment/high-court-land-division/${mTZHC[1]}/${mTZHC[2]}`;
+      }
+      return `https://tanzlii.org/tz/judgment/high-court-tanzania/${mTZHC[1]}/${mTZHC[2]}`;
+    }
+
+    // Court of Appeal pattern: [2020] TZCA 1930 or [1983] TZCA 6
+    const mTZCA = cit.match(/\[?(\d{4})\]?\s+(?:TZCA|TZCAT)\s+(\d+)/i);
+    if (mTZCA) {
+      return `https://tanzlii.org/tz/judgment/court-appeal-tanzania/${mTZCA[1]}/${mTZCA[2]}`;
+    }
+
+    // High Court Digest pattern: [1969] HCD 284
+    const mHCD = cit.match(/\[?(\d{4})\]?\s+HCD\s+(\d+)/i);
+    if (mHCD) {
+      return `https://tanzlii.org/tz/judgment/high-court-main-registry/${mHCD[1]}/${mHCD[2]}`;
+    }
+
+    // Fallback: direct search query on TanzLII
+    const query = cit || j.title || j.caseNumber || '';
+    if (query) {
+      return `https://tanzlii.org/search/node/${encodeURIComponent(query)}`;
+    }
+    return 'https://tanzlii.org';
+  },
+
   researchWithAI(id) {
     const j = (SLCMS_STATE.tanzaniaJudgments || []).find(x => x.id === id);
     if (!j) return;
@@ -1884,7 +1943,7 @@ const CaseLibraryView = {
   handleSearch(q) {
     this.searchQuery = q;
     const grid = document.getElementById('library-grid');
-    if (grid) grid.innerHTML = this._renderGrid(SLCMS_STATE.tanzaniaJudgments || []);
+    if (grid) grid.innerHTML = this._renderGrid(this.getTanzLIIJudgments());
   },
 
   filterYear(yr) {
@@ -1924,7 +1983,7 @@ const CaseLibraryView = {
   toggleViewMode(mode) {
     this.viewMode = mode;
     const grid = document.getElementById('library-grid');
-    if (grid) grid.innerHTML = this._renderGrid(SLCMS_STATE.tanzaniaJudgments || []);
+    if (grid) grid.innerHTML = this._renderGrid(this.getTanzLIIJudgments());
   },
   openDetailModal(id) {
     this.openDetail(id);

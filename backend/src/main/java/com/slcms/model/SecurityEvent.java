@@ -1,22 +1,49 @@
 package com.slcms.model;
 
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
  * Entity representing an authentic security event in SLCMS.
  * Stored separately in database for security auditing and access tracking.
  */
+@Entity
+@Table(name = "security_events")
 public class SecurityEvent {
+
+    @Id
+    @Column(length = 50)
     private String id;
+
+    @Column(name = "user_id", length = 50, nullable = false)
     private String userId;
+
+    @Column(name = "user_name", length = 150)
     private String userName;
+
+    @Convert(converter = EventTypeConverter.class)
+    @Column(name = "event_type", length = 100, nullable = false)
     private EventType eventType;
+
+    @Column(name = "result", length = 200)
     private String result;
+
+    @Column(name = "event_time")
     private LocalDateTime eventTime;
+
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
+
+    @Column(name = "ip_address", length = 50)
     private String ipAddress;
+
+    @Column(name = "resolved")
     private boolean resolved;
+
+    @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;
+
+    @Column(name = "resolved_by", length = 50)
     private String resolvedBy;
 
     public SecurityEvent() {

@@ -8,9 +8,22 @@ const AuthView = {
   currentTab: 'login', // 'login' | 'register'
   currentViewMode: 'auth', // 'auth' | 'first_login_password_change'
   tempAuthUser: null, // Temporary session context for first-login reset
+  portalMode: 'welcome_gate', // 'welcome_gate' | 'staff' | 'client_entrance' | 'client_register' | 'client_verify' | 'client_login'
+  pendingClientEmail: '',
+  pendingClientName: '',
+  registeredClientId: '',
+  verifyCountdownInterval: null,
+  verifySecondsLeft: 600,
+  clientType: 'Individual',
   currentInvStep: 1, // 1 | 2 | 3
   verifiedInvitationData: null,
   verifiedFormData: null,
+
+  setPortalMode(mode) {
+    this.portalMode = mode;
+    this.hideServerAlert();
+    this.renderInPlace();
+  },
 
   switchTab(tab) {
     this.currentTab = tab;
@@ -18,6 +31,39 @@ const AuthView = {
     this.currentInvStep = 1;
     this.verifiedInvitationData = null;
     this.renderInPlace();
+  },
+
+  quickFillStaff(role) {
+    const inputEmail = document.getElementById('login-email-input');
+    const inputPass = document.getElementById('login-password-input');
+    if (!inputEmail || !inputPass) return;
+
+    if (role === 'admin') {
+      inputEmail.value = 'ADM-0001';
+      inputPass.value = 'SecretLawFirm2026!';
+    } else if (role === 'senior_lawyer') {
+      inputEmail.value = 'LAW-0021';
+      inputPass.value = 'SecretLawFirm2026!';
+    } else if (role === 'legal_officer') {
+      inputEmail.value = 'OFF-0041';
+      inputPass.value = 'SecretLawFirm2026!';
+    }
+    
+    // Add brief highlight animation to fields
+    [inputEmail, inputPass].forEach(el => {
+      el.style.transition = 'all 0.3s ease';
+      el.style.borderColor = '#D4AF37';
+      el.style.boxShadow = '0 0 0 3px rgba(200, 155, 60, 0.3)';
+      setTimeout(() => {
+        el.style.borderColor = '';
+        el.style.boxShadow = '';
+      }, 1000);
+    });
+
+    if (typeof App !== 'undefined' && App.showToast) {
+      const titles = { admin: 'System Administrator (ADM-0001)', senior_lawyer: 'Senior Lawyer (LAW-0021)', legal_officer: 'Legal Officer (OFF-0041)' };
+      App.showToast(`Loaded ${titles[role] || role} credentials`, 'success');
+    }
   },
 
   renderInPlace() {
@@ -38,30 +84,38 @@ const AuthView = {
 
     return `
       <div class="auth-page-container animate-fade" style="position: relative;">
-        <!-- Floating Animated Background Orbs -->
+        <!-- Floating Animated Background Orbs & Ambient Grid -->
         <div class="auth-bg-orb auth-bg-orb-1"></div>
         <div class="auth-bg-orb auth-bg-orb-2"></div>
         <div class="auth-bg-orb auth-bg-orb-3"></div>
+        <div class="auth-bg-grid-overlay"></div>
 
         <div class="auth-split-layout">
           <!-- 1. Left Legal Hero Branding Section -->
           <div class="auth-hero-panel">
             <!-- Top Logo Header -->
             <div class="auth-brand-header">
-              <div class="auth-brand-logo-icon" style="padding: 0; background: transparent; border: none;">
-                <img data-setting-image="logoUrl" src="${typeof AppSettings !== 'undefined' ? AppSettings.get('logoUrl', 'assets/SLCMS.png') : 'assets/SLCMS.png'}" alt="Emblem" style="width: 46px; height: 46px; border-radius: 50%; display: block; object-fit: contain; box-shadow: 0 0 12px rgba(200, 155, 60, 0.4);">
+              <div class="auth-brand-logo-icon">
+                <img data-setting-image="logoUrl" src="${typeof AppSettings !== 'undefined' ? AppSettings.get('logoUrl', 'assets/SLCMS.png') : 'assets/SLCMS.png'}" alt="Emblem" style="width: 44px; height: 44px; border-radius: 50%; display: block; object-fit: contain;">
               </div>
-              <div class="auth-brand-name" data-setting="shortName">${typeof AppSettings !== 'undefined' ? AppSettings.get('shortName', 'SLCMS') : 'SLCMS'}</div>
+              <div class="auth-brand-text-block">
+                <div class="auth-brand-name" data-setting="shortName">${typeof AppSettings !== 'undefined' ? AppSettings.get('shortName', 'SLCMS') : 'SLCMS'}</div>
+                <div class="auth-brand-tag">Judicial Intelligence &amp; Case Operations</div>
+              </div>
             </div>
 
             <!-- Center Headline & Tagline -->
             <div class="auth-hero-center">
+              <div class="auth-hero-pre-badge">
+                <span class="auth-pulse-dot"></span>
+                <span>Next-Generation Legal Infrastructure</span>
+              </div>
               <h1 class="auth-main-headline" data-setting="systemName">
                 ${typeof AppSettings !== 'undefined' ? AppSettings.get('systemName', 'Smart Legal Case Management System') : 'Smart Legal Case Management System'}
               </h1>
               <div class="auth-headline-bar"></div>
               <p class="auth-lead-tagline">
-                Enterprise law-firm management with strict administrator account governance and zero-trust identity control.
+                Enterprise law-firm management with strict administrator governance, zero-trust identity control, and bank-grade privilege security.
               </p>
 
               <!-- 3 Pill Badges -->
@@ -93,16 +147,39 @@ const AuthView = {
                       <path d="m9 12 2 2 4-4"/>
                     </svg>
                   </span>
-                  <span>Strict RBAC</span>
+                  <span>Strict RBAC Security</span>
+                </div>
+              </div>
+
+              <!-- Live Telemetry Card -->
+              <div class="auth-hero-telemetry-card">
+                <div class="auth-telemetry-item">
+                  <span class="auth-telemetry-dot green"></span>
+                  <span class="auth-telemetry-label">Zero-Trust:</span>
+                  <span class="auth-telemetry-val">Operational</span>
+                </div>
+                <div class="auth-telemetry-divider"></div>
+                <div class="auth-telemetry-item">
+                  <span class="auth-telemetry-dot blue"></span>
+                  <span class="auth-telemetry-label">Security:</span>
+                  <span class="auth-telemetry-val">TLS 1.3 / AES-256</span>
+                </div>
+                <div class="auth-telemetry-divider"></div>
+                <div class="auth-telemetry-item">
+                  <span class="auth-telemetry-dot gold"></span>
+                  <span class="auth-telemetry-label">Privilege:</span>
+                  <span class="auth-telemetry-val">Protected</span>
                 </div>
               </div>
             </div>
 
             <!-- Left Bottom Spacer -->
             <div class="auth-hero-bottom-legal" style="font-size: 0.8rem; color: #94A3B8;">
-              Enterprise Law-Firm Portal • Authorized Personnel Only • Self-Registration Prohibited
+              Enterprise Law-Firm Portal • Authorized Personnel Only • Privileged &amp; Confidential
             </div>
-          </div>          <!-- 2. Right Form Section - Premium Redesigned Auth Card -->
+          </div>
+
+          <!-- 2. Right Form Section - Premium Redesigned Auth Card -->
           <div class="auth-form-panel">
 
             <!-- Dark / Light Mode Button: Positioned on Top of the White Part Side -->
@@ -139,144 +216,8 @@ const AuthView = {
               </div>
             </div>
 
-            <div class="auth-white-card">
-              <!-- Premium Lock Badge with Glow -->
-              <div class="auth-card-lock-badge">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  <circle cx="12" cy="16" r="1.5"/>
-                </svg>
-              </div>
-
-              <!-- Card Header -->
-              <h2 class="auth-card-title">Welcome</h2>
-              <p class="auth-card-subtitle">Sign in to your secure workspace</p>
-
-              <!-- Trust Badges Row -->
-              <div class="auth-trust-row">
-                <span class="auth-trust-badge">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
-                  Zero-Trust
-                </span>
-                <span class="auth-trust-badge">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                  Encrypted
-                </span>
-                <span class="auth-trust-badge">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-                  RBAC
-                </span>
-              </div>
-
-              <!-- Server/Security Alert Banner -->
-              <div id="auth-server-alert" class="alert alert-danger hidden" style="margin-bottom: 1.25rem; font-size: 0.85rem; text-align: left;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="8" x2="12" y2="12"/>
-                  <line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-                <div id="auth-server-alert-text"></div>
-              </div>
-
-              <!-- SIGN IN FORM -->
-              <form id="auth-main-login-form" onsubmit="AuthView.handleLoginSubmit(event)" novalidate>
-                <!-- Staff ID / Username / Email Field -->
-                <div class="auth-input-group">
-                  <label for="login-email-input">Staff ID, username or email</label>
-                  <div class="auth-input-wrapper" style="position: relative;">
-                    <span class="auth-input-icon">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="8" r="4"/>
-                        <path d="M6 20v-2a6 6 0 0 1 12 0v2"/>
-                      </svg>
-                    </span>
-                    <input 
-                      type="text" 
-                      id="login-email-input" 
-                      class="auth-input-field auth-input-premium" 
-                      placeholder="ADM-0001 · username · email" 
-                      value="${localStorage.getItem('slcms_remembered_staff_id') || ''}" 
-                      autocomplete="username"
-                      oninput="AuthView.clearFieldError('login-email-input', 'login-email-error')"
-                    >
-                  </div>
-                  <div id="login-email-error" class="form-error-msg hidden"></div>
-                </div>
-
-                <!-- Password Field -->
-                <div class="auth-input-group">
-                  <label for="login-password-input">Password</label>
-                  <div class="auth-input-wrapper" style="position: relative;">
-                    <span class="auth-input-icon">
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                      </svg>
-                    </span>
-                    <input 
-                      type="password" 
-                      id="login-password-input" 
-                      class="auth-input-field auth-input-premium" 
-                      placeholder="Enter your password" 
-                      value="" 
-                      autocomplete="current-password"
-                      style="padding-right: 2.75rem;"
-                      oninput="AuthView.clearFieldError('login-password-input', 'login-password-error')"
-                    >
-                    <button 
-                      type="button" 
-                      onclick="AuthView.togglePasswordEye('login-password-input', 'auth-eye-svg')" 
-                      class="auth-password-eye-btn"
-                      title="Show / Hide Password"
-                    >
-                      <svg id="auth-eye-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-                        <circle cx="12" cy="12" r="3"/>
-                      </svg>
-                    </button>
-                  </div>
-                  <div id="login-password-error" class="form-error-msg hidden"></div>
-                </div>
-
-                <!-- Remember + Forgot Row -->
-                <div class="auth-remember-row">
-                  <label class="checkbox-label" title="Only use on trusted firm workstations">
-                    <input type="checkbox" id="auth-remember-check" checked>
-                    <span class="checkbox-custom">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                        <path d="M20 6 9 17l-5-5"/>
-                      </svg>
-                    </span>
-                    <span>Remember Staff ID</span>
-                  </label>
-                  <a href="javascript:void(0)" onclick="AuthView.showForgotPasswordModal()" class="auth-forgot-link">Forgot Password?</a>
-                </div>
-
-                <!-- Premium Login Button -->
-                <button type="submit" id="auth-submit-btn" class="auth-btn-signin auth-btn-premium">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                    <polyline points="10 17 15 12 10 7"/>
-                    <line x1="15" y1="12" x2="3" y2="12"/>
-                  </svg>
-                  <span>Sign In to Workspace</span>
-                </button>
-
-                <div class="auth-card-need-access">
-                  Need access?
-                  <a href="javascript:void(0)" onclick="AuthView.showContactAdminModal()">Contact Administrator</a>
-                </div>
-              </form>
-
-              <!-- Bottom Security Badge -->
-              <div class="auth-security-footer-note">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
-                  <path d="m9 12 2 2 4-4"/>
-                </svg>
-                <span>Privileged &amp; Confidential • Admin-Managed • No Self-Registration</span>
-              </div>
+            <div class="auth-white-card ${this.portalMode === 'client_register' ? 'reg-card-wide' : (this.portalMode === 'welcome_gate' ? 'auth-gate-card-wide' : '')}">
+              ${this.renderCardContent(isLoginTab, isDark)}
             </div>
           </div>
         </div>
@@ -289,12 +230,1208 @@ const AuthView = {
           </div>
           <div class="auth-footer-line-2">
             <a href="javascript:void(0)" onclick="App.showToast('Firm Security &amp; Privacy Policies (SOC-2 Type II Certified)', 'info')">Privacy &amp; Confidentiality</a>
-            <span class="auth-footer-dot">•</span>
-            <a href="javascript:void(0)" onclick="AuthView.showContactAdminModal()">Administrator Support</a>
           </div>
         </footer>
       </div>
     `;
+  },
+
+  renderCardContent(isLoginTab, isDark) {
+    switch (this.portalMode) {
+      case 'welcome_gate':
+        return this.renderWelcomeGate();
+      case 'client_entrance':
+        return this.renderClientEntrance();
+      case 'client_register':
+        return this.renderClientRegister();
+      case 'client_verify':
+        return this.renderClientVerify();
+      case 'client_login':
+        return this.renderClientLogin();
+      case 'staff':
+      default:
+        return this.renderStaffLogin(isLoginTab);
+    }
+  },
+
+  /* --------------------------------------------------------------------------
+     1. FIRST SYSTEM PAGE: WELCOME GATE (Executive Legal Gateway)
+     -------------------------------------------------------------------------- */
+  renderWelcomeGate() {
+    return `
+      <div class="auth-welcome-gate animate-fade">
+        <!-- Executive Shield & Scales Emblem -->
+        <div class="auth-gate-shield-emblem">
+          <div class="auth-gate-shield-glow"></div>
+          <div class="auth-gate-shield-icon" title="SLCMS Enterprise Security">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="M12 7v10"/>
+              <path d="M8 10.5h8"/>
+              <path d="M7 14.5l2-4"/>
+              <path d="M17 14.5l-2-4"/>
+              <circle cx="7" cy="14.5" r="1.5"/>
+              <circle cx="17" cy="14.5" r="1.5"/>
+              <path d="M10 19h4"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Gateway Header & Directory Status -->
+        <div class="auth-gate-header">
+          <div class="auth-gate-badge">
+            <span class="auth-pulse-dot"></span>
+            <span class="auth-gate-badge-label">Enterprise Gateway</span>
+            <span class="auth-gate-badge-sep">/</span>
+            <span class="auth-gate-badge-sub">Zero-Trust Directory</span>
+          </div>
+          <h2 class="auth-gate-title">Welcome to SLCMS</h2>
+          <p class="auth-gate-subtitle">
+            Smart Legal Case Management System — select your authorized portal to authenticate and access your workspace.
+          </p>
+        </div>
+
+        <!-- The Two Compact Luxury Portal Gate Cards -->
+        <div class="portal-gate-options">
+          <!-- Card 1: Staff Portal -->
+          <div class="portal-gate-card staff-card" onclick="AuthView.setPortalMode('staff')" onkeydown="if(event.key==='Enter'||event.key===' ')AuthView.setPortalMode('staff')" tabindex="0" role="button" aria-label="Enter Staff and Counsel Portal">
+            <div class="portal-card-shine"></div>
+            <div class="portal-card-icon-box staff-icon-box">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                <circle cx="12" cy="16.5" r="1.5" fill="currentColor"/>
+              </svg>
+            </div>
+            <div class="portal-card-content">
+              <div class="portal-card-eyebrow staff-eyebrow">
+                <span>Attorneys &amp; Firm Personnel</span>
+                <span class="portal-card-badge staff-badge">Internal SSO</span>
+              </div>
+              <div class="portal-card-title-row">
+                <span class="portal-card-title">Staff &amp; Counsel Portal</span>
+              </div>
+              <div class="portal-card-desc">
+                Case management, court dockets, legal filings, and practice operations
+              </div>
+              <div class="portal-card-tags">
+                <span class="portal-card-tag">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                  Zero-Trust RBAC
+                </span>
+                <span class="portal-card-tag">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  MFA Protected
+                </span>
+                <span class="portal-card-tag">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                  Practice Suite
+                </span>
+              </div>
+            </div>
+            <div class="portal-card-action staff-action">
+              <span class="portal-action-text">Sign In</span>
+              <span class="portal-action-arrow">→</span>
+            </div>
+          </div>
+
+          <!-- Card 2: Client Portal -->
+          <div class="portal-gate-card client-card" onclick="AuthView.setPortalMode('client_entrance')" onkeydown="if(event.key==='Enter'||event.key===' ')AuthView.setPortalMode('client_entrance')" tabindex="0" role="button" aria-label="Enter Client and Case Portal">
+            <div class="portal-card-shine"></div>
+            <div class="portal-card-icon-box client-icon-box">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <div class="portal-card-content">
+              <div class="portal-card-eyebrow client-eyebrow">
+                <span>Clients &amp; Case Parties</span>
+                <span class="portal-card-badge client-badge">Verified Access</span>
+              </div>
+              <div class="portal-card-title-row">
+                <span class="portal-card-title">Client &amp; Case Portal</span>
+              </div>
+              <div class="portal-card-desc">
+                Track court proceedings, review case filings, and consult counsel
+              </div>
+              <div class="portal-card-tags">
+                <span class="portal-card-tag">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                  Docket Tracking
+                </span>
+                <span class="portal-card-tag">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                  Case Documents
+                </span>
+                <span class="portal-card-tag">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  Encrypted
+                </span>
+              </div>
+            </div>
+            <div class="portal-card-action client-action">
+              <span class="portal-action-text">Enter</span>
+              <span class="portal-action-arrow">→</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Institutional Security & Compliance Footer Strip -->
+        <div class="auth-gate-security-strip">
+          <div class="auth-security-badges-row">
+            <span class="auth-sec-badge">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+              TLS 1.3 / AES-256
+            </span>
+            <span class="auth-sec-divider">•</span>
+            <span class="auth-sec-badge">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Zero-Trust Architecture
+            </span>
+            <span class="auth-sec-divider">•</span>
+            <span class="auth-sec-badge">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+              SOC 2 Type II
+            </span>
+          </div>
+          <div class="auth-security-subtext">
+            Privileged &amp; Confidential • All Access Sessions Audited
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  /* --------------------------------------------------------------------------
+     2. CLIENT PORTAL ENTRANCE (Compact & Unified)
+     -------------------------------------------------------------------------- */
+  renderClientEntrance() {
+    return `
+      <div class="auth-client-entrance animate-fade" style="text-align: left;">
+        <div class="auth-card-topbar">
+          <button type="button" class="auth-topbar-link" onclick="AuthView.setPortalMode('welcome_gate')">
+            ← Gateway
+          </button>
+          <button type="button" class="auth-topbar-link" onclick="AuthView.setPortalMode('staff')">
+            Staff Portal →
+          </button>
+        </div>
+
+        <div class="auth-compact-header">
+          <h2 class="auth-card-title">Client Portal</h2>
+          <p class="auth-card-subtitle">Access your legal dossier, court dates, and assistance requests</p>
+        </div>
+
+        <div class="portal-compact-actions">
+          <!-- Option 1: Existing Client -->
+          <div class="portal-compact-item" onclick="AuthView.setPortalMode('client_login')" tabindex="0" role="button">
+            <div class="portal-compact-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                <polyline points="10 17 15 12 10 7"/>
+                <line x1="15" y1="12" x2="3" y2="12"/>
+              </svg>
+            </div>
+            <div class="portal-compact-info">
+              <div class="portal-compact-title">Client Sign In</div>
+              <div class="portal-compact-desc">Access ongoing cases and active legal matters</div>
+            </div>
+            <div class="portal-compact-arrow">→</div>
+          </div>
+
+          <!-- Option 2: New Client -->
+          <div class="portal-compact-item" onclick="AuthView.setPortalMode('client_register')" tabindex="0" role="button">
+            <div class="portal-compact-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <line x1="19" y1="8" x2="19" y2="14"/>
+                <line x1="22" y1="11" x2="16" y2="11"/>
+              </svg>
+            </div>
+            <div class="portal-compact-info">
+              <div class="portal-compact-title">Create Client Account</div>
+              <div class="portal-compact-desc">Register to request counsel or file new assistance</div>
+            </div>
+            <div class="portal-compact-arrow">→</div>
+          </div>
+        </div>
+
+        <div class="auth-compact-notice">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span>Staff accounts are provisioned exclusively by firm administration.</span>
+        </div>
+      </div>
+    `;
+  },
+
+  /* --------------------------------------------------------------------------
+     3. CLIENT REGISTRATION FORM (Compact 2-Column with Live Validation)
+     -------------------------------------------------------------------------- */
+  renderClientRegister() {
+    return `
+      <div class="auth-client-register animate-fade" style="text-align: left;">
+        <div class="auth-card-topbar">
+          <button type="button" class="auth-topbar-link" onclick="AuthView.setPortalMode('client_entrance')">
+            ← Client Portal
+          </button>
+          <button type="button" class="auth-topbar-link" onclick="AuthView.setPortalMode('client_login')">
+            Sign In instead →
+          </button>
+        </div>
+
+        <div class="auth-compact-header">
+          <h2 class="auth-card-title">Create Client Account</h2>
+          <p class="auth-card-subtitle">Register to request legal representation and track cases</p>
+        </div>
+
+        <!-- Alert Container -->
+        <div id="client-reg-alert" class="alert alert-danger hidden" style="margin-bottom: 0.85rem; font-size: 0.82rem; padding: 0.65rem 0.85rem;"></div>
+
+        <form id="client-registration-form" onsubmit="AuthView.handleClientRegisterSubmit(event)" novalidate>
+          <!-- Client Type Pill Selector -->
+          <div style="display: flex; gap: 6px; margin-bottom: 0.85rem; background: #F1F5F9; padding: 3px; border-radius: 8px;">
+            <button type="button" id="btn-type-indiv" class="btn" 
+                    onclick="AuthView.handleClientTypeChange('Individual')"
+                    style="flex: 1; padding: 0.4rem; font-size: 0.82rem; font-weight: 700; border-radius: 6px; border: none; ${this.clientType === 'Individual' ? 'background: #0F172A; color: #fff;' : 'background: transparent; color: #64748B;'}">
+              Individual Client
+            </button>
+            <button type="button" id="btn-type-org" class="btn" 
+                    onclick="AuthView.handleClientTypeChange('Organization')"
+                    style="flex: 1; padding: 0.4rem; font-size: 0.82rem; font-weight: 700; border-radius: 6px; border: none; ${this.clientType === 'Organization' ? 'background: #0F172A; color: #fff;' : 'background: transparent; color: #64748B;'}">
+              Organization
+            </button>
+          </div>
+
+          <!-- Row 1: Name and Phone (2 Columns) -->
+          <div class="auth-form-row">
+            <div>
+              <label id="lbl-client-name" for="client-reg-name" style="display: block; font-size: 0.78rem; font-weight: 700; color: #1E293B; margin-bottom: 0.25rem;">
+                ${this.clientType === 'Organization' ? 'Organization Name *' : 'Full Name *'}
+              </label>
+              <input type="text" id="client-reg-name" class="input-field" 
+                     placeholder="${this.clientType === 'Organization' ? 'Acme Holdings Ltd' : 'e.g. Evans Kaija'}" 
+                     required autocomplete="name"
+                     oninput="AuthView.validateClientRegisterName(this.value)"
+                     onblur="AuthView.validateClientRegisterName(this.value)">
+              <div id="client-reg-name-err" class="hidden"></div>
+            </div>
+
+            <div>
+              <label for="client-reg-phone" style="display: block; font-size: 0.78rem; font-weight: 700; color: #1E293B; margin-bottom: 0.25rem;">
+                Phone Number * <span style="font-weight: 400; color: #64748B;">(+255)</span>
+              </label>
+              <input type="tel" id="client-reg-phone" class="input-field" 
+                     placeholder="+255712345678" value="+255"
+                     required autocomplete="tel"
+                     oninput="AuthView.validateClientRegisterPhone(this.value)"
+                     onblur="AuthView.validateClientRegisterPhone(this.value)">
+              <div id="client-reg-phone-err" class="hidden"></div>
+            </div>
+          </div>
+
+          <!-- Row 2: Email Address -->
+          <div style="margin-bottom: 0.75rem; text-align: left;">
+            <label for="client-reg-email" style="display: block; font-size: 0.78rem; font-weight: 700; color: #1E293B; margin-bottom: 0.25rem;">
+              Email Address *
+            </label>
+            <input type="email" id="client-reg-email" class="input-field" 
+                   placeholder="client@example.com" 
+                   required autocomplete="email"
+                   oninput="AuthView.validateClientRegisterEmail(this.value)"
+                   onblur="AuthView.validateClientRegisterEmail(this.value)">
+            <div id="client-reg-email-err" class="hidden"></div>
+          </div>
+
+          <!-- Row 3: Password and Confirm Password (2 Columns) -->
+          <div class="auth-form-row">
+            <div>
+              <label for="client-reg-password" style="display: block; font-size: 0.78rem; font-weight: 700; color: #1E293B; margin-bottom: 0.25rem;">
+                Password *
+              </label>
+              <input type="password" id="client-reg-password" class="input-field" 
+                     placeholder="Min. 10 chars" 
+                     required autocomplete="new-password"
+                     oninput="AuthView.validateClientRegisterPassword(this.value)"
+                     onblur="AuthView.validateClientRegisterPassword(this.value)">
+              <!-- Compact 4-bar strength meter -->
+              <div class="pw-strength-box">
+                <div class="pw-strength-bars">
+                  <span class="pw-bar" id="pw-bar-1"></span>
+                  <span class="pw-bar" id="pw-bar-2"></span>
+                  <span class="pw-bar" id="pw-bar-3"></span>
+                  <span class="pw-bar" id="pw-bar-4"></span>
+                </div>
+                <span class="pw-strength-label" id="pw-strength-label">Password strength</span>
+              </div>
+              <div id="client-reg-password-err" class="hidden"></div>
+            </div>
+
+            <div>
+              <label for="client-reg-confirm-password" style="display: block; font-size: 0.78rem; font-weight: 700; color: #1E293B; margin-bottom: 0.25rem;">
+                Confirm Password *
+              </label>
+              <input type="password" id="client-reg-confirm-password" class="input-field" 
+                     placeholder="Confirm password" 
+                     required autocomplete="new-password"
+                     oninput="AuthView.validateClientRegisterConfirmPassword(this.value)"
+                     onblur="AuthView.validateClientRegisterConfirmPassword(this.value)">
+              <div id="client-reg-confirm-err" class="hidden"></div>
+            </div>
+          </div>
+
+          <!-- Privacy Policy Checkbox -->
+          <div style="margin-bottom: 0.95rem; text-align: left;">
+            <label style="display: flex; align-items: flex-start; gap: 0.45rem; font-size: 0.78rem; color: #475569; cursor: pointer; line-height: 1.35;">
+              <input type="checkbox" id="client-reg-privacy" required style="margin-top: 0.15rem;">
+              <span>I accept the <strong>Privacy and Confidentiality Policy</strong> governing legal representation and attorney-client privilege.</span>
+            </label>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" id="btn-client-register-submit" class="auth-btn-signin" style="width: 100%;">
+            Create Account
+          </button>
+        </form>
+
+        <div style="text-align: center; margin-top: 0.85rem; font-size: 0.8rem; color: #64748B;">
+          Already have a client account? 
+          <a href="javascript:void(0)" onclick="AuthView.setPortalMode('client_login')" style="color: #0F172A; font-weight: 700;">Sign In</a>
+        </div>
+      </div>
+    `;
+  },
+
+  /* --------------------------------------------------------------------------
+     4. VERIFY THE CLIENT (Requirement 4)
+     -------------------------------------------------------------------------- */
+  renderClientVerify() {
+    const email = this.pendingClientEmail || 'your email';
+
+    return `
+      <div class="auth-client-verify animate-fade" style="text-align: center; padding: 0.5rem 0;">
+        <div style="text-align: left;">
+          <button type="button" class="auth-back-link" onclick="AuthView.setPortalMode('client_entrance')">
+            ← Back to Client Portal
+          </button>
+        </div>
+        <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(15, 23, 42, 0.08); color: #0F172A; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem auto;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+        </div>
+
+        <h2 style="font-size: 1.35rem; font-weight: 700; color: #0F172A; margin: 0 0 0.25rem 0;">
+          Enter Verification Code
+        </h2>
+        <p style="font-size: 0.84rem; color: #64748B; margin: 0 auto 1.25rem auto; max-width: 320px; line-height: 1.4;">
+          We sent a code to <strong style="color: #0F172A;">${this.escapeHtml(email)}</strong>
+        </p>
+
+        <div id="client-verify-alert" class="alert alert-danger hidden" style="margin-bottom: 1rem; font-size: 0.82rem; padding: 0.65rem; text-align: left;"></div>
+
+        <form onsubmit="AuthView.handleClientVerifySubmit(event)">
+          <div style="margin-bottom: 1rem;">
+            <input type="text" id="client-verify-code" maxlength="6" 
+                   placeholder="______" autocomplete="one-time-code"
+                   style="width: 200px; font-size: 1.75rem; font-family: var(--font-mono, monospace); letter-spacing: 0.4em; text-align: center; padding: 0.5rem 0.4rem; border: 2px solid #CBD5E1; border-radius: 8px; margin: 0 auto; display: block; font-weight: 700; color: #0F172A;"
+                   required autofocus>
+          </div>
+
+          <div id="verify-timer-box" style="font-size: 0.78rem; color: #64748B; margin-bottom: 1.25rem;">
+            Code expires in <strong id="verify-countdown" style="color: #0F172A; font-family: monospace;">10:00</strong>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 0.65rem; max-width: 260px; margin: 0 auto 1.25rem auto;">
+            <button type="submit" id="btn-verify-account" class="auth-btn-signin" style="width: 100%;">
+              Verify Account
+            </button>
+            <button type="button" onclick="AuthView.handleResendClientCode()" class="btn btn-secondary" 
+                    style="width: 100%; font-weight: 600; padding: 0.6rem; border-radius: 8px; font-size: 0.85rem;">
+              Resend Code
+            </button>
+          </div>
+        </form>
+
+        <div class="auth-compact-notice">
+          <strong>Notice:</strong> If email is unavailable, the Legal Officer can manually verify your client profile.
+        </div>
+      </div>
+    `;
+  },
+
+  /* --------------------------------------------------------------------------
+     5. CLIENT LOGIN (Requirement 5)
+     -------------------------------------------------------------------------- */
+  renderClientLogin() {
+    const rememberedId = this.registeredClientId || this.pendingClientEmail || '';
+
+    return `
+      <div class="auth-client-login animate-fade" style="text-align: left;">
+        <div class="auth-card-topbar">
+          <button type="button" class="auth-topbar-link" onclick="AuthView.setPortalMode('client_entrance')">
+            ← Client Portal
+          </button>
+          <button type="button" class="auth-topbar-link" onclick="AuthView.setPortalMode('staff')">
+            Staff Sign In →
+          </button>
+        </div>
+
+        <div class="auth-compact-header">
+          <h2 class="auth-card-title">Client Sign In</h2>
+          <p class="auth-card-subtitle">Access your active cases, hearings, and counsel requests</p>
+        </div>
+
+        <div id="client-login-alert" class="alert alert-danger hidden" style="margin-bottom: 0.85rem; font-size: 0.82rem; padding: 0.65rem 0.85rem;"></div>
+
+        <form id="client-login-form" onsubmit="AuthView.handleClientLoginSubmit(event)" novalidate>
+          <div style="margin-bottom: 0.85rem; text-align: left;">
+            <label for="client-login-id" style="display: block; font-size: 0.78rem; font-weight: 700; color: #1E293B; margin-bottom: 0.25rem;">
+              Email or Client ID
+            </label>
+            <input type="text" id="client-login-id" class="input-field" 
+                   placeholder="e.g. CLT-0001 or client@example.com" 
+                   value="${this.escapeHtml(rememberedId)}"
+                   required autocomplete="username"
+                   oninput="AuthView.validateClientLoginField('client-login-id')"
+                   onblur="AuthView.validateClientLoginField('client-login-id')">
+            <div id="client-id-err" class="hidden"></div>
+          </div>
+
+          <div style="margin-bottom: 0.95rem; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+              <label for="client-login-password" style="font-size: 0.78rem; font-weight: 700; color: #1E293B; margin: 0;">
+                Password
+              </label>
+              <a href="javascript:void(0)" onclick="App.showToast('Please contact your assigned Legal Officer to reset your client password.', 'info')" style="font-size: 0.75rem; color: #64748B; text-decoration: none; font-weight: 600;">
+                Forgot Password?
+              </a>
+            </div>
+            <div class="auth-input-wrapper" style="position: relative;">
+              <input type="password" id="client-login-password" class="input-field" 
+                     placeholder="Enter your client password" 
+                     required autocomplete="current-password"
+                     style="padding-right: 2.4rem;"
+                     oninput="AuthView.validateClientLoginField('client-login-password')"
+                     onblur="AuthView.validateClientLoginField('client-login-password')">
+              <button type="button" onclick="AuthView.togglePasswordEye('client-login-password', 'client-eye-svg')" class="auth-password-eye-btn" title="Toggle password visibility">
+                <svg id="client-eye-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+            <div id="client-pw-err" class="hidden"></div>
+          </div>
+
+          <button type="submit" id="btn-client-login-submit" class="auth-btn-signin" style="width: 100%;">
+            Log In
+          </button>
+        </form>
+
+        <div style="text-align: center; margin-top: 0.95rem; font-size: 0.8rem; color: #64748B;">
+          New client? 
+          <a href="javascript:void(0)" onclick="AuthView.setPortalMode('client_register')" style="color: #0F172A; font-weight: 700;">Create Client Account</a>
+        </div>
+      </div>
+    `;
+  },
+
+  /* --------------------------------------------------------------------------
+     6. STAFF LOGIN VIEW (Compact, Role-Neutral, Live Validated)
+     -------------------------------------------------------------------------- */
+  renderStaffLogin(isLoginTab) {
+    return `
+      <div class="auth-staff-login animate-fade" style="text-align: left;">
+        <div class="auth-card-topbar">
+          <button type="button" class="auth-topbar-link" onclick="AuthView.setPortalMode('welcome_gate')">
+            ← Gateway
+          </button>
+          <button type="button" class="auth-topbar-link" onclick="AuthView.setPortalMode('client_entrance')">
+            Client Portal →
+          </button>
+        </div>
+
+        <div class="auth-compact-header">
+          <div class="auth-compact-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </div>
+          <h2 class="auth-card-title">Staff Sign In</h2>
+          <p class="auth-card-subtitle">Authorized legal operations &amp; firm workspace</p>
+        </div>
+
+        <!-- Server/Security Alert Banner -->
+        <div id="auth-server-alert" class="alert alert-danger hidden" style="margin-bottom: 0.85rem; font-size: 0.82rem; padding: 0.65rem 0.85rem; text-align: left;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <div id="auth-server-alert-text"></div>
+        </div>
+
+        <!-- SIGN IN FORM -->
+        <form id="auth-main-login-form" onsubmit="AuthView.handleLoginSubmit(event)" novalidate>
+          <!-- Staff ID / Username / Email Field -->
+          <div class="auth-input-group">
+            <label for="login-email-input">Staff ID, username or email</label>
+            <div class="auth-input-wrapper">
+              <span class="auth-input-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="8" r="4"/>
+                  <path d="M6 20v-2a6 6 0 0 1 12 0v2"/>
+                </svg>
+              </span>
+              <input 
+                type="text" 
+                id="login-email-input" 
+                class="auth-input-field" 
+                placeholder="Staff ID, username or email" 
+                value="${localStorage.getItem('slcms_remembered_staff_id') || ''}" 
+                autocomplete="username"
+                oninput="AuthView.validateStaffField('login-email-input')"
+                onblur="AuthView.validateStaffField('login-email-input')"
+              >
+            </div>
+            <div id="login-email-error" class="form-error-msg hidden"></div>
+          </div>
+
+          <!-- Password Field -->
+          <div class="auth-input-group">
+            <label for="login-password-input">Password</label>
+            <div class="auth-input-wrapper">
+              <span class="auth-input-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              </span>
+              <input 
+                type="password" 
+                id="login-password-input" 
+                class="auth-input-field" 
+                placeholder="Enter your password" 
+                value="" 
+                autocomplete="current-password"
+                style="padding-right: 2.5rem;"
+                oninput="AuthView.validateStaffField('login-password-input')"
+                onblur="AuthView.validateStaffField('login-password-input')"
+              >
+              <button 
+                type="button" 
+                onclick="AuthView.togglePasswordEye('login-password-input', 'auth-eye-svg')" 
+                class="auth-password-eye-btn"
+                title="Show / Hide Password"
+              >
+                <svg id="auth-eye-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+            <div id="login-password-error" class="form-error-msg hidden"></div>
+          </div>
+
+          <!-- Remember Staff ID & Help Link -->
+          <div class="auth-remember-row">
+            <label class="checkbox-label" title="Only use on trusted firm workstations">
+              <input type="checkbox" id="auth-remember-check" checked>
+              <span class="checkbox-custom">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <path d="M20 6 9 17l-5-5"/>
+                </svg>
+              </span>
+              <span>Remember Staff ID</span>
+            </label>
+            <a href="javascript:void(0)" onclick="App.showToast('Please contact your System Administrator to reset your staff credentials.', 'info')" class="auth-forgot-link">
+              Need Help?
+            </a>
+          </div>
+
+          <!-- Sign In Button -->
+          <button type="submit" id="auth-submit-btn" class="auth-btn-signin">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <polyline points="10 17 15 12 10 7"/>
+              <line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+            <span>Sign In to Workspace</span>
+          </button>
+        </form>
+
+        <div class="auth-compact-notice" style="justify-content: center; margin-top: 0.95rem;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+          <span>Privileged &amp; Confidential • Zero-Trust Governance</span>
+        </div>
+      </div>
+    `;
+  },
+
+  /* --------------------------------------------------------------------------
+     CLIENT PORTAL HANDLERS & VALIDATORS (Requirements 3, 4, 5)
+     -------------------------------------------------------------------------- */
+  handleClientTypeChange(type) {
+    this.clientType = type;
+    const btnIndiv = document.getElementById('btn-type-indiv');
+    const btnOrg = document.getElementById('btn-type-org');
+    const lblName = document.getElementById('lbl-client-name');
+    const inputName = document.getElementById('client-reg-name');
+
+    if (btnIndiv && btnOrg) {
+      if (type === 'Individual') {
+        btnIndiv.style.background = '#0F172A';
+        btnIndiv.style.color = '#fff';
+        btnOrg.style.background = 'transparent';
+        btnOrg.style.color = '#64748B';
+        if (lblName) lblName.innerText = 'Full Name *';
+        if (inputName) inputName.placeholder = 'e.g. Evans Kaija';
+      } else {
+        btnOrg.style.background = '#0F172A';
+        btnOrg.style.color = '#fff';
+        btnIndiv.style.background = 'transparent';
+        btnIndiv.style.color = '#64748B';
+        if (lblName) lblName.innerText = 'Organization Name *';
+        if (inputName) inputName.placeholder = 'e.g. Acme Holdings Limited';
+      }
+    }
+    if (inputName && inputName.value) {
+      this.validateClientRegisterName(inputName.value);
+    }
+  },
+
+  /* --------------------------------------------------------------------------
+     LIVE FIELD VALIDATION METHODS
+     -------------------------------------------------------------------------- */
+  validateStaffField(fieldId) {
+    const input = document.getElementById(fieldId);
+    if (!input) return false;
+    const val = input.value.trim();
+    const errorEl = document.getElementById(fieldId === 'login-email-input' ? 'login-email-error' : 'login-password-error');
+
+    if (fieldId === 'login-email-input') {
+      if (!val) {
+        input.classList.add('is-invalid');
+        input.classList.remove('is-valid');
+        if (errorEl) {
+          errorEl.innerHTML = '<span class="auth-field-hint error">⚠ Please enter your Staff ID, username or email.</span>';
+          errorEl.classList.remove('hidden');
+        }
+        return false;
+      } else {
+        input.classList.remove('is-invalid');
+        input.classList.add('is-valid');
+        if (errorEl) {
+          errorEl.innerHTML = '';
+          errorEl.classList.add('hidden');
+        }
+        return true;
+      }
+    } else if (fieldId === 'login-password-input') {
+      if (!val) {
+        input.classList.add('is-invalid');
+        input.classList.remove('is-valid');
+        if (errorEl) {
+          errorEl.innerHTML = '<span class="auth-field-hint error">⚠ Please enter your password.</span>';
+          errorEl.classList.remove('hidden');
+        }
+        return false;
+      } else {
+        input.classList.remove('is-invalid');
+        input.classList.add('is-valid');
+        if (errorEl) {
+          errorEl.innerHTML = '';
+          errorEl.classList.add('hidden');
+        }
+        return true;
+      }
+    }
+    return true;
+  },
+
+  validateClientRegisterName(val) {
+    const input = document.getElementById('client-reg-name');
+    const err = document.getElementById('client-reg-name-err');
+    if (!input) return false;
+    val = (val !== undefined ? val : input.value).trim();
+
+    if (!val) {
+      input.classList.add('is-invalid');
+      input.classList.remove('is-valid');
+      if (err) { err.innerHTML = '<span class="auth-field-hint error">⚠ Name is required</span>'; err.classList.remove('hidden'); }
+      return false;
+    }
+    if (this.clientType === 'Individual') {
+      if (!/^[A-Za-z\s'\-]+$/.test(val)) {
+        input.classList.add('is-invalid');
+        input.classList.remove('is-valid');
+        if (err) { err.innerHTML = '<span class="auth-field-hint error">⚠ Only letters, spaces, hyphens</span>'; err.classList.remove('hidden'); }
+        return false;
+      }
+    } else {
+      if (!/^[A-Za-z0-9\s.,&'\-]+$/.test(val)) {
+        input.classList.add('is-invalid');
+        input.classList.remove('is-valid');
+        if (err) { err.innerHTML = '<span class="auth-field-hint error">⚠ Valid business name required</span>'; err.classList.remove('hidden'); }
+        return false;
+      }
+    }
+    input.classList.remove('is-invalid');
+    input.classList.add('is-valid');
+    if (err) { err.innerHTML = '<span class="auth-field-hint success">✓ Valid</span>'; err.classList.remove('hidden'); }
+    return true;
+  },
+
+  validateClientRegisterPhone(val) {
+    const input = document.getElementById('client-reg-phone');
+    const err = document.getElementById('client-reg-phone-err');
+    if (!input) return false;
+    val = (val !== undefined ? val : input.value).trim();
+
+    if (val.startsWith('07') || val.startsWith('06')) {
+      val = '+255' + val.substring(1);
+      input.value = val;
+    } else if (val.startsWith('255')) {
+      val = '+' + val;
+      input.value = val;
+    }
+
+    if (!val || val === '+255') {
+      input.classList.add('is-invalid');
+      input.classList.remove('is-valid');
+      if (err) { err.innerHTML = '<span class="auth-field-hint error">⚠ Phone is required</span>'; err.classList.remove('hidden'); }
+      return false;
+    }
+    const phoneRegex = /^\+255[67]\d{8}$/;
+    if (!phoneRegex.test(val)) {
+      input.classList.add('is-invalid');
+      input.classList.remove('is-valid');
+      if (err) { err.innerHTML = '<span class="auth-field-hint error">⚠ Format: +255 6/7XXXXXXXX</span>'; err.classList.remove('hidden'); }
+      return false;
+    }
+    input.classList.remove('is-invalid');
+    input.classList.add('is-valid');
+    if (err) { err.innerHTML = '<span class="auth-field-hint success">✓ Valid format</span>'; err.classList.remove('hidden'); }
+    return true;
+  },
+
+  validateClientRegisterEmail(val) {
+    const input = document.getElementById('client-reg-email');
+    const err = document.getElementById('client-reg-email-err');
+    if (!input) return false;
+    val = (val !== undefined ? val : input.value).trim().toLowerCase();
+
+    if (!val) {
+      input.classList.add('is-invalid');
+      input.classList.remove('is-valid');
+      if (err) { err.innerHTML = '<span class="auth-field-hint error">⚠ Email is required</span>'; err.classList.remove('hidden'); }
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(val)) {
+      input.classList.add('is-invalid');
+      input.classList.remove('is-valid');
+      if (err) { err.innerHTML = '<span class="auth-field-hint error">⚠ Valid email required</span>'; err.classList.remove('hidden'); }
+      return false;
+    }
+    input.classList.remove('is-invalid');
+    input.classList.add('is-valid');
+    if (err) { err.innerHTML = '<span class="auth-field-hint success">✓ Valid email</span>'; err.classList.remove('hidden'); }
+    return true;
+  },
+
+  validateClientRegisterPassword(val) {
+    const input = document.getElementById('client-reg-password');
+    const err = document.getElementById('client-reg-password-err');
+    const bar1 = document.getElementById('pw-bar-1');
+    const bar2 = document.getElementById('pw-bar-2');
+    const bar3 = document.getElementById('pw-bar-3');
+    const bar4 = document.getElementById('pw-bar-4');
+    const label = document.getElementById('pw-strength-label');
+    if (!input) return false;
+    val = (val !== undefined ? val : input.value);
+
+    let score = 0;
+    if (val.length >= 8) score++;
+    if (val.length >= 10 && (/[A-Z]/.test(val) || /[0-9]/.test(val))) score++;
+    if (/[a-z]/.test(val) && /[A-Z]/.test(val) && /[0-9]/.test(val)) score++;
+    if (val.length >= 10 && /[^A-Za-z0-9]/.test(val)) score++;
+
+    const inactiveColor = (document.documentElement.getAttribute('data-theme') === 'dark') ? 'rgba(255,255,255,0.12)' : '#E2E8F0';
+    const colors = ['#EF4444', '#F59E0B', '#3B82F6', '#10B981'];
+    const labels = ['Weak', 'Fair', 'Good', 'Strong'];
+
+    [bar1, bar2, bar3, bar4].forEach((b, idx) => {
+      if (b) {
+        b.style.backgroundColor = (score > idx) ? colors[score - 1] : inactiveColor;
+      }
+    });
+
+    if (label) {
+      if (!val) {
+        label.innerText = 'Password strength';
+        label.style.color = '#64748B';
+      } else {
+        label.innerText = `Strength: ${labels[score - 1] || 'Weak'}`;
+        label.style.color = colors[score - 1] || '#EF4444';
+      }
+    }
+
+    const hasLength = val.length >= 10;
+    const hasUpper = /[A-Z]/.test(val);
+    const hasLower = /[a-z]/.test(val);
+    const hasNum = /\d/.test(val);
+    const hasSym = /[^A-Za-z0-9]/.test(val);
+    const isValid = hasLength && hasUpper && hasLower && hasNum && hasSym;
+
+    if (!val) {
+      input.classList.remove('is-valid', 'is-invalid');
+      if (err) { err.innerHTML = ''; err.classList.add('hidden'); }
+      return false;
+    }
+
+    if (isValid) {
+      input.classList.remove('is-invalid');
+      input.classList.add('is-valid');
+      if (err) { err.innerHTML = '<span class="auth-field-hint success">✓ Strong legal password</span>'; err.classList.remove('hidden'); }
+    } else {
+      input.classList.add('is-invalid');
+      input.classList.remove('is-valid');
+      if (err) { err.innerHTML = '<span class="auth-field-hint error">⚠ 10+ chars, upper, lower, digit &amp; symbol</span>'; err.classList.remove('hidden'); }
+    }
+
+    const confirmInput = document.getElementById('client-reg-confirm-password');
+    if (confirmInput && confirmInput.value) {
+      this.validateClientRegisterConfirmPassword(confirmInput.value);
+    }
+
+    return isValid;
+  },
+
+  validateClientRegisterConfirmPassword(val) {
+    const input = document.getElementById('client-reg-confirm-password');
+    const pwInput = document.getElementById('client-reg-password');
+    const err = document.getElementById('client-reg-confirm-err');
+    if (!input || !pwInput) return false;
+    val = (val !== undefined ? val : input.value);
+    const pwVal = pwInput.value;
+
+    if (!val) {
+      input.classList.add('is-invalid');
+      input.classList.remove('is-valid');
+      if (err) { err.innerHTML = '<span class="auth-field-hint error">⚠ Please confirm password</span>'; err.classList.remove('hidden'); }
+      return false;
+    }
+    if (val !== pwVal) {
+      input.classList.add('is-invalid');
+      input.classList.remove('is-valid');
+      if (err) { err.innerHTML = '<span class="auth-field-hint error">⚠ Passwords do not match</span>'; err.classList.remove('hidden'); }
+      return false;
+    }
+    input.classList.remove('is-invalid');
+    input.classList.add('is-valid');
+    if (err) { err.innerHTML = '<span class="auth-field-hint success">✓ Passwords match</span>'; err.classList.remove('hidden'); }
+    return true;
+  },
+
+  validateClientLoginField(fieldId) {
+    const input = document.getElementById(fieldId);
+    if (!input) return false;
+    const val = input.value.trim();
+    const err = document.getElementById(fieldId === 'client-login-id' ? 'client-id-err' : 'client-pw-err');
+
+    if (!val) {
+      input.classList.add('is-invalid');
+      input.classList.remove('is-valid');
+      if (err) { err.innerHTML = '<span class="auth-field-hint error">⚠ Field is required</span>'; err.classList.remove('hidden'); }
+      return false;
+    }
+    input.classList.remove('is-invalid');
+    input.classList.add('is-valid');
+    if (err) { err.innerHTML = ''; err.classList.add('hidden'); }
+    return true;
+  },
+
+  async handleClientRegisterSubmit(e) {
+    e.preventDefault();
+    this.clearClientError();
+
+    const name = document.getElementById('client-reg-name')?.value.trim();
+    const phone = document.getElementById('client-reg-phone')?.value.trim();
+    const email = document.getElementById('client-reg-email')?.value.trim().toLowerCase();
+    const password = document.getElementById('client-reg-password')?.value;
+    const confirmPassword = document.getElementById('client-reg-confirm-password')?.value;
+    const privacyChecked = document.getElementById('client-reg-privacy')?.checked;
+
+    const nameValid = this.validateClientRegisterName(name);
+    const phoneValid = this.validateClientRegisterPhone(phone);
+    const emailValid = this.validateClientRegisterEmail(email);
+    const passValid = this.validateClientRegisterPassword(password);
+    const confirmValid = this.validateClientRegisterConfirmPassword(confirmPassword);
+
+    if (!nameValid || !phoneValid || !emailValid || !passValid || !confirmValid) {
+      this.showClientError('Please resolve the highlighted fields to proceed.');
+      return;
+    }
+
+    // Check email & phone uniqueness across existing users & clients
+    const existingUser = (SLCMS_STATE.users || []).find(u => 
+      (u.email && u.email.toLowerCase() === email) || 
+      (u.phone && u.phone === phone)
+    );
+    const existingClient = (SLCMS_STATE.clients || []).find(c => 
+      (c.email && c.email.toLowerCase() === email) || 
+      (c.phone && c.phone === phone)
+    );
+    if (existingUser || existingClient) {
+      this.showClientError('An account with this email address or phone number is already registered.');
+      return;
+    }
+
+    // Privacy policy must be accepted
+    if (!privacyChecked) {
+      this.showClientError('You must accept the Privacy and Confidentiality Policy to proceed.');
+      return;
+    }
+
+    const submitBtn = document.getElementById('btn-client-register-submit');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Creating Account…';
+    }
+
+    try {
+      const payload = {
+        clientType: this.clientType,
+        name: name,
+        phone: phone,
+        email: email,
+        password: password
+      };
+
+      let result = null;
+      if (typeof ClientPortalService !== 'undefined') {
+        result = await ClientPortalService.register(payload);
+      }
+
+      // Requirement Update: No verification code screen. Directly log in and enter Client Dashboard!
+      const assignedId = result?.clientId || 'CLT-0001';
+      const clientUser = Object.assign({}, result?.user || result?.client || {}, {
+        id: result?.client?.id || result?.user?.id || ('clt-' + Date.now()),
+        clientNumber: assignedId,
+        staffId: assignedId,
+        name: name,
+        email: email,
+        phone: phone,
+        role: 'Client',
+        roleTitle: 'Client',
+        roleLabel: 'Client'
+      });
+
+      sessionStorage.setItem('slcms_auth', 'true');
+      sessionStorage.setItem('slcms_token', result?.token || ('clt_jwt_' + Date.now()));
+      sessionStorage.setItem('slcms_current_user', JSON.stringify(clientUser));
+      sessionStorage.setItem('slcms_current_user_id', clientUser.id);
+
+      SLCMS_STATE.currentUser = clientUser;
+      App.isLoggedIn = true;
+      App.renderAuthenticatedApp();
+      App.navigate('client-dashboard');
+      App.showToast(`Account created successfully! Welcome to SLCMS, ${name}.`, 'success', 6000);
+    } catch (err) {
+      this.showClientError(err.message || 'Registration failed. Please check your information and try again.');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Create Account';
+      }
+    }
+  },
+
+  startVerificationCountdown() {
+    if (this.verifyCountdownInterval) {
+      clearInterval(this.verifyCountdownInterval);
+    }
+    this.verifySecondsLeft = 600; // 10 minutes per Requirement 4
+    this.verifyCountdownInterval = setInterval(() => {
+      this.verifySecondsLeft--;
+      const el = document.getElementById('verify-countdown');
+      if (el) {
+        if (this.verifySecondsLeft <= 0) {
+          clearInterval(this.verifyCountdownInterval);
+          el.innerText = 'EXPIRED';
+          el.style.color = '#EF4444';
+          App.showToast('Verification code has expired. Please click "Resend Code".', 'warning');
+        } else {
+          const m = String(Math.floor(this.verifySecondsLeft / 60)).padStart(2, '0');
+          const s = String(this.verifySecondsLeft % 60).padStart(2, '0');
+          el.innerText = `${m}:${s}`;
+        }
+      }
+    }, 1000);
+  },
+
+  async handleClientVerifySubmit(e) {
+    e.preventDefault();
+    const code = document.getElementById('client-verify-code')?.value.trim();
+    if (!code || code.length !== 6) {
+      this.showClientVerifyError('Please enter the 6-digit verification code.');
+      return;
+    }
+
+    const btn = document.getElementById('btn-verify-account');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = 'Verifying…';
+    }
+
+    try {
+      let result = null;
+      if (typeof ClientPortalService !== 'undefined') {
+        result = await ClientPortalService.verify(this.pendingClientEmail, code);
+      }
+
+      if (this.verifyCountdownInterval) {
+        clearInterval(this.verifyCountdownInterval);
+      }
+
+      const assignedId = result?.clientId || 'CLT-0001';
+      this.registeredClientId = assignedId;
+      App.showToast(`Account verified successfully! Your Client ID is ${assignedId}.`, 'success', 6000);
+
+      // Transition to client login
+      this.setPortalMode('client_login');
+    } catch (err) {
+      this.showClientVerifyError(err.message || 'Invalid or expired verification code. Please check your email or resend.');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = 'Verify Account';
+      }
+    }
+  },
+
+  async handleResendClientCode() {
+    if (!this.pendingClientEmail) return;
+    try {
+      if (typeof ClientPortalService !== 'undefined') {
+        const res = await ClientPortalService.resendCode(this.pendingClientEmail);
+        this.startVerificationCountdown();
+        if (res && res.verificationCode) {
+          App.showToast(`New code dispatched to ${this.pendingClientEmail} (Demo code: ${res.verificationCode})`, 'info', 8000);
+        } else {
+          App.showToast(`A new 6-digit code has been sent to ${this.pendingClientEmail}`, 'success');
+        }
+      }
+    } catch (err) {
+      App.showToast(err.message || 'Unable to resend verification code.', 'error');
+    }
+  },
+
+  async handleClientLoginSubmit(e) {
+    e.preventDefault();
+    const idInput = document.getElementById('client-login-id');
+    const passInput = document.getElementById('client-login-password');
+    const identifier = idInput ? idInput.value.trim() : '';
+    const password = passInput ? passInput.value : '';
+
+    if (!identifier) {
+      this.showClientLoginError('Please enter your Email or Client ID.');
+      return;
+    }
+    if (!password) {
+      this.showClientLoginError('Please enter your password.');
+      return;
+    }
+
+    const submitBtn = document.getElementById('btn-client-login-submit');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Signing in…';
+    }
+
+    try {
+      let authResult = null;
+      if (typeof ClientPortalService !== 'undefined') {
+        authResult = await ClientPortalService.login(identifier, password);
+      }
+
+      if (authResult && authResult.success) {
+        const clientUser = Object.assign({}, authResult.user || {}, {
+          role: 'Client',
+          roleTitle: 'Client',
+          roleLabel: 'Client'
+        });
+
+        sessionStorage.setItem('slcms_auth', 'true');
+        sessionStorage.setItem('slcms_token', authResult.token || ('clt_jwt_' + Date.now()));
+        sessionStorage.setItem('slcms_current_user', JSON.stringify(clientUser));
+        sessionStorage.setItem('slcms_current_user_id', clientUser.id || clientUser.clientNumber);
+
+        SLCMS_STATE.currentUser = clientUser;
+        App.isLoggedIn = true;
+        App.renderAuthenticatedApp();
+        App.navigate('client-dashboard');
+        App.showToast(`Welcome back, ${clientUser.name || 'Client'}!`, 'success');
+      } else {
+        throw new Error(authResult?.message || 'Login failed. Please verify your Email/Client ID and password.');
+      }
+    } catch (err) {
+      this.showClientLoginError(err.message || 'Invalid Email/Client ID or password.');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Log In';
+      }
+    }
+  },
+
+  showClientError(msg) {
+    const el = document.getElementById('client-reg-alert');
+    if (el) {
+      el.innerText = msg;
+      el.classList.remove('hidden');
+    } else {
+      App.showToast(msg, 'error');
+    }
+  },
+
+  clearClientError() {
+    const el = document.getElementById('client-reg-alert');
+    if (el) el.classList.add('hidden');
+  },
+
+  showClientVerifyError(msg) {
+    const el = document.getElementById('client-verify-alert');
+    if (el) {
+      el.innerText = msg;
+      el.classList.remove('hidden');
+    } else {
+      App.showToast(msg, 'error');
+    }
+  },
+
+  showClientLoginError(msg) {
+    const el = document.getElementById('client-login-alert');
+    if (el) {
+      el.innerText = msg;
+      el.classList.remove('hidden');
+    } else {
+      App.showToast(msg, 'error');
+    }
+  },
+
+  escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   },
 
   renderInCardRegistrationFlow() {
@@ -1227,14 +2364,27 @@ const AuthView = {
       }
 
       // Complete Login: Authoritative role returned by the backend
-      const userRole = authResult.role || (authResult.user && (authResult.user.role || authResult.user.roleKey)) || 'LAWYER';
-      const currentUserObj = authResult.user || {
-        id: authResult.staffId,
-        staffId: authResult.staffId,
-        name: emailVal.split('@')[0],
-        email: emailVal,
-        role: userRole
-      };
+      const rawRole = authResult.roleDisplayName || authResult.role || (authResult.user && (authResult.user.roleDisplayName || authResult.user.role || authResult.user.roleKey)) || 'Lawyer';
+      const normalizedRole = (function(r) {
+        if (!r) return 'Lawyer';
+        const up = String(r).toUpperCase().replace(/[\s_-]+/g, '');
+        if (up === 'ADMINISTRATOR' || up === 'ADMIN' || up === 'SYSTEMADMINISTRATOR') return 'Administrator';
+        if (up === 'SENIORLAWYER' || up === 'MANAGINGPARTNER' || up === 'SENIORCOUNSEL') return 'Senior Lawyer';
+        if (up === 'LAWYER' || up === 'ASSOCIATELAWYER' || up === 'JUNIORLAWYER') return 'Lawyer';
+        if (up === 'LEGALCLERK' || up === 'CLERK') return 'Legal Clerk';
+        if (up === 'LEGALOFFICER' || up === 'OFFICER' || up.includes('OFFICER')) return 'Legal Officer';
+        return r;
+      })(rawRole);
+
+      const currentUserObj = Object.assign({}, authResult.user || {}, {
+        id: (authResult.user && authResult.user.id) || authResult.staffId || 'usr-001',
+        staffId: (authResult.user && (authResult.user.staffId || authResult.user.employeeId)) || authResult.staffId || emailVal,
+        name: (authResult.user && authResult.user.name) || emailVal.split('@')[0],
+        email: (authResult.user && authResult.user.email) || emailVal,
+        role: normalizedRole,
+        roleKey: authResult.roleKey || (authResult.user && authResult.user.roleKey) || (normalizedRole === 'Legal Officer' ? 'LEGAL_OFFICER' : (normalizedRole === 'Administrator' ? 'ADMINISTRATOR' : 'LAWYER')),
+        roleDisplayName: normalizedRole
+      });
 
       sessionStorage.setItem('slcms_auth', 'true');
       sessionStorage.setItem('slcms_token', authResult.token || ('slcms_jwt_' + Date.now()));
@@ -1254,11 +2404,16 @@ const AuthView = {
       App.isLoggedIn = true;
       App.renderAuthenticatedApp();
 
-      const rawDestination = authResult.destination ||
-        (typeof SLCMS_STATE !== 'undefined' && typeof SLCMS_STATE.getPermittedDestination === 'function'
-          ? SLCMS_STATE.getPermittedDestination(userRole)
-          : '/dashboard');
-      const destination = rawDestination.replace(/^\/+/, '');
+      let destination = 'dashboard';
+      if (normalizedRole === 'Administrator') {
+        destination = 'admin-dashboard';
+      } else if (normalizedRole === 'Legal Officer') {
+        destination = 'legal-requests';
+      } else if (authResult.destination) {
+        destination = authResult.destination.replace(/^\/+/, '');
+      } else if (typeof SLCMS_STATE !== 'undefined' && typeof SLCMS_STATE.getPermittedDestination === 'function') {
+        destination = SLCMS_STATE.getPermittedDestination(normalizedRole).replace(/^\/+/, '');
+      }
       App.navigate(destination);
 
       App.showToast(authResult.message || 'Login successful. Welcome to SLCMS.', 'success');
@@ -1434,9 +2589,12 @@ const AuthView = {
   showFieldError(inputId, errorId, msg) {
     const input = document.getElementById(inputId);
     const err = document.getElementById(errorId);
-    if (input) input.classList.add('error');
+    if (input) {
+      input.classList.add('is-invalid');
+      input.classList.remove('is-valid');
+    }
     if (err) {
-      err.innerText = msg;
+      err.innerHTML = `<span class="auth-field-hint error">⚠ ${msg}</span>`;
       err.classList.remove('hidden');
     }
   },
@@ -1444,9 +2602,14 @@ const AuthView = {
   clearFieldError(inputId, errorId) {
     const input = document.getElementById(inputId);
     const err = document.getElementById(errorId);
-    if (input) input.classList.remove('error');
+    if (input) {
+      input.classList.remove('is-invalid');
+      if (input.value && input.value.trim().length > 0) {
+        input.classList.add('is-valid');
+      }
+    }
     if (err) {
-      err.innerText = '';
+      err.innerHTML = '';
       err.classList.add('hidden');
     }
   },

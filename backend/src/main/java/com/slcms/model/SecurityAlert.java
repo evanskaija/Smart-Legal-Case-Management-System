@@ -1,27 +1,64 @@
 package com.slcms.model;
 
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
  * Entity representing an authentic security alert in SLCMS.
  * Security alerts only exist when a real database event occurs.
  */
+@Entity
+@Table(name = "security_alerts")
 public class SecurityAlert {
+
+    @Id
+    @Column(name = "alert_id", length = 50)
     private String alertId;
+
+    @Column(name = "user_id", length = 50, nullable = false)
     private String userId;
+
+    @Column(name = "staff_id", length = 50)
     private String staffId;
+
+    @Column(name = "full_name", length = 150)
     private String fullName;
+
+    @Column(name = "role", length = 50)
     private String role;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "alert_type", length = 50, nullable = false)
     private AlertType alertType;
+
+    @Column(name = "title", length = 200, nullable = false)
     private String title;
+
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
-    private String severity; // HIGH, MEDIUM, LOW
-    private LocalDateTime createdAt;
-    private boolean resolved;
+
+    @Column(name = "severity", length = 20)
+    private String severity = "MEDIUM"; // HIGH, MEDIUM, LOW
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "resolved")
+    private boolean resolved = false;
+
+    @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;
+
+    @Column(name = "resolved_by", length = 50)
     private String resolvedBy;
+
+    @Column(name = "locked_reason", length = 100)
     private String lockedReason;
+
+    @Column(name = "locked_by", length = 50)
     private String lockedBy;
+
+    @Column(name = "client_ip", length = 50)
     private String clientIp;
 
     public SecurityAlert() {

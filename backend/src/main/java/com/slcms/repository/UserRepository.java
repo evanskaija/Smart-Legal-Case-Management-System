@@ -1,9 +1,11 @@
 package com.slcms.repository;
 
 import com.slcms.model.UserAccount;
+import com.slcms.model.UserRole;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -12,6 +14,8 @@ import java.util.Optional;
  */
 @Repository
 public interface UserRepository extends JpaRepository<UserAccount, String> {
+
+    List<UserAccount> findByRole(UserRole role);
 
     Optional<UserAccount> findByEmailIgnoreCase(String email);
 
@@ -26,4 +30,18 @@ public interface UserRepository extends JpaRepository<UserAccount, String> {
     boolean existsByStaffIdIgnoreCase(String staffId);
 
     boolean existsByPhone(String phone);
+
+    boolean existsByUsernameIgnoreCase(String username);
+
+    boolean existsByNameIgnoreCase(String name);
+
+    boolean existsByAdvocateNumberIgnoreCase(String advocateNumber);
+
+    Optional<UserAccount> findByUsernameIgnoreCase(String username);
+
+    long countByAccountStatus(com.slcms.model.AccountStatus accountStatus);
+
+    long countByAccountStatusIn(java.util.Collection<com.slcms.model.AccountStatus> accountStatuses);
+
+    List<UserAccount> findByAccountStatusIn(java.util.Collection<com.slcms.model.AccountStatus> accountStatuses);
 }

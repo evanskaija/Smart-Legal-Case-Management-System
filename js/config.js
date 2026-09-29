@@ -11,15 +11,17 @@
                   window.location.hostname === '127.0.0.1' ||
                   window.location.protocol === 'file:';
 
+  // In local development, if running on non-8080 port (e.g. Live Server 5500) or file:,
+  // default to http://localhost:8080. If running directly on 8080, use relative paths.
+  const defaultLocalApi = (window.location.protocol === 'http:' || window.location.protocol === 'https:') && window.location.port === '8080' ? '' : 'http://localhost:8080';
+
   // Retrieve any explicit override stored by user or administrator
   const savedApiUrl = localStorage.getItem('slcms_api_base_url');
   const envApiUrl = (typeof window.__ENV__ !== 'undefined' && window.__ENV__.API_BASE_URL) ? window.__ENV__.API_BASE_URL : null;
 
   // Configuration object
   window.SLCMS_CONFIG = window.SLCMS_CONFIG || {
-    // In local dev, empty string calls current origin / local proxy or server.ps1.
-    // In production on Vercel, this points to your deployed Java Spring Boot backend.
-    API_BASE_URL: savedApiUrl || envApiUrl || (isLocal ? '' : (window.__SLCMS_PROD_API_URL__ || '')),
+    API_BASE_URL: savedApiUrl || envApiUrl || (isLocal ? defaultLocalApi : (window.__SLCMS_PROD_API_URL__ || '')),
     IS_LOCAL: isLocal,
     VERSION: '1.0.0'
   };
@@ -60,13 +62,23 @@
       opts.headers['Content-Type'] = 'application/json';
     }
 
-    // Pass role header if active user exists in session
+    // Pass role and authentication headers if active user exists in session
     try {
+      const token = sessionStorage.getItem('slcms_token');
+      if (token && !opts.headers['Authorization']) {
+        opts.headers['Authorization'] = 'Bearer ' + token;
+      }
       const activeUserJson = sessionStorage.getItem('slcms_current_user');
       if (activeUserJson) {
         const u = JSON.parse(activeUserJson);
         if (u && (u.role || u.roleKey)) {
           opts.headers['X-User-Role'] = u.roleKey || u.role;
+        }
+        if (u && u.email && !opts.headers['X-User-Email']) {
+          opts.headers['X-User-Email'] = u.email;
+        }
+        if (u && u.id && !opts.headers['X-User-Id']) {
+          opts.headers['X-User-Id'] = u.id;
         }
       }
     } catch (e) {}

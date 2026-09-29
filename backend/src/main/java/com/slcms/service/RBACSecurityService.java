@@ -19,15 +19,18 @@ public class RBACSecurityService {
 
     private final com.slcms.repository.UserRepository userRepository;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final com.slcms.repository.SecurityEventRepository securityEventRepository;
     private final List<Map<String, Object>> auditLogs = Collections.synchronizedList(new ArrayList<>());
     private final List<com.slcms.model.SecurityAlert> securityAlerts = Collections.synchronizedList(new ArrayList<>());
     private final List<com.slcms.model.SecurityEvent> securityEvents = Collections.synchronizedList(new ArrayList<>());
 
     @org.springframework.beans.factory.annotation.Autowired
     public RBACSecurityService(com.slcms.repository.UserRepository userRepository,
-                               org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
+                               org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
+                               @org.springframework.beans.factory.annotation.Autowired(required = false) com.slcms.repository.SecurityEventRepository securityEventRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.securityEventRepository = securityEventRepository;
         seedInitialUsersIfEmpty();
     }
 
@@ -59,9 +62,54 @@ public class RBACSecurityService {
         return userRepository.findAll();
     }
 
+    public List<UserAccount> findUsersByRole(String role) {
+        if (role == null || role.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+        UserRole userRole = UserRole.fromString(role);
+        if (userRole == null) {
+            try {
+                userRole = UserRole.valueOf(
+                    role.trim()
+                        .toUpperCase(Locale.ROOT)
+                        .replace(" ", "_")
+                        .replace("-", "_")
+                );
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Invalid system role: " + role);
+            }
+        }
+        return userRepository.findByRole(userRole);
+    }
+
+    public List<UserAccount> findUsersByRole(UserRole role) {
+        if (role == null) return Collections.emptyList();
+        return userRepository.findByRole(role);
+    }
+
     public UserAccount getUserByEmail(String email) {
         if (email == null || email.trim().isEmpty()) return null;
         return userRepository.findByEmailIgnoreCase(email.trim()).orElse(null);
+    }
+
+    public Optional<UserAccount> findUserByEmail(String email) {
+        if (email == null || email.trim().isEmpty()) return Optional.empty();
+        return userRepository.findByEmailIgnoreCase(email.trim());
+    }
+
+    public boolean hasPermission(UserAccount user, String action) {
+        if (user == null || action == null) return false;
+        return authorizeAction(user.getEmail(), action, null, null);
+    }
+
+    public boolean canAccessCase(UserAccount user, String caseId) {
+        if (user == null || caseId == null) return false;
+        return authorizeAction(user.getEmail(), "VIEW_CASE", caseId, null);
+    }
+
+    public boolean canAccessDocument(UserAccount user, String caseId, DocumentSensitivity sensitivity) {
+        if (user == null || caseId == null) return false;
+        return authorizeAction(user.getEmail(), "VIEW_DOCUMENT", caseId, sensitivity);
     }
 
     public UserAccount getUserById(String id) {
@@ -102,12 +150,12 @@ public class RBACSecurityService {
 
         switch (action.toUpperCase()) {
             case "VIEW_ALL_CASES":
-                permitted = (role == UserRole.MANAGING_PARTNER);
+                permitted = (role == UserRole.MANAGING_PARTNER || role == UserRole.LEGAL_OFFICER);
                 break;
 
             case "VIEW_CASE":
             case "VIEW_CASE_DETAILS":
-                if (role == UserRole.MANAGING_PARTNER) {
+                if (role == UserRole.MANAGING_PARTNER || role == UserRole.LEGAL_OFFICER) {
                     permitted = true;
                 } else if (targetCaseId != null && user.getAssignedCaseIds().contains(targetCaseId)) {
                     permitted = (role == UserRole.SENIOR_COUNSEL || role == UserRole.ASSOCIATE_LAWYER ||
@@ -116,7 +164,7 @@ public class RBACSecurityService {
                 break;
 
             case "CREATE_CASE":
-                permitted = (role == UserRole.MANAGING_PARTNER || role == UserRole.SENIOR_COUNSEL || role == UserRole.ASSOCIATE_LAWYER);
+                permitted = (role == UserRole.MANAGING_PARTNER || role == UserRole.SENIOR_COUNSEL || role == UserRole.ASSOCIATE_LAWYER || role == UserRole.LEGAL_OFFICER);
                 break;
 
             case "ASSIGN_CASE":
@@ -126,11 +174,11 @@ public class RBACSecurityService {
 
             case "CLOSE_CASE":
             case "REOPEN_CASE":
-                permitted = (role == UserRole.MANAGING_PARTNER || role == UserRole.SENIOR_COUNSEL);
+                permitted = (role == UserRole.MANAGING_PARTNER || role == UserRole.SENIOR_COUNSEL || role == UserRole.LEGAL_OFFICER);
                 break;
 
             case "UPLOAD_DOCUMENTS":
-                if (role == UserRole.MANAGING_PARTNER) {
+                if (role == UserRole.MANAGING_PARTNER || role == UserRole.LEGAL_OFFICER) {
                     permitted = true;
                 } else if (targetCaseId != null && user.getAssignedCaseIds().contains(targetCaseId)) {
                     permitted = (role == UserRole.SENIOR_COUNSEL || role == UserRole.ASSOCIATE_LAWYER ||
@@ -143,13 +191,13 @@ public class RBACSecurityService {
                 if (sensitivity == DocumentSensitivity.HIGHLY_CONFIDENTIAL || sensitivity == DocumentSensitivity.PRIVILEGED) {
                     if (role == UserRole.LEGAL_CLERK) {
                         permitted = false;
-                    } else if (role == UserRole.MANAGING_PARTNER) {
+                    } else if (role == UserRole.MANAGING_PARTNER || role == UserRole.LEGAL_OFFICER) {
                         permitted = true;
                     } else if (targetCaseId != null && user.getAssignedCaseIds().contains(targetCaseId)) {
                         permitted = (role == UserRole.SENIOR_COUNSEL || role == UserRole.ASSOCIATE_LAWYER);
                     }
                 } else {
-                    if (role == UserRole.MANAGING_PARTNER) {
+                    if (role == UserRole.MANAGING_PARTNER || role == UserRole.LEGAL_OFFICER) {
                         permitted = true;
                     } else if (targetCaseId != null && user.getAssignedCaseIds().contains(targetCaseId)) {
                         permitted = true;
@@ -159,12 +207,12 @@ public class RBACSecurityService {
 
             case "DRAFT_LEGAL_DOCUMENTS":
                 permitted = (role == UserRole.MANAGING_PARTNER || role == UserRole.SENIOR_COUNSEL ||
-                             role == UserRole.ASSOCIATE_LAWYER || role == UserRole.JUNIOR_LAWYER);
+                             role == UserRole.ASSOCIATE_LAWYER || role == UserRole.JUNIOR_LAWYER || role == UserRole.LEGAL_OFFICER);
                 break;
 
             case "APPROVE_LEGAL_DOCUMENTS":
             case "APPROVE_REPORTS":
-                permitted = (role == UserRole.MANAGING_PARTNER || role == UserRole.SENIOR_COUNSEL);
+                permitted = (role == UserRole.MANAGING_PARTNER || role == UserRole.SENIOR_COUNSEL || role == UserRole.LEGAL_OFFICER);
                 break;
 
             case "USE_LEGAL_AI":
@@ -312,7 +360,17 @@ public class RBACSecurityService {
         if (event.getId() == null) {
             event.setId("evt-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 5));
         }
+        if (event.getEventTime() == null) {
+            event.setEventTime(LocalDateTime.now());
+        }
         securityEvents.add(event);
+        if (securityEventRepository != null) {
+            try {
+                securityEventRepository.save(event);
+            } catch (Exception e) {
+                System.err.println("Security event database log notice: " + e.getMessage());
+            }
+        }
     }
 
     public List<com.slcms.model.SecurityEvent> getSecurityEvents(String userId) {
@@ -328,14 +386,8 @@ public class RBACSecurityService {
         return result;
     }
 
-    public UserAccount getUserById(String userId) {
-        if (userId == null) return null;
-        for (UserAccount u : userDatabase.values()) {
-            if (userId.equalsIgnoreCase(u.getId()) || userId.equalsIgnoreCase(u.getStaffId()) || userId.equalsIgnoreCase(u.getEmployeeId())) {
-                return u;
-            }
-        }
-        return null;
+    public boolean lockUser(String userId, String reason, boolean adminLock, String lockedBy) {
+        return lockAccount(userId, reason, lockedBy, adminLock ? null : (System.currentTimeMillis() + 120000));
     }
 
     public boolean lockAccount(String userId, String reason, String lockedBy, Long lockedUntil) {
